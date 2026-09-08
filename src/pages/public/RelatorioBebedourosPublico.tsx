@@ -318,17 +318,23 @@ export function RelatorioBebedourosPublico({ relatorioInfo }: Props) {
 
   const statusPorBebedouro: StatusLimpeza[] = useMemo(() => {
     const fim = periodoFim
-    const dataReferencia = new Date(fim + 'T00:00:00')
-    dataReferencia.setHours(0, 0, 0, 0)
+    // Normaliza para date-only (meia-noite local) para que a diferenca seja sempre
+    // um numero inteiro de dias de calendario, independente de timezone ou horario.
+    const toDateOnly = (dateStr: string) => {
+      const d = new Date(dateStr.split('T')[0] + 'T00:00:00')
+      d.setHours(0, 0, 0, 0)
+      return d
+    }
+    const dataReferencia = toDateOnly(fim)
 
     return bebedourosFiltrados.map((b) => {
       const limpezasDoBebedouro = todasLimpezas
         .filter((l) => l.bebedouro_id === b.id)
-        .sort((a, b2) => new Date(b2.data_limpeza).getTime() - new Date(a.data_limpeza).getTime())
+        .sort((a, b2) => toDateOnly(b2.data_limpeza).getTime() - toDateOnly(a.data_limpeza).getTime())
 
       const ultima = limpezasDoBebedouro[0] || null
       const diasDesdeUltima = ultima
-        ? Math.max(Math.round((dataReferencia.getTime() - new Date(ultima.data_limpeza).getTime()) / (1000 * 60 * 60 * 24)), 0)
+        ? Math.max(Math.round((dataReferencia.getTime() - toDateOnly(ultima.data_limpeza).getTime()) / (1000 * 60 * 60 * 24)), 0)
         : null
 
       const status = statusLimpeza(diasDesdeUltima, b.meta_intervalo_limpeza)
@@ -996,7 +1002,7 @@ function GraficoLimpezaDia({ limpezas, onSelecionar }: { limpezas: LimpezaDoDia[
     const meta = payload?.meta
     const intervalo = payload?.intervalo
     const elements: any[] = [
-      <rect key="bar" x={x} y={y} width={Math.max(width, 0)} height={height} fill={fill} rx={4} ry={4} />
+      <rect key="bar" x={x} y={y} width={Math.max(width, intervalo === 0 ? 4 : 0)} height={height} fill={fill} rx={4} ry={4} />
     ]
     if (meta && meta > 0 && intervalo > 0 && width > 0) {
       const metaX = x + (meta * width / intervalo)
@@ -1125,7 +1131,7 @@ function GraficoLimpeza({ status, onSelecionar, dataReferencia }: { status: Stat
     const meta = payload?.meta
     const dias = payload?.dias
     const elements: any[] = [
-      <rect key="bar" x={x} y={y} width={Math.max(width, 0)} height={height} fill={fill} rx={4} ry={4} />
+      <rect key="bar" x={x} y={y} width={Math.max(width, dias === 0 ? 4 : 0)} height={height} fill={fill} rx={4} ry={4} />
     ]
     if (meta && meta > 0 && dias > 0 && width > 0) {
       const metaX = x + (meta * width / dias)
