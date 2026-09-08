@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useRef, useMemo } from 'react'
+import { ReactNode, useState, useEffect, useRef, useMemo, useTransition } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useFazenda } from '../../hooks/useDashboardQueries'
@@ -9,6 +9,7 @@ import { KeyboardHelpModal } from '../ui/KeyboardHelpModal'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { supabase } from '../../services/supabaseClient'
 import { ImpersonationBar } from '../ImpersonationBar'
+import { prefetchRoute } from '../../utils/routePrefetch'
 
 interface ControllerLayoutProps {
   children: ReactNode
@@ -169,7 +170,18 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set())
   const [showHelpModal, setShowHelpModal] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [, startTransition] = useTransition()
   const drawerRef = useRef<HTMLDivElement>(null)
+
+  const handleNavigate = (path: string) => {
+    startTransition(() => {
+      navigate(path)
+    })
+  }
+
+  const handlePrefetch = (path: string) => {
+    prefetchRoute(path)
+  }
 
   const shortcuts = [
     {
@@ -307,7 +319,8 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                   return (
                     <button
                       key={menu.path}
-                      onClick={() => navigate(menu.path!)}
+                      onClick={() => handleNavigate(menu.path!)}
+                      onMouseEnter={() => handlePrefetch(menu.path!)}
                       className={`w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 flex items-center gap-3 ${
                         isPathActive(menu.path!)
                           ? 'bg-primary/10 text-primary border-l-4 border-primary font-medium'
@@ -352,7 +365,8 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                           {menu.items.map((item) => (
                             <button
                               key={item.path}
-                              onClick={() => navigate(item.path)}
+                              onClick={() => handleNavigate(item.path)}
+                              onMouseEnter={() => handlePrefetch(item.path)}
                               className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 text-sm flex items-center gap-3 ${
                                 isPathActive(item.path)
                                   ? 'bg-primary text-white font-medium'
@@ -407,9 +421,10 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                       <button
                         key={menu.path}
                         onClick={() => {
-                          navigate(menu.path!)
+                          handleNavigate(menu.path!)
                           setMobileMenuOpen(false)
                         }}
+                        onMouseEnter={() => handlePrefetch(menu.path!)}
                         className={`w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 flex items-center gap-3 ${
                           isPathActive(menu.path!)
                             ? 'bg-primary/10 text-primary border-l-4 border-primary font-medium'
@@ -454,9 +469,10 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                               <button
                                 key={item.path}
                                 onClick={() => {
-                                  navigate(item.path)
+                                  handleNavigate(item.path)
                                   setMobileMenuOpen(false)
                                 }}
+                                onMouseEnter={() => handlePrefetch(item.path)}
                                 className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 text-sm flex items-center gap-3 ${
                                   isPathActive(item.path)
                                     ? 'bg-primary text-white font-medium'

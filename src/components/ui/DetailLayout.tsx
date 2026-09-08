@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
-import { Button, ErrorState, EmptyState, PageSkeleton } from './'
+import { Button } from './Button'
+import { ErrorState } from './ErrorState'
+import { EmptyState } from './EmptyState'
+import { PageSkeleton } from './PageSkeleton'
 
 interface DetailLayoutProps {
   loading: boolean
