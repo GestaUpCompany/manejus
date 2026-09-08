@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, Modal, ConfirmModal } from '../../components/ui'
+import { Button, Card, DetailLayout, DetailSection, DetailField, formatValue, Input, Modal, ConfirmModal, useToast } from '../../components/ui'
+import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useLotes } from '../../hooks/useFazendaQueries'
 
 interface RegistroSuplementacao {
   id: string
@@ -52,24 +54,41 @@ interface EditForm {
   escore_fezes: string
 }
 
+function capitalizeWords(str: string): string {
+  return str.split(', ').map(word => {
+    return word.split(' ').map(subword => {
+      return subword.charAt(0).toUpperCase() + subword.slice(1).toLowerCase()
+    }).join(' ')
+  }).join(', ')
+}
+
+function boolSimNao(valor?: boolean): string {
+  if (valor === undefined || valor === null) return '-'
+  return valor ? 'Sim' : 'Não'
+}
+
 export function SuplementacaoDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [registro, setRegistro] = useState<RegistroSuplementacao | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditForm | null>(null)
-  const [lotes, setLotes] = useState<{ id: string; nome: string }[]>([])
   const [formulacoes, setFormulacoes] = useState<{ nome: string }[]>([])
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [leituraDropdownOpen, setLeituraDropdownOpen] = useState(false)
   const [escoreDropdownOpen, setEscoreDropdownOpen] = useState(false)
   const leituraDropdownRef = useRef<HTMLDivElement>(null)
   const escoreDropdownRef = useRef<HTMLDivElement>(null)
+
+  const { data: lotesData = [] } = useLotes(fazendaId || undefined)
+  const lotes = lotesData.filter(l => l.ativo)
 
   const canDelete = user && (user.papel === 'admin' || user.papel === 'super_admin' || user.papel === 'controller')
 
@@ -79,23 +98,6 @@ export function SuplementacaoDetalhes() {
     'd54abd92-5783-407a-8adb-15c31388ebc4' // Doce Ilusão
   ]
   const featureHabilitada = fazendaId ? FAZENDAS_HABILITADAS.includes(fazendaId) : false
-
-  const capitalizeWords = (str: string) => {
-    return str.split(', ').map(word => {
-      return word.split(' ').map(subword => {
-        return subword.charAt(0).toUpperCase() + subword.slice(1).toLowerCase()
-      }).join(' ')
-    }).join(', ')
-  }
-
-  const formatDate = (data: string) => {
-    if (!data) return '-'
-    const date = new Date(data)
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const year = date.getFullYear()
-    return `${day}/${month}/${year}`
-  }
 
   const handleEditFormulacao = async () => {
     if (!registro?.formulacao || !user) return
@@ -136,6 +138,7 @@ export function SuplementacaoDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
+    setLoadError(null)
     const _fazendaId = await getFazendaIdForUser(user.id)
 
     if (!_fazendaId) return
@@ -151,7 +154,12 @@ export function SuplementacaoDetalhes() {
       .single()
 
     if (error) {
-      console.error('Erro ao buscar registro:', error)
+      if (error.code === 'PGRST116') {
+        setRegistro(null)
+      } else {
+        console.error('Erro ao buscar registro:', error)
+        setLoadError(error.message || 'Erro ao buscar registro')
+      }
     } else {
       setRegistro(data as RegistroSuplementacao)
     }
@@ -164,13 +172,14 @@ export function SuplementacaoDetalhes() {
     const _fazendaId = await getFazendaIdForUser(user.id)
     if (!_fazendaId) return
 
-    const [lotesRes, formulacoesRes] = await Promise.all([
-      supabase.from('lotes').select('id, nome').eq('fazenda_id', _fazendaId).eq('ativo', true).order('nome'),
-      supabase.from('formulacoes').select('nome').eq('fazenda_id', _fazendaId).eq('ativo', true).order('nome'),
-    ])
+    const { data: formulacoesData } = await supabase
+      .from('formulacoes')
+      .select('nome')
+      .eq('fazenda_id', _fazendaId)
+      .eq('ativo', true)
+      .order('nome')
 
-    if (lotesRes.data) setLotes(lotesRes.data)
-    if (formulacoesRes.data) setFormulacoes(formulacoesRes.data)
+    if (formulacoesData) setFormulacoes(formulacoesData)
   }
 
   const handleStartEdit = async () => {
@@ -237,6 +246,7 @@ export function SuplementacaoDetalhes() {
         setRegistro(data as RegistroSuplementacao)
       }
       setIsEditing(false)
+      toast.success('Registro editado com sucesso.')
     } catch (err) {
       console.error('Erro ao editar registro:', err)
       setErrorMsg('Erro inesperado ao salvar edição')
@@ -262,176 +272,157 @@ export function SuplementacaoDetalhes() {
 
       if (error) {
         console.error('Erro ao excluir registro:', error)
-        alert(error.message || 'Erro ao excluir registro')
+        toast.error(error.message || 'Erro ao excluir registro')
         return
       }
 
+      toast.success('Registro excluído com sucesso.')
       navigate('/controller/cadernetas/suplementacao')
     } catch (err) {
       console.error('Erro ao excluir registro:', err)
-      alert('Erro inesperado ao excluir registro')
+      toast.error('Erro inesperado ao excluir registro')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
-  }
+  const backUrl = '/controller/cadernetas/suplementacao'
 
-  if (!registro) {
-    return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/suplementacao')}>
-          Voltar
+  const actions = (
+    <>
+      {featureHabilitada && (
+        <Button variant="primary" onClick={handleStartEdit} className="text-sm">
+          Editar
         </Button>
-        <Card className="bg-white p-6 text-center" disableHover>
-          <p className="text-gray-600">Registro não encontrado</p>
-        </Card>
-      </div>
-    )
-  }
+      )}
+      {featureHabilitada && canDelete && (
+        <Button
+          variant="danger"
+          onClick={() => setIsDeleteConfirmOpen(true)}
+          className="text-sm"
+        >
+          Excluir
+        </Button>
+      )}
+    </>
+  )
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Suplementação</h2>
-        <div className="flex gap-2">
-          {featureHabilitada && (
-            <Button variant="primary" onClick={handleStartEdit} className="text-sm">
-              Editar
-            </Button>
-          )}
-          {featureHabilitada && canDelete && (
-            <Button
-              variant="danger"
-              onClick={() => setIsDeleteConfirmOpen(true)}
-              className="text-sm"
-            >
-              Excluir
-            </Button>
-          )}
-          <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/suplementacao')}>
-            Voltar
-          </Button>
-        </div>
-      </div>
+    <>
+      <DetailLayout
+        loading={loading}
+        loadError={loadError}
+        notFound={!registro}
+        onBack={() => navigate(backUrl)}
+        onRetry={loadRegistro}
+        title="Detalhes do Registro de Suplementação"
+        actions={actions}
+      >
+        {() => (
+          <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+            <div className="space-y-6">
+              {/* Informações Gerais */}
+              <DetailSection title="Informações Gerais">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <DetailField label="Data" value={formatDate(registro!.data)} />
+                  <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                  <DetailField label="Tratador" value={formatValue(registro!.tratador)} />
+                  <DetailField label="Pasto" value={formatValue(registro!.pasto)} />
+                  <DetailField label="Lote" value={formatValue(registro!.lote)} />
+                </div>
+              </DetailSection>
 
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
-        <div className="space-y-6">
-          {/* Informações Gerais */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Tratador:</span> {registro.tratador || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
-            </div>
-          </div>
+              {/* Formulação e Gado */}
+              <DetailSection title="Formulação e Gado" highlighted>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <DetailField label="Formulação" value={formatValue(registro!.formulacao)} />
+                    {registro!.formulacao && (
+                      <button
+                        onClick={handleEditFormulacao}
+                        className="text-xs text-primary hover:underline font-medium"
+                      >
+                        Visualizar
+                      </button>
+                    )}
+                  </div>
+                  <DetailField label="Categorias" value={registro!.categorias ? capitalizeWords(registro!.categorias) : '-'} />
+                </div>
+              </DetailSection>
 
-          {/* Formulação e Gado */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Formulação e Gado</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm"><span className="font-medium text-gray-700">Formulação:</span> {registro.formulacao || '-'}</p>
-                  {registro.formulacao && (
-                    <button
-                      onClick={handleEditFormulacao}
-                      className="text-xs text-primary hover:underline font-medium"
-                    >
-                      Visualizar
-                    </button>
+              {/* Quantidades */}
+              <DetailSection title="Quantidades">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      <tr><td className="px-4 py-2 text-sm text-gray-900">KG Cocho</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.kg_cocho || 0}</td></tr>
+                      <tr><td className="px-4 py-2 text-sm text-gray-900">KG Depósito</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.kg_deposito || 0}</td></tr>
+                      <tr><td className="px-4 py-2 text-sm text-gray-900">Nº Cabeças</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{formatValue(registro!.n_cabecas)}</td></tr>
+                      <tr><td className="px-4 py-2 text-sm text-gray-900">Qtd Bezerros</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{formatValue(registro!.qtd_bezerros)}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </DetailSection>
+
+              {/* Indicadores */}
+              <DetailSection title="Indicadores" highlighted>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <DetailField label="Leitura de cocho" value={formatValue(registro!.leitura)} />
+                  <DetailField label="Escore Fezes" value={formatValue(registro!.escore_fezes)} />
+                  <DetailField label="Peso Vivo (kg)" value={registro!.peso_vivo_kg ? Number(registro!.peso_vivo_kg).toFixed(2) : '-'} />
+                </div>
+              </DetailSection>
+
+              {/* Métricas de Consumo */}
+              <DetailSection title="Métricas de Consumo" highlighted>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <DetailField label="Consumo MN (kg/cab/dia)" value={registro!.consumo_medio_geral_kg_mn ? Number(registro!.consumo_medio_geral_kg_mn).toFixed(4) : '-'} />
+                  <DetailField label="Consumo MS (kg/cab/dia)" value={registro!.consumo_medio_geral_kg_ms ? Number(registro!.consumo_medio_geral_kg_ms).toFixed(4) : '-'} />
+                  <DetailField label="Consumo %PV" value={registro!.consumo_medio_geral_percent_pv ? Number(registro!.consumo_medio_geral_percent_pv).toFixed(4) : '-'} />
+                  <DetailField label="Custo (R$/cab/dia)" value={registro!.custo_medio_reais_cab_dia ? Number(registro!.custo_medio_reais_cab_dia).toFixed(4) : '-'} />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Métricas recalculadas automaticamente após edição. O último registro da série fica sem consumo até que um novo registro seja adicionado.</p>
+              </DetailSection>
+
+              {/* Condições do Cocho */}
+              <DetailSection title="Condições do Cocho" highlighted>
+                <div className="space-y-4">
+                  {registro!.checklist?.limpeza_cocho && (
+                    <div className="space-y-1">
+                      <DetailField label="Limpeza de cocho foi realizada?" value={boolSimNao(registro!.checklist.limpeza_cocho.valor)} />
+                      {registro!.checklist.limpeza_cocho.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro!.checklist.limpeza_cocho.observacao}</p>}
+                    </div>
+                  )}
+                  {registro!.checklist?.cochos_condicoes && (
+                    <div className="space-y-1">
+                      <DetailField label="Cochos estão em boas condições?" value={boolSimNao(registro!.checklist.cochos_condicoes.valor)} />
+                      {registro!.checklist.cochos_condicoes.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro!.checklist.cochos_condicoes.observacao}</p>}
+                    </div>
+                  )}
+                  {registro!.checklist?.aterro_acesso_ideal && (
+                    <div className="space-y-1">
+                      <DetailField label="Aterro / acesso ao cocho está ideal?" value={boolSimNao(registro!.checklist.aterro_acesso_ideal.valor)} />
+                      {registro!.checklist.aterro_acesso_ideal.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro!.checklist.aterro_acesso_ideal.observacao}</p>}
+                    </div>
+                  )}
+                  {registro!.checklist?.deposito_condicoes && (
+                    <div className="space-y-1">
+                      <DetailField label="Depósito está em boas condições?" value={boolSimNao(registro!.checklist.deposito_condicoes.valor)} />
+                      {registro!.checklist.deposito_condicoes.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro!.checklist.deposito_condicoes.observacao}</p>}
+                    </div>
                   )}
                 </div>
-                <p className="text-sm"><span className="font-medium text-gray-700">Categorias:</span> {registro.categorias ? capitalizeWords(registro.categorias) : '-'}</p>
-              </div>
+              </DetailSection>
             </div>
-          </div>
-
-          {/* Quantidades */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Quantidades</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  <tr><td className="px-4 py-2 text-sm text-gray-900">KG Cocho</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.kg_cocho || 0}</td></tr>
-                  <tr><td className="px-4 py-2 text-sm text-gray-900">KG Depósito</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.kg_deposito || 0}</td></tr>
-                  <tr><td className="px-4 py-2 text-sm text-gray-900">Nº Cabeças</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.n_cabecas || '-'}</td></tr>
-                  <tr><td className="px-4 py-2 text-sm text-gray-900">Qtd Bezerros</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.qtd_bezerros || '-'}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Indicadores */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Indicadores</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Leitura de cocho:</span> {registro.leitura || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Escore Fezes:</span> {registro.escore_fezes || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Peso Vivo (kg):</span> {registro.peso_vivo_kg ? Number(registro.peso_vivo_kg).toFixed(2) : '-'}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Métricas de Consumo (derivadas, recalculadas automaticamente) */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Métricas de Consumo</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Consumo MN (kg/cab/dia):</span> {registro.consumo_medio_geral_kg_mn ? Number(registro.consumo_medio_geral_kg_mn).toFixed(4) : '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Consumo MS (kg/cab/dia):</span> {registro.consumo_medio_geral_kg_ms ? Number(registro.consumo_medio_geral_kg_ms).toFixed(4) : '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Consumo %PV:</span> {registro.consumo_medio_geral_percent_pv ? Number(registro.consumo_medio_geral_percent_pv).toFixed(4) : '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Custo (R$/cab/dia):</span> {registro.custo_medio_reais_cab_dia ? Number(registro.custo_medio_reais_cab_dia).toFixed(4) : '-'}</p>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">Métricas recalculadas automaticamente após edição. O último registro da série fica sem consumo até que um novo registro seja adicionado.</p>
-            </div>
-          </div>
-
-          {/* Condições do Cocho */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Condições do Cocho</h3>
-            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-              {registro.checklist?.limpeza_cocho && (
-                <div className="space-y-1">
-                  <p className="text-sm"><span className="font-medium text-gray-700">Limpeza de cocho foi realizada?</span> {registro.checklist.limpeza_cocho.valor ? 'Sim' : 'Não'}</p>
-                  {registro.checklist.limpeza_cocho.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.limpeza_cocho.observacao}</p>}
-                </div>
-              )}
-              {registro.checklist?.cochos_condicoes && (
-                <div className="space-y-1">
-                  <p className="text-sm"><span className="font-medium text-gray-700">Cochos estão em boas condições?</span> {registro.checklist.cochos_condicoes.valor ? 'Sim' : 'Não'}</p>
-                  {registro.checklist.cochos_condicoes.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.cochos_condicoes.observacao}</p>}
-                </div>
-              )}
-              {registro.checklist?.aterro_acesso_ideal && (
-                <div className="space-y-1">
-                  <p className="text-sm"><span className="font-medium text-gray-700">Aterro / acesso ao cocho está ideal?</span> {registro.checklist.aterro_acesso_ideal.valor ? 'Sim' : 'Não'}</p>
-                  {registro.checklist.aterro_acesso_ideal.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.aterro_acesso_ideal.observacao}</p>}
-                </div>
-              )}
-              {registro.checklist?.deposito_condicoes && (
-                <div className="space-y-1">
-                  <p className="text-sm"><span className="font-medium text-gray-700">Depósito está em boas condições?</span> {registro.checklist.deposito_condicoes.valor ? 'Sim' : 'Não'}</p>
-                  {registro.checklist.deposito_condicoes.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.deposito_condicoes.observacao}</p>}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </Card>
+          </Card>
+        )}
+      </DetailLayout>
 
       {/* Modal de Edição */}
       {isEditing && editForm && (
@@ -652,16 +643,18 @@ export function SuplementacaoDetalhes() {
       )}
 
       {/* Confirm Modal de Exclusão */}
-      <ConfirmModal
-        isOpen={isDeleteConfirmOpen}
-        onClose={() => !isSubmitting && setIsDeleteConfirmOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Excluir Registro de Suplementação"
-        message={`Tem certeza que deseja excluir o registro de ${formatDate(registro.data)}?\n\nLote: ${registro.lote || '-'}\nFormulação: ${registro.formulacao || '-'}\nKG Cocho: ${registro.kg_cocho || 0}\n\nO registro será marcado como excluído. As métricas de consumo da série serão recalculadas automaticamente.`}
-        confirmText={isSubmitting ? 'Excluindo...' : 'Excluir'}
-        cancelText="Cancelar"
-        variant="danger"
-      />
-    </div>
+      {registro && (
+        <ConfirmModal
+          isOpen={isDeleteConfirmOpen}
+          onClose={() => !isSubmitting && setIsDeleteConfirmOpen(false)}
+          onConfirm={handleConfirmDelete}
+          title="Excluir Registro de Suplementação"
+          message={`Tem certeza que deseja excluir o registro de ${formatDate(registro.data)}?\n\nLote: ${registro.lote || '-'}\nFormulação: ${registro.formulacao || '-'}\nKG Cocho: ${registro.kg_cocho || 0}\n\nO registro será marcado como excluído. As métricas de consumo da série serão recalculadas automaticamente.`}
+          confirmText={isSubmitting ? 'Excluindo...' : 'Excluir'}
+          cancelText="Cancelar"
+          variant="danger"
+        />
+      )}
+    </>
   )
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardItem, useToast, EmptyState, PageSkeleton } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -50,6 +50,7 @@ interface FornecedorOption {
 export function Insumos() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [fornecedores, setFornecedores] = useState<FornecedorOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -214,7 +215,7 @@ export function Insumos() {
   const handleToggleActive = async (insumo: Insumo) => {
     // Insumos gerados de premix não podem ser desativados diretamente
     if (insumo.formulacao_origem_id) {
-      alert(
+      toast.warning(
         'Este insumo é gerado automaticamente por uma formulação premix. ' +
         'Para desativá-lo, desative a formulação de origem em Formulações.'
       )
@@ -254,14 +255,7 @@ export function Insumos() {
   useKeyboardShortcuts(shortcuts)
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-      </div>
-    )
+    return <PageSkeleton variant="grid" />
   }
 
   return (
@@ -432,10 +426,10 @@ export function Insumos() {
       )}
 
       {!showForm && insumos.length === 0 ? (
-        <Card className="bg-white p-12 border-0 shadow-sm text-center">
-          <p className="text-gray-600 mb-4">Nenhum insumo cadastrado</p>
-          <Button onClick={() => setShowForm(true)}>Criar Primeiro Insumo</Button>
-        </Card>
+        <EmptyState
+          title="Nenhum insumo cadastrado"
+          action={<Button onClick={() => setShowForm(true)}>Criar Primeiro Insumo</Button>}
+        />
       ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {insumos

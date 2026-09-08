@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState, ReactNode } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem, Modal, MultiSelect } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem, Modal, MultiSelect, useToast } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { updateFazenda } from '../../services/fazendasService'
 import { hashPin } from '../../utils/pinHash'
 import { CADERNETAS } from '../../utils/cadernetas'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import * as XLSX from 'xlsx'
+import type * as XLSXType from 'xlsx'
 
 interface TabConfig {
   key: string
@@ -343,6 +343,7 @@ function novoArtigo(tab: TabConfig): string {
 
 export function CadastrosAuxiliares() {
   const { user } = useAuth()
+  const toast = useToast()
   const [activeTab, setActiveTab] = useState(tabs[0].key)
   const [tabStates, setTabStates] = useState<Record<string, TabState>>(
     () => Object.fromEntries(tabs.map((t) => [t.key, { ...defaultTabState }]))
@@ -358,11 +359,13 @@ export function CadastrosAuxiliares() {
   const [setorEmEdicao, setSetorEmEdicao] = useState<{id: string | null, nome: string, funcionario_ids: string[]} | null>(null)
   const [salvandoSetor, setSalvandoSetor] = useState(false)
   const [atribuindoFunc, setAtribuindoFunc] = useState<string | null>(null)
+  const [setorParaExcluir, setSetorParaExcluir] = useState<string | null>(null)
   const [funcionarioRbac, setFuncionarioRbac] = useState({
     acessa_app: false,
     pin: '',
     cadernetas_permitidas: [] as string[],
   })
+  const [funcionarioErrors, setFuncionarioErrors] = useState<Record<string, string>>({})
   const [mostrarApenasComAcesso, setMostrarApenasComAcesso] = useState(false)
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [controleAcessoHabilitado, setControleAcessoHabilitado] = useState(false)
@@ -448,27 +451,31 @@ export function CadastrosAuxiliares() {
     const fazendaId = await getFazendaId()
     if (!fazendaId) return
 
-    const { data, error } = await supabase
-      .from('setores')
-      .select('id, nome')
-      .eq('fazenda_id', fazendaId)
-      .eq('ativo', true)
-      .is('deleted_at', null)
-      .order('nome', { ascending: true })
+    // Buscar setores e funcionários com setores em paralelo (são independentes)
+    const [
+      { data, error },
+      { data: funcData, error: funcError },
+    ] = await Promise.all([
+      supabase
+        .from('setores')
+        .select('id, nome')
+        .eq('fazenda_id', fazendaId)
+        .eq('ativo', true)
+        .is('deleted_at', null)
+        .order('nome', { ascending: true }),
+      supabase
+        .from('v_funcionarios_com_setores')
+        .select('funcionario_id, nome, cargo, ativo, setor_ids, setor_nomes')
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+        .order('nome', { ascending: true }),
+    ])
 
     if (error) {
       console.error('Erro ao buscar setores:', error)
     } else {
       setSetores(data || [])
     }
-
-    // Carregar funcionarios com setores via view N:N
-    const { data: funcData, error: funcError } = await supabase
-      .from('v_funcionarios_com_setores')
-      .select('funcionario_id, nome, cargo, ativo, setor_ids, setor_nomes')
-      .eq('fazenda_id', fazendaId)
-      .is('deleted_at', null)
-      .order('nome', { ascending: true })
 
     if (funcError) {
       console.error('Erro ao buscar funcionários com setor:', funcError)
@@ -539,31 +546,38 @@ export function CadastrosAuxiliares() {
 
       setSetorEmEdicao(null)
       await loadSetoresComFuncionarios()
+      toast.success('Setor salvo com sucesso.')
     } catch (err) {
       console.error('Erro ao salvar setor:', err)
-      alert('Erro ao salvar setor')
+      toast.error('Erro ao salvar setor.')
     } finally {
       setSalvandoSetor(false)
     }
   }
 
   const handleExcluirSetor = async (setorId: string) => {
-    if (!confirm('Excluir este setor? Os funcionários ficarão sem setor.')) return
+    setSetorParaExcluir(setorId)
+  }
+
+  const confirmarExclusaoSetor = async () => {
+    if (!setorParaExcluir) return
     try {
       // Desvincular funcionários da junction
       await supabase
         .from('funcionario_setores')
         .delete()
-        .eq('setor_id', setorId)
+        .eq('setor_id', setorParaExcluir)
       // Soft delete
       await supabase
         .from('setores')
         .update({ deleted_at: new Date().toISOString(), ativo: false })
-        .eq('id', setorId)
+        .eq('id', setorParaExcluir)
       await loadSetoresComFuncionarios()
     } catch (err) {
       console.error('Erro ao excluir setor:', err)
-      alert('Erro ao excluir setor')
+      toast.error('Erro ao excluir setor.')
+    } finally {
+      setSetorParaExcluir(null)
     }
   }
 
@@ -578,7 +592,7 @@ export function CadastrosAuxiliares() {
       await loadSetoresComFuncionarios()
     } catch (err) {
       console.error('Erro ao atribuir setor:', err)
-      alert('Erro ao atribuir setor')
+      toast.error('Erro ao atribuir setor.')
     } finally {
       setAtribuindoFunc(null)
     }
@@ -596,7 +610,7 @@ export function CadastrosAuxiliares() {
       await loadSetoresComFuncionarios()
     } catch (err) {
       console.error('Erro ao remover do setor:', err)
-      alert('Erro ao remover do setor')
+      toast.error('Erro ao remover do setor.')
     } finally {
       setAtribuindoFunc(null)
     }
@@ -694,7 +708,7 @@ export function CadastrosAuxiliares() {
       if (funcionarioRbac.acessa_app) {
         const temPinAtual = !!state.editingItem?.pin_hash
         if (!/^[0-9]{4}$/.test(funcionarioRbac.pin) && !temPinAtual) {
-          alert('PIN deve ter exatamente 4 dígitos numéricos')
+          setFuncionarioErrors({ pin: 'PIN deve ter exatamente 4 dígitos numéricos.' })
           setTabStates((prev) => ({
             ...prev,
             [activeTab]: { ...prev[activeTab], submitting: false },
@@ -703,7 +717,7 @@ export function CadastrosAuxiliares() {
         }
 
         if (funcionarioRbac.cadernetas_permitidas.length === 0) {
-          alert('Selecione pelo menos uma caderneta')
+          setFuncionarioErrors({ cadernetas: 'Selecione pelo menos uma caderneta.' })
           setTabStates((prev) => ({
             ...prev,
             [activeTab]: { ...prev[activeTab], submitting: false },
@@ -749,8 +763,9 @@ export function CadastrosAuxiliares() {
 
     if (error) {
       console.error(`Erro ao salvar ${tab.label}:`, error)
-      alert(`Erro ao salvar. Verifique se já não existe um registro com este nome.`)
+      toast.error('Erro ao salvar. Verifique se já não existe um registro com este nome.')
     } else {
+      setFuncionarioErrors({})
       setTabStates((prev) => ({
         ...prev,
         [activeTab]: {
@@ -762,6 +777,7 @@ export function CadastrosAuxiliares() {
         },
       }))
       loadItems(activeTab)
+      toast.success(state.editingItem ? `${tab.singular || tab.label} atualizado(a) com sucesso.` : `${tab.singular || tab.label} criado(a) com sucesso.`)
     }
 
     setTabStates((prev) => ({
@@ -771,6 +787,7 @@ export function CadastrosAuxiliares() {
   }
 
   const handleEdit = (item: GenericItem) => {
+    setFuncionarioErrors({})
     const tab = tabs.find((t) => t.key === activeTab)!
     const formData: Record<string, string> = {}
     tab.fields.forEach((f) => {
@@ -803,6 +820,7 @@ export function CadastrosAuxiliares() {
 
   const handleCancel = () => {
     const tab = tabs.find((t) => t.key === activeTab)!
+    setFuncionarioErrors({})
     setFuncionarioRbac({
       acessa_app: false,
       pin: '',
@@ -982,6 +1000,7 @@ export function CadastrosAuxiliares() {
       const existingNames = new Set(existingBebedouros?.map(b => b.nome.toLowerCase()) || [])
 
       const data = await file.arrayBuffer()
+      const XLSX = await import('xlsx') as typeof XLSXType
       const workbook = XLSX.read(data, { type: 'array' })
       const sheetName = workbook.SheetNames[0]
       const worksheet = workbook.Sheets[sheetName]
@@ -1573,11 +1592,13 @@ export function CadastrosAuxiliares() {
                             onChange={(e) => {
                               const value = e.target.value.replace(/\D/g, '')
                               setFuncionarioRbac({ ...funcionarioRbac, pin: value })
+                              if (funcionarioErrors.pin) setFuncionarioErrors((p) => ({ ...p, pin: '' }))
                             }}
                             placeholder="4 dígitos"
                             autoComplete="new-password"
-                            className="border-gray-200 focus:border-accent min-h-[44px]"
+                            className={`focus:border-accent min-h-[44px] ${funcionarioErrors.pin ? 'border-red-400' : 'border-gray-200'}`}
                           />
+                          {funcionarioErrors.pin && <p className="text-xs text-red-600 mt-1">{funcionarioErrors.pin}</p>}
                         </div>
 
                         <div>
@@ -1603,6 +1624,9 @@ export function CadastrosAuxiliares() {
                                 : 'Selecionar todas'}
                             </button>
                           </div>
+                          {funcionarioErrors.cadernetas && (
+                            <p className="text-xs text-red-600 mb-2">{funcionarioErrors.cadernetas}</p>
+                          )}
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {CADERNETAS.map((caderneta) => (
                               <label
@@ -1613,6 +1637,7 @@ export function CadastrosAuxiliares() {
                                   type="checkbox"
                                   checked={funcionarioRbac.cadernetas_permitidas.includes(caderneta.id)}
                                   onChange={(e) => {
+                                    if (funcionarioErrors.cadernetas) setFuncionarioErrors((p) => ({ ...p, cadernetas: '' }))
                                     const selected = funcionarioRbac.cadernetas_permitidas
                                     if (e.target.checked) {
                                       setFuncionarioRbac({
@@ -1815,6 +1840,16 @@ export function CadastrosAuxiliares() {
           </Button>
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!setorParaExcluir}
+        onClose={() => setSetorParaExcluir(null)}
+        onConfirm={confirmarExclusaoSetor}
+        title="Excluir setor?"
+        message="Os funcionários ficarão sem setor."
+        confirmText="Excluir"
+        variant="danger"
+      />
     </div>
   )
 }

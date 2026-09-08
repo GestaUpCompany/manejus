@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, CardItem, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, CardItem, ConfirmModal, useToast } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -132,6 +132,7 @@ function DecimalInput({
 export function Formulacoes() {
   const { user } = useAuth()
   const [searchParams] = useSearchParams()
+  const toast = useToast()
   const [formulacoes, setFormulacoes] = useState<Dieta[]>([])
   const [insumos, setInsumos] = useState<InsumoOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -366,7 +367,7 @@ export function Formulacoes() {
         .maybeSingle()
 
       if (colisao) {
-        alert(
+        toast.error(
           `Já existe um insumo atômico chamado "${formData.nome}". ` +
           `Renomeie a formulação ou o insumo existente para evitar confusão no select de ingredientes.`
         )
@@ -661,7 +662,7 @@ export function Formulacoes() {
         .eq('formulacao_id', dieta.id)
         .eq('ativo', true)
       if (lotesUsando && lotesUsando.length > 0) {
-        alert(`Não é possível desativar a formulação "${dieta.nome}" porque está em uso por ${lotesUsando.length} ${lotesUsando.length === 1 ? 'lote ativo' : 'lotes ativos'}: ${lotesUsando.map(l => l.nome).join(', ')}. Remova a formulação dos lotes antes de desativar.`)
+        toast.error(`Não é possível desativar a formulação "${dieta.nome}" porque está em uso por ${lotesUsando.length} ${lotesUsando.length === 1 ? 'lote ativo' : 'lotes ativos'}: ${lotesUsando.map(l => l.nome).join(', ')}. Remova a formulação dos lotes antes de desativar.`)
         return
       }
     }

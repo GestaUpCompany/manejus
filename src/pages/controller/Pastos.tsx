@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, MultiSelect } from '../../components/ui'
+import { Button, Card, Input, ConfirmModal, MultiSelect, EmptyState, PageSkeleton } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
-import * as XLSX from 'xlsx'
+import type * as XLSXType from 'xlsx'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface Pasto {
@@ -415,6 +415,7 @@ export function Pastos() {
 
       // Ler arquivo Excel
       const data = await file.arrayBuffer()
+      const XLSX = await import('xlsx') as typeof XLSXType
       const workbook = XLSX.read(data, { type: 'array' })
       const sheetName = workbook.SheetNames[0]
       const worksheet = workbook.Sheets[sheetName]
@@ -618,14 +619,7 @@ export function Pastos() {
   useKeyboardShortcuts(shortcuts)
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-      </div>
-    )
+    return <PageSkeleton variant="grid" />
   }
 
   return (
@@ -1103,12 +1097,10 @@ export function Pastos() {
       )}
 
       {!showForm && pastosFiltrados.length === 0 ? (
-        <Card className="bg-white p-8 sm:p-12 border-0 shadow-sm text-center">
-          <p className="text-gray-600 mb-4 text-sm sm:text-base">
-            {searchTerm ? 'Nenhum pasto encontrado para a busca' : 'Nenhum pasto cadastrado'}
-          </p>
-          {!searchTerm && <Button onClick={() => setShowForm(true)} className="text-sm">Criar Primeiro Pasto</Button>}
-        </Card>
+        <EmptyState
+          title={searchTerm ? 'Nenhum pasto encontrado para a busca' : 'Nenhum pasto cadastrado'}
+          action={!searchTerm ? <Button onClick={() => setShowForm(true)} className="text-sm">Criar Primeiro Pasto</Button> : undefined}
+        />
       ) : !showForm ? (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

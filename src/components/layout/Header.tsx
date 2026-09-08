@@ -48,6 +48,7 @@ export function Header() {
           <img
             src="/images/manejus360.png"
             alt="Manej'Us 360"
+            loading="eager"
             className="h-7 sm:h-8 md:h-10 w-auto hover-scale cursor-pointer rounded-lg"
           />
           <h1 className="text-sm sm:text-base md:text-xl font-bold text-white ml-1 sm:ml-2 md:ml-3 hidden sm:block">
@@ -63,7 +64,7 @@ export function Header() {
           </div>
           <Dropdown
             trigger={
-              <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white/10 rounded-lg transition-all text-white hover-scale button-press hover:bg-white/20">
+              <button aria-label="Menu do usuário" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 min-h-[44px] bg-white/10 rounded-lg transition-all text-white hover-scale button-press hover:bg-white/20">
                 <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>

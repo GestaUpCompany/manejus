@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, ConfirmModal, useToast } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface LinhaConfinamento {
@@ -59,6 +59,7 @@ function formatCategoria(texto: string): string {
 
 export function Currais() {
   const { user } = useAuth()
+  const toast = useToast()
   const [linhas, setLinhas] = useState<LinhaConfinamento[]>([])
   const [currais, setCurrais] = useState<Curral[]>([])
   const [lotes, setLotes] = useState<Lote[]>([])
@@ -364,7 +365,7 @@ export function Currais() {
     if (curralFormData.lote_id) {
       const loteSel = lotes.find(l => l.id === curralFormData.lote_id)
       if (loteSel?.pasto_id) {
-        alert('Este lote está alocado em um pasto e não pode ser vinculado a um curral simultaneamente. Remova-o do pasto primeiro.')
+        toast.error('Este lote está alocado em um pasto e não pode ser vinculado a um curral simultaneamente. Remova-o do pasto primeiro.')
         setSubmittingCurral(false)
         return
       }

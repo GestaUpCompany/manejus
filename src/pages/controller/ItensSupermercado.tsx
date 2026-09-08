@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, Select } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, Select, useToast } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -17,6 +17,7 @@ interface ItemSupermercado {
 
 export function ItensSupermercado() {
   const { user } = useAuth()
+  const toast = useToast()
   const [itens, setItens] = useState<ItemSupermercado[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -108,7 +109,7 @@ export function ItensSupermercado() {
 
     if (error) {
       console.error('Erro ao salvar item:', error)
-      alert('Erro ao salvar item')
+      toast.error('Erro ao salvar item')
       return
     }
 

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { Card, Button } from '../../components/ui'
+import { Card, Button, ErrorState, PageSkeleton } from '../../components/ui'
 import { CADERNETA_IMAGES, CADERNETA_TITLES } from '../../types/images'
 import { useFazenda, useDashboardStats, useGadoStats, useRecentActivities, useFormulacoesBackfillAlert } from '../../hooks/useDashboardQueries'
 
@@ -9,13 +9,14 @@ export function ControllerDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const { data: fazenda, isLoading: loadingFazenda } = useFazenda(user?.id)
-  const { data: stats, isLoading: loadingStats } = useDashboardStats(user?.id)
+  const { data: fazenda, isLoading: loadingFazenda, isError: fazendaError, error: fazendaErr, refetch: refetchFazenda } = useFazenda(user?.id)
+  const { data: stats, isLoading: loadingStats, isError: statsError, error: statsErr, refetch: refetchStats } = useDashboardStats(user?.id)
   const { data: gadoStats } = useGadoStats(user?.id)
   const { data: recentActivities } = useRecentActivities(user?.id)
   const { data: formulacoesBackfill } = useFormulacoesBackfillAlert(user?.id)
 
   const loading = loadingFazenda || loadingStats
+  const loadError = fazendaError || statsError
 
   const cadastroStats = stats?.cadastroStats ?? { pastos: 0, lotes: 0, funcionarios: 0, insumos: 0, pluviometros: 0, medicamentos: 0 }
   const cadernetaStats = stats?.cadernetaStats ?? {
@@ -30,10 +31,17 @@ export function ControllerDashboard() {
   }
 
   if (loading) {
+    return <PageSkeleton variant="grid" />
+  }
+
+  if (loadError) {
+    const errMsg = (fazendaErr as Error)?.message || (statsErr as Error)?.message
     return (
-      <div className="flex items-center justify-center py-12 animate-fade-in">
-        <p className="text-gray-600">Carregando...</p>
-      </div>
+      <ErrorState
+        message="Erro ao carregar dados do dashboard"
+        detail={errMsg}
+        onRetry={() => { refetchFazenda(); refetchStats() }}
+      />
     )
   }
 
@@ -55,6 +63,7 @@ export function ControllerDashboard() {
             <img
               src={fazenda.logo_url}
               alt={fazenda.nome}
+              loading="eager"
               className="w-20 h-12 sm:w-32 sm:h-16 rounded-xl object-contain"
             />
           ) : (
@@ -263,7 +272,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/maternidade')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.maternidade} alt={CADERNETA_TITLES.maternidade} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.maternidade} alt={CADERNETA_TITLES.maternidade} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.maternidade}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.maternidade}</p>
@@ -275,7 +284,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/pastagens')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.pastagens} alt={CADERNETA_TITLES.pastagens} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.pastagens} alt={CADERNETA_TITLES.pastagens} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.pastagens}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.pastagens}</p>
@@ -287,7 +296,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/rodeio')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.rodeio} alt={CADERNETA_TITLES.rodeio} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.rodeio} alt={CADERNETA_TITLES.rodeio} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.rodeio}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.rodeio}</p>
@@ -299,7 +308,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/suplementacao')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.suplementacao} alt={CADERNETA_TITLES.suplementacao} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.suplementacao} alt={CADERNETA_TITLES.suplementacao} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.suplementacao}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.suplementacao}</p>
@@ -311,7 +320,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/bebedouros')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.bebedouros} alt={CADERNETA_TITLES.bebedouros} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.bebedouros} alt={CADERNETA_TITLES.bebedouros} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.bebedouros}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.bebedouros}</p>
@@ -323,7 +332,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/movimentacao')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.movimentacao} alt={CADERNETA_TITLES.movimentacao} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.movimentacao} alt={CADERNETA_TITLES.movimentacao} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.movimentacao}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.movimentacao}</p>
@@ -335,7 +344,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/enfermaria')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.enfermaria} alt={CADERNETA_TITLES.enfermaria} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.enfermaria} alt={CADERNETA_TITLES.enfermaria} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.enfermaria}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.enfermaria}</p>
@@ -347,7 +356,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/morte')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.morte} alt={CADERNETA_TITLES.morte} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.morte} alt={CADERNETA_TITLES.morte} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.morte}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.morte}</p>
@@ -359,7 +368,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/clima')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.clima} alt={CADERNETA_TITLES.clima} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.clima} alt={CADERNETA_TITLES.clima} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.clima}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.clima}</p>
@@ -371,7 +380,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/abastecimento')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.abastecimento} alt={CADERNETA_TITLES.abastecimento} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.abastecimento} alt={CADERNETA_TITLES.abastecimento} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.abastecimento}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.abastecimento}</p>
@@ -383,7 +392,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/alimentacao')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.cantina} alt={CADERNETA_TITLES.cantina} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.cantina} alt={CADERNETA_TITLES.cantina} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.cantina}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.cantina}</p>
@@ -395,7 +404,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/limpeza')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.limpeza} alt={CADERNETA_TITLES.limpeza} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.limpeza} alt={CADERNETA_TITLES.limpeza} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.limpeza}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.limpeza}</p>
@@ -407,7 +416,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/operacoes-maquinas')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES['operacoes-maquinas']} alt={CADERNETA_TITLES['operacoes-maquinas']} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES['operacoes-maquinas']} alt={CADERNETA_TITLES['operacoes-maquinas']} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES['operacoes-maquinas']}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats['operacoes-maquinas']}</p>
@@ -419,7 +428,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/almoxarifado')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.almoxarifado} alt={CADERNETA_TITLES.almoxarifado} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.almoxarifado} alt={CADERNETA_TITLES.almoxarifado} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.almoxarifado}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.almoxarifado}</p>
@@ -431,7 +440,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/manutencao-maquinas')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES['manutencao-maquinas']} alt={CADERNETA_TITLES['manutencao-maquinas']} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES['manutencao-maquinas']} alt={CADERNETA_TITLES['manutencao-maquinas']} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES['manutencao-maquinas']}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats['manutencao-maquinas']}</p>
@@ -443,7 +452,7 @@ export function ControllerDashboard() {
             onClick={() => navigate('/controller/cadernetas/problemas')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-              <img src={CADERNETA_IMAGES.problemas} alt={CADERNETA_TITLES.problemas} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <img src={CADERNETA_IMAGES.problemas} alt={CADERNETA_TITLES.problemas} loading="lazy" className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.problemas}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.problemas}</p>

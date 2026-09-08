@@ -1,4 +1,4 @@
-import jsPDF from 'jspdf'
+import type jsPDF from 'jspdf'
 
 // === Paleta de cores compartilhada ===
 const GREEN_DARK = '#0F6437'

@@ -1,9 +1,6 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { Chart, registerables } from 'chart.js'
+import type jsPDF from 'jspdf'
+import type { Chart } from 'chart.js'
 import { renderRelatorioHeader, type HeaderContext } from './relatorioHeaderPDF'
-
-Chart.register(...registerables)
 
 export interface Agregado {
   label: string
@@ -134,6 +131,8 @@ async function renderizarGraficoBarras(
   const labels = dados.map((d) => d.label)
   const valores = dados.map((d) => Number(d.valor))
 
+  const { Chart, registerables } = await import('chart.js')
+  Chart.register(...registerables)
   const chart = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -457,15 +456,16 @@ async function renderChartCard(
 
 // === Tabela 1: Detalhamento por máquina (colunas 1-5) ===
 
-function renderTabelaDetalhamento(
+async function renderTabelaDetalhamento(
   ctx: RenderContext,
   detalhes: DetalheMaquinaPDF[],
   totalLitros: number,
   totalRegistros: number,
   startY: number,
   margin: number,
-): number {
+): Promise<number> {
   const { doc } = ctx
+  const autoTableMod = await import('jspdf-autotable')
 
   doc.setFontSize(10)
   setTextColor(doc, DARK_TEXT)
@@ -505,7 +505,7 @@ function renderTabelaDetalhamento(
   ])
 
   // @ts-ignore
-  autoTable(doc, {
+  autoTableMod.default(doc, {
     startY,
     head: [['Máquina/Veículo', 'Litros', '% Total', 'Nº abast.', 'Média (L)', 'Maior (L)', 'Período', 'Combustíveis']],
     body: tabelaDados,
@@ -542,13 +542,14 @@ function renderTabelaDetalhamento(
 
 // === Tabela 2: Detalhamento operacional (colunas 6-9) ===
 
-function renderTabelaOperacional(
+async function renderTabelaOperacional(
   ctx: RenderContext,
   detalhes: DetalheMaquinaPDF[],
   startY: number,
   margin: number,
-): number {
+): Promise<number> {
   const { doc } = ctx
+  const autoTableMod = await import('jspdf-autotable')
 
   doc.setFontSize(10)
   setTextColor(doc, DARK_TEXT)
@@ -562,7 +563,7 @@ function renderTabelaOperacional(
   ])
 
   // @ts-ignore
-  autoTable(doc, {
+  autoTableMod.default(doc, {
     startY,
     head: [['Máquina/Veículo', 'Operador(es)', 'Placa(s)']],
     body: tabelaDados,
@@ -596,7 +597,8 @@ function renderTabelaOperacional(
 // === Função principal ===
 
 export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAbastecimento): Promise<Blob> {
-  const doc = new jsPDF({
+  const jsPDFMod = await import('jspdf')
+  const doc = new jsPDFMod.default({
     orientation: 'landscape',
     unit: 'mm',
     format: 'a4',
@@ -666,7 +668,7 @@ export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAba
   }
 
   // Tabela 1: Detalhamento por máquina (colunas 1-5)
-  let finalY = renderTabelaDetalhamento(ctx, dados.detalhesPorMaquina, dados.totalLitros, dados.totalRegistros, tabelaY, margin)
+  let finalY = await renderTabelaDetalhamento(ctx, dados.detalhesPorMaquina, dados.totalLitros, dados.totalRegistros, tabelaY, margin)
 
   // Tabela 2: Detalhamento operacional (colunas 6-9)
   const tabela2Y = finalY + 18
@@ -680,7 +682,7 @@ export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAba
     finalY = 40
   }
 
-  renderTabelaOperacional(ctx, dados.detalhesPorMaquina, finalY > 30 ? finalY : tabela2Y, margin)
+  await renderTabelaOperacional(ctx, dados.detalhesPorMaquina, finalY > 30 ? finalY : tabela2Y, margin)
 
   // === Footer em todas as páginas ===
   const numPaginas = doc.getNumberOfPages()

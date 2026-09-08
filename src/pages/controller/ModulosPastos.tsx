@@ -69,24 +69,27 @@ export function ModulosPastos() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    const { data, error } = await supabase
-      .from('modulos_pastos')
-      .select('*, pastos(id, nome, area_util_ha, especie), setores(nome)')
-      .eq('fazenda_id', fazendaId)
-      .order('nome')
+    // Carregar módulos e ocupação atual em paralelo (consultas independentes)
+    const [
+      { data, error },
+      { data: ocupacaoData },
+    ] = await Promise.all([
+      supabase
+        .from('modulos_pastos')
+        .select('*, pastos(id, nome, area_util_ha, especie), setores(nome)')
+        .eq('fazenda_id', fazendaId)
+        .order('nome'),
+      // Carregar ocupação atual dos módulos (múltiplos lotes por módulo)
+      supabase
+        .from('v_lote_modulo_ocupacao_atual')
+        .select('*'),
+    ])
 
     if (error) {
       console.error('Erro ao carregar módulos:', error)
     } else {
       setModulos(data || [])
     }
-
-    setLoading(false)
-
-    // Carregar ocupação atual dos módulos (múltiplos lotes por módulo)
-    const { data: ocupacaoData } = await supabase
-      .from('v_lote_modulo_ocupacao_atual')
-      .select('*')
 
     if (ocupacaoData) {
       const ocupacaoMap: Record<string, any[]> = {}
@@ -96,6 +99,8 @@ export function ModulosPastos() {
       })
       setOcupacaoPorModulo(ocupacaoMap)
     }
+
+    setLoading(false)
   }
 
   const loadPastos = async (moduloId?: string) => {

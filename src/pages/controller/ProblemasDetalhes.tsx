@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card } from '../../components/ui'
+import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -34,12 +34,23 @@ interface RegistroProblemas {
   updated_at?: string
 }
 
+function fieldWithObs(value?: string, obs?: string): string {
+  if (!value) return '-'
+  return obs ? `${value} (${obs})` : value
+}
+
+function boolWithObs(value?: boolean, obs?: string): string {
+  const base = value ? 'Sim' : 'Não'
+  return obs ? `${base} - ${obs}` : base
+}
+
 export function ProblemasDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroProblemas | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistro()
@@ -48,6 +59,7 @@ export function ProblemasDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
+    setLoadError(null)
     const _fazendaId = await getFazendaIdForUser(user.id)
     const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
@@ -64,7 +76,12 @@ export function ProblemasDetalhes() {
       .single()
 
     if (error) {
-      console.error('Erro ao buscar registro:', error)
+      if (error.code === 'PGRST116') {
+        setRegistro(null)
+      } else {
+        console.error('Erro ao buscar registro:', error)
+        setLoadError(error.message || 'Erro ao buscar registro')
+      }
     } else {
       setRegistro(data as RegistroProblemas)
     }
@@ -72,82 +89,58 @@ export function ProblemasDetalhes() {
     setLoading(false)
   }
 
-  if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
-  }
-
-  if (!registro) {
-    return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/problemas')}>
-          Voltar
-        </Button>
-        <Card className="bg-white p-6 text-center" disableHover>
-          <p className="text-gray-600">Registro não encontrado</p>
-        </Card>
-      </div>
-    )
-  }
+  const backUrl = '/controller/cadernetas/problemas'
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Problemas</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/problemas')}>
-          Voltar
-        </Button>
-      </div>
-
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
-        <div className="space-y-6">
-          {/* Informações Gerais */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Setor:</span> {registro.setor || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Local:</span> {registro.local || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Prioridade:</span> {registro.prioridade || '-'}</p>
-            </div>
-          </div>
-
-          {/* Problema */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Problema</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+    <DetailLayout
+      loading={loading}
+      loadError={loadError}
+      notFound={!registro}
+      onBack={() => navigate(backUrl)}
+      title="Detalhes do Registro de Problemas"
+    >
+      {() => (
+        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+          <div className="space-y-6">
+            {/* Informações Gerais */}
+            <DetailSection title="Informações Gerais">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Problema:</span> {registro.tipo_problema || '-'}{registro.tipo_problema_obs ? ` (${registro.tipo_problema_obs})` : ''}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Ocorrência:</span> {registro.tipo_ocorrencia || '-'}{registro.tipo_ocorrencia_obs ? ` (${registro.tipo_ocorrencia_obs})` : ''}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Gravidade do Impacto:</span> {registro.gravidade_impacto || '-'}{registro.gravidade_impacto_obs ? ` (${registro.gravidade_impacto_obs})` : ''}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Setor Resolve:</span> {registro.setor_resolve || '-'}</p>
+                <DetailField label="Data" value={formatDate(registro!.data)} />
+                <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                <DetailField label="Setor" value={formatValue(registro!.setor)} />
+                <DetailField label="Local" value={formatValue(registro!.local)} />
+                <DetailField label="Prioridade" value={formatValue(registro!.prioridade)} />
               </div>
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Descrição */}
-          {registro.descricao_problema && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Descrição do Problema</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm">{registro.descricao_problema}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Análise */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Análise e Ação</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Problema */}
+            <DetailSection title="Problema" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Causa Identificada:</span> {registro.causa_identificada ? 'Sim' : 'Não'}{registro.causa_identificada_obs ? ` - ${registro.causa_identificada_obs}` : ''}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Causa Raiz Identificada:</span> {registro.causa_raiz_identificada ? 'Sim' : 'Não'}{registro.causa_raiz_identificada_obs ? ` - ${registro.causa_raiz_identificada_obs}` : ''}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Ação Corretiva Realizada:</span> {registro.acao_corretiva_realizada ? 'Sim' : 'Não'}{registro.acao_corretiva_realizada_obs ? ` - ${registro.acao_corretiva_realizada_obs}` : ''}</p>
+                <DetailField label="Tipo Problema" value={fieldWithObs(registro!.tipo_problema, registro!.tipo_problema_obs)} />
+                <DetailField label="Tipo Ocorrência" value={fieldWithObs(registro!.tipo_ocorrencia, registro!.tipo_ocorrencia_obs)} />
+                <DetailField label="Gravidade do Impacto" value={fieldWithObs(registro!.gravidade_impacto, registro!.gravidade_impacto_obs)} />
+                <DetailField label="Setor Resolve" value={formatValue(registro!.setor_resolve)} />
               </div>
-            </div>
+            </DetailSection>
+
+            {/* Descrição */}
+            {registro!.descricao_problema && (
+              <DetailSection title="Descrição do Problema" highlighted>
+                <p className="text-sm">{registro!.descricao_problema}</p>
+              </DetailSection>
+            )}
+
+            {/* Análise */}
+            <DetailSection title="Análise e Ação" highlighted>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <DetailField label="Causa Identificada" value={boolWithObs(registro!.causa_identificada, registro!.causa_identificada_obs)} />
+                <DetailField label="Causa Raiz Identificada" value={boolWithObs(registro!.causa_raiz_identificada, registro!.causa_raiz_identificada_obs)} />
+                <DetailField label="Ação Corretiva Realizada" value={boolWithObs(registro!.acao_corretiva_realizada, registro!.acao_corretiva_realizada_obs)} />
+              </div>
+            </DetailSection>
           </div>
-        </div>
-      </Card>
-    </div>
+        </Card>
+      )}
+    </DetailLayout>
   )
 }

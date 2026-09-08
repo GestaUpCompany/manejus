@@ -66,6 +66,7 @@ export function Login() {
           <img
             src="/images/manejus360.png"
             alt="Manej'Us 360"
+            loading="eager"
             className="w-32 h-32 mb-6 rounded-lg"
           />
           <h1 className="text-4xl font-extrabold text-primary mb-3 tracking-wider leading-tight text-center">
@@ -101,12 +102,13 @@ export function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="relative">
-              <label className="block text-sm font-semibold text-primary mb-2">Email</label>
+              <label htmlFor="login-email" className="block text-sm font-semibold text-primary mb-2">Email</label>
               <div className="relative">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                 </svg>
                 <input
+                  id="login-email"
                   type="email"
                   value={email}
                   onChange={handleEmailChange}
@@ -135,12 +137,13 @@ export function Login() {
               )}
             </div>
             <div className="relative">
-              <label className="block text-sm font-semibold text-primary mb-2">Senha</label>
+              <label htmlFor="login-password" className="block text-sm font-semibold text-primary mb-2">Senha</label>
               <div className="relative">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={handlePasswordChange}
@@ -153,7 +156,8 @@ export function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:text-primary/80 transition-colors"
+                  aria-label={showPassword ? 'Esconder senha' : 'Mostrar senha'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:text-primary/80 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

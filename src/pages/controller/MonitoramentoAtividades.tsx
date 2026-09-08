@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Card, Modal, Input } from '../../components/ui'
+import { Card, Modal, Input, useToast } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import {
   getMonitoramentoData,
@@ -129,6 +129,7 @@ function formatarHoraCurta(iso: string | null): string {
 
 export function MonitoramentoAtividades() {
   const { user } = useAuth()
+  const toast = useToast()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [atividades, setAtividades] = useState<Atividade[]>([])
   const [loading, setLoading] = useState(true)
@@ -185,11 +186,13 @@ export function MonitoramentoAtividades() {
 
   useEffect(() => {
     if (!fazendaId) return
-    loadPrioridades()
-    loadFuncionarios()
-    loadAtividades()
-    loadSessoesAbertas()
-    loadImprevistosRecentes()
+    void Promise.all([
+      loadPrioridades(),
+      loadFuncionarios(),
+      loadAtividades(),
+      loadSessoesAbertas(),
+      loadImprevistosRecentes(),
+    ])
   }, [fazendaId])
 
   const loadSessoesAbertas = async () => {
@@ -230,7 +233,7 @@ export function MonitoramentoAtividades() {
       await loadAtividades(true)
     } catch (err) {
       console.error('[MonitoramentoAtividades] Erro ao reabrir atividade:', err)
-      alert('Erro ao reabrir atividade. Tente novamente.')
+      toast.error('Erro ao reabrir atividade. Tente novamente.')
     } finally {
       setReabrindoId(null)
     }
@@ -672,7 +675,7 @@ export function MonitoramentoAtividades() {
             {[1, 2, 3, 4].map((i) => <div key={i} className="h-8 w-28 bg-gray-200 rounded-full animate-pulse" />)}
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />)}
         </div>
         <div className="space-y-3">

@@ -60,6 +60,7 @@ export function FazendasList() {
                   <img
                     src={fazenda.logo_url}
                     alt={fazenda.nome}
+                    loading="lazy"
                     className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
                   />
                 ) : (

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton } from '../../components/ui'
+import { Button, Card, Input, EmptyState, PageSkeleton, Table, Thead, Tbody, Tr, Th, Td } from '../../components/ui'
 import { exportToXLSX } from '../../utils/exportXLSX'
 import { CLIMA_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '../../utils/formatDate'
@@ -86,14 +86,7 @@ export function RegistrosClima() {
   })
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-      </div>
-    )
+    return <PageSkeleton variant="list" />
   }
 
   return (
@@ -156,13 +149,9 @@ export function RegistrosClima() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro de clima encontrado</p>
-        </Card>
+        <EmptyState title="Nenhum registro encontrado" />
       ) : filteredRegistros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro encontrado com os filtros aplicados</p>
-        </Card>
+        <EmptyState title="Nenhum registro encontrado" description="Nenhum registro encontrado com os filtros aplicados" />
       ) : (
         <>
           {/* Mobile Card View */}
@@ -214,45 +203,45 @@ export function RegistrosClima() {
 
           {/* Desktop Table View */}
           <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+            <Table>
+              <Thead>
+                <Tr>
+                  <Th
+                    className="cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temperatura Média</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+                  </Th>
+                  <Th>Usuário</Th>
+                  <Th>Responsável</Th>
+                  <Th>Temperatura Média</Th>
+                  <Th>Observação</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
                 {filteredRegistros.map((registro) => (
-                  <tr
+                  <Tr
                     key={registro.id}
                     onClick={() => navigate(`/controller/cadernetas/clima/${registro.id}`)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="cursor-pointer"
                   >
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <Td>
                       {formatDate(registro.data)}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>{registro.nome_usuario || '-'}</Td>
+                    <Td>
                       {registro.responsavel || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.temperatura_media ? `${registro.temperatura_media}°C` : '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.observacao ? registro.observacao.substring(0, 50) + (registro.observacao.length > 50 ? '...' : '') : '-'}
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
+              </Tbody>
+            </Table>
           </Card>
         </>
       )}

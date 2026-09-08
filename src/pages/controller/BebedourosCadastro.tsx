@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
-import * as XLSX from 'xlsx'
+import type * as XLSXType from 'xlsx'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -240,6 +240,7 @@ export function BebedourosCadastro() {
 
       // Ler arquivo Excel
       const data = await file.arrayBuffer()
+      const XLSX = await import('xlsx') as typeof XLSXType
       const workbook = XLSX.read(data, { type: 'array' })
       const sheetName = workbook.SheetNames[0]
       const worksheet = workbook.Sheets[sheetName]

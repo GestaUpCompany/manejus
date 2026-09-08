@@ -1,5 +1,4 @@
-import jsPDF from 'jspdf'
-import Chart from 'chart.js/auto'
+import type jsPDF from 'jspdf'
 import { renderRelatorioHeader, type HeaderContext } from './relatorioHeaderPDF'
 
 // === Tipos ===
@@ -210,7 +209,8 @@ async function renderizarGraficoMortesTempo(
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
 
-  const chart = new Chart(ctx, {
+  const ChartMod = await import('chart.js/auto')
+  const chart = new ChartMod.default(ctx, {
     type: 'bar',
     data: {
       labels: dados.map((d) => d.label),
@@ -285,7 +285,8 @@ async function renderizarGraficoBarrasHorizontais(
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
 
-  const chart = new Chart(ctx, {
+  const ChartMod = await import('chart.js/auto')
+  const chart = new ChartMod.default(ctx, {
     type: 'bar',
     data: {
       labels: top.map((d) => d.label),
@@ -353,7 +354,8 @@ async function renderizarGraficoDonut(
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
 
-  const chart = new Chart(ctx, {
+  const ChartMod = await import('chart.js/auto')
+  const chart = new ChartMod.default(ctx, {
     type: 'doughnut',
     data: {
       labels: itens.map((d) => d.label),
@@ -615,7 +617,8 @@ function renderTabelaDetalhada(ctx: RenderContext, linhas: LinhaMorte[], startY:
 export async function gerarRelatorioMortePDF(params: ParametrosRelatorioMorte): Promise<Blob> {
   const { dataInicio, dataFim, fazendaNome, linhas, resumo } = params
 
-  const doc = new jsPDF({
+  const jsPDFMod = await import('jspdf')
+  const doc = new jsPDFMod.default({
     orientation: 'landscape',
     unit: 'mm',
     format: 'a4',

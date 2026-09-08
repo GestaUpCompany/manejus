@@ -185,6 +185,7 @@ export function EditarFazenda() {
                 <img
                   src={logoPreview}
                   alt="Preview"
+                  loading="lazy"
                   className="w-24 h-24 object-cover rounded-lg border-2 border-gray-300"
                 />
               ) : (

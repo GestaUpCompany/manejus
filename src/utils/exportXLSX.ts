@@ -1,4 +1,4 @@
-import ExcelJS from 'exceljs'
+import type ExcelJS from 'exceljs'
 import { formatDate, formatDateTime } from './formatDate'
 
 export type ColumnFormat = 'date' | 'datetime' | 'number' | 'boolean' | 'text'
@@ -224,7 +224,8 @@ export async function exportToXLSX(data: any[], config: TableExportConfig): Prom
 
   const { configCols, extraKeys } = buildColumnList(data, config.columns)
 
-  const workbook = new ExcelJS.Workbook()
+  const ExcelJSMod = await import('exceljs')
+  const workbook = new ExcelJSMod.default.Workbook()
   const worksheet = workbook.addWorksheet(config.sheetName)
 
   // Build resolved rows
@@ -248,7 +249,8 @@ export async function exportToXLSX(data: any[], config: TableExportConfig): Prom
 }
 
 export async function exportToXLSXMultiSheet(config: MultiSheetExportConfig): Promise<void> {
-  const workbook = new ExcelJS.Workbook()
+  const ExcelJSMod = await import('exceljs')
+  const workbook = new ExcelJSMod.default.Workbook()
   const usedNames = new Set<string>()
 
   for (const sheet of config.sheets) {

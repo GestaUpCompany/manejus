@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton } from '../../components/ui'
+import { Card, Input, EmptyState, PageSkeleton, Table, Thead, Tbody, Tr, Th, Td, SearchInput, FilterToolbar, FilterField } from '../../components/ui'
 import { exportToXLSX } from '../../utils/exportXLSX'
 import { MORTE_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '../../utils/formatDate'
@@ -103,14 +103,7 @@ export function RegistrosMorte() {
   })
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-      </div>
-    )
+    return <PageSkeleton variant="list" />
   }
 
   return (
@@ -119,67 +112,45 @@ export function RegistrosMorte() {
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Morte</h2>
       </div>
 
-      <Card className="bg-white p-4 sm:p-6" disableHover>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
-          <Button
-            onClick={() => exportToXLSX(filteredRegistros, MORTE_EXPORT_CONFIG)}
-            disabled={filteredRegistros.length === 0}
-            className="w-full sm:w-auto text-sm"
-          >
-            Exportar XLSX
-          </Button>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
-            <Input
-              type="text"
-              placeholder="Causa, lote, pasto, brinco, chip, categoria, sexo, raça, peso..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
-            <Input
-              type="date"
-              value={dataInicio}
-              onChange={(e) => setDataInicio(e.target.value)}
-              className="text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
-            <Input
-              type="date"
-              value={dataFim}
-              onChange={(e) => setDataFim(e.target.value)}
-              className="text-sm"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
-            <Button variant="secondary" onClick={() => {
-              setSearchTerm('')
-              setDataInicio('')
-              setDataFim('')
-            }} className="w-full sm:w-auto text-sm">
-              Limpar Filtros
-            </Button>
-          </div>
-        </div>
-      </Card>
+      <FilterToolbar
+        onExport={() => exportToXLSX(filteredRegistros, MORTE_EXPORT_CONFIG)}
+        exportDisabled={filteredRegistros.length === 0}
+        onClear={() => {
+          setSearchTerm('')
+          setDataInicio('')
+          setDataFim('')
+        }}
+      >
+        <FilterField label="Buscar" className="sm:col-span-2">
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Causa, lote, pasto, brinco, chip, categoria, sexo, raça, peso..."
+            className="text-sm"
+          />
+        </FilterField>
+        <FilterField label="Data Início">
+          <Input
+            type="date"
+            value={dataInicio}
+            onChange={(e) => setDataInicio(e.target.value)}
+            className="text-sm"
+          />
+        </FilterField>
+        <FilterField label="Data Fim">
+          <Input
+            type="date"
+            value={dataFim}
+            onChange={(e) => setDataFim(e.target.value)}
+            className="text-sm"
+          />
+        </FilterField>
+      </FilterToolbar>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro de morte encontrado</p>
-        </Card>
+        <EmptyState title="Nenhum registro encontrado" />
       ) : filteredRegistros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro encontrado com os filtros aplicados</p>
-        </Card>
+        <EmptyState title="Nenhum registro encontrado" description="Nenhum registro encontrado com os filtros aplicados" />
       ) : (
         <>
           {/* Mobile Card View */}
@@ -255,69 +226,69 @@ export function RegistrosMorte() {
 
           {/* Desktop Table View */}
           <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+            <Table>
+              <Thead>
+                <Tr>
+                  <Th
+                    className="cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Causa</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brinco</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chip</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sexo</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Raça</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso (kg)</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+                  </Th>
+                  <Th>Usuário</Th>
+                  <Th>Causa</Th>
+                  <Th>Lote</Th>
+                  <Th>Pasto</Th>
+                  <Th>Brinco</Th>
+                  <Th>Chip</Th>
+                  <Th>Categoria</Th>
+                  <Th>Sexo</Th>
+                  <Th>Raça</Th>
+                  <Th>Peso (kg)</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
                 {filteredRegistros.map((registro) => (
-                  <tr
+                  <Tr
                     key={registro.id}
                     onClick={() => navigate(`/controller/cadernetas/morte/${registro.id}`)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="cursor-pointer"
                   >
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <Td>
                       {formatDate(registro.data)}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>{registro.nome_usuario || '-'}</Td>
+                    <Td>
                       {registro.causa_morte || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.lote || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.pasto || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.brinco || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.chip || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.categoria || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.sexo || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.raca || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.peso_vivo || '-'}
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
+              </Tbody>
+            </Table>
           </Card>
         </>
       )}

@@ -1,6 +1,4 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import Chart from 'chart.js/auto'
+import type jsPDF from 'jspdf'
 import { renderRelatorioHeader, type HeaderContext } from './relatorioHeaderPDF'
 
 // === Paleta ===
@@ -361,7 +359,8 @@ async function renderizarGraficoLimpeza(
   const maxDias = Math.max(...valores, ...metas.map((m) => m ?? 0), 1)
   const limiteX = Math.ceil(maxDias * 1.15)
 
-  const chart = new Chart(ctx2d, {
+  const ChartMod = await import('chart.js/auto')
+  const chart = new ChartMod.default(ctx2d, {
     type: 'bar',
     data: {
       labels,
@@ -477,7 +476,8 @@ async function renderizarGraficoLimpezaDia(
   const maxIntervalo = Math.max(...valores, ...metas.map((m) => m ?? 0), 1)
   const limiteX = Math.ceil(maxIntervalo * 1.15)
 
-  const chart = new Chart(ctx2d, {
+  const ChartMod = await import('chart.js/auto')
+  const chart = new ChartMod.default(ctx2d, {
     type: 'bar',
     data: {
       labels,
@@ -588,7 +588,8 @@ async function renderizarGraficoProblemas(
   const labels = ranking.map((r) => r.label)
   const valores = ranking.map((r) => r.pctNegativo)
 
-  const chart = new Chart(ctx2d, {
+  const ChartMod = await import('chart.js/auto')
+  const chart = new ChartMod.default(ctx2d, {
     type: 'bar',
     data: {
       labels,
@@ -703,7 +704,9 @@ async function renderChartCard(
 // === Geração do PDF ===
 
 export async function gerarRelatorioBebedourosPDF(dados: DadosPDFBebedouros): Promise<Blob> {
-  const doc = new jsPDF({
+  const jsPDFMod = await import('jspdf')
+  const autoTableMod = await import('jspdf-autotable')
+  const doc = new jsPDFMod.default({
     orientation: 'landscape',
     unit: 'mm',
     format: 'a4',
@@ -894,7 +897,7 @@ export async function gerarRelatorioBebedourosPDF(dados: DadosPDFBebedouros): Pr
     doc.setFont('helvetica', 'normal')
     y += 3
 
-    autoTable(doc, {
+    autoTableMod.default(doc, {
       startY: y,
       head: [['Data', 'Bebedouro', 'Itens negativos', 'Obs. do item', 'Obs. geral', 'Responsável']],
       body: dados.ocorrencias.slice(0, 60).map((o) => [

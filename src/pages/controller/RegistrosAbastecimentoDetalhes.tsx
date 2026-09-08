@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card } from '../../components/ui'
+import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -36,6 +36,7 @@ export function RegistrosAbastecimentoDetalhes() {
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroAbastecimento | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistro()
@@ -44,6 +45,7 @@ export function RegistrosAbastecimentoDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
+    setLoadError(null)
     const _fazendaId = await getFazendaIdForUser(user.id)
     const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
@@ -60,7 +62,12 @@ export function RegistrosAbastecimentoDetalhes() {
       .single()
 
     if (error) {
-      console.error('Erro ao buscar registro:', error)
+      if (error.code === 'PGRST116') {
+        setRegistro(null)
+      } else {
+        console.error('Erro ao buscar registro:', error)
+        setLoadError(error.message || 'Erro ao buscar registro')
+      }
     } else {
       setRegistro(data as RegistroAbastecimento)
     }
@@ -68,82 +75,57 @@ export function RegistrosAbastecimentoDetalhes() {
     setLoading(false)
   }
 
-  if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
-  }
-
-  if (!registro) {
-    return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/abastecimento')}>
-          Voltar
-        </Button>
-        <Card className="bg-white p-6 text-center" disableHover>
-          <p className="text-gray-600">Registro não encontrado</p>
-        </Card>
-      </div>
-    )
-  }
+  const backUrl = '/controller/cadernetas/abastecimento'
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Abastecimento</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/abastecimento')}>
-          Voltar
-        </Button>
-      </div>
-
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
-        <div className="space-y-6">
-          {/* Informações Gerais */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Quem Abasteceu:</span> {registro.quem_abasteceu}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Operador/Motorista:</span> {registro.operador_motorista}</p>
-            </div>
-          </div>
-
-          {/* Veículo */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Veículo</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+    <DetailLayout
+      loading={loading}
+      loadError={loadError}
+      notFound={!registro}
+      onBack={() => navigate(backUrl)}
+      title="Detalhes do Registro de Abastecimento"
+    >
+      {() => (
+        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+          <div className="space-y-6">
+            {/* Informações Gerais */}
+            <DetailSection title="Informações Gerais">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Máquina/Veículo:</span> {registro.maquina_veiculo}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Placa:</span> {registro.placa}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Combustível:</span> {registro.combustivel}</p>
+                <DetailField label="Data" value={formatDate(registro!.data)} />
+                <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                <DetailField label="Quem Abasteceu" value={formatValue(registro!.quem_abasteceu)} />
+                <DetailField label="Operador/Motorista" value={formatValue(registro!.operador_motorista)} />
               </div>
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Medições */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Medições</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Veículo */}
+            <DetailSection title="Veículo" highlighted>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <DetailField label="Máquina/Veículo" value={formatValue(registro!.maquina_veiculo)} />
+                <DetailField label="Placa" value={formatValue(registro!.placa)} />
+                <DetailField label="Combustível" value={formatValue(registro!.combustivel)} />
+              </div>
+            </DetailSection>
+
+            {/* Medições */}
+            <DetailSection title="Medições" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Total Abastecido:</span> {registro.total_abastecido} L</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Total Bomba:</span> {registro.total_bomba || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Odômetro/Horímetro:</span> {registro.odometro_horimetro}</p>
+                <DetailField label="Total Abastecido" value={`${registro!.total_abastecido} L`} />
+                <DetailField label="Total Bomba" value={formatValue(registro!.total_bomba)} />
+                <DetailField label="Odômetro/Horímetro" value={formatValue(registro!.odometro_horimetro)} />
               </div>
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Operação */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Operação</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Operação */}
+            <DetailSection title="Operação" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Tipo de Operação:</span> {registro.tipo_operacao}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.observacao || '-'}</p>
+                <DetailField label="Tipo de Operação" value={formatValue(registro!.tipo_operacao)} />
+                <DetailField label="Observação" value={formatValue(registro!.observacao)} />
               </div>
-            </div>
+            </DetailSection>
           </div>
-        </div>
-      </Card>
-    </div>
+        </Card>
+      )}
+    </DetailLayout>
   )
 }

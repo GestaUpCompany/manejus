@@ -395,7 +395,7 @@ export function AcompanhamentoTratos() {
       ) : (
         <>
           {/* Cards de métricas globais */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <Card className="p-4" disableHover>
               <p className="text-xs text-gray-500 font-medium">Planejado total</p>
               <p className="text-xl font-bold text-gray-800 mt-1">{formatKg(metricas.planejadoTotal)} kg</p>
@@ -501,7 +501,7 @@ export function AcompanhamentoTratos() {
               </div>
 
               {/* Cards de métricas de pontualidade */}
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <Card className="p-4" disableHover>
                   <p className="text-xs text-gray-500 font-medium">Tratos no horário</p>
                   <p className="text-xl font-bold text-green-600 mt-1">{resumoHorarioFiltrado.tratos_no_horario}</p>

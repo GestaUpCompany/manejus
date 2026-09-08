@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import { Card, CardSkeleton, Button, Modal } from '../../components/ui'
-import * as XLSX from 'xlsx'
+import type * as XLSXType from 'xlsx'
 import { gerarRelatorioPlanosPDF } from '../../utils/relatorioPlanosPDF'
 
 interface RegistroPlano {
@@ -294,7 +294,8 @@ export function HistoricoPlanos() {
     return row
   }
 
-  const exportXLSX = () => {
+  const exportXLSX = async () => {
+    const XLSX = await import('xlsx') as typeof XLSXType
     const lotesParaExportar = lotesSelecionados.size === 0
       ? [...new Set(planosFiltrados.map((p) => p.nomeLote))]
       : [...lotesSelecionados]

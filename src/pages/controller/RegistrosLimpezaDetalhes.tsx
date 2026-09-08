@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card } from '../../components/ui'
+import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -26,12 +26,38 @@ interface RegistroLimpeza {
   deleted_at?: string
 }
 
+function renderLimpezaRealizada(val: any): React.ReactNode {
+  if (Array.isArray(val)) {
+    return <p className="text-sm font-medium text-gray-700">{val.map((item: string) => item.charAt(0).toUpperCase() + item.slice(1)).join(', ')}</p>
+  }
+  if (val && typeof val === 'object') {
+    const lista = val.limpezaRealizada || val.tarefasRealizadas || []
+    const detalhes = val.tarefas
+    return (
+      <>
+        {Array.isArray(lista) && lista.length > 0 && (
+          <p className="text-sm font-medium text-gray-700">{lista.map((item: string) => item.charAt(0).toUpperCase() + item.slice(1)).join(', ')}</p>
+        )}
+        {detalhes && typeof detalhes === 'object' && Object.keys(detalhes).length > 0 && (
+          <div className="border-t pt-2 mt-2 space-y-1">
+            {Object.entries(detalhes).map(([k, v]) => (
+              <p key={k} className="text-sm text-gray-600"><span className="font-medium capitalize">{k.replace(/_/g, ' ')}:</span> {String(v)}</p>
+            ))}
+          </div>
+        )}
+      </>
+    )
+  }
+  return <p className="text-sm text-gray-700">{String(val)}</p>
+}
+
 export function RegistrosLimpezaDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroLimpeza | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistro()
@@ -40,6 +66,7 @@ export function RegistrosLimpezaDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
+    setLoadError(null)
     const _fazendaId = await getFazendaIdForUser(user.id)
     const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
@@ -56,7 +83,12 @@ export function RegistrosLimpezaDetalhes() {
       .single()
 
     if (error) {
-      console.error('Erro ao buscar registro:', error)
+      if (error.code === 'PGRST116') {
+        setRegistro(null)
+      } else {
+        console.error('Erro ao buscar registro:', error)
+        setLoadError(error.message || 'Erro ao buscar registro')
+      }
     } else {
       setRegistro(data as RegistroLimpeza)
     }
@@ -64,103 +96,54 @@ export function RegistrosLimpezaDetalhes() {
     setLoading(false)
   }
 
-  if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
-  }
-
-  if (!registro) {
-    return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/limpeza')}>
-          Voltar
-        </Button>
-        <Card className="bg-white p-6 text-center" disableHover>
-          <p className="text-gray-600">Registro não encontrado</p>
-        </Card>
-      </div>
-    )
-  }
+  const backUrl = '/controller/cadernetas/limpeza'
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Limpeza</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/limpeza')}>
-          Voltar
-        </Button>
-      </div>
+    <DetailLayout
+      loading={loading}
+      loadError={loadError}
+      notFound={!registro}
+      onBack={() => navigate(backUrl)}
+      title="Detalhes do Registro de Limpeza"
+    >
+      {() => (
+        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+          <div className="space-y-6">
+            {/* Informações Gerais */}
+            <DetailSection title="Informações Gerais">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <DetailField label="Data" value={formatDate(registro!.data)} />
+                <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                <DetailField label="Nº Equipe" value={formatValue(registro!.numero_equipe)} />
+                <DetailField label="Setor" value={formatValue(registro!.setor)} />
+                <DetailField label="Local" value={formatValue(registro!.local)} />
+              </div>
+            </DetailSection>
 
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
-        <div className="space-y-6">
-          {/* Informações Gerais */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Nº Equipe:</span> {registro.numero_equipe || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Setor:</span> {registro.setor || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Local:</span> {registro.local || '-'}</p>
-            </div>
-          </div>
-
-          {/* Horários */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Horários</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Horários */}
+            <DetailSection title="Horários" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Hora Início:</span> {registro.hora_inicio || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Hora Final:</span> {registro.hora_final || '-'}</p>
+                <DetailField label="Hora Início" value={formatValue(registro!.hora_inicio)} />
+                <DetailField label="Hora Final" value={formatValue(registro!.hora_final)} />
               </div>
-            </div>
+            </DetailSection>
+
+            {/* Limpeza Realizada */}
+            {registro!.limpeza_realizada && (
+              <DetailSection title="Limpeza Realizada" highlighted>
+                {renderLimpezaRealizada(registro!.limpeza_realizada)}
+              </DetailSection>
+            )}
+
+            {/* Observação */}
+            {registro!.observacao && (
+              <DetailSection title="Observação" highlighted>
+                <p className="text-sm">{registro!.observacao}</p>
+              </DetailSection>
+            )}
           </div>
-
-          {/* Limpeza Realizada */}
-          {registro.limpeza_realizada && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Limpeza Realizada</h3>
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                {(() => {
-                  const val = registro.limpeza_realizada
-                  if (Array.isArray(val)) {
-                    return <p className="text-sm font-medium text-gray-700">{val.map((item: string) => item.charAt(0).toUpperCase() + item.slice(1)).join(', ')}</p>
-                  }
-                  if (val && typeof val === 'object') {
-                    const lista = val.limpezaRealizada || val.tarefasRealizadas || []
-                    const detalhes = val.tarefas
-                    return (
-                      <>
-                        {Array.isArray(lista) && lista.length > 0 && (
-                          <p className="text-sm font-medium text-gray-700">{lista.map((item: string) => item.charAt(0).toUpperCase() + item.slice(1)).join(', ')}</p>
-                        )}
-                        {detalhes && typeof detalhes === 'object' && Object.keys(detalhes).length > 0 && (
-                          <div className="border-t pt-2 mt-2 space-y-1">
-                            {Object.entries(detalhes).map(([k, v]) => (
-                              <p key={k} className="text-sm text-gray-600"><span className="font-medium capitalize">{k.replace(/_/g, ' ')}:</span> {String(v)}</p>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    )
-                  }
-                  return <p className="text-sm text-gray-700">{String(val)}</p>
-                })()}
-              </div>
-            </div>
-          )}
-
-          {/* Observação */}
-          {registro.observacao && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observação</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm">{registro.observacao}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
-    </div>
+        </Card>
+      )}
+    </DetailLayout>
   )
 }

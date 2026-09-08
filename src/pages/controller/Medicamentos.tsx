@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardItem, EmptyState, PageSkeleton } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -188,14 +188,7 @@ export function Medicamentos() {
   )
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-      </div>
-    )
+    return <PageSkeleton variant="grid" />
   }
 
   return (
@@ -316,10 +309,10 @@ export function Medicamentos() {
       )}
 
       {!showForm && medicamentos.length === 0 ? (
-        <Card className="bg-white p-12 border-0 shadow-sm text-center">
-          <p className="text-gray-600 mb-4">Nenhum medicamento cadastrado</p>
-          <Button onClick={() => setShowForm(true)}>Criar Primeiro Medicamento</Button>
-        </Card>
+        <EmptyState
+          title="Nenhum medicamento cadastrado"
+          action={<Button onClick={() => setShowForm(true)}>Criar Primeiro Medicamento</Button>}
+        />
       ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMedicamentos.map((medicamento) => (

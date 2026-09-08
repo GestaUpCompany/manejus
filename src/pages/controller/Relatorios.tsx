@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useToast, PageSkeleton, ConfirmModal } from '../../components/ui'
 
 interface RelatorioPublico {
   id: string
@@ -57,6 +58,7 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
 export function Relatorios() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [fazendaNome, setFazendaNome] = useState<string | null>(null)
   const [acessoConfinamento, setAcessoConfinamento] = useState(false)
@@ -68,6 +70,7 @@ export function Relatorios() {
   const [linkGerado, setLinkGerado] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<{ type: string; id?: string } | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -133,7 +136,7 @@ export function Relatorios() {
 
     if (error) {
       console.error('Erro ao gerar link:', error)
-      alert('Erro ao gerar link. Tente novamente.')
+      toast.error('Erro ao gerar link. Tente novamente.')
       return
     }
 
@@ -155,7 +158,11 @@ export function Relatorios() {
 
   const desativarLink = async (id: string) => {
     if (!fazendaId) return
-    if (!confirm('Desativar este link público? O relatório não será mais acessível.')) return
+    setConfirmAction({ type: 'desativar', id })
+  }
+
+  const desativarLinkExec = async (id: string) => {
+    if (!fazendaId) return
 
     const { error } = await supabase
       .from('relatorios_publicos')
@@ -164,7 +171,7 @@ export function Relatorios() {
 
     if (error) {
       console.error('Erro ao desativar link:', error)
-      alert('Erro ao desativar link.')
+      toast.error('Erro ao desativar link.')
     } else {
       await carregarLinks(fazendaId)
     }
@@ -180,7 +187,7 @@ export function Relatorios() {
 
     if (error) {
       console.error('Erro ao reativar link:', error)
-      alert('Erro ao reativar link.')
+      toast.error('Erro ao reativar link.')
     } else {
       await carregarLinks(fazendaId)
     }
@@ -188,7 +195,11 @@ export function Relatorios() {
 
   const excluirLink = async (id: string) => {
     if (!fazendaId) return
-    if (!confirm('Inativar este link público? O registro será desativado, não excluído. Você pode reativá-lo posteriormente.')) return
+    setConfirmAction({ type: 'inativar', id })
+  }
+
+  const excluirLinkExec = async (id: string) => {
+    if (!fazendaId) return
 
     const { error } = await supabase
       .from('relatorios_publicos')
@@ -197,9 +208,20 @@ export function Relatorios() {
 
     if (error) {
       console.error('Erro ao inativar link:', error)
-      alert('Erro ao inativar link.')
+      toast.error('Erro ao inativar link.')
     } else {
       await carregarLinks(fazendaId)
+    }
+  }
+
+  const handleConfirm = async () => {
+    if (!confirmAction) return
+    const { type, id } = confirmAction
+    setConfirmAction(null)
+    if (type === 'desativar' && id) {
+      await desativarLinkExec(id)
+    } else if (type === 'inativar' && id) {
+      await excluirLinkExec(id)
     }
   }
 
@@ -210,14 +232,7 @@ export function Relatorios() {
     : RELATORIOS_DISPONIVEIS.filter((rel) => rel.tipo !== 'tratos')
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mb-3"></div>
-          <p className="text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    )
+    return <PageSkeleton variant="list" />
   }
 
   return (
@@ -316,6 +331,7 @@ export function Relatorios() {
             Links públicos ({linksAtivos.filter((l) => l.ativo).length} ativos de {linksAtivos.length})
           </h2>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -353,7 +369,7 @@ export function Relatorios() {
                               onClick={() => {
                                 const url = `${window.location.origin}/r/${link.id}`
                                 navigator.clipboard.writeText(url)
-                                alert('Link copiado: ' + url)
+                                toast.success('Link copiado: ' + url)
                               }}
                               className="text-xs text-green-700 hover:text-green-800 font-medium"
                             >
@@ -388,6 +404,7 @@ export function Relatorios() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -415,6 +432,7 @@ export function Relatorios() {
               </div>
               <button
                 onClick={() => setModalAberto(false)}
+                aria-label="Fechar"
                 className="text-gray-400 hover:text-gray-600"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -494,6 +512,20 @@ export function Relatorios() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleConfirm}
+        title={confirmAction?.type === 'desativar' ? 'Desativar link público' : 'Inativar link público'}
+        message={
+          confirmAction?.type === 'desativar'
+            ? 'Desativar este link público? O relatório não será mais acessível.'
+            : 'Inativar este link público? O registro será desativado, não excluído. Você pode reativá-lo posteriormente.'
+        }
+        confirmText={confirmAction?.type === 'desativar' ? 'Desativar' : 'Inativar'}
+        variant={confirmAction?.type === 'desativar' ? 'danger' : 'warning'}
+      />
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card } from '../../components/ui'
+import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '../../components/ui'
 import { formatDateTime } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -22,12 +22,63 @@ interface RegistroAlmoxarifado {
   updated_at?: string
 }
 
+function formatItemKey(key: string): string {
+  return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
+}
+
+function renderItens(itens: any): React.ReactNode {
+  if (Array.isArray(itens)) {
+    return (
+      <div className="space-y-4">
+        {itens.map((item: any, index: number) => (
+          <div key={index} className="border-b border-gray-200 pb-3 last:border-0 last:pb-0">
+            {typeof item === 'string' ? (
+              <p className="text-sm">{item}</p>
+            ) : typeof item === 'object' && item !== null ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                {Object.entries(item).map(([key, value]) => {
+                  if (key === 'necessitaDevolucao' && item.prazoDevolucao) return null
+                  return (
+                    <div key={key} className="flex flex-col">
+                      <span className="font-medium text-gray-700 capitalize">{formatItemKey(key)}:</span>
+                      <span className="text-gray-900">{String(value)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-sm">{String(item)}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (typeof itens === 'object' && itens !== null) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+        {Object.entries(itens).map(([key, value]) => {
+          if (key === 'necessitaDevolucao' && itens.prazoDevolucao) return null
+          return (
+            <div key={key} className="flex flex-col">
+              <span className="font-medium text-gray-700 capitalize">{formatItemKey(key)}:</span>
+              <span className="text-gray-900">{String(value)}</span>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+  return <p className="text-sm">{String(itens)}</p>
+}
+
 export function AlmoxarifadoDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroAlmoxarifado | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistro()
@@ -36,6 +87,7 @@ export function AlmoxarifadoDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
+    setLoadError(null)
     const _fazendaId = await getFazendaIdForUser(user.id)
     const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
@@ -52,7 +104,12 @@ export function AlmoxarifadoDetalhes() {
       .single()
 
     if (error) {
-      console.error('Erro ao buscar registro:', error)
+      if (error.code === 'PGRST116') {
+        setRegistro(null)
+      } else {
+        console.error('Erro ao buscar registro:', error)
+        setLoadError(error.message || 'Erro ao buscar registro')
+      }
     } else {
       setRegistro(data as RegistroAlmoxarifado)
     }
@@ -60,124 +117,50 @@ export function AlmoxarifadoDetalhes() {
     setLoading(false)
   }
 
-  if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
-  }
-
-  if (!registro) {
-    return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/almoxarifado')}>
-          Voltar
-        </Button>
-        <Card className="bg-white p-6 text-center" disableHover>
-          <p className="text-gray-600">Registro não encontrado</p>
-        </Card>
-      </div>
-    )
-  }
+  const backUrl = '/controller/cadernetas/almoxarifado'
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Almoxarifado</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/almoxarifado')}>
-          Voltar
-        </Button>
-      </div>
-
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
-        <div className="space-y-6">
-          {/* Informações Gerais */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
-                return formatDateTime(registro.data)
-              })()}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Setor:</span> {registro.setor || '-'}</p>
-            </div>
-          </div>
-
-          {/* Movimentação */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Movimentação</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+    <DetailLayout
+      loading={loading}
+      loadError={loadError}
+      notFound={!registro}
+      onBack={() => navigate(backUrl)}
+      title="Detalhes do Registro de Almoxarifado"
+    >
+      {() => (
+        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+          <div className="space-y-6">
+            {/* Informações Gerais */}
+            <DetailSection title="Informações Gerais">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Quem Entregou:</span> {registro.quem_entregou || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Quem Pegou:</span> {registro.quem_pegou || '-'}</p>
+                <DetailField label="Data" value={formatDateTime(registro!.data)} />
+                <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                <DetailField label="Setor" value={formatValue(registro!.setor)} />
               </div>
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Itens */}
-          {registro.itens && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Itens</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                {Array.isArray(registro.itens) ? (
-                  <div className="space-y-4">
-                    {registro.itens.map((item: any, index: number) => (
-                      <div key={index} className="border-b border-gray-200 pb-3 last:border-0 last:pb-0">
-                        {typeof item === 'string' ? (
-                          <p className="text-sm">{item}</p>
-                        ) : typeof item === 'object' && item !== null ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                            {Object.entries(item).map(([key, value]) => {
-                              // Hide necessitaDevolucao if prazoDevolucao is not null
-                              if (key === 'necessitaDevolucao' && item.prazoDevolucao) {
-                                return null
-                              }
-                              return (
-                                <div key={key} className="flex flex-col">
-                                  <span className="font-medium text-gray-700 capitalize">
-                                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                                  </span>
-                                  <span className="text-gray-900">{String(value)}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-sm">{String(item)}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : typeof registro.itens === 'object' && registro.itens !== null ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                    {Object.entries(registro.itens).map(([key, value]) => {
-                      // Hide necessitaDevolucao if prazoDevolucao is not null
-                      if (key === 'necessitaDevolucao' && registro.itens.prazoDevolucao) {
-                        return null
-                      }
-                      return (
-                        <div key={key} className="flex flex-col">
-                          <span className="font-medium text-gray-700 capitalize">
-                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                          </span>
-                          <span className="text-gray-900">{String(value)}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm">{String(registro.itens)}</p>
-                )}
+            {/* Movimentação */}
+            <DetailSection title="Movimentação" highlighted>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <DetailField label="Quem Entregou" value={formatValue(registro!.quem_entregou)} />
+                <DetailField label="Quem Pegou" value={formatValue(registro!.quem_pegou)} />
               </div>
-            </div>
-          )}
+            </DetailSection>
 
-          {/* Observações */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observações</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.observacao || '-'}</p>
-            </div>
+            {/* Itens */}
+            {registro!.itens && (
+              <DetailSection title="Itens" highlighted>
+                {renderItens(registro!.itens)}
+              </DetailSection>
+            )}
+
+            {/* Observações */}
+            <DetailSection title="Observações" highlighted>
+              <DetailField label="Observação" value={formatValue(registro!.observacao)} />
+            </DetailSection>
           </div>
-        </div>
-      </Card>
-    </div>
+        </Card>
+      )}
+    </DetailLayout>
   )
 }

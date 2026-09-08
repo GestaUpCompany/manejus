@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, NumericInput, Modal } from '../../components/ui'
+import { Button, Card, NumericInput, Modal, useToast } from '../../components/ui'
 import {
   calculateCompletenessScore,
   getSyncStatusFromScore,
@@ -17,6 +17,7 @@ import {
   type IdentificationField,
 } from '../../utils/checkDuplicateIdentification'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useLotes } from '../../hooks/useFazendaQueries'
 
 interface SelectOption {
   id: string
@@ -68,6 +69,7 @@ export function IndividuoNovo() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user } = useAuth()
+  const toast = useToast()
   const [form, setForm] = useState(INITIAL_FORM)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -89,7 +91,6 @@ export function IndividuoNovo() {
 
   const [fazendaId, setFazendaId] = useState('')
   const [racas, setRacas] = useState<SelectOption[]>([])
-  const [lotes, setLotes] = useState<SelectOption[]>([])
   const [setores, setSetores] = useState<SelectOption[]>([])
   const [fornecedores, setFornecedores] = useState<SelectOption[]>([])
   const [individuosMacho, setIndividuosMacho] = useState<SelectOption[]>([])
@@ -101,6 +102,9 @@ export function IndividuoNovo() {
   const [categoriaOriginal, setCategoriaOriginal] = useState<string | null>(null)
   const [showLoteChangeModal, setShowLoteChangeModal] = useState(false)
   const [pendingLoteChange, setPendingLoteChange] = useState<{ loteId: string; loteNome: string; pastoNome: string | null; categoriaData: any } | null>(null)
+
+  const { data: lotesData = [] } = useLotes(fazendaId || undefined)
+  const lotes = lotesData.filter(l => l.ativo)
 
   useEffect(() => {
     // Verificar se há ID na rota (rota direta) ou parâmetro edit
@@ -157,10 +161,9 @@ export function IndividuoNovo() {
     const fazenda = vinculos[0].fazenda_id
     setFazendaId(fazenda)
 
-    const [racasRes, lotesRes, setoresRes, fornecedoresRes, machosRes, femeasRes] =
+    const [racasRes, setoresRes, fornecedoresRes, machosRes, femeasRes] =
       await Promise.all([
         supabase.from('racas').select('id, nome').eq('fazenda_id', fazenda).eq('ativo', true).is('deleted_at', null),
-        supabase.from('lotes').select('id, nome').eq('fazenda_id', fazenda).eq('ativo', true).is('deleted_at', null),
         supabase.from('setores').select('id, nome').eq('fazenda_id', fazenda).eq('ativo', true).is('deleted_at', null),
         supabase.from('fornecedores').select('id, nome').eq('fazenda_id', fazenda).eq('ativo', true).is('deleted_at', null),
         supabase
@@ -192,7 +195,6 @@ export function IndividuoNovo() {
       }))
 
     setRacas(mapOptions(racasRes.data))
-    setLotes(mapOptions(lotesRes.data))
     setSetores(mapOptions(setoresRes.data))
     setFornecedores(mapOptions(fornecedoresRes.data))
     setIndividuosMacho(mapIndividuos(machosRes.data))
@@ -407,7 +409,7 @@ export function IndividuoNovo() {
           .single()
 
         if (!loteData) {
-          alert('Não foi possível carregar os dados do novo lote.')
+          toast.error('Não foi possível carregar os dados do novo lote.')
           return
         }
 
@@ -435,7 +437,7 @@ export function IndividuoNovo() {
         setShowLoteChangeModal(true)
       } catch (error) {
         console.error('Erro ao carregar dados do novo lote:', error)
-        alert('Não foi possível carregar os dados do novo lote.')
+        toast.error('Não foi possível carregar os dados do novo lote.')
       }
       return
     }
@@ -506,7 +508,7 @@ export function IndividuoNovo() {
 
         if (error) {
           console.error('Erro ao atualizar indivíduo:', error)
-          alert('Erro ao atualizar indivíduo: ' + error.message)
+          toast.error('Erro ao atualizar indivíduo: ' + error.message)
           setSubmitting(false)
           return
         }
@@ -662,7 +664,7 @@ export function IndividuoNovo() {
 
         if (error) {
           console.error('Erro ao criar indivíduo:', error)
-          alert('Erro ao criar indivíduo: ' + error.message)
+          toast.error('Erro ao criar indivíduo: ' + error.message)
           setSubmitting(false)
           return
         }
@@ -741,7 +743,7 @@ export function IndividuoNovo() {
       }
     } catch (error) {
       console.error('Erro ao salvar indivíduo:', error)
-      alert('Erro ao salvar indivíduo: ' + (error as Error).message)
+      toast.error('Erro ao salvar indivíduo: ' + (error as Error).message)
     } finally {
       setSubmitting(false)
     }

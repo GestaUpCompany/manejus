@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, Table, Thead, Tbody, Tr, Th, Td } from '../../components/ui'
 import { exportToXLSX } from '../../utils/exportXLSX'
 import { BEBEDOUROS_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '../../utils/formatDate'
@@ -226,57 +226,57 @@ export function Bebedouros() {
 
           {/* Desktop Table View */}
           <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+            <Table>
+              <Thead>
+                <Tr>
+                  <Th
+                    className="cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Bebedouro</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leitura</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+                  </Th>
+                  <Th>Usuário</Th>
+                  <Th>Responsável</Th>
+                  <Th>Lote</Th>
+                  <Th>Pasto</Th>
+                  <Th>Nº Bebedouro</Th>
+                  <Th>Leitura</Th>
+                  <Th>Observação</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
                 {filteredRegistros.map((registro) => (
-                  <tr
+                  <Tr
                     key={registro.id}
                     onClick={() => navigate(`/controller/cadernetas/bebedouros/${registro.id}`)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="cursor-pointer"
                   >
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <Td>
                       {formatDate(registro.data)}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>{registro.nome_usuario || '-'}</Td>
+                    <Td>
                       {registro.responsavel || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.lote || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.pasto || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.numero_bebedouro || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.leitura_bebedouro || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    </Td>
+                    <Td>
                       {registro.observacao || '-'}
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
+              </Tbody>
+            </Table>
           </Card>
         </>
       )}

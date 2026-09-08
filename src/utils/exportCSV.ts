@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx'
-
 const columnsToRemove = ['id', 'fazenda_id', 'dispositivo_id', 'nome_usuario', 'created_at', 'updated_at', 'deleted_at', 'lote_id', 'pasto_id', 'sync_status', 'version', 'espacamento_cocho_cm_cab', 'espacamento_cocho_obs', 'espacamento_cocho_detalhes', 'checklist', 'espacamento_cocho_ideal']
 
 function prepareDataForExport(data: any[]): any[] {
@@ -37,9 +35,10 @@ function prepareDataForExport(data: any[]): any[] {
   })
 }
 
-export function exportToCSV(data: any[], filename: string) {
+export function exportToCSV(data: any[], filename: string, onEmpty?: () => void) {
   if (data.length === 0) {
-    alert('Nenhum dado para exportar')
+    if (onEmpty) onEmpty()
+    else alert('Nenhum dado para exportar')
     return
   }
 
@@ -83,23 +82,4 @@ export function exportToCSV(data: any[], filename: string) {
     link.click()
     document.body.removeChild(link)
   }
-}
-
-export function exportToExcel(data: any[], filename: string) {
-  if (data.length === 0) {
-    alert('Nenhum dado para exportar')
-    return
-  }
-
-  const preparedData = prepareDataForExport(data)
-
-  // Criar worksheet
-  const worksheet = XLSX.utils.json_to_sheet(preparedData)
-
-  // Criar workbook
-  const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Dados')
-
-  // Exportar arquivo
-  XLSX.writeFile(workbook, `${filename}.xlsx`)
 }

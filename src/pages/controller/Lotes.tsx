@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, useToast, ErrorState, EmptyState } from '../../components/ui'
 import { PlanoNutricionalLoteModal } from '../../components/plano-nutricional/PlanoNutricionalLoteModal'
 import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plano-nutricional/PlanoNutricionalDraftModal'
 import { RevisarNovoLoteModal } from '../../components/lotes/RevisarNovoLoteModal'
+import { LoteCard } from '../../components/lotes/LoteCard'
+import { LoteFilters } from '../../components/lotes/LoteFilters'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { usePastos, useCurrais } from '../../hooks/useFazendaQueries'
 import { exportToXLSXMultiSheet, type ColumnConfig } from '../../utils/exportXLSX'
 
 interface LoteCategoria {
@@ -115,13 +119,19 @@ interface Lote {
 export function Lotes() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const toast = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [lotes, setLotes] = useState<Lote[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingLote, setEditingLote] = useState<Lote | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [pastos, setPastos] = useState<{id: string, nome: string}[]>([])
-  const [currais, setCurrais] = useState<{id: string, nome: string, linha_id: string | null}[]>([])
+  const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
+  const { data: pastosData = [] } = usePastos(fazendaId)
+  const { data: curraisData = [] } = useCurrais(fazendaId)
+  const pastos = useMemo(() => pastosData.filter(p => p.ativo), [pastosData])
+  const currais = useMemo(() => curraisData.filter(c => c.ativo), [curraisData])
   const [racas, setRacas] = useState<{id: string, nome: string}[]>([])
   const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, categoria?: string, consumo_meta?: number, gmd?: number}[]>([])
   const [formulacaoCategoriasGmd, setFormulacaoCategoriasGmd] = useState<Record<string, Record<string, number>>>({})
@@ -173,6 +183,7 @@ export function Lotes() {
     formulacao_lote_id: '' as string,
   })
   const [submitting, setSubmitting] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   // Estado da verificação de nome duplicado em tempo real
   // status: 'idle' (vazio/curto demais) | 'checking' (consultando) | 'available' | 'duplicated'
   const [nomeCheck, setNomeCheck] = useState<{ status: 'idle' | 'checking' | 'available' | 'duplicated'; duplicataNome?: string }>({ status: 'idle' })
@@ -268,17 +279,14 @@ export function Lotes() {
 
       if (!vinculos || vinculos.length === 0) return
 
-      const fazendaId = vinculos[0].fazenda_id
+      const fid = vinculos[0].fazenda_id
+      setFazendaId(fid)
 
-      const [pastosData, racasData, formulacoesData, curraisData] = await Promise.all([
-        supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null),
-        supabase.from('racas').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
-        supabase.from('formulacoes').select('id, nome, tipo, categoria, consumo_ms_percent_pv, gmd, e_premix').eq('fazenda_id', fazendaId).eq('ativo', true).eq('e_premix', false).is('deleted_at', null).order('nome'),
-        supabase.from('currais').select('id, nome, linha_id').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
+      const [racasData, formulacoesData] = await Promise.all([
+        supabase.from('racas').select('id, nome').eq('fazenda_id', fid).eq('ativo', true).is('deleted_at', null).order('nome'),
+        supabase.from('formulacoes').select('id, nome, tipo, categoria, consumo_ms_percent_pv, gmd, e_premix').eq('fazenda_id', fid).eq('ativo', true).eq('e_premix', false).is('deleted_at', null).order('nome'),
       ])
 
-      if (pastosData.data) setPastos(pastosData.data)
-      if (curraisData.data) setCurrais(curraisData.data)
       if (racasData.data) setRacas(racasData.data)
 
       if (formulacoesData.data) {
@@ -325,6 +333,7 @@ export function Lotes() {
   }
 
   const handleCategoriaToggle = (categoria: string) => {
+    if (errors.categorias) setErrors((p) => ({ ...p, categorias: '' }))
     const categoriaExists = formData.categorias.some(c => c.categoria.toLowerCase() === categoria.toLowerCase())
     if (categoriaExists) {
       // Check if category has quant_atual > 0 before allowing removal
@@ -809,6 +818,7 @@ export function Lotes() {
   const loadLotes = async () => {
     if (!user) return
 
+    setLoadError(null)
     // Buscar fazenda vinculada
     const _fazendaId = await getFazendaIdForUser(user.id)
     const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
@@ -817,25 +827,47 @@ export function Lotes() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    // Buscar lotes com suas categorias
-    const { data: lotesData, error: lotesError } = await supabase
-      .from('lotes')
-      .select(`
-        *,
-        pastos (nome),
-        currais (id, nome)
-      `)
-      .eq('fazenda_id', fazendaId)
-      .is('deleted_at', null)
-      .order('nome', { ascending: true })
+    // Buscar lotes, solicitações e ocupação em paralelo (são independentes)
+    const [
+      lotesResult,
+      solicitacoesResult,
+      ocupacaoPastoResult,
+      ocupacaoModuloResult,
+    ] = await Promise.all([
+      supabase
+        .from('lotes')
+        .select(`
+          *,
+          pastos (nome),
+          currais (id, nome)
+        `)
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+        .order('nome', { ascending: true }),
+      supabase
+        .from('solicitacoes_novo_lote')
+        .select('*')
+        .eq('fazenda_id', fazendaId)
+        .eq('status', 'pendente')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('v_lote_pasto_ocupacao_atual')
+        .select('*'),
+      supabase
+        .from('v_lote_modulo_ocupacao_atual')
+        .select('*'),
+    ])
+
+    const { data: lotesData, error: lotesError } = lotesResult
 
     if (lotesError) {
       console.error('Erro ao buscar lotes:', lotesError)
+      setLoadError(lotesError.message || 'Erro ao buscar lotes')
       setLoading(false)
       return
     }
 
-    // Buscar categorias para cada lote (apenas ativas)
+    // Buscar categorias para cada lote (apenas ativas) — depende de lotesData
     const loteIds = lotesData?.map(l => l.id) || []
     const { data: categoriasData, error: categoriasError } = await supabase
       .from('lote_categorias')
@@ -871,31 +903,16 @@ export function Lotes() {
       }
     }
 
-    // Carregar solicitações de Novo Lote pendentes
-    try {
-      const { data: solicitacoesData, error: solicitacoesError } = await supabase
-        .from('solicitacoes_novo_lote')
-        .select('*')
-        .eq('fazenda_id', fazendaId)
-        .eq('status', 'pendente')
-        .order('created_at', { ascending: false })
-
-      if (!solicitacoesError && solicitacoesData) {
-        setSolicitacoesNovoLote(solicitacoesData)
-      }
-    } catch (e) {
-      console.error('Erro ao buscar solicitações de novo lote:', e)
+    // Processar solicitações (já carregadas em paralelo)
+    if (!solicitacoesResult.error && solicitacoesResult.data) {
+      setSolicitacoesNovoLote(solicitacoesResult.data)
+    } else if (solicitacoesResult.error) {
+      console.error('Erro ao buscar solicitações de novo lote:', solicitacoesResult.error)
     }
 
-    // Carregar ocupação atual dos lotes
-    const { data: ocupacaoPastoData } = await supabase
-      .from('v_lote_pasto_ocupacao_atual')
-      .select('*')
-
-    const { data: ocupacaoModuloData } = await supabase
-      .from('v_lote_modulo_ocupacao_atual')
-      .select('*')
-
+    // Processar ocupação (já carregada em paralelo)
+    const ocupacaoPastoData = ocupacaoPastoResult.data
+    const ocupacaoModuloData = ocupacaoModuloResult.data
     if (ocupacaoPastoData || ocupacaoModuloData) {
       const ocupacaoMap: Record<string, any> = {}
       ocupacaoPastoData?.forEach((item: any) => {
@@ -1071,7 +1088,7 @@ export function Lotes() {
     // Validar nome único na fazenda (case-insensitive, sem acento)
     const nomeDuplicado = await verificarNomeDuplicado(fazendaId, formData.nome, editingLote?.id)
     if (nomeDuplicado) {
-      alert(`Já existe um lote com o nome "${nomeDuplicado}" nesta fazenda. Nomes são comparados ignorando maiúsculas e acentos.`)
+      setErrors({ nome: `Já existe o lote "${nomeDuplicado}" com esse nome (ignora maiúsculas e acentos).` })
       setSubmitting(false)
       return
     }
@@ -1079,19 +1096,19 @@ export function Lotes() {
     // Validar: lote de confinamento precisa de curral, lote de pasto precisa de pasto
     const isConfinamento = formData.sistema_producao === 'Confinamento'
     if (isConfinamento && !formData.curral_id) {
-      alert('Selecione um curral para o lote de confinamento.')
+      setErrors({ curral_id: 'Selecione um curral para o lote de confinamento.' })
       setSubmitting(false)
       return
     }
     if (!isConfinamento && !formData.pasto_id) {
-      alert('Selecione um pasto para o lote.')
+      setErrors({ pasto_id: 'Selecione um pasto para o lote.' })
       setSubmitting(false)
       return
     }
 
     // Validar categorias
     if (formData.categorias.length === 0) {
-      alert('Selecione pelo menos uma categoria')
+      setErrors({ categorias: 'Selecione pelo menos uma categoria.' })
       setSubmitting(false)
       return
     }
@@ -1143,9 +1160,9 @@ export function Lotes() {
     if (error) {
       console.error('Erro ao salvar lote:', error)
       if (error.code === '23505' && error.message?.includes('lote com o nome')) {
-        alert(error.message)
+        toast.error(error.message)
       } else {
-        alert('Erro ao salvar lote. Verifique o console para detalhes.')
+        toast.error('Erro ao salvar lote. Verifique o console para detalhes.')
       }
       setSubmitting(false)
       return
@@ -1173,7 +1190,7 @@ export function Lotes() {
 
     if (categoriasComPesoMetaInvalido.length > 0) {
       const nomes = categoriasComPesoMetaInvalido.map((cat) => cat.categoria).join(', ')
-      alert(`O peso meta deve ser maior que o peso atual nas categorias: ${nomes}`)
+      setErrors({ peso_meta: `O peso meta deve ser maior que o peso atual nas categorias: ${nomes}` })
       setSubmitting(false)
       return
     }
@@ -1188,7 +1205,7 @@ export function Lotes() {
 
     if (categoriasComPesoInvalido.length > 0) {
       const nomes = categoriasComPesoInvalido.map((cat) => cat.categoria).join(', ')
-      alert(`O peso atual não pode ser menor que o peso original nas categorias: ${nomes}`)
+      setErrors({ peso_atual: `O peso atual não pode ser menor que o peso original nas categorias: ${nomes}` })
       setSubmitting(false)
       return
     }
@@ -1380,7 +1397,7 @@ export function Lotes() {
         }
       } catch (catError: any) {
         console.error(`Erro ao salvar categoria ${cat.categoria}:`, catError)
-        alert(`Erro ao salvar categoria ${cat.categoria}: ${catError.message}`)
+        toast.error(`Erro ao salvar categoria ${cat.categoria}: ${catError.message}`)
         continue
       }
     }
@@ -1469,8 +1486,10 @@ export function Lotes() {
       setOriginalAtivo(true)
       setNomeCheck({ status: 'idle' })
       setNomeTouched(false)
+      setErrors({})
       lotesCacheRef.current = null
       loadLotes()
+      toast.success(editingLote ? 'Lote atualizado com sucesso.' : 'Lote criado com sucesso.')
       // Invalidar cache do Dashboard para atualizar KPIs
       if (user?.id) {
         queryClient.invalidateQueries({ queryKey: ['fazenda', user.id] })
@@ -1696,8 +1715,21 @@ export function Lotes() {
     setShowForm(true)
   }
 
+  // Deep link via ?lote=<id> (vindo da busca global)
+  useEffect(() => {
+    const loteId = searchParams.get('lote')
+    if (!loteId || lotes.length === 0) return
+    const lote = lotes.find((l) => l.id === loteId)
+    if (lote) {
+      handleEdit(lote)
+      searchParams.delete('lote')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, lotes, setSearchParams])
+
   const handleCancel = () => {
     setEditingLote(null)
+    setErrors({})
     setFormData({
       nome: '',
       numero_cabecas: '',
@@ -1789,7 +1821,7 @@ export function Lotes() {
         .eq('ativo', true)
       if (planoError) {
         console.error('Erro ao encerrar planos do lote:', planoError)
-        alert('Erro ao encerrar planos nutricionais do lote. Exclusão cancelada.')
+        toast.error('Erro ao encerrar planos nutricionais do lote. Exclusão cancelada.')
         setDeleting(false)
         return
       }
@@ -1803,7 +1835,7 @@ export function Lotes() {
         .eq('ativo', true)
       if (catError) {
         console.error('Erro ao encerrar categorias do lote:', catError)
-        alert('Erro ao encerrar categorias do lote. Exclusão cancelada.')
+        toast.error('Erro ao encerrar categorias do lote. Exclusão cancelada.')
         setDeleting(false)
         return
       }
@@ -1815,16 +1847,17 @@ export function Lotes() {
         .eq('id', id)
       if (loteError) {
         console.error('Erro ao excluir lote:', loteError)
-        alert('Erro ao excluir lote.')
+        toast.error('Erro ao excluir lote.')
         setDeleting(false)
         return
       }
 
       setDeleteTarget(null)
       loadLotes()
+      toast.success('Lote excluído com sucesso.')
     } catch (err) {
       console.error('Erro inesperado ao excluir lote:', err)
-      alert('Erro inesperado ao excluir lote.')
+      toast.error('Erro inesperado ao excluir lote.')
     }
     setDeleting(false)
   }
@@ -2104,6 +2137,43 @@ export function Lotes() {
     })
   }
 
+  // Stable callbacks via ref para evitar re-render dos cards ao digitar no formulário
+  const cbRef = useRef({} as any)
+  cbRef.current = { handleEdit, handleToggleActive, setDeleteTarget, handleExportAllLotes }
+  const onEdit = useCallback((lote: any) => cbRef.current.handleEdit(lote), [])
+  const onToggleActive = useCallback((lote: any) => cbRef.current.handleToggleActive(lote), [])
+  const onDelete = useCallback((id: string, nome: string) => cbRef.current.setDeleteTarget({ id, nome }), [])
+  const onExport = useCallback(() => cbRef.current.handleExportAllLotes(), [])
+
+  const onNewLote = useCallback(() => {
+    setShowForm(true)
+    setEditingLote(null)
+    setNomeTouched(false)
+    setAvisoEnfermariaFechado(false)
+    setErrors({})
+    setMovimentacaoData([])
+    setMaternidadeData([])
+    setMorteData([])
+  }, [])
+
+  const onToggleInactive = useCallback(() => setShowInactive(v => !v), [])
+
+  // Counts para os filtros (só mudam quando lotes/showInactive/searchTerm mudam, não no form)
+  const filterCounts = useMemo(() => ({
+    todos: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l)).length,
+    pasto: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao !== 'Confinamento').length,
+    confinamento: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao === 'Confinamento').length,
+  }), [lotes, showInactive, searchTerm])
+
+  // Lista filtrada (só muda quando lotes/filtros/search mudam, não no form)
+  const lotesFiltrados = useMemo(() => lotes
+    .filter((lote) => (showInactive || lote.ativo) && matchesSearch(lote))
+    .filter((lote) =>
+      filtroLocal === 'todos' ? true :
+      filtroLocal === 'pasto' ? lote.sistema_producao !== 'Confinamento' :
+      lote.sistema_producao === 'Confinamento'
+    ), [lotes, showInactive, searchTerm, filtroLocal])
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -2115,65 +2185,26 @@ export function Lotes() {
     )
   }
 
+  if (loadError) {
+    return <ErrorState message="Erro ao carregar lotes" detail={loadError} onRetry={loadLotes} />
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       {!showForm && (
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-2xl font-bold text-gray-800">Lotes</h2>
-          <div className="flex gap-2 items-start w-full md:w-auto">
-            <Input
-              type="text"
-              placeholder="Buscar por lote, pasto ou curral..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 min-w-[300px] border-gray-200 focus:border-accent h-10"
-            />
-            <Button onClick={() => {
-              setShowForm(true)
-              setEditingLote(null)
-              setNomeTouched(false)
-              setAvisoEnfermariaFechado(false)
-              setMovimentacaoData([])
-              setMaternidadeData([])
-              setMorteData([])
-            }} className="h-10">Novo Lote</Button>
-            <Button
-              onClick={handleExportAllLotes}
-              disabled={lotes.length === 0}
-              className="h-10"
-            >
-              Exportar Tudo
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Filter Toggle */}
-      {!showForm && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => setShowInactive(!showInactive)}
-            className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
-              showInactive
-                ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            {showInactive ? (
-              <>
-                <span className="sm:hidden">✓ Mostrando</span>
-                <span className="hidden sm:inline">✓ Mostrando Desativados</span>
-              </>
-            ) : (
-              <>
-                <span className="sm:hidden">Mostrar</span>
-                <span className="hidden sm:inline">Mostrar Desativados</span>
-              </>
-            )}
-          </button>
-        </div>
+        <LoteFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          showInactive={showInactive}
+          onToggleInactive={onToggleInactive}
+          filtroLocal={filtroLocal}
+          onFiltroChange={setFiltroLocal}
+          counts={filterCounts}
+          onNewLote={onNewLote}
+          onExport={onExport}
+          exportDisabled={lotes.length === 0}
+        />
       )}
 
       {showForm && (
@@ -2205,7 +2236,7 @@ export function Lotes() {
                   <Input
                     type="text"
                     value={formData.nome}
-                    onChange={(e) => { setNomeTouched(true); setFormData({ ...formData, nome: e.target.value }) }}
+                    onChange={(e) => { setNomeTouched(true); setFormData({ ...formData, nome: e.target.value }); if (errors.nome) setErrors((p) => ({ ...p, nome: '' })) }}
                     required
                     placeholder="Nome do lote"
                     className={`${
@@ -2227,6 +2258,9 @@ export function Lotes() {
                       Já existe o lote “{nomeCheck.duplicataNome}” com esse nome (ignora maiúsculas e acentos)
                     </p>
                   )}
+                  {errors.nome && (
+                    <p className="text-xs text-red-600 mt-1">{errors.nome}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
@@ -2235,9 +2269,9 @@ export function Lotes() {
                   {formData.sistema_producao === 'Confinamento' ? (
                     <select
                       value={formData.curral_id}
-                      onChange={(e) => setFormData({ ...formData, curral_id: e.target.value, pasto_id: '' })}
+                      onChange={(e) => { setFormData({ ...formData, curral_id: e.target.value, pasto_id: '' }); if (errors.curral_id) setErrors((p) => ({ ...p, curral_id: '' })) }}
                       required
-                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${errors.curral_id ? 'border-red-400' : 'border-gray-200'}`}
                     >
                       <option value="">Selecione</option>
                       {currais.map((curral) => (
@@ -2247,9 +2281,9 @@ export function Lotes() {
                   ) : (
                     <select
                       value={formData.pasto_id}
-                      onChange={(e) => setFormData({ ...formData, pasto_id: e.target.value, curral_id: '' })}
+                      onChange={(e) => { setFormData({ ...formData, pasto_id: e.target.value, curral_id: '' }); if (errors.pasto_id) setErrors((p) => ({ ...p, pasto_id: '' })) }}
                       required
-                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${errors.pasto_id ? 'border-red-400' : 'border-gray-200'}`}
                     >
                       <option value="">Selecione</option>
                       {pastos.map((pasto) => (
@@ -2257,6 +2291,8 @@ export function Lotes() {
                       ))}
                     </select>
                   )}
+                  {errors.curral_id && <p className="text-xs text-red-600 mt-1">{errors.curral_id}</p>}
+                  {errors.pasto_id && <p className="text-xs text-red-600 mt-1">{errors.pasto_id}</p>}
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
@@ -2356,7 +2392,7 @@ export function Lotes() {
                   <button
                     type="button"
                     onClick={() => setIsPlanoLoteModalOpen(true)}
-                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap min-h-[44px]"
                   >
                     Gerenciar Planos →
                   </button>
@@ -2367,7 +2403,10 @@ export function Lotes() {
                 <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Categorias <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                {errors.categorias && (
+                  <p className="text-xs text-red-600 mb-2">{errors.categorias}</p>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                   {categoriasOpcoes.map((categoria) => {
                     const isSelected = formData.categorias.some(c => c.categoria.toLowerCase() === categoria.toLowerCase())
                     return (
@@ -2396,6 +2435,16 @@ export function Lotes() {
               {/* Dados Específicos por Categoria */}
               {formData.categorias.length > 0 && (
                 <div className="border-t pt-4 mt-4">
+                  {errors.peso_meta && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-700">{errors.peso_meta}</p>
+                    </div>
+                  )}
+                  {errors.peso_atual && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-700">{errors.peso_atual}</p>
+                    </div>
+                  )}
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">Dados por Categoria</h4>
                   {formData.categorias.map((cat, catIndex) => (
                     <div key={catIndex} className="mb-10 p-6 bg-white rounded-xl border-2 border-gray-300 shadow-md">
@@ -2406,7 +2455,7 @@ export function Lotes() {
                         <button
                           type="button"
                           onClick={() => handleCategoryCollapse(cat.categoria)}
-                          className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                          className="flex items-center justify-center w-11 h-11 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
                           aria-label={expandedCategories.has(cat.categoria) ? 'Colapsar' : 'Expandir'}
                         >
                           <svg 
@@ -2668,7 +2717,7 @@ export function Lotes() {
                                                 }
                                               } catch (err) {
                                                 console.error('Erro ao salvar GMD:', err)
-                                                alert('Erro ao salvar GMD. Tente novamente.')
+                                                toast.error('Erro ao salvar GMD. Tente novamente.')
                                               }
                                             }}
                                           >
@@ -2758,6 +2807,7 @@ export function Lotes() {
                                   const updatedCategorias = [...formData.categorias]
                                   updatedCategorias[catIndex] = { ...cat, peso_vivo_atual_kg_cab: novoPeso }
                                   setFormData({ ...formData, categorias: updatedCategorias })
+                                  if (errors.peso_atual || errors.peso_meta) setErrors((p) => ({ ...p, peso_atual: '', peso_meta: '' }))
                                 }}
                                 placeholder="0,00"
                                 decimalPlaces={2}
@@ -3521,173 +3571,37 @@ export function Lotes() {
       )}
 
       {!showForm && lotes.length === 0 ? (
-        <Card className="bg-white p-12 border-0 shadow-sm text-center">
-          <p className="text-gray-600 mb-4">Nenhum lote cadastrado</p>
-          <Button onClick={() => {
-            setShowForm(true)
-            setEditingLote(null)
-            setNomeTouched(false)
-            setAvisoEnfermariaFechado(false)
-            setMovimentacaoData([])
-            setMaternidadeData([])
-            setMorteData([])
-          }}>Criar Primeiro Lote</Button>
+        <Card className="bg-white border-0 shadow-sm">
+          <EmptyState
+            title="Nenhum lote cadastrado"
+            action={<Button onClick={() => {
+              setShowForm(true)
+              setEditingLote(null)
+              setNomeTouched(false)
+              setAvisoEnfermariaFechado(false)
+              setErrors({})
+              setMovimentacaoData([])
+              setMaternidadeData([])
+              setMorteData([])
+            }}>Criar Primeiro Lote</Button>}
+          />
         </Card>
       ) : !showForm ? (
         <div className="space-y-4">
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setFiltroLocal('todos')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${filtroLocal === 'todos' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-          >
-            Todos <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l)).length}</span>
-          </button>
-          <button
-            onClick={() => setFiltroLocal('pasto')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${filtroLocal === 'pasto' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-          >
-            Pasto <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao !== 'Confinamento').length}</span>
-          </button>
-          <button
-            onClick={() => setFiltroLocal('confinamento')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${filtroLocal === 'confinamento' ? 'bg-amber-700 text-white border-amber-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-          >
-            Confinamento <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao === 'Confinamento').length}</span>
-          </button>
-        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
-        {(() => {
-          const lotesFiltrados = lotes
-            .filter((lote) =>
-              (showInactive || lote.ativo) &&
-              matchesSearch(lote)
-            )
-            .filter((lote) =>
-              filtroLocal === 'todos' ? true :
-              filtroLocal === 'pasto' ? lote.sistema_producao !== 'Confinamento' :
-              lote.sistema_producao === 'Confinamento'
-            )
-          const renderCard = (lote: any) => (
-              <CardItem
-                key={lote.id}
-                title={lote.nome}
-                subtitle={(() => {
-                  const total = lote.categorias?.reduce((sum: number, cat: any) => sum + (cat.quant_atual ?? cat.quant_inicial ?? 0), 0) || lote.n_cabecas || 0
-                  return total > 0 ? `${total} cabeças` : undefined
-                })()}
-                status={lote.ativo ?? undefined}
-                onClick={() => handleEdit(lote)}
-              >
-                <div className="space-y-2 mb-4 flex-1">
-                  {lote.sistema_producao && (
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">Sistema:</span>{' '}
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lote.sistema_producao === 'Confinamento' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
-                        {lote.sistema_producao === 'Confinamento' ? 'Confinamento' : 'Pasto'}
-                      </span>
-                    </p>
-                  )}
-                  {lote.peso_vivo_atual_kg_cab && (
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">Peso Vivo:</span> {lote.peso_vivo_atual_kg_cab} kg
-                    </p>
-                  )}
-
-                  {lote.pasto_nome && (
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">Pasto:</span> {lote.pasto_nome}
-                    </p>
-                  )}
-
-                  {lote.curral_nome && (
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">Curral:</span> {lote.curral_nome}
-                    </p>
-                  )}
-
-                  {ocupacaoPorLote[lote.id]?.pasto && (
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">Tempo no pasto:</span> {ocupacaoPorLote[lote.id].pasto.periodo_ocupacao_dias} dias
-                    </p>
-                  )}
-
-                  {ocupacaoPorLote[lote.id]?.modulo && (
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">Módulo:</span> {ocupacaoPorLote[lote.id].modulo.modulo_nome}
-                    </p>
-                  )}
-
-                  {ocupacaoPorLote[lote.id]?.modulo && (
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">Tempo no módulo:</span> {ocupacaoPorLote[lote.id].modulo.periodo_ocupacao_dias} dias
-                    </p>
-                  )}
-
-                  {lote.categorias && lote.categorias.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-700 mb-2">Categorias:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {lote.categorias.map((cat: LoteCategoria, index: number) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-gray-100 rounded text-xs capitalize"
-                          >
-                            {cat.categoria}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {lote.qtd_bezerros && (
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">Bezerros:</span> {lote.qtd_bezerros}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex gap-2 mt-auto pt-3">
-                  <button
-                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleEdit(lote)
-                    }}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 text-red-600 hover:text-red-700"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleToggleActive(lote)
-                    }}
-                  >
-                    {lote.ativo ? 'Desativar' : 'Ativar'}
-                  </button>
-                  {!lote.ativo && (
-                    <button
-                      className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-red-600 text-white focus:ring-red-500 hover:shadow-md hover:bg-red-700 flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setDeleteTarget({ id: lote.id, nome: lote.nome })
-                      }}
-                    >
-                      Excluir
-                    </button>
-                  )}
-                </div>
-              </CardItem>
-          )
-          return (
-            <>
-              {lotesFiltrados.map(renderCard)}
-              {lotesFiltrados.length === 0 && (
-                <div className="col-span-full text-center text-gray-400 py-8">Nenhum lote encontrado.</div>
-              )}
-            </>
-          )
-        })()}
+          {lotesFiltrados.map((lote) => (
+            <LoteCard
+              key={lote.id}
+              lote={lote}
+              ocupacao={ocupacaoPorLote[lote.id]}
+              onEdit={onEdit}
+              onToggleActive={onToggleActive}
+              onDelete={onDelete}
+            />
+          ))}
+          {lotesFiltrados.length === 0 && (
+            <div className="col-span-full text-center text-gray-400 py-8">Nenhum lote encontrado.</div>
+          )}
         </div>
         </div>
       ) : null}

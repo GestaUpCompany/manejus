@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card } from '../../components/ui'
+import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -38,6 +38,7 @@ export function MovimentacaoDetalhes() {
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroMovimentacao | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistro()
@@ -46,6 +47,7 @@ export function MovimentacaoDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
+    setLoadError(null)
     const _fazendaId = await getFazendaIdForUser(user.id)
     const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
@@ -62,7 +64,12 @@ export function MovimentacaoDetalhes() {
       .single()
 
     if (error) {
-      console.error('Erro ao buscar registro:', error)
+      if (error.code === 'PGRST116') {
+        setRegistro(null)
+      } else {
+        console.error('Erro ao buscar registro:', error)
+        setLoadError(error.message || 'Erro ao buscar registro')
+      }
     } else {
       setRegistro(data as RegistroMovimentacao)
     }
@@ -70,83 +77,63 @@ export function MovimentacaoDetalhes() {
     setLoading(false)
   }
 
-  if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
-  }
-
-  if (!registro) {
-    return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/movimentacao')}>
-          Voltar
-        </Button>
-        <Card className="bg-white p-6 text-center" disableHover>
-          <p className="text-gray-600">Registro não encontrado</p>
-        </Card>
-      </div>
-    )
-  }
+  const backUrl = '/controller/cadernetas/movimentacao'
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Movimentação</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/movimentacao')}>
-          Voltar
-        </Button>
-      </div>
-
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
-        <div className="space-y-6">
-          {/* Informações Gerais */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote Origem:</span> {registro.lote_origem || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Destino:</span> {registro.destino || '-'}</p>
-            </div>
-          </div>
-
-          {/* Quantidades */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Quantidades</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Nº Cabeças:</span> {registro.numero_cabecas || 0}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Peso Vivo Atual (kg):</span> {registro.peso_vivo_atual_kg || 0}</p>
+    <DetailLayout
+      loading={loading}
+      loadError={loadError}
+      notFound={!registro}
+      onBack={() => navigate(backUrl)}
+      title="Detalhes do Registro de Movimentação"
+    >
+      {() => (
+        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+          <div className="space-y-6">
+            {/* Informações Gerais */}
+            <DetailSection title="Informações Gerais">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <DetailField label="Data" value={formatDate(registro!.data)} />
+                <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                <DetailField label="Lote Origem" value={formatValue(registro!.lote_origem)} />
+                <DetailField label="Destino" value={formatValue(registro!.destino)} />
               </div>
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Categorias */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Categorias</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}</p>
-            </div>
-          </div>
-
-          {/* Motivação */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Motivação</h3>
-            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+            {/* Quantidades */}
+            <DetailSection title="Quantidades" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Motivo:</span> {registro.motivo_movimentacao || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Subtipo:</span> {registro.subtipo || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Brinco:</span> {registro.brinco || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Chip:</span> {registro.chip || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Saída:</span> {registro.tipo_saida || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Entrada:</span> {registro.tipo_entrada || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Destino:</span> {registro.tipo_destino || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Fazenda Destino:</span> {registro.fazenda_destino_nome?.nome || '-'}</p>
+                <DetailField label="Nº Cabeças" value={registro!.numero_cabecas ?? 0} />
+                <DetailField label="Peso Vivo Atual (kg)" value={registro!.peso_vivo_atual_kg ?? 0} />
               </div>
-              {registro.causa_observacao && <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.causa_observacao}</p>}
-            </div>
+            </DetailSection>
+
+            {/* Categorias */}
+            <DetailSection title="Categorias" highlighted>
+              <DetailField label="Categoria" value={formatValue(registro!.categoria)} />
+            </DetailSection>
+
+            {/* Motivação */}
+            <DetailSection title="Motivação" highlighted>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <DetailField label="Motivo" value={formatValue(registro!.motivo_movimentacao)} />
+                  <DetailField label="Subtipo" value={formatValue(registro!.subtipo)} />
+                  <DetailField label="Brinco" value={formatValue(registro!.brinco)} />
+                  <DetailField label="Chip" value={formatValue(registro!.chip)} />
+                  <DetailField label="Tipo Saída" value={formatValue(registro!.tipo_saida)} />
+                  <DetailField label="Tipo Entrada" value={formatValue(registro!.tipo_entrada)} />
+                  <DetailField label="Tipo Destino" value={formatValue(registro!.tipo_destino)} />
+                  <DetailField label="Fazenda Destino" value={formatValue(registro!.fazenda_destino_nome?.nome)} />
+                </div>
+                {registro!.causa_observacao && (
+                  <DetailField label="Observação" value={formatValue(registro!.causa_observacao)} />
+                )}
+              </div>
+            </DetailSection>
           </div>
-        </div>
-      </Card>
-    </div>
+        </Card>
+      )}
+    </DetailLayout>
   )
 }

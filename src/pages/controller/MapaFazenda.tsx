@@ -7,7 +7,7 @@ import { TerraDraw, TerraDrawPolygonMode, TerraDrawPointMode, TerraDrawLineStrin
 import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
 import { supabase } from '../../services/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
-import { Button } from '../../components/ui'
+import { Button, ConfirmModal } from '../../components/ui'
 import type { BebedouroMapa, EstradaMapa, PontoMapa, CurralDetalhe, PastoDetalhe } from './mapaFazenda/types'
 import { mapStyle, terraDrawStyles } from './mapaFazenda/mapaConfig'
 import { loadSavedView, saveView } from './mapaFazenda/viewPersist'
@@ -107,6 +107,15 @@ export function MapaFazenda() {
   const [bebedourosDoPasto, setBebedourosDoPasto] = useState<{ id: string; nome: string }[]>([])
   const [buscandoPasto, setBuscandoPasto] = useState(false)
   const [salvando, setSalvando] = useState(false)
+
+  // Confirmação única para remoções (substitui window.confirm)
+  const [confirmAction, setConfirmAction] = useState<
+    | { type: 'removerEstrada'; estradaId: string }
+    | { type: 'removerPonto'; pontoId: string }
+    | { type: 'removerFabrica'; fabricaId: string }
+    | { type: 'removerGeometriaCurral'; curralId: string }
+    | null
+  >(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -672,18 +681,8 @@ export function MapaFazenda() {
     if (canvas) canvas.style.cursor = ''
   }
 
-  const removerEstrada = async (estradaId: string) => {
-    if (!confirm('Remover esta estrada do mapa?')) return
-    try {
-      const { error } = await supabase.rpc('remover_estrada', { p_estrada_id: estradaId })
-      if (error) throw error
-      setEstradaDetalhe(null)
-      setImportStatus({ type: 'success', msg: 'Estrada removida.' })
-      loadData()
-    } catch (err) {
-      console.error('Erro ao remover estrada:', err)
-      setImportStatus({ type: 'error', msg: `Erro ao remover: ${(err as Error).message}` })
-    }
+  const removerEstrada = (estradaId: string) => {
+    setConfirmAction({ type: 'removerEstrada', estradaId })
   }
 
   // ==================== Pontos de interesse ====================
@@ -746,18 +745,8 @@ export function MapaFazenda() {
     if (canvas) canvas.style.cursor = ''
   }
 
-  const removerPonto = async (pontoId: string) => {
-    if (!confirm('Remover este ponto do mapa?')) return
-    try {
-      const { error } = await supabase.rpc('remover_ponto', { p_ponto_id: pontoId })
-      if (error) throw error
-      setPontoDetalhe(null)
-      setImportStatus({ type: 'success', msg: 'Ponto removido.' })
-      loadData()
-    } catch (err) {
-      console.error('Erro ao remover ponto:', err)
-      setImportStatus({ type: 'error', msg: `Erro ao remover: ${(err as Error).message}` })
-    }
+  const removerPonto = (pontoId: string) => {
+    setConfirmAction({ type: 'removerPonto', pontoId })
   }
 
   // ==================== Fábricas ====================
@@ -820,18 +809,8 @@ export function MapaFazenda() {
     if (canvas) canvas.style.cursor = ''
   }
 
-  const removerFabrica = async (fabricaId: string) => {
-    if (!confirm('Remover esta fábrica do mapa?')) return
-    try {
-      const { error } = await supabase.rpc('remover_ponto', { p_ponto_id: fabricaId })
-      if (error) throw error
-      setFabricaDetalhe(null)
-      setImportStatus({ type: 'success', msg: 'Fábrica removida.' })
-      loadData()
-    } catch (err) {
-      console.error('Erro ao remover fábrica:', err)
-      setImportStatus({ type: 'error', msg: `Erro ao remover: ${(err as Error).message}` })
-    }
+  const removerFabrica = (fabricaId: string) => {
+    setConfirmAction({ type: 'removerFabrica', fabricaId })
   }
 
   const iniciarEdicaoFabrica = (fabricaId: string, fabricaNome: string) => {
@@ -944,18 +923,8 @@ export function MapaFazenda() {
     if (canvas) canvas.style.cursor = ''
   }
 
-  const removerGeometriaCurral = async (curralId: string) => {
-    if (!confirm('Remover a geometria deste curral do mapa?')) return
-    try {
-      const { error } = await supabase.rpc('remover_geometria_curral', { p_curral_id: curralId })
-      if (error) throw error
-      setCurralDetalhe(null)
-      setImportStatus({ type: 'success', msg: 'Geometria do curral removida.' })
-      loadData()
-    } catch (err) {
-      console.error('Erro ao remover curral:', err)
-      setImportStatus({ type: 'error', msg: `Erro ao remover: ${(err as Error).message}` })
-    }
+  const removerGeometriaCurral = (curralId: string) => {
+    setConfirmAction({ type: 'removerGeometriaCurral', curralId })
   }
 
   const iniciarEdicaoCurral = (curralId: string, curralNome: string) => {
@@ -1972,6 +1941,58 @@ export function MapaFazenda() {
     )
   }
 
+  // Executa a ação de remoção confirmada no modal (substitui window.confirm)
+  const executarConfirmacao = async () => {
+    if (!confirmAction) return
+    const action = confirmAction
+    setConfirmAction(null)
+    try {
+      if (action.type === 'removerEstrada') {
+        const { error } = await supabase.rpc('remover_estrada', { p_estrada_id: action.estradaId })
+        if (error) throw error
+        setEstradaDetalhe(null)
+        setImportStatus({ type: 'success', msg: 'Estrada removida.' })
+        loadData()
+      } else if (action.type === 'removerPonto') {
+        const { error } = await supabase.rpc('remover_ponto', { p_ponto_id: action.pontoId })
+        if (error) throw error
+        setPontoDetalhe(null)
+        setImportStatus({ type: 'success', msg: 'Ponto removido.' })
+        loadData()
+      } else if (action.type === 'removerFabrica') {
+        const { error } = await supabase.rpc('remover_ponto', { p_ponto_id: action.fabricaId })
+        if (error) throw error
+        setFabricaDetalhe(null)
+        setImportStatus({ type: 'success', msg: 'Fábrica removida.' })
+        loadData()
+      } else if (action.type === 'removerGeometriaCurral') {
+        const { error } = await supabase.rpc('remover_geometria_curral', { p_curral_id: action.curralId })
+        if (error) throw error
+        setCurralDetalhe(null)
+        setImportStatus({ type: 'success', msg: 'Geometria do curral removida.' })
+        loadData()
+      }
+    } catch (err) {
+      const rotuloErro =
+        action.type === 'removerEstrada' ? 'Erro ao remover estrada:'
+        : action.type === 'removerPonto' ? 'Erro ao remover ponto:'
+        : action.type === 'removerFabrica' ? 'Erro ao remover fábrica:'
+        : 'Erro ao remover curral:'
+      console.error(rotuloErro, err)
+      setImportStatus({ type: 'error', msg: `Erro ao remover: ${(err as Error).message}` })
+    }
+  }
+
+  // Configuração do modal de confirmação conforme o tipo de ação
+  const confirmModalConfig = confirmAction
+    ? {
+        removerEstrada: { title: 'Remover estrada', message: 'Remover esta estrada do mapa?' },
+        removerPonto: { title: 'Remover ponto', message: 'Remover este ponto do mapa?' },
+        removerFabrica: { title: 'Remover fábrica', message: 'Remover esta fábrica do mapa?' },
+        removerGeometriaCurral: { title: 'Remover geometria do curral', message: 'Remover a geometria deste curral do mapa?' },
+      }[confirmAction.type]
+    : null
+
   return (
     <div className={modoTelaCheia ? 'fixed inset-0 z-50 bg-white flex flex-col' : 'space-y-4'}>
       {/* Header (oculto em tela cheia) */}
@@ -2977,6 +2998,17 @@ export function MapaFazenda() {
           setNomeFabrica('')
           setShowFabricaModal(true)
         }}
+      />
+
+      {/* Modal de confirmação genérico para remoções (estrada, ponto, fábrica, curral) */}
+      <ConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={executarConfirmacao}
+        title={confirmModalConfig?.title ?? ''}
+        message={confirmModalConfig?.message ?? ''}
+        confirmText="Remover"
+        variant="danger"
       />
     </div>
   )

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card } from '../../components/ui'
+import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -45,12 +45,19 @@ interface RegistroOperacoesMaquinas {
   nome_usuario?: string
 }
 
+function simNao(valor?: string): string {
+  if (valor === 'S') return 'Sim'
+  if (valor === 'N') return 'Não'
+  return formatValue(valor)
+}
+
 export function RegistrosOperacoesMaquinasDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroOperacoesMaquinas | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistro()
@@ -59,6 +66,7 @@ export function RegistrosOperacoesMaquinasDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
+    setLoadError(null)
     const _fazendaId = await getFazendaIdForUser(user.id)
     const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
@@ -75,7 +83,12 @@ export function RegistrosOperacoesMaquinasDetalhes() {
       .single()
 
     if (error) {
-      console.error('Erro ao buscar registro:', error)
+      if (error.code === 'PGRST116') {
+        setRegistro(null)
+      } else {
+        console.error('Erro ao buscar registro:', error)
+        setLoadError(error.message || 'Erro ao buscar registro')
+      }
     } else {
       setRegistro(data as RegistroOperacoesMaquinas)
     }
@@ -83,124 +96,92 @@ export function RegistrosOperacoesMaquinasDetalhes() {
     setLoading(false)
   }
 
-  if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
-  }
-
-  if (!registro) {
-    return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/operacoes-maquinas')}>
-          Voltar
-        </Button>
-        <Card className="bg-white p-6 text-center" disableHover>
-          <p className="text-gray-600">Registro não encontrado</p>
-        </Card>
-      </div>
-    )
-  }
+  const backUrl = '/controller/cadernetas/operacoes-maquinas'
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Operações de Máquinas</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/operacoes-maquinas')}>
-          Voltar
-        </Button>
-      </div>
+    <DetailLayout
+      loading={loading}
+      loadError={loadError}
+      notFound={!registro}
+      onBack={() => navigate(backUrl)}
+      title="Detalhes do Registro de Operações de Máquinas"
+    >
+      {() => (
+        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+          <div className="space-y-6">
+            {/* Informações Gerais */}
+            <DetailSection title="Informações Gerais">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <DetailField label="Data" value={formatDate(registro!.data)} />
+                <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                <DetailField label="Veículo/Trator" value={formatValue(registro!.veiculo_trator)} />
+                <DetailField label="Implemento Utilizado" value={formatValue(registro!.implemento_utilizado)} />
+                <DetailField label="Tipo Operação" value={registro!.tipo_operacao.charAt(0).toUpperCase() + registro!.tipo_operacao.slice(1)} />
+              </div>
+            </DetailSection>
 
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
-        <div className="space-y-6">
-          {/* Informações Gerais */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Veículo/Trator:</span> {registro.veiculo_trator}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Implemento Utilizado:</span> {registro.implemento_utilizado || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Tipo Operação:</span> {registro.tipo_operacao.charAt(0).toUpperCase() + registro.tipo_operacao.slice(1)}</p>
-            </div>
-          </div>
-
-          {/* Horários */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Horários</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Horários */}
+            <DetailSection title="Horários" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Hora Inicial:</span> {registro.hora_inicial || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Hora Final:</span> {registro.hora_final || '-'}</p>
+                <DetailField label="Hora Inicial" value={formatValue(registro!.hora_inicial)} />
+                <DetailField label="Hora Final" value={formatValue(registro!.hora_final)} />
               </div>
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Odômetro */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Odômetro/Horímetro</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Odômetro */}
+            <DetailSection title="Odômetro/Horímetro" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Inicial:</span> {registro.odometro_horimetro_inicial || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Final:</span> {registro.odometro_horimetro_final || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Total:</span> {registro.total_odometro_horimetro || '-'}</p>
+                <DetailField label="Inicial" value={formatValue(registro!.odometro_horimetro_inicial)} />
+                <DetailField label="Final" value={formatValue(registro!.odometro_horimetro_final)} />
+                <DetailField label="Total" value={formatValue(registro!.total_odometro_horimetro)} />
               </div>
-            </div>
+            </DetailSection>
+
+            {/* Aplicação */}
+            {registro!.aplicacoes && Array.isArray(registro!.aplicacoes) && registro!.aplicacoes.length > 0 && (
+              <DetailSection title="Aplicação" highlighted>
+                <div className="space-y-3">
+                  {registro!.aplicacoes.map((aplic, idx) => (
+                    <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                      <DetailField label="Insumo Aplicado" value={formatValue(aplic.insumo_aplicado)} />
+                      <DetailField label="Quantidade Total" value={formatValue(aplic.quantidade_total_aplicada)} />
+                      <DetailField label="Área Trabalhada" value={formatValue(aplic.area_trabalhada)} />
+                      <DetailField label="Dose Aplicada" value={formatValue(aplic.dose_aplicada)} />
+                    </div>
+                  ))}
+                </div>
+              </DetailSection>
+            )}
+
+            {/* Meta Diária */}
+            {registro!.checklist?.meta_diaria_batida && (
+              <DetailSection title="Meta Diária" highlighted>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <DetailField label="Meta Diária Batida" value={simNao(registro!.checklist.meta_diaria_batida.valor)} />
+                  <DetailField label="Obs." value={formatValue(registro!.checklist.meta_diaria_batida.observacao)} />
+                </div>
+              </DetailSection>
+            )}
+
+            {/* Imprevistos */}
+            {registro!.checklist?.algum_imprevisto && (
+              <DetailSection title="Imprevistos" highlighted>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <DetailField label="Algum Imprevisto" value={simNao(registro!.checklist.algum_imprevisto.valor)} />
+                  <DetailField label="Obs." value={formatValue(registro!.checklist.algum_imprevisto.observacao)} />
+                </div>
+              </DetailSection>
+            )}
+
+            {/* Observação */}
+            {registro!.observacao && (
+              <DetailSection title="Observação" highlighted>
+                <p className="text-sm">{registro!.observacao}</p>
+              </DetailSection>
+            )}
           </div>
-
-          {/* Aplicação */}
-          {registro.aplicacoes && Array.isArray(registro.aplicacoes) && registro.aplicacoes.length > 0 && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Aplicação</h3>
-              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                {registro.aplicacoes.map((aplic, idx) => (
-                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <p className="text-sm"><span className="font-medium text-gray-700">Insumo Aplicado:</span> {aplic.insumo_aplicado || '-'}</p>
-                    <p className="text-sm"><span className="font-medium text-gray-700">Quantidade Total:</span> {aplic.quantidade_total_aplicada || '-'}</p>
-                    <p className="text-sm"><span className="font-medium text-gray-700">Área Trabalhada:</span> {aplic.area_trabalhada || '-'}</p>
-                    <p className="text-sm"><span className="font-medium text-gray-700">Dose Aplicada:</span> {aplic.dose_aplicada || '-'}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Meta Diária */}
-          {registro.checklist?.meta_diaria_batida && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Meta Diária</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <p className="text-sm"><span className="font-medium text-gray-700">Meta Diária Batida:</span> {registro.checklist.meta_diaria_batida.valor === 'S' ? 'Sim' : registro.checklist.meta_diaria_batida.valor === 'N' ? 'Não' : registro.checklist.meta_diaria_batida.valor || '-'}</p>
-                  <p className="text-sm"><span className="font-medium text-gray-700">Obs.:</span> {registro.checklist.meta_diaria_batida.observacao || '-'}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Imprevistos */}
-          {registro.checklist?.algum_imprevisto && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Imprevistos</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <p className="text-sm"><span className="font-medium text-gray-700">Algum Imprevisto:</span> {registro.checklist.algum_imprevisto.valor === 'S' ? 'Sim' : registro.checklist.algum_imprevisto.valor === 'N' ? 'Não' : registro.checklist.algum_imprevisto.valor || '-'}</p>
-                  <p className="text-sm"><span className="font-medium text-gray-700">Obs.:</span> {registro.checklist.algum_imprevisto.observacao || '-'}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Observação */}
-          {registro.observacao && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observação</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm">{registro.observacao}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
-    </div>
+        </Card>
+      )}
+    </DetailLayout>
   )
 }

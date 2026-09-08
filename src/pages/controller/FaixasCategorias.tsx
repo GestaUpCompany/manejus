@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState, useCallback } from 'react'
 
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, Modal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, Modal, EmptyState, PageSkeleton } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import { exportToXLSXMultiSheet, type ColumnConfig } from '../../utils/exportXLSX'
 
@@ -699,18 +699,12 @@ export function FaixasCategorias() {
   }
 
   if (loadingFazenda) {
-    return (
-      <div className="flex items-center justify-center py-12 animate-fade-in">
-        <p className="text-gray-600">Carregando...</p>
-      </div>
-    )
+    return <PageSkeleton variant="list" />
   }
 
   if (!fazendaId) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600 mb-4">Nenhuma fazenda vinculada ao seu usuário</p>
-      </div>
+      <EmptyState title="Nenhuma fazenda vinculada ao seu usuário" />
     )
   }
 

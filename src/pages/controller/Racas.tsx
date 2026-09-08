@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem, useToast } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -14,6 +14,7 @@ interface Raca {
 
 export function Racas() {
   const { user } = useAuth()
+  const toast = useToast()
   const [racas, setRacas] = useState<Raca[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -95,7 +96,7 @@ export function Racas() {
 
     if (error) {
       console.error('Erro ao salvar raça:', error)
-      alert('Erro ao salvar raça. Verifique se já não existe uma raça com este nome.')
+      toast.error('Erro ao salvar raça. Verifique se já não existe uma raça com este nome.')
     } else {
       setFormData({ nome: '' })
       setShowForm(false)

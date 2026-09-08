@@ -1,5 +1,5 @@
-import jsPDF from 'jspdf'
-import Chart from 'chart.js/auto'
+import type jsPDF from 'jspdf'
+import type Chart from 'chart.js/auto'
 import { renderRelatorioHeader, type HeaderContext } from './relatorioHeaderPDF'
 
 export interface DadoRelatorioConsumo {
@@ -116,7 +116,8 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
   const darkText = '#1F2937'
   const mediumText = '#6B7280'
 
-  const chart = new Chart(ctx, {
+  const ChartMod = await import('chart.js/auto')
+  const chart = new ChartMod.default(ctx, {
     type: 'bar',
     data: {
       labels: dados.map((d) => d.data_label),
@@ -577,7 +578,8 @@ function chunkDados(dados: DadoRelatorioConsumo[], maxPerPage: number): DadoRela
 export async function gerarRelatorioConsumoPDF(params: ParametrosRelatorioConsumo): Promise<Blob> {
   const { dataInicio, dataFim, lotes } = params
 
-  const doc = new jsPDF({
+  const jsPDFMod = await import('jspdf')
+  const doc = new jsPDFMod.default({
     orientation: 'landscape',
     unit: 'mm',
     format: 'a4',

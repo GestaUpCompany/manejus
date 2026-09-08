@@ -1,5 +1,4 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import type jsPDF from 'jspdf'
 import { renderRelatorioHeader, type HeaderContext } from './relatorioHeaderPDF'
 
 // === Paleta ===
@@ -243,7 +242,9 @@ function renderKPIs(ctx: RenderContext, kpis: KPIsPDF, variacoes: VariacoesPDF):
 }
 
 export async function gerarRelatorioAtividadesPDF(dados: DadosPDFRelatorioAtividades): Promise<Blob> {
-  const doc = new jsPDF({
+  const jsPDFMod = await import('jspdf')
+  const autoTableMod = await import('jspdf-autotable')
+  const doc = new jsPDFMod.default({
     orientation: 'landscape',
     unit: 'mm',
     format: 'a4',
@@ -290,7 +291,7 @@ export async function gerarRelatorioAtividadesPDF(dados: DadosPDFRelatorioAtivid
     doc.setFont('helvetica', 'normal')
     y += 2
 
-    autoTable(doc, {
+    autoTableMod.default(doc, {
       startY: y,
       head: [['Funcionário', 'Atrib.', 'Concl.', 'Andam.', 'Pend.', 'Não prev.', 'Tempo prod.', 'Taxa']],
       body: dados.metricasFunc.map((m) => {
@@ -334,7 +335,7 @@ export async function gerarRelatorioAtividadesPDF(dados: DadosPDFRelatorioAtivid
     doc.setFont('helvetica', 'normal')
     y += 2
 
-    autoTable(doc, {
+    autoTableMod.default(doc, {
       startY: y,
       head: [['Setor', 'Total', 'Concl.', 'Pend.', 'Atrasadas', 'Tempo prod.', 'Taxa conclusão']],
       body: dados.metricasSetor.map((s) => [
@@ -387,7 +388,7 @@ export async function gerarRelatorioAtividadesPDF(dados: DadosPDFRelatorioAtivid
       ])
     }
 
-    autoTable(doc, {
+    autoTableMod.default(doc, {
       startY: y,
       head: [['Status', 'Qtd.', 'Prioridade', 'Qtd.']],
       body: distBody,
@@ -428,7 +429,7 @@ export async function gerarRelatorioAtividadesPDF(dados: DadosPDFRelatorioAtivid
     doc.setFont('helvetica', 'normal')
     y += 2
 
-    autoTable(doc, {
+    autoTableMod.default(doc, {
       startY: y,
       head: [['Título', 'Responsável', 'Data', 'Status', 'Tempo']],
       body: dados.naoPrevistasLista.slice(0, 30).map((a) => {
@@ -471,7 +472,7 @@ export async function gerarRelatorioAtividadesPDF(dados: DadosPDFRelatorioAtivid
     doc.setFont('helvetica', 'normal')
     y += 2
 
-    autoTable(doc, {
+    autoTableMod.default(doc, {
       startY: y,
       head: [['Quando', 'Tipo', 'Atividade', 'Funcionário', 'Descrição', 'Impacto']],
       body: dados.imprevistos.slice(0, 50).map((i) => [
@@ -510,7 +511,7 @@ export async function gerarRelatorioAtividadesPDF(dados: DadosPDFRelatorioAtivid
     doc.setFont('helvetica', 'normal')
     y += 2
 
-    autoTable(doc, {
+    autoTableMod.default(doc, {
       startY: y,
       head: [['Título', 'Responsáveis', 'Data', 'Status', 'Tempo']],
       body: dados.atividades.slice(0, 80).map((a) => {

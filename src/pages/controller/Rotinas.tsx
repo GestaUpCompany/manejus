@@ -8,6 +8,7 @@ import {
   Modal,
   ConfirmModal,
   MultiSelect,
+  useToast,
 } from '../../components/ui'
 import {
   ChecklistRegra,
@@ -76,6 +77,7 @@ const INITIAL_ROTINA_FORM: RotinaFormData = {
 
 export function Rotinas() {
   const { user } = useAuth()
+  const toast = useToast()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [funcionarios, setFuncionarios] = useState<{ id: string; nome: string }[]>([])
 
@@ -482,7 +484,7 @@ export function Rotinas() {
     setHabilitandoCadernetas(false)
     if (error) {
       console.error('[Rotinas] Erro ao habilitar cadernetas:', error)
-      alert('Erro ao habilitar cadernetas. Tente novamente.')
+      toast.error('Erro ao habilitar cadernetas. Tente novamente.')
       return
     }
 

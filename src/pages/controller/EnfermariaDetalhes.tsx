@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card } from '../../components/ui'
+import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -29,12 +29,27 @@ interface RegistroEnfermaria {
   updated_at?: string
 }
 
+const DIAGNOSTICO_LABELS: Record<string, string> = {
+  bicheira: 'Bicheira',
+  cegueira: 'Cegueira',
+  fraturas: 'Fraturas',
+  febreAlta: 'Febre Alta',
+  picadoCobra: 'Picado por Cobra',
+  presencaSangue: 'Presença de Sangue',
+  andarCambaleante: 'Andar Cambaleante',
+  pododermiteCascos: 'Pododermite/Cascos',
+  sintomasPneumonia: 'Sintomas de Pneumonia',
+  desordensDigestivas: 'Desordens Digestivas',
+  incoordenacaoTremores: 'Incoordenação/Tremores',
+}
+
 export function EnfermariaDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroEnfermaria | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistro()
@@ -43,6 +58,7 @@ export function EnfermariaDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
+    setLoadError(null)
     const _fazendaId = await getFazendaIdForUser(user.id)
     const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
@@ -59,7 +75,12 @@ export function EnfermariaDetalhes() {
       .single()
 
     if (error) {
-      console.error('Erro ao buscar registro:', error)
+      if (error.code === 'PGRST116') {
+        setRegistro(null)
+      } else {
+        console.error('Erro ao buscar registro:', error)
+        setLoadError(error.message || 'Erro ao buscar registro')
+      }
     } else {
       setRegistro(data as RegistroEnfermaria)
     }
@@ -67,130 +88,87 @@ export function EnfermariaDetalhes() {
     setLoading(false)
   }
 
-  if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
-  }
-
-  if (!registro) {
-    return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/enfermaria')}>
-          Voltar
-        </Button>
-        <Card className="bg-white p-6" disableHover text-center>
-          <p className="text-gray-600">Registro não encontrado</p>
-        </Card>
-      </div>
-    )
-  }
+  const backUrl = '/controller/cadernetas/enfermaria'
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Enfermaria</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/enfermaria')}>
-          Voltar
-        </Button>
-      </div>
-
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
-        <div className="space-y-6">
-          {/* Informações Gerais */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Brinco:</span> {registro.brinco || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Chip:</span> {registro.chip || '-'}</p>
-            </div>
-          </div>
-
-          {/* Identificação do Animal */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Identificação do Animal</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+    <DetailLayout
+      loading={loading}
+      loadError={loadError}
+      notFound={!registro}
+      onBack={() => navigate(backUrl)}
+      title="Detalhes do Registro de Enfermaria"
+    >
+      {() => (
+        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+          <div className="space-y-6">
+            {/* Informações Gerais */}
+            <DetailSection title="Informações Gerais">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Sexo:</span> {registro.sexo || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Raça:</span> {registro.raca || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Idade:</span> {registro.idade || '-'}</p>
+                <DetailField label="Data" value={formatDate(registro!.data)} />
+                <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                <DetailField label="Brinco" value={formatValue(registro!.brinco)} />
+                <DetailField label="Chip" value={formatValue(registro!.chip)} />
               </div>
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Localização */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Localização</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Identificação do Animal */}
+            <DetailSection title="Identificação do Animal" highlighted>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <DetailField label="Categoria" value={formatValue(registro!.categoria)} />
+                <DetailField label="Sexo" value={formatValue(registro!.sexo)} />
+                <DetailField label="Raça" value={formatValue(registro!.raca)} />
+                <DetailField label="Idade" value={formatValue(registro!.idade)} />
+              </div>
+            </DetailSection>
+
+            {/* Localização */}
+            <DetailSection title="Localização" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
+                <DetailField label="Lote" value={formatValue(registro!.lote)} />
+                <DetailField label="Pasto" value={formatValue(registro!.pasto)} />
               </div>
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Tratamento */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Tratamento</h3>
-            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-              <p className="text-sm"><span className="font-medium text-gray-700">Tratamento:</span> {registro.tratamento_outros || '-'}</p>
-              {registro.tratamento_outros && <p className="text-sm"><span className="font-medium text-gray-700">Tratamento Outros:</span> {registro.tratamento_outros}</p>}
-              {registro.tratamento_obs && <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.tratamento_obs}</p>}
-            </div>
-          </div>
+            {/* Tratamento */}
+            <DetailSection title="Tratamento" highlighted>
+              <div className="space-y-2">
+                <DetailField label="Tratamento" value={formatValue(registro!.tratamento_outros)} />
+                {registro!.tratamento_obs && (
+                  <DetailField label="Observação" value={formatValue(registro!.tratamento_obs)} />
+                )}
+              </div>
+            </DetailSection>
 
-          {/* Diagnósticos */}
-          {registro.diagnosticos && Object.keys(registro.diagnosticos).length > 0 && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Diagnósticos</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Diagnósticos */}
+            {registro!.diagnosticos && Object.keys(registro!.diagnosticos).length > 0 && (
+              <DetailSection title="Diagnósticos" highlighted>
                 <p className="text-sm font-medium text-gray-700">
-                  {Object.entries(registro.diagnosticos)
+                  {Object.entries(registro!.diagnosticos)
                     .filter(([_, value]: [string, any]) => value.valor === 'S')
-                    .map(([key]: [string, any]) => {
-                      const mapping: Record<string, string> = {
-                        bicheira: 'Bicheira',
-                        cegueira: 'Cegueira',
-                        fraturas: 'Fraturas',
-                        febreAlta: 'Febre Alta',
-                        picadoCobra: 'Picado por Cobra',
-                        presencaSangue: 'Presença de Sangue',
-                        andarCambaleante: 'Andar Cambaleante',
-                        pododermiteCascos: 'Pododermite/Cascos',
-                        sintomasPneumonia: 'Sintomas de Pneumonia',
-                        desordensDigestivas: 'Desordens Digestivas',
-                        incoordenacaoTremores: 'Incoordenação/Tremores'
-                      }
-                      return mapping[key] || key
-                    })
+                    .map(([key]: [string, any]) => DIAGNOSTICO_LABELS[key] || key)
                     .join(', ') || 'Nenhum diagnóstico positivo'}
                 </p>
-              </div>
-            </div>
-          )}
+              </DetailSection>
+            )}
 
-          {/* Medicamentos */}
-          {registro.medicamentos && Array.isArray(registro.medicamentos) && registro.medicamentos.length > 0 && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Medicamentos</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Medicamentos */}
+            {registro!.medicamentos && Array.isArray(registro!.medicamentos) && (registro!.medicamentos as any[]).length > 0 && (
+              <DetailSection title="Medicamentos" highlighted>
                 <div className="space-y-3">
-                  {registro.medicamentos.map((med: any, index: number) => (
+                  {(registro!.medicamentos as any[]).map((med: any, index: number) => (
                     <div key={index} className="border-b border-gray-200 pb-2 last:border-0 last:pb-0">
-                      <p className="text-sm"><span className="font-medium text-gray-700">Nome:</span> {med.nomeComercial || '-'}</p>
-                      <p className="text-sm"><span className="font-medium text-gray-700">Tipo:</span> {med.tipo || '-'}</p>
-                      <p className="text-sm"><span className="font-medium text-gray-700">Dose Aplicada:</span> {med.doseAplicada || '-'}</p>
-                      {med.doseRecomendada && <p className="text-sm"><span className="font-medium text-gray-700">Dose Recomendada:</span> {med.doseRecomendada}</p>}
+                      <DetailField label="Nome" value={formatValue(med.nomeComercial)} />
+                      <DetailField label="Tipo" value={formatValue(med.tipo)} />
+                      <DetailField label="Dose Aplicada" value={formatValue(med.doseAplicada)} />
+                      {med.doseRecomendada && <DetailField label="Dose Recomendada" value={formatValue(med.doseRecomendada)} />}
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
-    </div>
+              </DetailSection>
+            )}
+          </div>
+        </Card>
+      )}
+    </DetailLayout>
   )
 }

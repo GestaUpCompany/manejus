@@ -1,5 +1,4 @@
-import jsPDF from 'jspdf'
-import Chart from 'chart.js/auto'
+import type jsPDF from 'jspdf'
 import { renderRelatorioHeader, type HeaderContext } from './relatorioHeaderPDF'
 
 // === Tipos ===
@@ -209,7 +208,8 @@ async function renderizarGraficoDesvioKg(
   const darkText = '#1F2937'
   const mediumText = '#6B7280'
 
-  const chart = new Chart(ctx, {
+  const ChartMod = await import('chart.js/auto')
+  const chart = new ChartMod.default(ctx, {
     type: 'bar',
     data: {
       labels,
@@ -321,7 +321,8 @@ async function renderizarGraficoDesvioHorario(
   const darkText = '#1F2937'
   const mediumText = '#6B7280'
 
-  const chart = new Chart(ctx, {
+  const ChartMod = await import('chart.js/auto')
+  const chart = new ChartMod.default(ctx, {
     type: 'bar',
     data: {
       labels,
@@ -613,7 +614,8 @@ function renderTabelaDetalhada(
 export async function gerarRelatorioTratosPDF(params: ParametrosRelatorioTratos): Promise<Blob> {
   const { dataInicio, dataFim, fazendaNome, lotes } = params
 
-  const doc = new jsPDF({
+  const jsPDFMod = await import('jspdf')
+  const doc = new jsPDFMod.default({
     orientation: 'landscape',
     unit: 'mm',
     format: 'a4',

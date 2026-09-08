@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, Select } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, Select, Pagination } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useLotes, usePastos } from '../../hooks/useFazendaQueries'
 
 interface Individuo {
   id: string
@@ -25,16 +26,6 @@ interface Individuo {
   pasto_atual?: string
   created_at: string
   updated_at: string
-}
-
-interface Lote {
-  id: string
-  nome: string
-}
-
-interface Pasto {
-  id: string
-  nome: string
 }
 
 interface Raca {
@@ -73,8 +64,7 @@ export function Individuos() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [individuos, setIndividuos] = useState<Individuo[]>([])
-  const [lotes, setLotes] = useState<Lote[]>([])
-  const [pastos, setPastos] = useState<Pasto[]>([])
+  const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
   const [racas, setRacas] = useState<Raca[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -92,6 +82,9 @@ export function Individuos() {
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(getStoredPerPage)
   const [totalCount, setTotalCount] = useState(0)
+
+  const { data: lotes = [] } = useLotes(fazendaId)
+  const { data: pastos = [] } = usePastos(fazendaId)
 
   const from = (page - 1) * perPage
   const to = from + perPage - 1
@@ -218,6 +211,8 @@ export function Individuos() {
       fazendaId = vinculos[0].fazenda_id
     }
 
+    setFazendaId(fazendaId || undefined)
+
     let countQuery: any = supabase
       .from('individuos')
       .select('*', { count: 'exact', head: true })
@@ -234,20 +229,12 @@ export function Individuos() {
     dataQuery = buildFilters(dataQuery)
     dataQuery = dataQuery.range(from, to)
 
-    let lotesQuery = supabase.from('lotes').select('id, nome').is('deleted_at', null)
-    if (fazendaId) lotesQuery = lotesQuery.eq('fazenda_id', fazendaId)
-
-    let pastosQuery = supabase.from('pastos').select('id, nome').is('deleted_at', null)
-    if (fazendaId) pastosQuery = pastosQuery.eq('fazenda_id', fazendaId)
-
     let racasQuery = supabase.from('racas').select('id, nome').is('deleted_at', null)
     if (fazendaId) racasQuery = racasQuery.eq('fazenda_id', fazendaId)
 
-    const [countRes, individuosRes, lotesRes, pastosRes, racasRes] = await Promise.all([
+    const [countRes, individuosRes, racasRes] = await Promise.all([
       countQuery,
       dataQuery,
-      lotesQuery,
-      pastosQuery,
       racasQuery,
     ])
 
@@ -262,12 +249,6 @@ export function Individuos() {
     } else {
       setIndividuos(individuosRes.data as Individuo[])
     }
-
-    if (lotesRes.error) console.error('Erro ao buscar lotes:', lotesRes.error)
-    else setLotes(lotesRes.data as Lote[])
-
-    if (pastosRes.error) console.error('Erro ao buscar pastos:', pastosRes.error)
-    else setPastos(pastosRes.data as Pasto[])
 
     if (racasRes.error) console.error('Erro ao buscar raças:', racasRes.error)
     else setRacas(racasRes.data as Raca[])
@@ -319,10 +300,6 @@ export function Individuos() {
         )
     }
   }
-
-  const totalPages = Math.ceil(totalCount / perPage) || 1
-  const startItem = totalCount === 0 ? 0 : from + 1
-  const endItem = Math.min(from + perPage, totalCount)
 
   const handlePerPageChange = (value: string) => {
     const newPerPage = Number(value)
@@ -734,50 +711,14 @@ export function Individuos() {
       </div>
 
       {/* Pagination */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span>
-            {startItem}–{endItem} de {totalCount}
-          </span>
-          <span>|</span>
-          <div className="flex items-center gap-2">
-            <label htmlFor="per-page">Por página:</label>
-            <select
-              id="per-page"
-              value={perPage}
-              onChange={(e) => handlePerPageChange(e.target.value)}
-              className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {PER_PAGE_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-          >
-            Anterior
-          </Button>
-          <span className="text-sm text-gray-600 px-2">
-            Página {page} de {totalPages}
-          </span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-          >
-            Próxima
-          </Button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        totalItems={totalCount}
+        perPage={perPage}
+        onPageChange={setPage}
+        onPerPageChange={(v) => handlePerPageChange(String(v))}
+        perPageOptions={PER_PAGE_OPTIONS}
+      />
     </div>
   )
 }

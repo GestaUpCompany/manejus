@@ -1,9 +1,11 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, Modal, MultiSelect } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, Modal, MultiSelect, useToast } from '../../components/ui'
+import { AtividadeCard } from '../../components/atividades/AtividadeCard'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { usePastos, useCurrais } from '../../hooks/useFazendaQueries'
 import {
   getAtividades,
   createAtividade,
@@ -30,38 +32,12 @@ const PRIORIDADE_CORES: Record<number, string> = {
   3: 'bg-green-500',
 }
 
-const STATUS_CORES: Record<string, string> = {
-  pendente: 'bg-gray-100 text-gray-700',
-  em_andamento: 'bg-blue-100 text-blue-700',
-  concluido: 'bg-green-100 text-green-700',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  pendente: 'Pendente',
-  em_andamento: 'Em Andamento',
-  concluido: 'Concluído',
-}
-
 const LOCAL_TIPO_LABELS: Record<string, string> = {
   livre: 'Livre',
   pasto: 'Pasto',
   curral: 'Curral',
   local: 'Infraestrutura',
   maquina: 'Máquina/Equipamento',
-}
-
-const AVATAR_CORES = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500', 'bg-indigo-500']
-
-function getIniciais(nome: string): string {
-  const partes = nome.trim().split(/\s+/)
-  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
-  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
-}
-
-function getCorAvatar(nome: string): string {
-  let hash = 0
-  for (let i = 0; i < nome.length; i++) hash = nome.charCodeAt(i) + ((hash << 5) - hash)
-  return AVATAR_CORES[Math.abs(hash) % AVATAR_CORES.length]
 }
 
 interface LocalPickerProps {
@@ -199,12 +175,6 @@ function getHoje(): string {
   return `${ano}-${mes}-${dia}`
 }
 
-function formatarData(iso: string): string {
-  if (!iso) return ''
-  const [, m, d] = iso.split('-')
-  return `${d}/${m}`
-}
-
 // === Draft cache ===
 
 const DRAFT_KEY = 'atividades_draft'
@@ -238,6 +208,8 @@ function clearDraft() {
 export function Atividades() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [atividades, setAtividades] = useState<Atividade[]>([])
   const [loading, setLoading] = useState(true)
@@ -246,11 +218,14 @@ export function Atividades() {
   const [showBulkForm, setShowBulkForm] = useState(false)
   const [rows, setRows] = useState<FormRow[]>([emptyRow()])
   const [submitting, setSubmitting] = useState(false)
+  const [bulkErrors, setBulkErrors] = useState<string>('')
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   // Form de edicao (modal vertical, atividade unica)
   const [editingAtividade, setEditingAtividade] = useState<Atividade | null>(null)
   const [editForm, setEditForm] = useState<EditFormData | null>(null)
   const [editSubmitting, setEditSubmitting] = useState(false)
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({})
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [atividadeToDelete, setAtividadeToDelete] = useState<string | null>(null)
@@ -261,8 +236,10 @@ export function Atividades() {
   const [setores, setSetores] = useState<{ id: string; nome: string }[]>([])
   const [funcionarios, setFuncionarios] = useState<FuncionarioComSetor[]>([])
   const [prioridades, setPrioridades] = useState<PrioridadeAtividade[]>([])
-  const [pastos, setPastos] = useState<{ id: string; nome: string }[]>([])
-  const [currais, setCurrais] = useState<{ id: string; nome: string }[]>([])
+  const { data: pastosData = [] } = usePastos(fazendaId || undefined)
+  const { data: curraisData = [] } = useCurrais(fazendaId || undefined)
+  const pastos = useMemo(() => pastosData.filter(p => p.ativo), [pastosData])
+  const currais = useMemo(() => curraisData.filter(c => c.ativo), [curraisData])
   const [locais, setLocais] = useState<{ id: string; nome: string }[]>([])
   const [maquinas, setMaquinas] = useState<{ id: string; nome: string }[]>([])
 
@@ -317,6 +294,7 @@ export function Atividades() {
   const [editingTemplate, setEditingTemplate] = useState<AtividadeTemplate | null>(null)
   const [editTemplateForm, setEditTemplateForm] = useState<{ id: string; titulo: string; descricao: string; local: string; local_tipo: string; local_id: string; setor_id: string; funcionario_ids: string[]; prioridade: number } | null>(null)
   const [editTemplateSubmitting, setEditTemplateSubmitting] = useState(false)
+  const [editTemplateErrors, setEditTemplateErrors] = useState<Record<string, string>>({})
   const [showTemplateDeleteModal, setShowTemplateDeleteModal] = useState(false)
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
@@ -333,15 +311,17 @@ export function Atividades() {
   useEffect(() => {
     if (!fazendaId) return
     loadControleAcesso()
-    loadSetores()
-    loadFuncionarios()
     loadPrioridades()
-    loadPastos()
-    loadCurrais()
-    loadLocais()
-    loadMaquinas()
-    loadAtividades()
-    loadTemplates()
+    void (async () => {
+      await Promise.all([
+        loadSetores(),
+        loadFuncionarios(),
+        loadLocais(),
+        loadMaquinas(),
+        loadAtividades(),
+        loadTemplates(),
+      ])
+    })()
   }, [fazendaId])
 
   const loadControleAcesso = async () => {
@@ -369,31 +349,6 @@ export function Atividades() {
     setFuncionarios(data.filter((f) => f.ativo))
   }
 
-  const loadPastos = async () => {
-    if (!fazendaId) return
-    const { data, error } = await supabase
-      .from('pastos')
-      .select('id, nome')
-      .eq('fazenda_id', fazendaId)
-      .eq('ativo', true)
-      .is('deleted_at', null)
-      .order('nome', { ascending: true })
-    if (error) { console.error('Erro ao buscar pastos:', error) }
-    else { setPastos(data || []) }
-  }
-
-  const loadCurrais = async () => {
-    if (!fazendaId) return
-    const { data, error } = await supabase
-      .from('currais')
-      .select('id, nome')
-      .eq('fazenda_id', fazendaId)
-      .eq('ativo', true)
-      .is('deleted_at', null)
-      .order('nome', { ascending: true })
-    if (error) { console.error('Erro ao buscar currais:', error) }
-    else { setCurrais(data || []) }
-  }
 
   const loadLocais = async () => {
     if (!fazendaId) return
@@ -467,9 +422,11 @@ export function Atividades() {
   const handleCloseBulkForm = () => {
     saveDraft(rows)
     setShowBulkForm(false)
+    setBulkErrors('')
   }
 
   const updateRow = (rowId: string, patch: Partial<FormRow>) => {
+    if (bulkErrors) setBulkErrors('')
     setRows((prev) => {
       const updated = prev.map((r) => (r.id === rowId ? { ...r, ...patch } : r))
       saveDraft(updated)
@@ -526,17 +483,17 @@ export function Atividades() {
     // Validar atividades normais: exigem data e responsáveis
     const normaisInvalidas = linhasNormais.filter((r) => !r.data_inicio || r.funcionario_ids.length === 0)
     if (linhasNormais.length === 0 && linhasPadrao.length === 0) {
-      alert('Preencha pelo menos uma linha com título')
+      setBulkErrors('Preencha pelo menos uma linha com título.')
       return
     }
     if (normaisInvalidas.length > 0) {
-      alert('Há atividades normais (não padrão) com título mas sem data ou responsável. Corrija, remova ou ative o modo padrão.')
+      setBulkErrors('Há atividades normais (não padrão) com título mas sem data ou responsável. Corrija, remova ou ative o modo padrão.')
       return
     }
 
     const semDataFim = linhasNormais.filter((r) => r.tipo_data === 'periodo' && !r.data_fim)
     if (semDataFim.length > 0) {
-      alert('Há atividades em período sem data final. Defina a data fim ou mude para "Dia único".')
+      setBulkErrors('Há atividades em período sem data final. Defina a data fim ou mude para "Dia único".')
       return
     }
 
@@ -583,9 +540,10 @@ export function Atividades() {
       setShowBulkForm(false)
       loadAtividades()
       loadTemplates()
+      toast.success('Atividade(s) salva(s) com sucesso.')
     } catch (err) {
       console.error('Erro ao salvar:', err)
-      alert('Erro ao salvar uma ou mais atividades')
+      toast.error('Erro ao salvar uma ou mais atividades.')
     } finally {
       setSubmitting(false)
     }
@@ -611,11 +569,25 @@ export function Atividades() {
     setEditingAtividade(atividade)
   }
 
+  // Deep link via ?atividade=<id> (vindo da busca global)
+  useEffect(() => {
+    const atividadeId = searchParams.get('atividade')
+    if (!atividadeId || atividades.length === 0) return
+    const atividade = atividades.find((a) => a.id === atividadeId)
+    if (atividade) {
+      handleEdit(atividade)
+      searchParams.delete('atividade')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, atividades, setSearchParams])
+
   const handleSubmitEdit = async () => {
     if (!editingAtividade || !editForm) return
-    if (!editForm.titulo.trim()) { alert('Título é obrigatório'); return }
-    if (!editForm.data_inicio) { alert('Selecione a data'); return }
-    if (editForm.funcionario_ids.length === 0) { alert('Selecione pelo menos um responsável'); return }
+    const errs: Record<string, string> = {}
+    if (!editForm.titulo.trim()) errs.titulo = 'Título é obrigatório.'
+    if (!editForm.data_inicio) errs.data_inicio = 'Selecione a data.'
+    if (editForm.funcionario_ids.length === 0) errs.funcionario_ids = 'Selecione pelo menos um responsável.'
+    if (Object.keys(errs).length > 0) { setEditErrors(errs); return }
 
     setEditSubmitting(true)
     try {
@@ -635,9 +607,10 @@ export function Atividades() {
       setEditingAtividade(null)
       setEditForm(null)
       loadAtividades()
+      toast.success('Atividade atualizada com sucesso.')
     } catch (err) {
       console.error('Erro ao editar:', err)
-      alert('Erro ao salvar alterações')
+      toast.error('Erro ao salvar alterações.')
     } finally {
       setEditSubmitting(false)
     }
@@ -701,7 +674,7 @@ export function Atividades() {
 
   const handleSubmitEditTemplate = async () => {
     if (!editingTemplate || !editTemplateForm || !fazendaId) return
-    if (!editTemplateForm.titulo.trim()) { alert('Nome da atividade é obrigatório'); return }
+    if (!editTemplateForm.titulo.trim()) { setEditTemplateErrors({ titulo: 'Nome da atividade é obrigatório.' }); return }
 
     setEditTemplateSubmitting(true)
     try {
@@ -716,9 +689,10 @@ export function Atividades() {
       setEditingTemplate(null)
       setEditTemplateForm(null)
       loadTemplates()
+      toast.success('Atividade padrão atualizada com sucesso.')
     } catch (err) {
       console.error('Erro ao editar atividade padrão:', err)
-      alert('Erro ao salvar alterações')
+      toast.error('Erro ao salvar alterações.')
     } finally {
       setEditTemplateSubmitting(false)
     }
@@ -774,6 +748,17 @@ export function Atividades() {
       setSelectedTemplateIds(templates.map((t) => t.id))
     }
   }
+
+  // === Callbacks estáveis para AtividadeCard (evita re-render dos cards ao digitar no form em lote) ===
+  const cbRef = useRef({} as { handleEdit: (a: Atividade) => void; openDeleteModal: (id: string) => void; navigate: (path: string) => void })
+  cbRef.current = {
+    handleEdit,
+    openDeleteModal: (id: string) => { setAtividadeToDelete(id); setShowDeleteModal(true) },
+    navigate,
+  }
+  const stableOnEdit = useCallback((a: Atividade) => cbRef.current.handleEdit(a), [])
+  const stableOnNavigate = useCallback((path: string) => cbRef.current.navigate(path), [])
+  const stableOnDelete = useCallback((id: string) => cbRef.current.openDeleteModal(id), [])
 
   if (gateLoading) {
     return (
@@ -880,7 +865,7 @@ export function Atividades() {
                         <div className="flex items-center gap-0.5 flex-shrink-0">
                           <button
                             onClick={() => handleEditarTemplate(t)}
-                            className="text-gray-400 hover:text-primary p-1"
+                            className="text-gray-400 hover:text-primary p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             title="Editar"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -890,7 +875,7 @@ export function Atividades() {
                               setTemplateToDelete(t.id)
                               setShowTemplateDeleteModal(true)
                             }}
-                            className="text-gray-400 hover:text-red-500 p-1"
+                            className="text-gray-400 hover:text-red-500 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             title="Excluir"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -935,6 +920,13 @@ export function Atividades() {
             </div>
           )}
 
+          {/* Erros de validação */}
+          {bulkErrors && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3">
+              {bulkErrors}
+            </div>
+          )}
+
           {/* Botão Usar Atividade Padrão */}
           {templates.length > 0 && (
             <div className="mb-3">
@@ -974,7 +966,7 @@ export function Atividades() {
                         <button
                           onClick={() => updateRow(row.id, { eh_padrao: !row.eh_padrao })}
                           disabled={!!row.origem_template_id}
-                          className={`p-1.5 rounded-md transition-colors ${row.eh_padrao ? 'text-amber-500 bg-amber-100' : 'text-gray-300 hover:text-amber-400 hover:bg-amber-50'} ${row.origem_template_id ? 'opacity-30 cursor-not-allowed' : ''}`}
+                          className={`p-1.5 rounded-md transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${row.eh_padrao ? 'text-amber-500 bg-amber-100' : 'text-gray-300 hover:text-amber-400 hover:bg-amber-50'} ${row.origem_template_id ? 'opacity-30 cursor-not-allowed' : ''}`}
                           title={row.origem_template_id ? 'Esta linha veio de uma atividade padrão existente. Use-a como atividade normal.' : (row.eh_padrao ? 'Atividade padrão (sem data). Clique para voltar a atividade normal' : 'Marcar como atividade padrão (sem data)')}
                         >
                           <svg className="w-4 h-4" fill={row.eh_padrao ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
@@ -1120,7 +1112,7 @@ export function Atividades() {
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => duplicateRow(row.id)}
-                            className="text-gray-400 hover:text-primary p-1"
+                            className="text-gray-400 hover:text-primary p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             title="Copiar linha"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1129,7 +1121,7 @@ export function Atividades() {
                           </button>
                           <button
                             onClick={() => handleRemoveRow(row.id)}
-                            className="text-gray-400 hover:text-red-500 p-1"
+                            className="text-gray-400 hover:text-red-500 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             title="Remover linha"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -1153,12 +1145,7 @@ export function Atividades() {
               </Button>
               <Button
                 variant="secondary"
-                onClick={() => {
-                  if (confirm('Limpar todas as linhas? O rascunho será descartado.')) {
-                    clearDraft()
-                    setRows([{ ...emptyRow(), data_inicio: getHoje() }])
-                  }
-                }}
+                onClick={() => setShowClearConfirm(true)}
                 className="h-9"
               >
                 Limpar
@@ -1252,86 +1239,15 @@ export function Atividades() {
       ) : (
         <>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {(expandirLista ? atividades : atividades.slice(0, LIMITE_LISTA)).map((atividade) => {
-            const metaParts: string[] = []
-            const periodo = atividade.data_inicio === atividade.data_fim
-              ? formatarData(atividade.data_inicio)
-              : `${formatarData(atividade.data_inicio)} - ${formatarData(atividade.data_fim)}`
-            metaParts.push(periodo)
-            if (atividade.setor_nome) metaParts.push(atividade.setor_nome)
-            if (atividade.local) metaParts.push(`📍 ${atividade.local}`)
-            return (
-            <Card key={atividade.id} className={`bg-white p-3 border-0 shadow-sm hover:shadow-md transition-shadow ${atividade.atrasada ? 'bg-red-50' : ''}`}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${PRIORIDADE_CORES[atividade.prioridade] || 'bg-gray-400'}`} />
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-800 truncate text-sm">{atividade.titulo}</h3>
-                    {atividade.descricao && (
-                      <p className="text-xs text-gray-600 mt-0.5 line-clamp-1">{atividade.descricao}</p>
-                    )}
-                    {metaParts.length > 0 && (
-                      <div className="text-xs text-gray-500 mt-0.5 truncate">{metaParts.join(' · ')}</div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {/* Avatares empilhados substituindo lista de ✓ Nome */}
-                  {atividade.funcionarios && atividade.funcionarios.length > 0 && (
-                    <div className="flex -space-x-1.5 mr-1">
-                      {atividade.funcionarios.slice(0, 4).map((af) => {
-                        const ringStatus =
-                          af.status_individual === 'concluida' ? 'ring-green-400' :
-                          af.status_individual === 'em_andamento' ? 'ring-blue-400' :
-                          af.status_individual === 'justificada' ? 'ring-amber-400' :
-                          'ring-gray-300'
-                        return (
-                          <div
-                            key={af.id}
-                            title={`${af.funcionario_nome} · ${STATUS_LABELS[af.status_individual] || af.status_individual}`}
-                            className={`w-6 h-6 rounded-full ${getCorAvatar(af.funcionario_nome || '?')} flex items-center justify-center text-white text-[9px] font-bold ring-2 ${ringStatus}`}
-                          >
-                            {getIniciais(af.funcionario_nome || '?')}
-                          </div>
-                        )
-                      })}
-                      {atividade.funcionarios.length > 4 && (
-                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-[9px] font-bold ring-2 ring-gray-200">
-                          +{atividade.funcionarios.length - 4}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CORES[atividade.status] || 'bg-gray-100'}`}>
-                    {STATUS_LABELS[atividade.status] || atividade.status}
-                  </span>
-                  {/* Botões de ação como ícones compactos */}
-                  <button
-                    onClick={() => handleEdit(atividade)}
-                    className="text-gray-400 hover:text-primary p-1"
-                    title="Editar"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                  </button>
-                  <button
-                    onClick={() => navigate(`/controller/monitoramento-atividades?atividade=${atividade.id}`)}
-                    className="text-gray-400 hover:text-primary p-1"
-                    title="Monitorar"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                  </button>
-                  <button
-                    onClick={() => { setAtividadeToDelete(atividade.id); setShowDeleteModal(true) }}
-                    className="text-gray-400 hover:text-red-500 p-1"
-                    title="Excluir"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
-                </div>
-              </div>
-            </Card>
-            )
-          })}
+          {(expandirLista ? atividades : atividades.slice(0, LIMITE_LISTA)).map((atividade) => (
+            <AtividadeCard
+              key={atividade.id}
+              atividade={atividade}
+              onEdit={stableOnEdit}
+              onNavigate={stableOnNavigate}
+              onDelete={stableOnDelete}
+            />
+          ))}
         </div>
         {atividades.length > LIMITE_LISTA && (
           <div className="flex justify-center mt-4">
@@ -1352,7 +1268,7 @@ export function Atividades() {
       {editingAtividade && editForm && (
         <Modal
           isOpen={!!editingAtividade}
-          onClose={() => { setEditingAtividade(null); setEditForm(null) }}
+          onClose={() => { setEditingAtividade(null); setEditForm(null); setEditErrors({}) }}
           title="Editar Atividade"
         >
           <div className="space-y-4">
@@ -1361,10 +1277,11 @@ export function Atividades() {
               <Input
                 type="text"
                 value={editForm.titulo}
-                onChange={(e) => setEditForm({ ...editForm, titulo: e.target.value })}
+                onChange={(e) => { setEditForm({ ...editForm, titulo: e.target.value }); if (editErrors.titulo) setEditErrors((p) => ({ ...p, titulo: '' })) }}
                 placeholder="Descrição da atividade"
-                className="border-gray-200 focus:border-accent"
+                className={`focus:border-accent ${editErrors.titulo ? 'border-red-400' : 'border-gray-200'}`}
               />
+              {editErrors.titulo && <p className="text-xs text-red-600 mt-1">{editErrors.titulo}</p>}
             </div>
 
             <div>
@@ -1418,6 +1335,7 @@ export function Atividades() {
                 options={funcionarioOptionsEdit}
                 value={editForm.funcionario_ids}
                 onChange={(ids) => {
+                  if (editErrors.funcionario_ids) setEditErrors((p) => ({ ...p, funcionario_ids: '' }))
                   const membrosSetor = editForm.setor_id
                     ? funcionarios.filter((f) => f.setor_ids.includes(editForm.setor_id)).map((f) => f.id)
                     : []
@@ -1432,6 +1350,7 @@ export function Atividades() {
                 }}
                 placeholder="Selecione os responsáveis"
               />
+              {editErrors.funcionario_ids && <p className="text-xs text-red-600 mt-1">{editErrors.funcionario_ids}</p>}
             </div>
 
             {/* Selecao dupla de data */}
@@ -1465,9 +1384,10 @@ export function Atividades() {
                   <Input
                     type="date"
                     value={editForm.data_inicio}
-                    onChange={(e) => setEditForm({ ...editForm, data_inicio: e.target.value })}
-                    className="border-gray-200 focus:border-accent"
+                    onChange={(e) => { setEditForm({ ...editForm, data_inicio: e.target.value }); if (editErrors.data_inicio) setEditErrors((p) => ({ ...p, data_inicio: '' })) }}
+                    className={`focus:border-accent ${editErrors.data_inicio ? 'border-red-400' : 'border-gray-200'}`}
                   />
+                  {editErrors.data_inicio && <p className="text-xs text-red-600 mt-1">{editErrors.data_inicio}</p>}
                 </div>
                 {editForm.tipo_data === 'periodo' && (
                   <div className="flex-1">
@@ -1568,7 +1488,7 @@ export function Atividades() {
       {editingTemplate && editTemplateForm && (
         <Modal
           isOpen={!!editingTemplate}
-          onClose={() => { setEditingTemplate(null); setEditTemplateForm(null) }}
+          onClose={() => { setEditingTemplate(null); setEditTemplateForm(null); setEditTemplateErrors({}) }}
           title="Editar Atividade Padrão"
         >
           <div className="space-y-4">
@@ -1577,11 +1497,12 @@ export function Atividades() {
               <Input
                 type="text"
                 value={editTemplateForm.titulo}
-                onChange={(e) => setEditTemplateForm({ ...editTemplateForm, titulo: e.target.value })}
+                onChange={(e) => { setEditTemplateForm({ ...editTemplateForm, titulo: e.target.value }); if (editTemplateErrors.titulo) setEditTemplateErrors((p) => ({ ...p, titulo: '' })) }}
                 placeholder="Ex: Vacinação do rebanho"
-                className="border-gray-200 focus:border-accent"
+                className={`focus:border-accent ${editTemplateErrors.titulo ? 'border-red-400' : 'border-gray-200'}`}
                 autoFocus
               />
+              {editTemplateErrors.titulo && <p className="text-xs text-red-600 mt-1">{editTemplateErrors.titulo}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Local</label>
@@ -1748,6 +1669,20 @@ export function Atividades() {
           )}
         </Modal>
       )}
+
+      <ConfirmModal
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={() => {
+          clearDraft()
+          setRows([{ ...emptyRow(), data_inicio: getHoje() }])
+          setShowClearConfirm(false)
+        }}
+        title="Limpar todas as linhas?"
+        message="O rascunho será descartado."
+        confirmText="Limpar"
+        variant="warning"
+      />
     </div>
   )
 }

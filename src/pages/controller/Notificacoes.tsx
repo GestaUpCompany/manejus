@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, CardSkeleton, ConfirmModal, LoadMore } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface Notificacao {
@@ -615,20 +615,14 @@ export function Notificacoes() {
             </div>
           ))}
 
-          {hasMore && !loading && (
-            <div className="text-center py-4">
-              <Button
-                onClick={() => {
-                  setPage(p => p + 1)
-                  loadNotificacoes(false)
-                }}
-                variant="secondary"
-                size="sm"
-              >
-                Carregar mais
-              </Button>
-            </div>
-          )}
+          <LoadMore
+            hasMore={hasMore}
+            loading={loading}
+            onLoadMore={() => {
+              setPage(p => p + 1)
+              loadNotificacoes(false)
+            }}
+          />
         </div>
       )}
 

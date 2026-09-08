@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Card, CardSkeleton } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useLotes, usePastos } from '../../hooks/useFazendaQueries'
 
 interface HistoricoItem {
   historico_id: string
@@ -43,9 +44,11 @@ export function HistoricoOcupacao() {
   const [loteSelecionado, setLoteSelecionado] = useState('')
   const [pastoSelecionado, setPastoSelecionado] = useState('')
   const [moduloSelecionado, setModuloSelecionado] = useState('')
-  const [lotesDisponiveis, setLotesDisponiveis] = useState<{id: string, nome: string}[]>([])
-  const [pastosDisponiveis, setPastosDisponiveis] = useState<{id: string, nome: string}[]>([])
+  const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
   const [modulosDisponiveis, setModulosDisponiveis] = useState<{id: string, nome: string}[]>([])
+
+  const { data: lotesDisponiveis = [] } = useLotes(fazendaId)
+  const { data: pastosDisponiveis = [] } = usePastos(fazendaId)
 
   // Filtros por métricas
   const [taxaLotacaoMin, setTaxaLotacaoMin] = useState('')
@@ -61,41 +64,32 @@ export function HistoricoOcupacao() {
   const ITENS_POR_PAGINA = 25
 
   useEffect(() => {
+    if (!user) return
+    getFazendaIdForUser(user.id).then(id => setFazendaId(id || undefined))
+  }, [user])
+
+  useEffect(() => {
     loadHistorico()
-  }, [user, tipo])
+  }, [user, tipo, fazendaId, lotesDisponiveis])
 
   useEffect(() => {
     setPaginaAtual(1)
   }, [searchTerm, statusFiltro, dataInicio, dataFim, periodoRapido, loteSelecionado, pastoSelecionado, moduloSelecionado, taxaLotacaoMin, taxaLotacaoMax, diasMin, diasMax, tipo])
 
   const loadHistorico = async () => {
-    if (!user) return
+    if (!user || !fazendaId) return
     setLoading(true)
 
-    // Buscar fazenda vinculada ao usuário
-    const _fazendaId = await getFazendaIdForUser(user.id)
-    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
+    // Buscar módulos da fazenda para os filtros
+    const { data: modulosData } = await supabase
+      .from('modulos_pastos')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .order('nome')
 
-    if (!vinculos || vinculos.length === 0) {
-      setHistorico([])
-      setLoading(false)
-      return
-    }
+    setModulosDisponiveis(modulosData || [])
 
-    const fazendaId = vinculos[0].fazenda_id
-
-    // Buscar lotes, pastos e módulos da fazenda para os filtros
-    const [lotesData, pastosData, modulosData] = await Promise.all([
-      supabase.from('lotes').select('id, nome').eq('fazenda_id', fazendaId).is('deleted_at', null).order('nome'),
-      supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).is('deleted_at', null).order('nome'),
-      supabase.from('modulos_pastos').select('id, nome').eq('fazenda_id', fazendaId).order('nome'),
-    ])
-
-    setLotesDisponiveis(lotesData.data || [])
-    setPastosDisponiveis(pastosData.data || [])
-    setModulosDisponiveis(modulosData.data || [])
-
-    const loteIds = lotesData.data?.map((l) => l.id) || []
+    const loteIds = lotesDisponiveis.map((l) => l.id)
 
     if (loteIds.length === 0) {
       setHistorico([])

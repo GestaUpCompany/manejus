@@ -1,9 +1,5 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { Chart, registerables } from 'chart.js'
+import type jsPDF from 'jspdf'
 import type { PlanoAgrupado } from '../pages/controller/HistoricoPlanos'
-
-Chart.register(...registerables)
 
 // ===== Utils =====
 function fmt(n: number | null | undefined, digits = 2): string {
@@ -36,6 +32,8 @@ async function renderChart(config: any, w = 900, h = 450): Promise<string> {
   canvas.width = w
   canvas.height = h
   const ctx = canvas.getContext('2d')!
+  const { Chart, registerables } = await import('chart.js')
+  Chart.register(...registerables)
   const chart = new Chart(ctx, config)
   await new Promise((r) => setTimeout(r, 150))
   const dataUrl = canvas.toDataURL('image/png', 1.0)
@@ -155,7 +153,9 @@ export async function gerarRelatorioPlanosPDF(
   nomeFazenda: string,
   filtros: { lote: string; categoria: string }
 ): Promise<void> {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const jsPDFMod = await import('jspdf')
+  const autoTableMod = await import('jspdf-autotable')
+  const doc = new jsPDFMod.default({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageW = doc.internal.pageSize.getWidth()
   const pageH = doc.internal.pageSize.getHeight()
   const margin = 14
@@ -340,7 +340,7 @@ export async function gerarRelatorioPlanosPDF(
     ]
   })
 
-  autoTable(doc, {
+  autoTableMod.default(doc, {
     startY: y,
     head: [['Lote', 'Categoria', 'Planos', 'Vigentes', 'Encerrados', 'Cab.', 'GMD Médio', 'Ganho kg/cab', 'Produção @']],
     body: resumoLoteBody,
@@ -555,7 +555,7 @@ export async function gerarRelatorioPlanosPDF(
       ]
     })
 
-    autoTable(doc, {
+    autoTableMod.default(doc, {
       startY: y,
       head: [['Plano', 'Status', 'Início', 'Duração', 'Peso Inic.', 'Peso Atual', 'Meta', 'Ganho kg', 'GMD Real', 'GMD Plan', 'Ganho @', 'Prod. @', 'Custo/cab', 'Mort. %']],
       body: tableBody,
@@ -664,7 +664,7 @@ export async function gerarRelatorioPlanosPDF(
       ])
     }
 
-    autoTable(doc, {
+    autoTableMod.default(doc, {
       startY: y,
       head: [['Plano', 'Cab Inic.', 'Cab Final', 'RC Inic.', 'RC Final', 'Prog Final', 'Custo (R$/Cab)', '@/cab Inic.', '@/cab Final', 'Mort. %']],
       body: metricasBody,
@@ -699,7 +699,7 @@ export async function gerarRelatorioPlanosPDF(
       ]
     })
 
-    autoTable(doc, {
+    autoTableMod.default(doc, {
       startY: y,
       head: [['Lote', 'Categoria', 'Plano', 'Início', 'Peso Inic.', 'Peso Atual', 'Meta', 'Prog.', 'GMD', 'Custo/cab', 'Cabeças']],
       body: vigBody,

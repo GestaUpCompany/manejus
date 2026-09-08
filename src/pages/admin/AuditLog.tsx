@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../services/supabaseClient'
-import { Card } from '../../components/ui'
+import { Card, DatePresets, Pagination } from '../../components/ui'
 
 interface AuditEntry {
   id: number
@@ -34,13 +34,6 @@ interface AuditLogResponse {
 }
 
 const OPERACOES = ['INSERT', 'UPDATE', 'DELETE'] as const
-
-const PRESETS_DATA: { label: string; value: string }[] = [
-  { label: 'Últimas 24h', value: '24h' },
-  { label: 'Últimos 7 dias', value: '7d' },
-  { label: 'Últimos 30 dias', value: '30d' },
-  { label: 'Personalizado', value: 'custom' },
-]
 
 function operacaoColor(op: string): string {
   switch (op) {
@@ -268,19 +261,10 @@ export function AuditLog() {
 
       {/* Presets de data */}
       <div className="flex flex-wrap gap-2">
-        {PRESETS_DATA.map((p) => (
-          <button
-            key={p.value}
-            onClick={() => p.value === 'custom' ? setPresetData('custom') : applyPreset(p.value)}
-            className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
-              presetData === p.value
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
+        <DatePresets
+          value={presetData}
+          onChange={(v) => v === 'custom' ? setPresetData('custom') : applyPreset(v)}
+        />
         {apenasImpersonacao && (
           <span className="text-xs px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 font-medium">
             Apenas impersonações
@@ -597,26 +581,13 @@ export function AuditLog() {
       )}
 
       {/* Paginação */}
-      {data && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={() => setPage(Math.max(0, page - 1))}
-            disabled={page === 0}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 disabled:opacity-40 enabled:hover:bg-gray-50"
-          >
-            Anterior
-          </button>
-          <span className="text-sm text-gray-600">
-            {page + 1} / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-            disabled={page >= totalPages - 1}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 disabled:opacity-40 enabled:hover:bg-gray-50"
-          >
-            Próximo
-          </button>
-        </div>
+      {data && data.total > 0 && (
+        <Pagination
+          page={page + 1}
+          totalItems={data.total}
+          perPage={pageSize}
+          onPageChange={(p) => setPage(p - 1)}
+        />
       )}
     </div>
   )

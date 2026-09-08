@@ -474,7 +474,7 @@ export function RelatorioPublico() {
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F5F5F5' }}>
         <div className="text-center flex flex-col items-center">
           <div className="bg-white rounded-xl p-4 shadow-sm mb-3">
-            <img src={logoManejus} alt="Manejus 360" className="h-12" />
+            <img src={logoManejus} alt="Manejus 360" loading="eager" className="h-12" />
           </div>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 mb-3" style={{ borderColor: GREEN_DARK }}></div>
           <p className="text-gray-600">Carregando relatório...</p>
@@ -488,7 +488,7 @@ export function RelatorioPublico() {
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F5F5F5' }}>
         <div className="text-center max-w-md">
           <div className="bg-white rounded-xl p-4 inline-block shadow-sm mb-4">
-            <img src={logoManejus} alt="Manejus 360" className="h-12 mx-auto" />
+            <img src={logoManejus} alt="Manejus 360" loading="eager" className="h-12 mx-auto" />
           </div>
           <h1 className="text-xl font-bold text-gray-900 mb-2">Relatório indisponível</h1>
           <p className="text-gray-600">{error}</p>
@@ -603,7 +603,7 @@ export function RelatorioPublico() {
             {/* Logo GestaUp + nome do sistema */}
             <div className="flex items-center gap-2">
               <div className="bg-white rounded-lg p-1 flex items-center justify-center">
-                <img src={logoManejus} alt="Manej'Us 360" className="h-8 w-auto" />
+                <img src={logoManejus} alt="Manej'Us 360" loading="eager" className="h-8 w-auto" />
               </div>
               <h1 className="text-sm sm:text-base font-bold text-white hidden sm:block">
                 Manej'Us <span className="text-yellow-500">360</span>
@@ -624,7 +624,7 @@ export function RelatorioPublico() {
             <div className="flex items-center gap-2">
               {relatorioInfo?.fazenda_logo_url && (
                 <div className="bg-white rounded-lg p-1 flex items-center justify-center">
-                  <img src={relatorioInfo.fazenda_logo_url} alt={relatorioInfo?.fazenda_nome || 'Fazenda'} className="h-8 w-auto max-w-[80px] object-contain" />
+                  <img src={relatorioInfo.fazenda_logo_url} alt={relatorioInfo?.fazenda_nome || 'Fazenda'} loading="eager" className="h-8 w-auto max-w-[80px] object-contain" />
                 </div>
               )}
               <button
@@ -1103,7 +1103,7 @@ export function RelatorioPublico() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-white rounded-lg p-1">
-              <img src={logoManejus} alt="Manej'Us 360" className="h-5 w-auto" />
+              <img src={logoManejus} alt="Manej'Us 360" loading="lazy" className="h-5 w-auto" />
             </div>
             <span className="text-sm font-bold text-white">
               Manej'Us <span className="text-yellow-500">360</span>

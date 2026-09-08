@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card } from '../../components/ui'
+import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -45,12 +45,19 @@ const CHECKLIST_LABELS: Record<string, string> = {
   abastecimentoRealizado: 'Abastecimento realizado',
 }
 
+function simNao(valor?: string): string {
+  if (valor === 'S') return 'Sim'
+  if (valor === 'N') return 'Não'
+  return formatValue(valor)
+}
+
 export function ManutencaoMaquinasDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroManutencaoMaquinas | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistro()
@@ -59,6 +66,7 @@ export function ManutencaoMaquinasDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
+    setLoadError(null)
     const _fazendaId = await getFazendaIdForUser(user.id)
     const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
@@ -75,7 +83,12 @@ export function ManutencaoMaquinasDetalhes() {
       .single()
 
     if (error) {
-      console.error('Erro ao buscar registro:', error)
+      if (error.code === 'PGRST116') {
+        setRegistro(null)
+      } else {
+        console.error('Erro ao buscar registro:', error)
+        setLoadError(error.message || 'Erro ao buscar registro')
+      }
     } else {
       setRegistro(data as RegistroManutencaoMaquinas)
     }
@@ -83,79 +96,55 @@ export function ManutencaoMaquinasDetalhes() {
     setLoading(false)
   }
 
-  if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
-  }
-
-  if (!registro) {
-    return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/manutencao-maquinas')}>
-          Voltar
-        </Button>
-        <Card className="bg-white p-6 text-center" disableHover>
-          <p className="text-gray-600">Registro não encontrado</p>
-        </Card>
-      </div>
-    )
-  }
+  const backUrl = '/controller/cadernetas/manutencao-maquinas'
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Manutenção de Máquinas</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/manutencao-maquinas')}>
-          Voltar
-        </Button>
-      </div>
+    <DetailLayout
+      loading={loading}
+      loadError={loadError}
+      notFound={!registro}
+      onBack={() => navigate(backUrl)}
+      title="Detalhes do Registro de Manutenção de Máquinas"
+    >
+      {() => (
+        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+          <div className="space-y-6">
+            {/* Informações Gerais */}
+            <DetailSection title="Informações Gerais">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <DetailField label="Data" value={formatDate(registro!.data)} />
+                <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                <DetailField label="Veículo/Trator" value={formatValue(registro!.veiculo_trator)} />
+                <DetailField label="Placa" value={formatValue(registro!.placa)} />
+                <DetailField label="Odômetro/Horímetro" value={formatValue(registro!.odometro_horimetro)} />
+                <DetailField label="Operador/Motorista" value={formatValue(registro!.operador_motorista)} />
+                <DetailField label="Responsável Checklist" value={formatValue(registro!.responsavel_checklist)} />
+              </div>
+            </DetailSection>
 
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
-        <div className="space-y-6">
-          {/* Informações Gerais */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Veículo/Trator:</span> {registro.veiculo_trator || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Placa:</span> {registro.placa || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Odômetro/Horímetro:</span> {registro.odometro_horimetro || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Operador/Motorista:</span> {registro.operador_motorista || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Responsável Checklist:</span> {registro.responsavel_checklist || '-'}</p>
-            </div>
-          </div>
-
-          {/* Checklist de Manutenção */}
-          {registro.checklist && Object.keys(registro.checklist).length > 0 && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Checklist de Manutenção</h3>
-              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+            {/* Checklist de Manutenção */}
+            {registro!.checklist && Object.keys(registro!.checklist).length > 0 && (
+              <DetailSection title="Checklist de Manutenção" highlighted>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {Object.entries(registro.checklist).map(([key, item]) => (
+                  {Object.entries(registro!.checklist).map(([key, item]) => (
                     <div key={key} className="space-y-1">
-                      <p className="text-sm">
-                        <span className="font-medium text-gray-700">{CHECKLIST_LABELS[key] || key}:</span>{' '}
-                        {item.valor === 'S' ? 'Sim' : item.valor === 'N' ? 'Não' : item.valor || '-'}
-                      </p>
+                      <DetailField label={CHECKLIST_LABELS[key] || key} value={simNao(item.valor)} />
                       {item.observacao && (
                         <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {item.observacao}</p>
                       )}
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-          )}
+              </DetailSection>
+            )}
 
-          {/* Observações */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observações</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.observacao || '-'}</p>
-            </div>
+            {/* Observações */}
+            <DetailSection title="Observações" highlighted>
+              <DetailField label="Observação" value={formatValue(registro!.observacao)} />
+            </DetailSection>
           </div>
-        </div>
-      </Card>
-    </div>
+        </Card>
+      )}
+    </DetailLayout>
   )
 }

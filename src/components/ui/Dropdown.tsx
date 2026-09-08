@@ -41,27 +41,35 @@ export function Dropdown({ trigger, options, align = 'right' }: DropdownProps) {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <div onClick={() => setIsOpen(!isOpen)}>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isOpen}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setIsOpen(!isOpen)
+          }
+        }}
+      >
         {trigger}
       </div>
 
       {isOpen && (
         <>
           {/* Backdrop para mobile */}
-          <div 
+          <div
             className="fixed inset-0 z-40 sm:hidden"
             onClick={() => setIsOpen(false)}
           />
-          
-          {/* Dropdown/Bottom Sheet */}
+
+          {/* Dropdown */}
           <div
-            className={`z-50 bg-white rounded-t-2xl sm:rounded-lg shadow-lg border border-gray-200 py-1 animate-slide-down sm:absolute sm:mt-2 sm:w-56 fixed bottom-0 left-0 right-0 sm:bottom-auto sm:left-auto ${
-              align === 'right' ? 'sm:right-0' : 'sm:right-0'
+            className={`absolute z-50 bg-white rounded-lg shadow-lg border border-gray-200 py-1 mt-2 w-56 right-0 ${
+              align === 'right' ? 'right-0' : 'right-0'
             }`}
           >
-            <div className="flex justify-center sm:hidden mb-2 pt-2">
-              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
-            </div>
             {options.map((option, index) => (
               <div key={index}>
                 {option.onClick ? (

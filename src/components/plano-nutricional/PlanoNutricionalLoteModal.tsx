@@ -989,8 +989,8 @@ export function PlanoNutricionalLoteModal({
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-xs font-medium text-gray-700">Duração *</label>
                       <div className="flex gap-1">
-                        <button type="button" onClick={() => setFormData({ ...formData, tipo_entrada_periodo: 'periodo' })} className={`px-2 py-0.5 rounded border text-xs ${formData.tipo_entrada_periodo === 'periodo' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-200'}`}>Dias</button>
-                        <button type="button" onClick={() => setFormData({ ...formData, tipo_entrada_periodo: 'data_final' })} className={`px-2 py-0.5 rounded border text-xs ${formData.tipo_entrada_periodo === 'data_final' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-200'}`}>Data final</button>
+                        <button type="button" onClick={() => setFormData({ ...formData, tipo_entrada_periodo: 'periodo' })} className={`px-3 py-1.5 rounded border text-xs min-h-[44px] ${formData.tipo_entrada_periodo === 'periodo' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-200'}`}>Dias</button>
+                        <button type="button" onClick={() => setFormData({ ...formData, tipo_entrada_periodo: 'data_final' })} className={`px-3 py-1.5 rounded border text-xs min-h-[44px] ${formData.tipo_entrada_periodo === 'data_final' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-200'}`}>Data final</button>
                       </div>
                     </div>
                     {formData.tipo_entrada_periodo === 'periodo' ? (
@@ -1222,7 +1222,7 @@ function CategoriaPersonalizacaoCard({
           </p>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Período (dias)</label>
           <Input type="number" value={periodo} onChange={(e) => setPeriodo(e.target.value)} placeholder="Ex: 90" className="text-sm" disabled={!planoVigenteId} />

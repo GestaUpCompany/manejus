@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card } from '../../components/ui'
+import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -36,12 +36,18 @@ interface RegistroBebedouros {
   updated_at?: string
 }
 
+function boolSimNao(item?: ChecklistItem): string {
+  if (!item) return '-'
+  return item.valor ? 'Sim' : 'Não'
+}
+
 export function BebedourosDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroBebedouros | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistro()
@@ -50,6 +56,7 @@ export function BebedourosDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
+    setLoadError(null)
     const _fazendaId = await getFazendaIdForUser(user.id)
     const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
@@ -66,7 +73,12 @@ export function BebedourosDetalhes() {
       .single()
 
     if (error) {
-      console.error('Erro ao buscar registro:', error)
+      if (error.code === 'PGRST116') {
+        setRegistro(null)
+      } else {
+        console.error('Erro ao buscar registro:', error)
+        setLoadError(error.message || 'Erro ao buscar registro')
+      }
     } else {
       setRegistro(data as RegistroBebedouros)
     }
@@ -74,85 +86,63 @@ export function BebedourosDetalhes() {
     setLoading(false)
   }
 
-  if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
-  }
-
-  if (!registro) {
-    return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/bebedouros')}>
-          Voltar
-        </Button>
-        <Card className="bg-white p-6 text-center" disableHover>
-          <p className="text-gray-600">Registro não encontrado</p>
-        </Card>
-      </div>
-    )
-  }
+  const backUrl = '/controller/cadernetas/bebedouros'
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Bebedouros</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/bebedouros')}>
-          Voltar
-        </Button>
-      </div>
-
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
-        <div className="space-y-6">
-          {/* Informações Gerais */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Responsável:</span> {registro.responsavel || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
-            </div>
-          </div>
-
-          {/* Bebedouro */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Bebedouro</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Nº Bebedouro:</span> {registro.numero_bebedouro || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Leitura:</span> {registro.leitura_bebedouro || 0}</p>
+    <DetailLayout
+      loading={loading}
+      loadError={loadError}
+      notFound={!registro}
+      onBack={() => navigate(backUrl)}
+      title="Detalhes do Registro de Bebedouros"
+    >
+      {() => (
+        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+          <div className="space-y-6">
+            {/* Informações Gerais */}
+            <DetailSection title="Informações Gerais">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <DetailField label="Data" value={formatDate(registro!.data)} />
+                <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                <DetailField label="Responsável" value={formatValue(registro!.responsavel)} />
+                <DetailField label="Pasto" value={formatValue(registro!.pasto)} />
+                <DetailField label="Lote" value={formatValue(registro!.lote)} />
               </div>
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Condições do Bebedouro */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Condições do Bebedouro</h3>
-            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+            {/* Bebedouro */}
+            <DetailSection title="Bebedouro" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Água Suficiente:</span> {registro.checklist?.agua_suficiente ? (registro.checklist.agua_suficiente.valor ? 'Sim' : 'Não') : '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Vazão Bebedouro Ideal:</span> {registro.checklist?.vazao_bebedouro_ideal ? (registro.checklist.vazao_bebedouro_ideal.valor ? 'Sim' : 'Não') : '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Aterro Acesso Bebedouro Ideal:</span> {registro.checklist?.aterro_acesso_bebedouro_ideal ? (registro.checklist.aterro_acesso_bebedouro_ideal.valor ? 'Sim' : 'Não') : '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Espaçamento Bebedouro Ideal:</span> {registro.checklist?.espacamento_bebedouro_ideal ? (registro.checklist.espacamento_bebedouro_ideal.valor ? 'Sim' : 'Não') : '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Boia Proteção Boas Condições:</span> {registro.checklist?.boia_protecao_boas_condicoes ? (registro.checklist.boia_protecao_boas_condicoes.valor ? 'Sim' : 'Não') : '-'}</p>
+                <DetailField label="Nº Bebedouro" value={formatValue(registro!.numero_bebedouro)} />
+                <DetailField label="Leitura" value={registro!.leitura_bebedouro ?? 0} />
               </div>
-              {registro.checklist?.agua_suficiente?.observacao && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Água:</span> {registro.checklist.agua_suficiente.observacao}</p>}
-              {registro.checklist?.vazao_bebedouro_ideal?.observacao && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Vazão:</span> {registro.checklist.vazao_bebedouro_ideal.observacao}</p>}
-              {registro.checklist?.aterro_acesso_bebedouro_ideal?.observacao && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Aterro:</span> {registro.checklist.aterro_acesso_bebedouro_ideal.observacao}</p>}
-              {registro.checklist?.espacamento_bebedouro_ideal?.observacao && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Espaçamento:</span> {registro.checklist.espacamento_bebedouro_ideal.observacao}</p>}
-              {registro.checklist?.boia_protecao_boas_condicoes?.observacao && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Boia:</span> {registro.checklist.boia_protecao_boas_condicoes.observacao}</p>}
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Observações */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observações</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.observacao || '-'}</p>
-            </div>
+            {/* Condições do Bebedouro */}
+            <DetailSection title="Condições do Bebedouro" highlighted>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <DetailField label="Água Suficiente" value={boolSimNao(registro!.checklist?.agua_suficiente)} />
+                  <DetailField label="Vazão Bebedouro Ideal" value={boolSimNao(registro!.checklist?.vazao_bebedouro_ideal)} />
+                  <DetailField label="Aterro Acesso Bebedouro Ideal" value={boolSimNao(registro!.checklist?.aterro_acesso_bebedouro_ideal)} />
+                  <DetailField label="Espaçamento Bebedouro Ideal" value={boolSimNao(registro!.checklist?.espacamento_bebedouro_ideal)} />
+                  <DetailField label="Boia Proteção Boas Condições" value={boolSimNao(registro!.checklist?.boia_protecao_boas_condicoes)} />
+                </div>
+                {registro!.checklist?.agua_suficiente?.observacao && <DetailField label="Obs. Água" value={registro!.checklist.agua_suficiente.observacao} />}
+                {registro!.checklist?.vazao_bebedouro_ideal?.observacao && <DetailField label="Obs. Vazão" value={registro!.checklist.vazao_bebedouro_ideal.observacao} />}
+                {registro!.checklist?.aterro_acesso_bebedouro_ideal?.observacao && <DetailField label="Obs. Aterro" value={registro!.checklist.aterro_acesso_bebedouro_ideal.observacao} />}
+                {registro!.checklist?.espacamento_bebedouro_ideal?.observacao && <DetailField label="Obs. Espaçamento" value={registro!.checklist.espacamento_bebedouro_ideal.observacao} />}
+                {registro!.checklist?.boia_protecao_boas_condicoes?.observacao && <DetailField label="Obs. Boia" value={registro!.checklist.boia_protecao_boas_condicoes.observacao} />}
+              </div>
+            </DetailSection>
+
+            {/* Observações */}
+            <DetailSection title="Observações" highlighted>
+              <DetailField label="Observação" value={formatValue(registro!.observacao)} />
+            </DetailSection>
           </div>
-        </div>
-      </Card>
-    </div>
+        </Card>
+      )}
+    </DetailLayout>
   )
 }

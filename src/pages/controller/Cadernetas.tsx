@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Button } from '../../components/ui'
+import { Card, Button, useToast } from '../../components/ui'
 import { CADERNETA_IMAGES, CADERNETA_TITLES, CADERNETA_DESCRIPTIONS } from '../../types/images'
 import { useAuth } from '../../contexts/AuthContext'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
@@ -9,6 +9,7 @@ import { exportAllCadernetas } from '../../utils/exportAllCadernetas'
 export function Cadernetas() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const toast = useToast()
   const [exporting, setExporting] = useState(false)
 
   const cadernetas = [
@@ -116,13 +117,14 @@ export function Cadernetas() {
     try {
       const fazendaId = await getFazendaIdForUser(user.id)
       if (!fazendaId) {
-        alert('Fazenda não encontrada para o usuário.')
+        toast.error('Fazenda não encontrada para o usuário.')
         return
       }
       await exportAllCadernetas(fazendaId)
+      toast.success('Cadernetas exportadas com sucesso.')
     } catch (err: any) {
       console.error('Erro ao exportar todas as cadernetas:', err)
-      alert(err?.message || 'Erro ao exportar cadernetas.')
+      toast.error(err?.message || 'Erro ao exportar cadernetas.')
     } finally {
       setExporting(false)
     }
@@ -152,6 +154,7 @@ export function Cadernetas() {
               <img
                 src={caderneta.image}
                 alt={caderneta.title}
+                loading="lazy"
                 className="w-24 h-24 mb-4 rounded-[32px]"
               />
               <h3 className="text-xl font-semibold text-gray-800 mb-2 text-center">{caderneta.title}</h3>

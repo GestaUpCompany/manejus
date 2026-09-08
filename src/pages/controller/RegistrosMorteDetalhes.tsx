@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card } from '../../components/ui'
+import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -35,12 +35,25 @@ interface RegistroMorte {
   deleted_at?: string
 }
 
+const SINAIS_CLINICOS_LABELS: Record<string, string> = {
+  secrecaoOrificios: 'Secreção pelos orifícios',
+  sintomasPneumonia: 'Sintomas de pneumonia',
+  inchaco: 'Inchaço',
+  incoordenacaoTremores: 'Incoordenação/Tremores',
+  apatiaFraqueza: 'Apatia/Fraqueza',
+  presencaSangue: 'Presença de sangue',
+  desordensDigestivas: 'Desordens digestivas',
+  morteSubita: 'Morte Súbita',
+  animalSozinho: 'Animal Sozinho',
+}
+
 export function RegistrosMorteDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroMorte | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistro()
@@ -49,6 +62,7 @@ export function RegistrosMorteDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
+    setLoadError(null)
     const _fazendaId = await getFazendaIdForUser(user.id)
     const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
@@ -65,7 +79,12 @@ export function RegistrosMorteDetalhes() {
       .single()
 
     if (error) {
-      console.error('Erro ao buscar registro:', error)
+      if (error.code === 'PGRST116') {
+        setRegistro(null)
+      } else {
+        console.error('Erro ao buscar registro:', error)
+        setLoadError(error.message || 'Erro ao buscar registro')
+      }
     } else {
       setRegistro(data as RegistroMorte)
     }
@@ -73,62 +92,43 @@ export function RegistrosMorteDetalhes() {
     setLoading(false)
   }
 
-  if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
-  }
-
-  if (!registro) {
-    return (
-      <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/morte')}>
-          Voltar
-        </Button>
-        <Card className="bg-white p-6 text-center" disableHover>
-          <p className="text-gray-600">Registro não encontrado</p>
-        </Card>
-      </div>
-    )
-  }
-
+  const backUrl = '/controller/cadernetas/morte'
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Morte</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/morte')}>
-          Voltar
-        </Button>
-      </div>
-
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
-        <div className="space-y-6">
-          {/* Informações Gerais */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
-            </div>
-          </div>
-
-          {/* Identificação do Animal */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Identificação do Animal</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+    <DetailLayout
+      loading={loading}
+      loadError={loadError}
+      notFound={!registro}
+      onBack={() => navigate(backUrl)}
+      onRetry={loadRegistro}
+      title="Detalhes do Registro de Morte"
+    >
+      {() => (
+        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+          <div className="space-y-6">
+            {/* Informações Gerais */}
+            <DetailSection title="Informações Gerais">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Brinco:</span> {registro.brinco || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Chip:</span> {registro.chip || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}{registro.categoria === 'outros' && registro.categoria_outros ? ` (${registro.categoria_outros})` : ''}</p>
+                <DetailField label="Data" value={formatDate(registro!.data)} />
+                <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                <DetailField label="Lote" value={formatValue(registro!.lote)} />
+                <DetailField label="Pasto" value={formatValue(registro!.pasto)} />
               </div>
-              {registro.individuo_id && (
+            </DetailSection>
+
+            {/* Identificação do Animal */}
+            <DetailSection title="Identificação do Animal" highlighted>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <DetailField label="Brinco" value={formatValue(registro!.brinco)} />
+                <DetailField label="Chip" value={formatValue(registro!.chip)} />
+                <DetailField label="Categoria" value={registro!.categoria === 'outros' && registro!.categoria_outros ? `${registro!.categoria} (${registro!.categoria_outros})` : formatValue(registro!.categoria)} />
+              </div>
+              {registro!.individuo_id && (
                 <div className="mt-3 pt-3 border-t border-gray-200">
                   <p className="text-sm">
                     <span className="font-medium text-gray-700">Indivíduo:</span>{' '}
                     <button
-                      onClick={() => navigate(`/controller/individuos/${registro.individuo_id}`)}
+                      onClick={() => navigate(`/controller/individuos/${registro!.individuo_id}`)}
                       className="text-primary hover:underline font-medium"
                     >
                       Ver indivíduo
@@ -136,73 +136,48 @@ export function RegistrosMorteDetalhes() {
                   </p>
                 </div>
               )}
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Características */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Características</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Características */}
+            <DetailSection title="Características" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Sexo:</span> {registro.sexo || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Raça:</span> {registro.raca || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Idade:</span> {registro.idade || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Peso Vivo (kg):</span> {registro.peso_vivo || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Escore:</span> {registro.escore !== undefined && registro.escore !== null ? registro.escore : '-'}</p>
+                <DetailField label="Sexo" value={formatValue(registro!.sexo)} />
+                <DetailField label="Raça" value={formatValue(registro!.raca)} />
+                <DetailField label="Idade" value={formatValue(registro!.idade)} />
+                <DetailField label="Peso Vivo (kg)" value={formatValue(registro!.peso_vivo)} />
+                <DetailField label="Escore" value={registro!.escore !== undefined && registro!.escore !== null ? registro!.escore : '-'} />
               </div>
-            </div>
-          </div>
+            </DetailSection>
 
-          {/* Causa da Morte */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Causa da Morte</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm"><span className="font-medium text-gray-700">Causa:</span> {registro.causa_morte || '-'}</p>
-            </div>
-          </div>
+            {/* Causa da Morte */}
+            <DetailSection title="Causa da Morte" highlighted>
+              <DetailField label="Causa" value={formatValue(registro!.causa_morte)} />
+            </DetailSection>
 
-          {/* Sinais Clínicos */}
-          {registro.diagnosticos && Object.keys(registro.diagnosticos).length > 0 && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Sinais Clínicos</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Sinais Clínicos */}
+            {registro!.diagnosticos && Object.keys(registro!.diagnosticos).length > 0 && (
+              <DetailSection title="Sinais Clínicos" highlighted>
                 <p className="text-sm font-medium text-gray-700">
-                  {Object.entries(registro.diagnosticos)
+                  {Object.entries(registro!.diagnosticos)
                     .filter(([_, value]: [string, any]) => value.valor === 'S')
-                    .map(([key]: [string, any]) => {
-                      const mapping: Record<string, string> = {
-                        secrecaoOrificios: 'Secreção pelos orifícios',
-                        sintomasPneumonia: 'Sintomas de pneumonia',
-                        inchaco: 'Inchaço',
-                        incoordenacaoTremores: 'Incoordenação/Tremores',
-                        apatiaFraqueza: 'Apatia/Fraqueza',
-                        presencaSangue: 'Presença de sangue',
-                        desordensDigestivas: 'Desordens digestivas',
-                        morteSubita: 'Morte Súbita',
-                        animalSozinho: 'Animal Sozinho'
-                      }
-                      return mapping[key] || key
-                    })
+                    .map(([key]: [string, any]) => SINAIS_CLINICOS_LABELS[key] || key)
                     .join(', ') || 'Nenhum sinal clínico registrado'}
                 </p>
-              </div>
-            </div>
-          )}
+              </DetailSection>
+            )}
 
-          {/* Nutrição */}
-          {(registro.nutricao_atual || registro.nutricao_anterior) && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Nutrição</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
+            {/* Nutrição */}
+            {(registro!.nutricao_atual || registro!.nutricao_anterior) && (
+              <DetailSection title="Nutrição" highlighted>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <p className="text-sm"><span className="font-medium text-gray-700">Nutrição Atual:</span> {registro.nutricao_atual || '-'}</p>
-                  <p className="text-sm"><span className="font-medium text-gray-700">Nutrição Anterior:</span> {registro.nutricao_anterior || '-'}</p>
+                  <DetailField label="Nutrição Atual" value={formatValue(registro!.nutricao_atual)} />
+                  <DetailField label="Nutrição Anterior" value={formatValue(registro!.nutricao_anterior)} />
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
-    </div>
+              </DetailSection>
+            )}
+          </div>
+        </Card>
+      )}
+    </DetailLayout>
   )
 }
