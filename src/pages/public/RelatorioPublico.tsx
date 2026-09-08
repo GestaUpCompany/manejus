@@ -515,7 +515,7 @@ export function RelatorioPublico() {
   }
 
   if (relatorioInfo?.tipo === 'bebedouros') {
-    return <RelatorioBebedourosPublico relatorioInfo={relatorioInfo} />
+    return <RelatorioBebedourosPublico token={token!} relatorioInfo={relatorioInfo} />
   }
 
   // Componente de popover multi-select

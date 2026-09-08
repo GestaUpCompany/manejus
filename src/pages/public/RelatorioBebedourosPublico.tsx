@@ -136,6 +136,7 @@ interface LimpezaDoDia {
 }
 
 interface Props {
+  token: string
   relatorioInfo: RelatorioInfo
 }
 
@@ -154,7 +155,7 @@ function statusLimpeza(diasDesde: number | null, meta: number | null): { label: 
   return { label: 'Atraso crítico', cor: '#EF4444' }
 }
 
-export function RelatorioBebedourosPublico({ relatorioInfo }: Props) {
+export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [bebedouros, setBebedouros] = useState<Bebedouro[]>([])
@@ -208,6 +209,21 @@ export function RelatorioBebedourosPublico({ relatorioInfo }: Props) {
       const inicio = periodoInicio
       const fim = periodoFim
 
+      const permitidosRes = await supabase.rpc('get_bebedouros_permitidos_relatorio', {
+        p_token: token,
+      })
+
+      if (permitidosRes.error) {
+        console.error('Erro ao carregar bebedouros permitidos:', permitidosRes.error)
+        setError('Erro ao carregar dados do relatório.')
+        setLoading(false)
+        return
+      }
+
+      const bebedourosPermitidos = new Set(
+        (permitidosRes.data || []).map((item: { bebedouro_id: string }) => item.bebedouro_id)
+      )
+
       const [bebedourosRes, limpezasRes, registrosRes] = await Promise.all([
         supabase
           .from('bebedouros')
@@ -231,41 +247,48 @@ export function RelatorioBebedourosPublico({ relatorioInfo }: Props) {
           .order('data', { ascending: false }),
       ])
 
-      if (bebedourosRes.error) {
-        console.error('Erro ao carregar bebedouros:', bebedourosRes.error)
+      if (bebedourosRes.error || limpezasRes.error || registrosRes.error) {
+        console.error('Erro ao carregar dados dos bebedouros:', bebedourosRes.error || limpezasRes.error || registrosRes.error)
         setError('Erro ao carregar dados do relatório.')
         setLoading(false)
         return
       }
 
-      const bebedourosMapped: Bebedouro[] = (bebedourosRes.data || []).map((b: any) => ({
-        id: b.id,
-        nome: b.nome,
-        capacidade: b.capacidade ? Number(b.capacidade) : null,
-        meta_intervalo_limpeza: b.meta_intervalo_limpeza,
-        ativo: b.ativo,
-      }))
+      const bebedourosMapped: Bebedouro[] = (bebedourosRes.data || [])
+        .filter((b: any) => bebedourosPermitidos.has(b.id))
+        .map((b: any) => ({
+          id: b.id,
+          nome: b.nome,
+          capacidade: b.capacidade ? Number(b.capacidade) : null,
+          meta_intervalo_limpeza: b.meta_intervalo_limpeza,
+          ativo: b.ativo,
+        }))
+      const nomesBebedourosPermitidos = new Set(bebedourosMapped.map((b) => b.nome))
 
-      const limpezasMapped: Limpeza[] = (limpezasRes.data || []).map((l: any) => ({
-        id: l.id,
-        bebedouro_id: l.bebedouro_id,
-        bebedouro_nome: l.bebedouro?.nome || '—',
-        data_limpeza: l.data_limpeza,
-        responsavel: l.responsavel,
-        observacao: l.observacao,
-      }))
+      const limpezasMapped: Limpeza[] = (limpezasRes.data || [])
+        .filter((l: any) => bebedourosPermitidos.has(l.bebedouro_id))
+        .map((l: any) => ({
+          id: l.id,
+          bebedouro_id: l.bebedouro_id,
+          bebedouro_nome: l.bebedouro?.nome || '—',
+          data_limpeza: l.data_limpeza,
+          responsavel: l.responsavel,
+          observacao: l.observacao,
+        }))
 
-      const registrosMapped: RegistroBebedouro[] = (registrosRes.data || []).map((r: any) => ({
-        id: r.id,
-        data: r.data,
-        numero_bebedouro: r.numero_bebedouro,
-        leitura_bebedouro: r.leitura_bebedouro,
-        responsavel: r.responsavel,
-        pasto: r.pasto,
-        lote: r.lote,
-        observacao: r.observacao,
-        checklist: r.checklist,
-      }))
+      const registrosMapped: RegistroBebedouro[] = (registrosRes.data || [])
+        .filter((r: any) => r.numero_bebedouro && nomesBebedourosPermitidos.has(r.numero_bebedouro))
+        .map((r: any) => ({
+          id: r.id,
+          data: r.data,
+          numero_bebedouro: r.numero_bebedouro,
+          leitura_bebedouro: r.leitura_bebedouro,
+          responsavel: r.responsavel,
+          pasto: r.pasto,
+          lote: r.lote,
+          observacao: r.observacao,
+          checklist: r.checklist,
+        }))
 
       setBebedouros(bebedourosMapped)
       setTodasLimpezas(limpezasMapped)
@@ -277,7 +300,7 @@ export function RelatorioBebedourosPublico({ relatorioInfo }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [relatorioInfo, periodoInicio, periodoFim])
+  }, [token, relatorioInfo, periodoInicio, periodoFim])
 
   useEffect(() => {
     carregarDados()
