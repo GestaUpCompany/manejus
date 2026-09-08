@@ -166,8 +166,11 @@ export function Suplementacao() {
               onClick={() => {
               // Pre-computar data_anterior e intervalo_dias para cada registro
               // baseado na serie por lote_id ordenada por data ( independente da formulação)
+              // Normaliza para meia-noite (YYYY-MM-DD) para que o intervalo conte dias de calendário,
+              // independentemente do horário do registro (o campo data é timestamptz, não date).
+              const toDateOnly = (dateStr: string) => new Date(dateStr.substring(0, 10))
               const sorted = [...filteredRegistros].sort((a, b) =>
-                new Date(a.data).getTime() - new Date(b.data).getTime()
+                toDateOnly(a.data).getTime() - toDateOnly(b.data).getTime()
               )
               const seriesMap = new Map<string, typeof sorted>()
               for (const reg of sorted) {
@@ -181,9 +184,9 @@ export function Suplementacao() {
                 const idx = series.indexOf(reg)
                 const prev = idx > 0 ? series[idx - 1] : null
                 const next = idx < series.length - 1 ? series[idx + 1] : null
-                const dataAtual = new Date(reg.data)
-                const dataAnterior = prev ? new Date(prev.data) : null
-                const dataProximo = next ? new Date(next.data) : null
+                const dataAtual = toDateOnly(reg.data)
+                const dataAnterior = prev ? toDateOnly(prev.data) : null
+                const dataProximo = next ? toDateOnly(next.data) : null
                 const intervalo = dataAnterior
                   ? Math.max(Math.round((dataAtual.getTime() - dataAnterior.getTime()) / (1000 * 60 * 60 * 24)), 0)
                   : null
