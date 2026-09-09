@@ -1,5 +1,7 @@
--- Retorna apenas bebedouros associados a pastos atualmente ocupados por lotes
--- para um relatório público válido.
+-- Retorna bebedouros permitidos para o relatório público:
+--   - bebedouros sem associação a pasto
+--   - bebedouros associados a pastos atualmente ocupados por lotes
+-- Exclui apenas bebedouros associados a pastos desocupados.
 
 CREATE OR REPLACE FUNCTION public.get_bebedouros_permitidos_relatorio(p_token uuid)
 RETURNS TABLE (bebedouro_id uuid)
@@ -23,14 +25,26 @@ BEGIN
   END IF;
 
   RETURN QUERY
-  SELECT DISTINCT pb.bebedouro_id
-  FROM pasto_bebedouros pb
-  JOIN pastos p ON p.id = pb.pasto_id
-  JOIN lote_pasto_historico h ON h.pasto_id = p.id
-    AND h.data_hora_saida IS NULL
-  JOIN lotes l ON l.id = h.lote_id
-    AND l.fazenda_id = v_fazenda_id
-  WHERE p.fazenda_id = v_fazenda_id;
+  SELECT b.id
+  FROM bebedouros b
+  WHERE b.fazenda_id = v_fazenda_id
+    AND b.deleted_at IS NULL
+    AND (
+      NOT EXISTS (
+        SELECT 1 FROM public.pasto_bebedouros pb WHERE pb.bebedouro_id = b.id
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM public.pasto_bebedouros pb
+        JOIN public.pastos p ON p.id = pb.pasto_id
+        JOIN public.lote_pasto_historico h ON h.pasto_id = p.id
+          AND h.data_hora_saida IS NULL
+        JOIN public.lotes l ON l.id = h.lote_id
+          AND l.fazenda_id = v_fazenda_id
+        WHERE pb.bebedouro_id = b.id
+          AND p.fazenda_id = v_fazenda_id
+      )
+    );
 END;
 $function$;
 

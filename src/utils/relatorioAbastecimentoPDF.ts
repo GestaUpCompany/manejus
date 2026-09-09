@@ -671,18 +671,18 @@ export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAba
   let finalY = await renderTabelaDetalhamento(ctx, dados.detalhesPorMaquina, dados.totalLitros, dados.totalRegistros, tabelaY, margin)
 
   // Tabela 2: Detalhamento operacional (colunas 6-9)
-  const tabela2Y = finalY + 18
+  let tabela2StartY = finalY + 18
   const tabela2HEstimada = 20 + dados.detalhesPorMaquina.length * 7
 
-  if (tabela2Y + tabela2HEstimada > pageH - 15) {
+  if (tabela2StartY + tabela2HEstimada > pageH - 15) {
     doc.addPage()
     setFillColor(doc, LIGHT_BG)
     doc.rect(0, 0, pageW, pageH, 'F')
     renderHeader(ctx, tituloPDF)
-    finalY = 40
+    tabela2StartY = 40
   }
 
-  await renderTabelaOperacional(ctx, dados.detalhesPorMaquina, finalY > 30 ? finalY : tabela2Y, margin)
+  await renderTabelaOperacional(ctx, dados.detalhesPorMaquina, tabela2StartY, margin)
 
   // === Footer em todas as páginas ===
   const numPaginas = doc.getNumberOfPages()

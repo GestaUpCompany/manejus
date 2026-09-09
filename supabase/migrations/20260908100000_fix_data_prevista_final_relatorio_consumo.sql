@@ -1,6 +1,8 @@
--- Corrige a data prevista final do relatório de consumo.
--- A data deve representar o fim projetado da formulação/categoria vigente,
+-- Corrige a data prevista final do relatório de consumo e a seleção de lotes/categorias.
+-- A data prevista final representa o fim projetado da formulação/categoria vigente,
 -- independentemente do intervalo de datas usado no relatório.
+-- Lotes inativos (mas não excluídos) e categorias/planos históricos vigentes na
+-- data do último registro passam a ser considerados, permitindo relatórios históricos.
 
 CREATE OR REPLACE FUNCTION public.get_dados_relatorio_consumo(
   p_token uuid,
@@ -41,7 +43,7 @@ BEGIN
       AND r.deleted_at IS NULL
       AND r.lote_id IS NOT NULL
   ) regs
-  JOIN lotes l ON l.id = regs.lote_id AND l.ativo = true;
+  JOIN lotes l ON l.id = regs.lote_id AND l.deleted_at IS NULL;
 
   -- LAG sem filtro de data: busca o registro anterior do lote mesmo se estiver fora do periodo
   WITH registros_windowed AS (
@@ -65,7 +67,7 @@ BEGIN
     WHERE r.fazenda_id = v_fazenda_id
       AND r.deleted_at IS NULL
       AND r.lote_id IS NOT NULL
-      AND r.lote_id IN (SELECT id FROM lotes WHERE ativo = true)
+      AND r.lote_id IN (SELECT id FROM lotes WHERE deleted_at IS NULL)
     WINDOW w AS (PARTITION BY r.lote_id ORDER BY r.data, r.created_at)
   ),
   dados_por_lote AS (
@@ -139,11 +141,9 @@ BEGIN
       pn.formulacao_id AS plano_formulacao_id
     FROM ultimo_registro_por_lote ur
     JOIN lote_categorias lc ON lc.lote_id = ur.lote_id
-      AND lc.ativo = true
       AND lc.created_at::date <= ur.data_local
       AND (lc.data_fim IS NULL OR lc.data_fim >= ur.data_local)
     LEFT JOIN planos_nutricionais pn ON pn.lote_categoria_id = lc.id
-      AND pn.ativo = true
       AND pn.fazenda_id = v_fazenda_id
       AND pn.data_inicio <= ur.data
       AND (pn.data_fim IS NULL OR pn.data_fim >= ur.data)
@@ -191,7 +191,7 @@ BEGIN
       CASE WHEN cce.erros IS NULL THEN to_char(MAX(cnp.data_meta_projetada), 'YYYY-MM-DD') END AS data_prevista_final,
       cce.erros
     FROM cats_no_periodo cnp
-    JOIN lotes l ON l.id = cnp.lote_id AND l.ativo = true
+    JOIN lotes l ON l.id = cnp.lote_id AND l.deleted_at IS NULL
     LEFT JOIN cats_com_erro cce ON cce.lote_id = cnp.lote_id
     LEFT JOIN primeiro_registro_por_lote pr ON pr.lote_id = cnp.lote_id
     GROUP BY cnp.lote_id, l.nome, cnp.reg_n_cabecas, cnp.reg_peso_vivo_kg, cce.erros, pr.data_local
