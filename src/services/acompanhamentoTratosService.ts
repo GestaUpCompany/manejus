@@ -11,7 +11,8 @@ export interface PlanejadoLote {
   peso_vivo_medio_snapshot: number | null
   tipo: TipoProgramacao
   quantidade_tratos: number
-  programacao_created_at: string // ISO timestamp
+  data_inicio: string
+  data_fim: string
 }
 
 export interface RegistroTratoDia {
@@ -67,9 +68,8 @@ export async function fetchPlanejadoPorLote(
 ): Promise<Record<string, PlanejadoLote[]>> {
   const { data: progs, error: progError } = await supabase
     .from('programacao_tratos')
-    .select('id, tipo, quantidade_tratos, created_at')
+    .select('id, tipo, quantidade_tratos, data_inicio, data_fim')
     .eq('fazenda_id', fazendaId)
-    .eq('ativo', true)
 
   if (progError || !progs || progs.length === 0) return {}
 
@@ -105,7 +105,8 @@ export async function fetchPlanejadoPorLote(
         peso_vivo_medio_snapshot: c.peso_vivo_medio_snapshot,
         tipo: prog.tipo as TipoProgramacao,
         quantidade_tratos: prog.quantidade_tratos,
-        programacao_created_at: prog.created_at as string,
+        data_inicio: prog.data_inicio,
+        data_fim: prog.data_fim,
       }
 
       if (!resultado[loteId]) resultado[loteId] = []
@@ -260,21 +261,18 @@ export function cruzarPlanejadoReal(
 
   for (const loteId of lotesPlanejados) {
     const curraisLote = planejado[loteId]
-    const kgPlanejadoDia = curraisLote.reduce((sum, c) => sum + c.kg_mn_dia, 0)
     const loteNome = curraisLote[0]?.lote_nome ?? '—'
-    const curralNome = curraisLote[0]?.curral_nome ?? null
-    const tipoProg = curraisLote[0]?.tipo ?? null
-
-    // Data de início efetiva do planejamento: created_at da programação.
-    // A tabela programacao_tratos não tem data_inicio, então usamos created_at como proxy.
-    const createdAt = curraisLote[0]?.programacao_created_at
-    const dataInicioPlanejamento = createdAt ? createdAt.substring(0, 10) : dataInicio
 
     for (const data of datas) {
-      // Pular dias anteriores à criação da programação
-      if (data < dataInicioPlanejamento) continue
-
       const realDia = realMapa[`${loteId}|${data}`]
+      const planosDoDia = curraisLote.filter(
+        (plano) => data >= plano.data_inicio && data <= plano.data_fim
+      )
+      if (planosDoDia.length === 0 && !realDia) continue
+
+      const kgPlanejadoDia = planosDoDia.reduce((sum, c) => sum + c.kg_mn_dia, 0)
+      const curralNome = planosDoDia[0]?.curral_nome ?? curraisLote[0]?.curral_nome ?? null
+      const tipoProg = planosDoDia[0]?.tipo ?? curraisLote[0]?.tipo ?? null
 
       if (realDia) {
         // Dia com execução: usar kg_planejado do próprio registro
@@ -457,6 +455,125 @@ function classificarDesvioHorario(desvioMin: number | null): LinhaHorario['statu
   if (abs <= TOLERANCIA_OK_MIN) return 'ok'
   if (abs <= TOLERANCIA_ALERTA_MIN) return 'alerta'
   return 'critico'
+}
+
+/**
+ * Detalhe por trato individual, para expansão na tabela de acompanhamento.
+ * Mostra o desvio de cada trato e revela padrões de compensação entre tratos.
+ */
+export interface DetalheTratoLote {
+  data: string
+  lote_id: string
+  ordem_trato: number
+  horario_sugerido: string | null
+  horario_real: string | null
+  kg_planejado: number
+  kg_real: number
+  desvio_kg: number
+  desvio_pct: number | null
+  leitura_cocho: number | null
+  tratador: string | null
+}
+
+/**
+ * Busca registros de oferta de trato individuais (não agregados) por lote.
+ * Retorna cada trato separadamente para mostrar o padrão de distribuição ao expandir um lote.
+ */
+export async function fetchDetalheTratosPorLote(
+  fazendaId: string,
+  dataInicio: string,
+  dataFim: string
+): Promise<Record<string, DetalheTratoLote[]>> {
+  const dataFimNext = new Date(dataFim + 'T00:00:00')
+  dataFimNext.setDate(dataFimNext.getDate() + 1)
+  const dataFimExclusive = dataFimNext.toISOString().substring(0, 10)
+
+  const { data, error } = await supabase
+    .from('registros_oferta_trato')
+    .select(`
+      data,
+      lote_id,
+      ordem_trato,
+      kg_planejado,
+      kg_ofertado_real,
+      leitura_cocho_nota,
+      nome_usuario,
+      programacao_id
+    `)
+    .eq('fazenda_id', fazendaId)
+    .is('deleted_at', null)
+    .gte('data', dataInicio)
+    .lt('data', dataFimExclusive)
+    .order('data', { ascending: true })
+    .order('ordem_trato', { ascending: true })
+
+  if (error || !data) return {}
+
+  // Buscar timezone da fazenda para converter o timestamp real do registro
+  const { data: fazenda } = await supabase
+    .from('fazendas')
+    .select('timezone')
+    .eq('id', fazendaId)
+    .single()
+  const timezone = fazenda?.timezone || 'America/Cuiaba'
+
+  const programacaoIds = [...new Set(
+    data.map((r: any) => r.programacao_id).filter(Boolean)
+  )]
+  const horariosMapa: Record<string, string | null> = {}
+  if (programacaoIds.length > 0) {
+    const { data: percentuais } = await supabase
+      .from('programacao_tratos_percentuais')
+      .select('programacao_id, ordem_trato, horario_sugerido')
+      .in('programacao_id', programacaoIds)
+    for (const p of percentuais || []) {
+      horariosMapa[`${p.programacao_id}|${p.ordem_trato}`] = p.horario_sugerido || null
+    }
+  }
+
+  const mapa: Record<string, DetalheTratoLote[]> = {}
+  for (const r of data as any[]) {
+    const loteId = r.lote_id
+    if (!loteId) continue
+    const dataRaw = String(r.data)
+    const dataDia = dataRaw.substring(0, 10)
+    const planejado = Number(r.kg_planejado) || 0
+    const real = Number(r.kg_ofertado_real) || 0
+    const desvio = real - planejado
+
+    // Converter timestamp UTC para horário local da fazenda
+    let horarioReal: string | null = null
+    const horaUtc = dataRaw.substring(11, 19)
+    if (horaUtc && horaUtc !== '00:00:00') {
+      const dataObj = new Date(dataRaw)
+      const localStr = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: timezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(dataObj)
+      horarioReal = localStr
+    }
+
+    if (!mapa[loteId]) mapa[loteId] = []
+    mapa[loteId].push({
+      data: dataDia,
+      lote_id: loteId,
+      ordem_trato: r.ordem_trato,
+      horario_sugerido: r.programacao_id
+        ? horariosMapa[`${r.programacao_id}|${r.ordem_trato}`]?.substring(0, 5) ?? null
+        : null,
+      horario_real: horarioReal,
+      kg_planejado: planejado,
+      kg_real: real,
+      desvio_kg: desvio,
+      desvio_pct: planejado > 0 ? (desvio / planejado) * 100 : null,
+      leitura_cocho: r.leitura_cocho_nota != null ? Number(r.leitura_cocho_nota) : null,
+      tratador: r.nome_usuario || null,
+    })
+  }
+
+  return mapa
 }
 
 /**
@@ -645,4 +762,204 @@ export function calcularResumoHorarios(linhas: LinhaHorario[]): ResumoHorario {
     desvio_medio_min: Math.round(desvioMedio),
     pior_desvio_min: Math.round(piorDesvio),
   }
+}
+
+export interface LinhaFabricaAcompanhamento {
+  data: string
+  tipo: TipoProgramacao
+  ordem_trato: number
+  formulacao_id: string
+  formulacao_nome: string
+  vagao_nome: string | null
+  previsto_kg: number
+  produzido_kg: number
+  distribuido_kg: number
+  saldo_kg: number
+  status: 'nao_produzido' | 'parcial' | 'concluido' | 'produzido_sem_distribuicao' | 'distribuido_sem_fabricacao'
+}
+
+function dataSeguinte(data: string): string {
+  const date = new Date(`${data}T00:00:00`)
+  date.setDate(date.getDate() + 1)
+  return date.toISOString().slice(0, 10)
+}
+
+/**
+ * Concilia produção da Fábrica com distribuição por dieta e trato.
+ * O planejamento é derivado da programação vigente; quando existe produção,
+ * total_previsto da Fábrica tem precedência por refletir ajustes do dia.
+ */
+export async function fetchFabricaAcompanhamento(
+  fazendaId: string,
+  dataInicio: string,
+  dataFim: string,
+  lotesFiltro: string[] = []
+): Promise<LinhaFabricaAcompanhamento[]> {
+  const dataFimExclusive = dataSeguinte(dataFim)
+  const [progsRes, fabricaRes, distribuicaoRes] = await Promise.all([
+    supabase
+      .from('programacao_tratos')
+      .select('id, tipo, quantidade_tratos, data_inicio, data_fim')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true),
+    supabase
+      .from('registros_fabrica_confinamento')
+      .select('data, ordem_trato, tipo, formulacao_id, vagao_id, total_previsto, total_produzido, concluido, formulacoes(nome), vagoes(nome)')
+      .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
+      .gte('data', dataInicio)
+      .lt('data', dataFimExclusive),
+    supabase
+      .from('registros_oferta_trato')
+      .select('data, ordem_trato, kg_ofertado_real, lote_id, programacao_id')
+      .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
+      .gte('data', dataInicio)
+      .lt('data', dataFimExclusive),
+  ])
+
+  if (progsRes.error || fabricaRes.error || distribuicaoRes.error) return []
+
+  const programas = (progsRes.data || []) as any[]
+  const programacaoIds = programas.map((programa) => programa.id)
+  const curraisRes = programacaoIds.length > 0
+    ? await supabase
+      .from('programacao_tratos_currais')
+      .select('programacao_id, lote_id, kg_mn_dia')
+      .in('programacao_id', programacaoIds)
+    : { data: [], error: null }
+  if (curraisRes.error) return []
+
+  const loteIds = [...new Set((curraisRes.data || []).map((curral: any) => curral.lote_id).filter(Boolean))]
+  const categoriasRes = loteIds.length > 0
+    ? await supabase
+      .from('lote_categorias')
+      .select('lote_id, formulacao_id, formulacoes(nome)')
+      .in('lote_id', loteIds)
+      .eq('ativo', true)
+      .not('formulacao_id', 'is', null)
+    : { data: [], error: null }
+  if (categoriasRes.error) return []
+
+  const categoriaPorLote = new Map<string, { id: string; nome: string }>()
+  for (const categoria of (categoriasRes.data || []) as any[]) {
+    if (categoria.lote_id && categoria.formulacao_id && !categoriaPorLote.has(categoria.lote_id)) {
+      categoriaPorLote.set(categoria.lote_id, {
+        id: categoria.formulacao_id,
+        nome: categoria.formulacoes?.nome || categoria.formulacao_id,
+      })
+    }
+  }
+
+  const formulacoesPermitidas = lotesFiltro.length > 0
+    ? new Set(lotesFiltro.map((id) => categoriaPorLote.get(id)?.id).filter(Boolean) as string[])
+    : null
+  const porChave = new Map<string, LinhaFabricaAcompanhamento>()
+  const chave = (data: string, tipo: string, formulacaoId: string, ordem: number) =>
+    `${data}|${tipo}|${formulacaoId}|${ordem}`
+
+  const adicionarPlanejamento = (
+    data: string,
+    tipo: TipoProgramacao,
+    formulacao: { id: string; nome: string },
+    ordem: number,
+    previsto: number
+  ) => {
+    if (formulacoesPermitidas && !formulacoesPermitidas.has(formulacao.id)) return
+    const key = chave(data, tipo, formulacao.id, ordem)
+    const atual = porChave.get(key)
+    if (atual) {
+      atual.previsto_kg += previsto
+      atual.saldo_kg = Math.max(0, atual.previsto_kg - atual.produzido_kg)
+      return
+    }
+    porChave.set(key, {
+      data,
+      tipo,
+      ordem_trato: ordem,
+      formulacao_id: formulacao.id,
+      formulacao_nome: formulacao.nome,
+      vagao_nome: null,
+      previsto_kg: previsto,
+      produzido_kg: 0,
+      distribuido_kg: 0,
+      saldo_kg: previsto,
+      status: 'nao_produzido',
+    })
+  }
+
+  const percentuaisPorProg = new Map<string, any[]>()
+  for (const prog of programas) {
+    const { data: percentuais } = await supabase
+      .from('programacao_tratos_percentuais')
+      .select('ordem_trato, percentual')
+      .eq('programacao_id', prog.id)
+    percentuaisPorProg.set(prog.id, percentuais || [])
+
+    const { data: currais } = await supabase
+      .from('programacao_tratos_currais')
+      .select('lote_id, kg_mn_dia')
+      .eq('programacao_id', prog.id)
+    for (const data of gerarDatasPeriodo(dataInicio, dataFim)) {
+      if (data < prog.data_inicio || data > prog.data_fim) continue
+      for (const curral of currais || []) {
+        if (!curral.lote_id || (lotesFiltro.length > 0 && !lotesFiltro.includes(curral.lote_id))) continue
+        const formulacao = categoriaPorLote.get(curral.lote_id)
+        if (!formulacao) continue
+        for (const percentual of percentuaisPorProg.get(prog.id) || []) {
+          adicionarPlanejamento(
+            data,
+            prog.tipo as TipoProgramacao,
+            formulacao,
+            percentual.ordem_trato,
+            (Number(curral.kg_mn_dia) || 0) * (Number(percentual.percentual) || 0) / 100
+          )
+        }
+      }
+    }
+  }
+
+  const tipoPorProg = new Map(programas.map((p) => [p.id, p.tipo as TipoProgramacao]))
+  for (const registro of (fabricaRes.data || []) as any[]) {
+    const data = String(registro.data).slice(0, 10)
+    if (formulacoesPermitidas && !formulacoesPermitidas.has(registro.formulacao_id)) continue
+    const formulacaoNome = registro.formulacoes?.nome || registro.formulacao_id
+    const key = chave(data, registro.tipo, registro.formulacao_id, registro.ordem_trato)
+    const atual = porChave.get(key) || {
+      data,
+      tipo: registro.tipo as TipoProgramacao,
+      ordem_trato: registro.ordem_trato,
+      formulacao_id: registro.formulacao_id,
+      formulacao_nome: formulacaoNome,
+      vagao_nome: registro.vagoes?.nome || null,
+      previsto_kg: 0,
+      produzido_kg: 0,
+      distribuido_kg: 0,
+      saldo_kg: 0,
+      status: 'nao_produzido' as const,
+    }
+    atual.previsto_kg = Number(registro.total_previsto) || atual.previsto_kg
+    atual.produzido_kg += Number(registro.total_produzido) || 0
+    atual.vagao_nome = registro.vagoes?.nome || atual.vagao_nome
+    porChave.set(key, atual)
+  }
+
+  for (const registro of (distribuicaoRes.data || []) as any[]) {
+    const formulacao = categoriaPorLote.get(registro.lote_id)
+    const tipo = tipoPorProg.get(registro.programacao_id)
+    if (!formulacao || !tipo || (formulacoesPermitidas && !formulacoesPermitidas.has(formulacao.id))) continue
+    const key = chave(String(registro.data).slice(0, 10), tipo, formulacao.id, registro.ordem_trato)
+    const atual = porChave.get(key)
+    if (atual) atual.distribuido_kg += Number(registro.kg_ofertado_real) || 0
+  }
+
+  return Array.from(porChave.values()).map((linha) => {
+    linha.saldo_kg = Math.max(0, linha.previsto_kg - linha.produzido_kg)
+    if (linha.produzido_kg <= 0 && linha.distribuido_kg > 0) linha.status = 'distribuido_sem_fabricacao'
+    else if (linha.produzido_kg > 0 && linha.distribuido_kg <= 0) linha.status = 'produzido_sem_distribuicao'
+    else if (linha.produzido_kg >= linha.previsto_kg - 0.5) linha.status = 'concluido'
+    else if (linha.produzido_kg > 0) linha.status = 'parcial'
+    else linha.status = 'nao_produzido'
+    return linha
+  }).sort((a, b) => `${b.data}|${a.formulacao_nome}|${a.ordem_trato}`.localeCompare(`${a.data}|${b.formulacao_nome}|${b.ordem_trato}`))
 }

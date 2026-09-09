@@ -49,6 +49,11 @@ const DESCRICOES_FIXAS: Record<number, string> = {
 }
 
 const NOTAS_ORDEM = [-1, 0, 1, 2, 3]
+const DATA_FIM_PADRAO = '9999-12-31'
+
+function hojeISO(): string {
+  return new Date().toISOString().slice(0, 10)
+}
 
 export function ConfiguracaoTratos() {
   const { user } = useAuth()
@@ -67,6 +72,8 @@ export function ConfiguracaoTratos() {
   // Configuração por tipo
   const [configs, setConfigs] = useState<Record<string, {
     quantidadeTratos: string
+    dataInicio: string
+    dataFim: string
     percentuais: PercentualTrato[]
     currais: CurralComKg[]
   }>>({})
@@ -109,7 +116,7 @@ export function ConfiguracaoTratos() {
 
     setTiposAtivos(tiposExistentes.length > 0 ? tiposExistentes : ['engorda'])
 
-    const newConfigs: Record<string, { quantidadeTratos: string; percentuais: PercentualTrato[]; currais: CurralComKg[] }> = {}
+    const newConfigs: Record<string, { quantidadeTratos: string; dataInicio: string; dataFim: string; percentuais: PercentualTrato[]; currais: CurralComKg[] }> = {}
 
     for (const [tipo, prog] of [['engorda', progEngorda], ['sequestro', progSequestro], ['tip', progTip]] as const) {
       // Mapa de kg MN salvos por curral
@@ -130,6 +137,8 @@ export function ConfiguracaoTratos() {
       if (prog.programacao) {
         newConfigs[tipo] = {
           quantidadeTratos: String(prog.programacao.quantidade_tratos),
+          dataInicio: prog.programacao.data_inicio,
+          dataFim: prog.programacao.data_fim,
           percentuais: prog.percentuais.map((p) => ({
             ordem_trato: p.ordem_trato,
             percentual: String(p.percentual),
@@ -140,6 +149,8 @@ export function ConfiguracaoTratos() {
       } else {
         newConfigs[tipo] = {
           quantidadeTratos: '4',
+          dataInicio: hojeISO(),
+          dataFim: DATA_FIM_PADRAO,
           percentuais: distribuirPercentuais(4),
           currais,
         }
@@ -186,6 +197,8 @@ export function ConfiguracaoTratos() {
 
   const configAtual = configs[tipoSelecionado] || {
     quantidadeTratos: '4',
+    dataInicio: hojeISO(),
+    dataFim: DATA_FIM_PADRAO,
     percentuais: distribuirPercentuais(4),
     currais: [],
   }
@@ -198,6 +211,16 @@ export function ConfiguracaoTratos() {
         ...prev[tipoSelecionado],
         quantidadeTratos: value,
         percentuais: n > 0 ? distribuirPercentuais(n) : [],
+      },
+    }))
+  }
+
+  const handleVigenciaChange = (campo: 'dataInicio' | 'dataFim', value: string) => {
+    setConfigs((prev) => ({
+      ...prev,
+      [tipoSelecionado]: {
+        ...prev[tipoSelecionado],
+        [campo]: value,
       },
     }))
   }
@@ -242,6 +265,9 @@ export function ConfiguracaoTratos() {
 
   const podeSalvar =
     parseInt(configAtual.quantidadeTratos) > 0 &&
+    Boolean(configAtual.dataInicio) &&
+    Boolean(configAtual.dataFim) &&
+    configAtual.dataFim >= configAtual.dataInicio &&
     (configAtual.percentuais || []).length > 0 &&
     percentuaisValidos &&
     horariosPreenchidos
@@ -254,6 +280,8 @@ export function ConfiguracaoTratos() {
 
     const result = await saveProgramacaoTratos(fazendaId, tipoSelecionado, {
       quantidade_tratos: parseInt(configAtual.quantidadeTratos),
+      data_inicio: configAtual.dataInicio,
+      data_fim: configAtual.dataFim,
       percentuais: (configAtual.percentuais || []).map((p) => ({
         ordem_trato: p.ordem_trato,
         percentual: parseFloat(p.percentual) || 0,
@@ -460,6 +488,37 @@ export function ConfiguracaoTratos() {
                 className="border-gray-200 focus:border-accent max-w-[200px]"
               />
             </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Data de início <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="date"
+                  value={configAtual.dataInicio}
+                  onChange={(e) => handleVigenciaChange('dataInicio', e.target.value)}
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Data de fim <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="date"
+                  min={configAtual.dataInicio || undefined}
+                  value={configAtual.dataFim}
+                  onChange={(e) => handleVigenciaChange('dataFim', e.target.value)}
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+            </div>
+            {configAtual.dataInicio && configAtual.dataFim && configAtual.dataFim < configAtual.dataInicio && (
+              <p className="-mt-4 mb-4 text-sm font-medium text-red-600">
+                A data de fim deve ser igual ou posterior à data de início.
+              </p>
+            )}
 
             {/* Tabela de percentuais por trato */}
             <div>

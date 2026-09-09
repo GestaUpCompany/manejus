@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, Fragment } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, CardSkeleton, Input } from '../../components/ui'
@@ -11,9 +11,13 @@ import {
   calcularResumoPorLote,
   fetchHorariosTratos,
   calcularResumoHorarios,
+  fetchFabricaAcompanhamento,
+  fetchDetalheTratosPorLote,
   type LinhaDesvio,
   type ResumoLote,
   type LinhaHorario,
+  type LinhaFabricaAcompanhamento,
+  type DetalheTratoLote,
 } from '../../services/acompanhamentoTratosService'
 import type { TipoProgramacao } from '../../services/programacaoTratosService'
 import {
@@ -65,6 +69,26 @@ function formatDesvioMin(v: number | null | undefined): string {
   return `${sinal}${v < 0 ? '-' : ''}${h}h${m > 0 ? ` ${m}min` : ''}`
 }
 
+function statusFabricaLabel(status: LinhaFabricaAcompanhamento['status']): string {
+  switch (status) {
+    case 'concluido': return 'Concluído'
+    case 'parcial': return 'Parcial'
+    case 'produzido_sem_distribuicao': return 'Sem distribuição'
+    case 'distribuido_sem_fabricacao': return 'Sem fabricação'
+    default: return 'Não produzido'
+  }
+}
+
+function statusFabricaClass(status: LinhaFabricaAcompanhamento['status']): string {
+  switch (status) {
+    case 'concluido': return 'bg-green-50 text-green-700 border-green-200'
+    case 'parcial': return 'bg-yellow-50 text-yellow-700 border-yellow-200'
+    case 'produzido_sem_distribuicao': return 'bg-blue-50 text-blue-700 border-blue-200'
+    case 'distribuido_sem_fabricacao': return 'bg-gray-50 text-gray-600 border-gray-200'
+    default: return 'bg-gray-50 text-gray-600 border-gray-200'
+  }
+}
+
 export function AcompanhamentoTratos() {
   const { user } = useAuth()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
@@ -87,10 +111,11 @@ export function AcompanhamentoTratos() {
   const [linhas, setLinhas] = useState<LinhaDesvio[]>([])
   const [resumos, setResumos] = useState<ResumoLote[]>([])
   const [linhasHorario, setLinhasHorario] = useState<LinhaHorario[]>([])
+  const [linhasFabrica, setLinhasFabrica] = useState<LinhaFabricaAcompanhamento[]>([])
+  const [detalheTratos, setDetalheTratos] = useState<Record<string, DetalheTratoLote[]>>({})
 
-  // Ordenação da tabela
-  const [sortField, setSortField] = useState<'data' | 'lote_nome' | 'planejado_kg' | 'real_kg' | 'desvio_pct'>('data')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  // Lotes expandidos na tabela unificada
+  const [lotesExpandidos, setLotesExpandidos] = useState<Set<string>>(new Set())
 
   const loadFazenda = useCallback(async () => {
     if (!user) return
@@ -125,10 +150,12 @@ export function AcompanhamentoTratos() {
     if (!fazendaId || !dataInicio || !dataFim) return
     setLoading(true)
 
-    const [planejado, real, horarios] = await Promise.all([
+    const [planejado, real, horarios, fabrica, detalhes] = await Promise.all([
       fetchPlanejadoPorLote(fazendaId),
       fetchRealPorLoteDia(fazendaId, dataInicio, dataFim),
       fetchHorariosTratos(fazendaId, dataInicio, dataFim, lotesSelecionados),
+      fetchFabricaAcompanhamento(fazendaId, dataInicio, dataFim, lotesSelecionados),
+      fetchDetalheTratosPorLote(fazendaId, dataInicio, dataFim),
     ])
 
     const cruzado = cruzarPlanejadoReal(planejado, real, dataInicio, dataFim, lotesSelecionados)
@@ -137,6 +164,8 @@ export function AcompanhamentoTratos() {
     setLinhas(cruzado)
     setResumos(resumo)
     setLinhasHorario(horarios)
+    setLinhasFabrica(fabrica)
+    setDetalheTratos(detalhes)
     setLoading(false)
   }, [fazendaId, dataInicio, dataFim, lotesSelecionados])
 
@@ -160,6 +189,22 @@ export function AcompanhamentoTratos() {
     return linhasHorario.filter((l) => l.tipo === tipoFiltro)
   }, [linhasHorario, tipoFiltro])
 
+  const linhasFabricaFiltradas = useMemo(() => {
+    if (tipoFiltro === 'todos') return linhasFabrica
+    return linhasFabrica.filter((l) => l.tipo === tipoFiltro)
+  }, [linhasFabrica, tipoFiltro])
+
+  const resumoFabrica = useMemo(() => ({
+    total: linhasFabricaFiltradas.length,
+    concluidos: linhasFabricaFiltradas.filter((l) => l.status === 'concluido').length,
+    parciais: linhasFabricaFiltradas.filter((l) => l.status === 'parcial').length,
+    pendentes: linhasFabricaFiltradas.filter((l) => l.status === 'nao_produzido').length,
+    saldoKg: linhasFabricaFiltradas.reduce((sum, l) => sum + l.saldo_kg, 0),
+    totalPrevisto: linhasFabricaFiltradas.reduce((sum, l) => sum + l.previsto_kg, 0),
+    totalProduzido: linhasFabricaFiltradas.reduce((sum, l) => sum + l.produzido_kg, 0),
+    totalDistribuido: linhasFabricaFiltradas.reduce((sum, l) => sum + l.distribuido_kg, 0),
+  }), [linhasFabricaFiltradas])
+
   const resumoHorarioFiltrado = useMemo(() => {
     return calcularResumoHorarios(linhasHorarioFiltradas)
   }, [linhasHorarioFiltradas])
@@ -168,13 +213,14 @@ export function AcompanhamentoTratos() {
   const metricas = useMemo(() => {
     let planejadoTotal = 0
     let realTotal = 0
-    let diasComRegistro = 0
+    const diasComRegistroSet = new Set<string>()
 
     for (const l of linhasFiltradas) {
       if (l.planejado_kg != null) planejadoTotal += l.planejado_kg
       realTotal += l.real_kg
-      if (l.n_tratos > 0) diasComRegistro++
+      if (l.n_tratos > 0) diasComRegistroSet.add(l.data)
     }
+    const diasComRegistro = diasComRegistroSet.size
 
     const desvioTotal = realTotal - planejadoTotal
     const desvioPctGlobal = planejadoTotal > 0
@@ -224,46 +270,22 @@ export function AcompanhamentoTratos() {
     }))
   }, [resumosFiltrados])
 
-  // Tabela ordenada
-  const linhasOrdenadas = useMemo(() => {
-    const sorted = [...linhasFiltradas]
-    sorted.sort((a, b) => {
-      let cmp = 0
-      switch (sortField) {
-        case 'data':
-          cmp = a.data.localeCompare(b.data)
-          break
-        case 'lote_nome':
-          cmp = a.lote_nome.localeCompare(b.lote_nome)
-          break
-        case 'planejado_kg':
-          cmp = (a.planejado_kg ?? -1) - (b.planejado_kg ?? -1)
-          break
-        case 'real_kg':
-          cmp = a.real_kg - b.real_kg
-          break
-        case 'desvio_pct':
-          cmp = (a.desvio_pct ?? -999) - (b.desvio_pct ?? -999)
-          break
-      }
-      return sortOrder === 'asc' ? cmp : -cmp
-    })
-    return sorted
-  }, [linhasFiltradas, sortField, sortOrder])
-
-  const handleSort = (field: typeof sortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortOrder('desc')
-    }
-  }
+  // Agrupar detalhe de tratos por lote_id (já vêm ordenados por data + ordem_trato do serviço)
+  const detalhesPorLote = useMemo(() => detalheTratos, [detalheTratos])
 
   const toggleLote = (id: string) => {
     setLotesSelecionados((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
     )
+  }
+
+  const toggleExpandirLote = (loteId: string) => {
+    setLotesExpandidos((prev) => {
+      const next = new Set(prev)
+      if (next.has(loteId)) next.delete(loteId)
+      else next.add(loteId)
+      return next
+    })
   }
 
   const limparFiltros = () => {
@@ -284,11 +306,38 @@ export function AcompanhamentoTratos() {
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Acompanhamento de Tratos</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Compare o kg planejado por dia com o kg realmente tratado, por lote. Identifique desvios e tendências.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Acompanhamento de Tratos</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Compare o kg planejado por dia com o kg realmente tratado, por lote. Identifique desvios e tendências.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => loadData()}
+          disabled={loading}
+          aria-label="Atualizar acompanhamento de tratos"
+          title="Atualizar dados"
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg border-2 border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <svg
+            className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M20 11a8.1 8.1 0 0 0-14.7-4.7L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M4 13a8.1 8.1 0 0 0 14.7 4.7L21 16" />
+            <path d="M21 21v-5h-5" />
+          </svg>
+          Atualizar
+        </button>
       </div>
 
       {/* Filtros */}
@@ -385,11 +434,11 @@ export function AcompanhamentoTratos() {
           <CardSkeleton />
           <CardSkeleton />
         </div>
-      ) : linhasFiltradas.length === 0 ? (
+      ) : linhasFiltradas.length === 0 && linhasFabricaFiltradas.length === 0 ? (
         <Card className="p-8 text-center" disableHover>
           <p className="text-gray-500">Nenhum dado encontrado para o período selecionado.</p>
           <p className="text-sm text-gray-400 mt-1">
-            Verifique se há programação de tratos configurada e registros de suplementação no período.
+            Verifique se há programação, fabricação ou distribuição registrada no período.
           </p>
         </Card>
       ) : (
@@ -421,6 +470,83 @@ export function AcompanhamentoTratos() {
               <p className="text-xl font-bold text-gray-800 mt-1">{metricas.diasComRegistro}</p>
             </Card>
           </div>
+
+          {/* Fábrica e conciliação */}
+          <Card className="p-4" disableHover>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Fábrica e conciliação</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Compare o que foi produzido na Fábrica com o que foi distribuído por dieta e trato.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+                <div className="rounded-lg bg-gray-50 px-3 py-2">
+                  <p className="text-xs text-gray-500">Tratos</p>
+                  <p className="font-bold text-gray-800">{resumoFabrica.total}</p>
+                </div>
+                <div className="rounded-lg bg-green-50 px-3 py-2">
+                  <p className="text-xs text-green-700">Concluídos</p>
+                  <p className="font-bold text-green-700">{resumoFabrica.concluidos}</p>
+                </div>
+                <div className="rounded-lg bg-yellow-50 px-3 py-2">
+                  <p className="text-xs text-yellow-700">Parciais</p>
+                  <p className="font-bold text-yellow-700">{resumoFabrica.parciais}</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-3 py-2">
+                  <p className="text-xs text-gray-600">Pendente fabricação</p>
+                  <p className="font-bold text-gray-700">{formatKg(resumoFabrica.saldoKg)} kg</p>
+                </div>
+              </div>
+            </div>
+            {linhasFabricaFiltradas.length === 0 ? (
+              <p className="mt-4 rounded-lg bg-gray-50 p-4 text-sm text-gray-500">
+                Nenhuma produção de fábrica encontrada para os filtros selecionados.
+              </p>
+            ) : (
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                    <tr>
+                      <th className="px-3 py-2">Data</th>
+                      <th className="px-3 py-2">Dieta</th>
+                      <th className="px-3 py-2">Trato</th>
+                      <th className="px-3 py-2">Vagão</th>
+                      <th className="px-3 py-2 text-right">Previsto</th>
+                      <th className="px-3 py-2 text-right">Produzido</th>
+                      <th className="px-3 py-2 text-right">Distribuído</th>
+                      <th className="px-3 py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {linhasFabricaFiltradas.map((linha) => (
+                      <tr key={`${linha.data}-${linha.tipo}-${linha.formulacao_id}-${linha.ordem_trato}`}>
+                        <td className="whitespace-nowrap px-3 py-2 text-gray-600">{formatDate(linha.data)}</td>
+                        <td className="px-3 py-2 font-medium text-gray-800">{linha.formulacao_nome}</td>
+                        <td className="px-3 py-2 text-gray-600">{linha.ordem_trato}º</td>
+                        <td className="px-3 py-2 text-gray-600 text-sm">{linha.vagao_nome || '—'}</td>
+                        <td className="px-3 py-2 text-right text-gray-700">{formatKg(linha.previsto_kg)} kg</td>
+                        <td className="px-3 py-2 text-right font-medium text-gray-800">{formatKg(linha.produzido_kg)} kg</td>
+                        <td className="px-3 py-2 text-right text-gray-700">{formatKg(linha.distribuido_kg)} kg</td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${statusFabricaClass(linha.status)}`}>
+                            {statusFabricaLabel(linha.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
+                      <td className="px-3 py-2 text-gray-700" colSpan={4}>Total</td>
+                      <td className="px-3 py-2 text-right text-gray-800">{formatKg(resumoFabrica.totalPrevisto)} kg</td>
+                      <td className="px-3 py-2 text-right text-gray-800">{formatKg(resumoFabrica.totalProduzido)} kg</td>
+                      <td className="px-3 py-2 text-right text-gray-800">{formatKg(resumoFabrica.totalDistribuido)} kg</td>
+                      <td className="px-3 py-2"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
 
           {/* Gráficos */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -598,9 +724,27 @@ export function AcompanhamentoTratos() {
             </>
           )}
 
-          {/* Resumo por lote */}
+          {/* Tabela unificada: resumo por lote com detalhamento por dia expansível */}
           <Card className="p-4" disableHover>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Resumo por lote</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">
+                Resumo por lote ({resumosFiltrados.length} lotes)
+              </h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setLotesExpandidos(new Set(resumosFiltrados.map((r) => r.lote_id)))}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Expandir todos
+                </button>
+                <button
+                  onClick={() => setLotesExpandidos(new Set())}
+                  className="text-xs text-gray-500 hover:text-gray-700 font-medium"
+                >
+                  Recolher todos
+                </button>
+              </div>
+            </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -612,99 +756,103 @@ export function AcompanhamentoTratos() {
                     <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Desvio %</th>
                     <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Dias c/ registro</th>
                     <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase"></th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {resumosFiltrados.map((r) => {
                     const cor = CORES_STATUS[r.status]
+                    const expandido = lotesExpandidos.has(r.lote_id)
+                    const tratos = detalhesPorLote[r.lote_id] || []
                     return (
-                      <tr key={r.lote_id} className="hover:bg-gray-50">
-                        <td className="px-3 py-2 text-sm font-medium text-gray-800">{r.lote_nome}</td>
-                        <td className="px-3 py-2 text-sm text-right text-gray-700">{formatKg(r.planejado_total_kg)}</td>
-                        <td className="px-3 py-2 text-sm text-right text-gray-700">{formatKg(r.real_total_kg)}</td>
-                        <td className={`px-3 py-2 text-sm text-right font-medium ${r.desvio_total_kg < 0 ? 'text-red-600' : r.desvio_total_kg > 0 ? 'text-yellow-600' : 'text-gray-700'}`}>
-                          {r.desvio_total_kg >= 0 ? '+' : ''}{formatKg(r.desvio_total_kg)}
-                        </td>
-                        <td className={`px-3 py-2 text-sm text-right font-medium ${r.desvio_medio_pct < 0 ? 'text-red-600' : r.desvio_medio_pct > 5 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {formatPct(r.desvio_medio_pct)}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-center text-gray-600">
-                          {r.dias_com_registro} / {r.dias_no_periodo}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cor.bg} ${cor.text} ${cor.border} border`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${cor.dot}`} />
-                            {statusLabel(r.status)}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          {/* Tabela detalhada lote × dia */}
-          <Card className="p-4" disableHover>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
-              Detalhamento por lote × dia ({linhasOrdenadas.length} linhas)
-            </h3>
-            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-              <table className="min-w-full divide-y divide-gray-200 sticky-header">
-                <thead className="bg-gray-50 sticky top-0 z-10">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onClick={() => handleSort('data')}>
-                      Data {sortField === 'data' && (sortOrder === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onClick={() => handleSort('lote_nome')}>
-                      Lote {sortField === 'lote_nome' && (sortOrder === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Curral</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onClick={() => handleSort('planejado_kg')}>
-                      Planejado (kg) {sortField === 'planejado_kg' && (sortOrder === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onClick={() => handleSort('real_kg')}>
-                      Real (kg) {sortField === 'real_kg' && (sortOrder === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Desvio (kg)</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onClick={() => handleSort('desvio_pct')}>
-                      Desvio (%) {sortField === 'desvio_pct' && (sortOrder === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Nº tratos</th>
-                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Leitura</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tratador</th>
-                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {linhasOrdenadas.map((l, idx) => {
-                    const cor = CORES_STATUS[l.status]
-                    return (
-                      <tr key={`${l.lote_id}-${l.data}-${idx}`} className="hover:bg-gray-50">
-                        <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">{formatDate(l.data)}</td>
-                        <td className="px-3 py-2 text-sm font-medium text-gray-800">{l.lote_nome}</td>
-                        <td className="px-3 py-2 text-sm text-gray-600">{l.curral_nome || '—'}</td>
-                        <td className="px-3 py-2 text-sm text-right text-gray-700">{formatKg(l.planejado_kg)}</td>
-                        <td className="px-3 py-2 text-sm text-right text-gray-700">{formatKg(l.real_kg)}</td>
-                        <td className={`px-3 py-2 text-sm text-right font-medium ${l.desvio_kg != null && l.desvio_kg < 0 ? 'text-red-600' : l.desvio_kg != null && l.desvio_kg > 0 ? 'text-yellow-600' : 'text-gray-700'}`}>
-                          {l.desvio_kg != null ? `${l.desvio_kg >= 0 ? '+' : ''}${formatKg(l.desvio_kg)}` : '—'}
-                        </td>
-                        <td className={`px-3 py-2 text-sm text-right font-medium ${l.desvio_pct != null && l.desvio_pct < 0 ? 'text-red-600' : l.desvio_pct != null && l.desvio_pct > 5 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {formatPct(l.desvio_pct)}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-center text-gray-600">{l.n_tratos}</td>
-                        <td className="px-3 py-2 text-sm text-center text-gray-600">
-                          {l.leitura_media != null ? l.leitura_media.toFixed(1) : '—'}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-600 whitespace-nowrap">{l.tratador || '—'}</td>
-                        <td className="px-3 py-2 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cor.bg} ${cor.text} ${cor.border} border`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${cor.dot}`} />
-                            {statusLabel(l.status)}
-                          </span>
-                        </td>
-                      </tr>
+                      <Fragment key={r.lote_id}>
+                        <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleExpandirLote(r.lote_id)}>
+                          <td className="px-3 py-2 text-sm font-medium text-gray-800 flex items-center gap-2">
+                            <svg
+                              className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${expandido ? 'rotate-90' : ''}`}
+                              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                            {r.lote_nome}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{formatKg(r.planejado_total_kg)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-gray-700">{formatKg(r.real_total_kg)}</td>
+                          <td className={`px-3 py-2 text-sm text-right font-medium ${r.desvio_total_kg < 0 ? 'text-red-600' : r.desvio_total_kg > 0 ? 'text-yellow-600' : 'text-gray-700'}`}>
+                            {r.desvio_total_kg >= 0 ? '+' : ''}{formatKg(r.desvio_total_kg)}
+                          </td>
+                          <td className={`px-3 py-2 text-sm text-right font-medium ${r.desvio_medio_pct < 0 ? 'text-red-600' : r.desvio_medio_pct > 5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {formatPct(r.desvio_medio_pct)}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-center text-gray-600">
+                            {r.dias_com_registro} / {r.dias_no_periodo}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cor.bg} ${cor.text} ${cor.border} border`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${cor.dot}`} />
+                              {statusLabel(r.status)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-center text-xs text-gray-400">
+                            {tratos.length > 0 ? `${tratos.length} trato(s)` : ''}
+                          </td>
+                        </tr>
+                        {expandido && tratos.length > 0 && (
+                          <tr className="bg-gray-50">
+                            <td colSpan={8} className="px-4 py-4">
+                              <div className="space-y-2">
+                                {tratos.map((t, idx) => {
+                                  const desvioAbs = Math.abs(t.desvio_kg)
+                                  const corTrato = t.kg_real === 0
+                                    ? 'red'
+                                    : desvioAbs <= 1
+                                    ? 'green'
+                                    : desvioAbs <= t.kg_planejado * 0.2
+                                    ? 'yellow'
+                                    : 'red'
+                                  const corClasses = {
+                                    red: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
+                                    yellow: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
+                                    green: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+                                  }[corTrato]
+                                  return (
+                                    <div key={`${t.lote_id}-${t.data}-${idx}`} className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2.5">
+                                      <div className="flex items-center gap-2 w-20 shrink-0">
+                                        <span className={`w-2 h-2 rounded-full ${corClasses.dot}`} />
+                                        <span className="text-sm font-medium text-gray-700">T{t.ordem_trato}</span>
+                                      </div>
+                                      <span className="text-xs text-gray-400 w-16 shrink-0">{t.horario_real || '—'}</span>
+                                      <span className="text-xs text-gray-400 w-24 shrink-0 hidden sm:inline">{formatDate(t.data)}</span>
+                                      <div className="flex-1 flex items-center gap-4 text-sm">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-gray-400 text-xs">Planejado</span>
+                                          <span className="font-medium text-gray-700">{formatKg(t.kg_planejado)} kg</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-gray-400 text-xs">Real</span>
+                                          <span className={`font-medium ${t.kg_real === 0 ? 'text-red-600' : 'text-gray-800'}`}>{formatKg(t.kg_real)} kg</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-gray-400 text-xs">Desvio</span>
+                                          <span className={`font-medium ${corClasses.text}`}>
+                                            {t.desvio_kg >= 0 ? '+' : ''}{formatKg(t.desvio_kg)} kg
+                                          </span>
+                                        </div>
+                                      </div>
+                                      {t.leitura_cocho != null && (
+                                        <span className="text-xs text-gray-400 shrink-0 hidden md:inline">Cocho: {t.leitura_cocho}</span>
+                                      )}
+                                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${corClasses.bg} ${corClasses.text} ${corClasses.border}`}>
+                                        {t.kg_real === 0 ? 'Zerado' : desvioAbs <= 1 ? 'No plano' : t.desvio_kg > 0 ? 'Acima' : 'Abaixo'}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     )
                   })}
                 </tbody>

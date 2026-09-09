@@ -7,6 +7,8 @@ export interface ProgramacaoTratos {
   fazenda_id: string
   tipo: TipoProgramacao
   quantidade_tratos: number
+  data_inicio: string
+  data_fim: string
   ativo: boolean
 }
 
@@ -42,13 +44,17 @@ export interface ProgramacaoCompleta {
   currais: ProgramacaoCurral[]
 }
 
+function dataHojeISO(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
 /**
- * Carrega a programação de tratos de um tipo específico (engorda, sequestro ou TIP)
- * para a fazenda, incluindo os percentuais por trato.
+ * Carrega a programação vigente para a data informada.
  */
 export async function getProgramacaoTratos(
   fazendaId: string,
-  tipo: TipoProgramacao
+  tipo: TipoProgramacao,
+  dataReferencia = dataHojeISO()
 ): Promise<ProgramacaoCompleta> {
   const { data: prog, error: progError } = await supabase
     .from('programacao_tratos')
@@ -56,6 +62,10 @@ export async function getProgramacaoTratos(
     .eq('fazenda_id', fazendaId)
     .eq('ativo', true)
     .eq('tipo', tipo)
+    .lte('data_inicio', dataReferencia)
+    .gte('data_fim', dataReferencia)
+    .order('data_inicio', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   if (progError) {
@@ -97,11 +107,14 @@ export async function getProgramacaoTratos(
  * Carrega quais tipos de programação (engorda, sequestro ou TIP) já existem para a fazenda.
  */
 export async function getTiposExistentes(fazendaId: string): Promise<TipoProgramacao[]> {
+  const dataReferencia = dataHojeISO()
   const { data, error } = await supabase
     .from('programacao_tratos')
     .select('tipo')
     .eq('fazenda_id', fazendaId)
     .eq('ativo', true)
+    .lte('data_inicio', dataReferencia)
+    .gte('data_fim', dataReferencia)
 
   if (error || !data) return []
   return data.map((d) => d.tipo as TipoProgramacao)
@@ -140,17 +153,22 @@ export async function saveProgramacaoTratos(
   tipo: TipoProgramacao,
   config: {
     quantidade_tratos: number
+    data_inicio: string
+    data_fim: string
     percentuais: { ordem_trato: number; percentual: number; horario_sugerido: string | null }[]
     currais: { curral_id: string; lote_id: string | null; kg_mn_dia: number }[]
   }
 ): Promise<{ success: boolean; error: string | null }> {
-  // Busca programação existente do tipo
+  // Atualiza somente a programação que tem exatamente esta vigência.
+  // Vigências diferentes são preservadas para histórico e futuro.
   const { data: existing } = await supabase
     .from('programacao_tratos')
     .select('id')
     .eq('fazenda_id', fazendaId)
     .eq('ativo', true)
     .eq('tipo', tipo)
+    .eq('data_inicio', config.data_inicio)
+    .eq('data_fim', config.data_fim)
     .maybeSingle()
 
   let programacaoId: string
@@ -180,6 +198,8 @@ export async function saveProgramacaoTratos(
         fazenda_id: fazendaId,
         tipo,
         quantidade_tratos: config.quantidade_tratos,
+        data_inicio: config.data_inicio,
+        data_fim: config.data_fim,
         ativo: true,
       })
       .select()
