@@ -53,6 +53,12 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'Status de limpeza, histórico e qualidade da água por bebedouro e período.',
     icone: '💧',
   },
+  {
+    tipo: 'morte',
+    titulo: 'Mortes',
+    descricao: 'Registros de morte por causa, categoria e sexo, taxa de mortalidade, peso médio e perda financeira estimada por animal (preço por kg vivo por categoria).',
+    icone: '💀',
+  },
 ]
 
 export function Relatorios() {
