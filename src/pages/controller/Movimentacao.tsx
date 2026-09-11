@@ -6,7 +6,7 @@ import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToXLSX } from '../../utils/exportXLSX'
 import { MOVIMENTACAO_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '../../utils/formatDate'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { getFazendaIdForUser, getFazendaNome } from '../../utils/fazendaContext'
 
 interface RegistroMovimentacao {
   id: string
@@ -38,6 +38,7 @@ export function Movimentacao() {
   const navigate = useNavigate()
   const [registros, setRegistros] = useState<RegistroMovimentacao[]>([])
   const [loading, setLoading] = useState(true)
+  const [fazendaNome, setFazendaNome] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
@@ -56,6 +57,7 @@ export function Movimentacao() {
     if (!vinculos || vinculos.length === 0) return
 
     const fazendaId = vinculos[0].fazenda_id
+    getFazendaNome(fazendaId).then(setFazendaNome)
 
     let query = supabase
       .from('registros_movimentacao')
@@ -122,7 +124,7 @@ export function Movimentacao() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
           <Button
-            onClick={() => exportToXLSX(filteredRegistros, MOVIMENTACAO_EXPORT_CONFIG)}
+            onClick={() => exportToXLSX(filteredRegistros, MOVIMENTACAO_EXPORT_CONFIG, fazendaNome)}
             disabled={filteredRegistros.length === 0}
             className="w-full sm:w-auto text-sm"
           >

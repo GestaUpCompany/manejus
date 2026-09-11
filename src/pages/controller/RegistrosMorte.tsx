@@ -6,7 +6,7 @@ import { Card, Input, EmptyState, PageSkeleton, Table, Thead, Tbody, Tr, Th, Td,
 import { exportToXLSX } from '../../utils/exportXLSX'
 import { MORTE_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '../../utils/formatDate'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { getFazendaIdForUser, getFazendaNome } from '../../utils/fazendaContext'
 
 interface RegistroMorte {
   id: string
@@ -41,6 +41,7 @@ export function RegistrosMorte() {
   const navigate = useNavigate()
   const [registros, setRegistros] = useState<RegistroMorte[]>([])
   const [loading, setLoading] = useState(true)
+  const [fazendaNome, setFazendaNome] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
@@ -59,6 +60,7 @@ export function RegistrosMorte() {
     if (!vinculos || vinculos.length === 0) return
 
     const fazendaId = vinculos[0].fazenda_id
+    getFazendaNome(fazendaId).then(setFazendaNome)
 
     let query = supabase
       .from('registros_morte')
@@ -113,7 +115,7 @@ export function RegistrosMorte() {
       </div>
 
       <FilterToolbar
-        onExport={() => exportToXLSX(filteredRegistros, MORTE_EXPORT_CONFIG)}
+        onExport={() => exportToXLSX(filteredRegistros, MORTE_EXPORT_CONFIG, fazendaNome)}
         exportDisabled={filteredRegistros.length === 0}
         onClear={() => {
           setSearchTerm('')

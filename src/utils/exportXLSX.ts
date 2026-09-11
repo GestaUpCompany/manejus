@@ -199,9 +199,10 @@ function autoFitColumns(worksheet: ExcelJS.Worksheet, headers: string[]) {
   })
 }
 
-async function downloadWorkbook(workbook: ExcelJS.Workbook, tableName: string) {
+async function downloadWorkbook(workbook: ExcelJS.Workbook, tableName: string, label?: string) {
   const timestamp = new Date().toISOString().slice(0, 10)
-  const filename = `${tableName}_${timestamp}.xlsx`
+  const base = label || tableName
+  const filename = `${base}_${timestamp}.xlsx`
   const buffer = await workbook.xlsx.writeBuffer()
   const blob = new Blob([buffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -216,7 +217,7 @@ async function downloadWorkbook(workbook: ExcelJS.Workbook, tableName: string) {
   URL.revokeObjectURL(url)
 }
 
-export async function exportToXLSX(data: any[], config: TableExportConfig): Promise<void> {
+export async function exportToXLSX(data: any[], config: TableExportConfig, fazendaNome?: string | null): Promise<void> {
   if (!data || data.length === 0) {
     console.warn('No data to export')
     return
@@ -245,10 +246,11 @@ export async function exportToXLSX(data: any[], config: TableExportConfig): Prom
   autoFitColumns(worksheet, headers)
   worksheet.views = [{ state: 'frozen', ySplit: 1 }]
 
-  await downloadWorkbook(workbook, config.tableName)
+  const label = fazendaNome ? `${fazendaNome} - ${config.sheetName}` : undefined
+  await downloadWorkbook(workbook, config.tableName, label)
 }
 
-export async function exportToXLSXMultiSheet(config: MultiSheetExportConfig): Promise<void> {
+export async function exportToXLSXMultiSheet(config: MultiSheetExportConfig, fazendaNome?: string | null): Promise<void> {
   const ExcelJSMod = await import('exceljs')
   const workbook = new ExcelJSMod.default.Workbook()
   const usedNames = new Set<string>()
@@ -286,5 +288,6 @@ export async function exportToXLSXMultiSheet(config: MultiSheetExportConfig): Pr
     worksheet.views = [{ state: 'frozen', ySplit: 1 }]
   }
 
-  await downloadWorkbook(workbook, config.tableName)
+  const label = fazendaNome ? `${fazendaNome} - Cadernetas` : undefined
+  await downloadWorkbook(workbook, config.tableName, label)
 }

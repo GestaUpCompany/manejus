@@ -6,7 +6,7 @@ import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToXLSX } from '../../utils/exportXLSX'
 import { SUPLEMENTACAO_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '../../utils/formatDate'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { getFazendaIdForUser, getFazendaNome } from '../../utils/fazendaContext'
 
 interface RegistroSuplementacao {
   id: string
@@ -48,6 +48,7 @@ export function Suplementacao() {
   const [lotes, setLotes] = useState<{ id: string; nome: string }[]>([])
   const [lotesSelecionados, setLotesSelecionados] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [fazendaNome, setFazendaNome] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
@@ -98,6 +99,7 @@ export function Suplementacao() {
     if (!vinculos || vinculos.length === 0) return
 
     const fazendaId = vinculos[0].fazenda_id
+    getFazendaNome(fazendaId).then(setFazendaNome)
 
     let query = supabase
       .from('registros_suplementacao')
@@ -201,7 +203,7 @@ export function Suplementacao() {
                   intervalo_ate_proximo_dias: intervaloAteProximo
                 }
               })
-              exportToXLSX(enriched, SUPLEMENTACAO_EXPORT_CONFIG)
+              exportToXLSX(enriched, SUPLEMENTACAO_EXPORT_CONFIG, fazendaNome)
             }}
             disabled={filteredRegistros.length === 0}
             className="w-full sm:w-auto text-sm"

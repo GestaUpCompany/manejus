@@ -1,5 +1,6 @@
 import { supabase } from '../services/supabaseClient'
 import { exportToXLSXMultiSheet, TableExportConfig, MultiSheetExportConfig } from './exportXLSX'
+import { getFazendaNome } from './fazendaContext'
 import {
   MATERNIDADE_EXPORT_CONFIG,
   PASTAGENS_EXPORT_CONFIG,
@@ -84,10 +85,12 @@ export async function exportAllCadernetas(fazendaId: string): Promise<void> {
     throw new Error('Nenhum registro encontrado para exportar.')
   }
 
+  const fazendaNome = await getFazendaNome(fazendaId)
+
   const multiConfig: MultiSheetExportConfig = {
     tableName: 'cadernetas_completo',
     sheets,
   }
 
-  exportToXLSXMultiSheet(multiConfig)
+  exportToXLSXMultiSheet(multiConfig, fazendaNome || undefined)
 }

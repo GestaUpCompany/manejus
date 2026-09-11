@@ -31,3 +31,12 @@ export async function getFazendaIdForUser(userId: string): Promise<string | null
 
   return vinculos[0].fazenda_id
 }
+
+export async function getFazendaNome(fazendaId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('fazendas')
+    .select('nome')
+    .eq('id', fazendaId)
+    .single()
+  return data?.nome || null
+}
