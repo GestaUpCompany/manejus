@@ -309,6 +309,22 @@ Disparador: quando mencionar "formulacao_insumos", "tabela de junção de insumo
 
 **Disparador**: quando mencionar "expediente", "horário de atividade", "fora do horário", "bloqueio por horário", "override de expediente", "turno noturno", ou problemas com acesso ao app fora do horário, ler esta seção.
 
+### Nome do arquivo XLSX com fazenda e caderneta — adicionado em 2026-09-10
+
+**Contexto**: a exportação XLSX de cada caderneta gerava arquivos com nome técnico da tabela (ex: `registros_maternidade_2026-09-10.xlsx`), dificultando a identificação quando o gestor baixa várias cadernetas de fazendas diferentes.
+
+**Mudança**: `downloadWorkbook` em `utils/exportXLSX.ts` agora aceita um `label` opcional que substitui o `tableName` no nome do arquivo. `exportToXLSX` e `exportToXLSXMultiSheet` recebem `fazendaNome` como parâmetro e montam o label como `${fazendaNome} - ${sheetName}` (individual) ou `${fazendaNome} - Cadernetas` (todas).
+
+**Nova função em `utils/fazendaContext.ts`**: `getFazendaNome(fazendaId)` busca o nome da fazenda no Supabase.
+
+**Padrão do nome do arquivo**:
+- Individual: `Fazenda Gesta'Up - Maternidade - 2026-09-10.xlsx`
+- Todas: `Fazenda Gesta'Up - Cadernetas - 2026-09-10.xlsx`
+
+Aplicado em 17 páginas de cadernetas individuais + `exportAllCadernetas.ts`.
+
+**Disparador**: quando mencionar "nome do arquivo xlsx", "exportação xlsx", "nome do arquivo exportado", ou problemas com identificação de arquivos exportados de cadernetas, ler esta seção.
+
 
 ### Relatórios públicos interativos (links compartilháveis) — adicionado em 2026-08-05
 
