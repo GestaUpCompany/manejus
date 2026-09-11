@@ -100,6 +100,7 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', 'attachment; filename="relatorio-mortalidade.pdf"')
     res.setHeader('Cache-Control', 'no-store')
+    res.setHeader('X-PDF-Renderer', 'puppeteer')
     return res.status(200).send(Buffer.from(pdf))
   } catch (error) {
     console.error('Erro ao gerar relatório de mortalidade com Puppeteer:', error)
