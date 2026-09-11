@@ -1,8 +1,1 @@
-{
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
+﻿{"functions": {"api/pdf/morte.ts": {"maxDuration": 60, "includeFiles": "node_modules/@sparticuz/chromium/bin/**"}}, "rewrites": [{"source": "/((?!api/).*)", "destination": "/index.html"}]}
