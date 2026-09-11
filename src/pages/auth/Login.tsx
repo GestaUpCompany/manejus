@@ -47,7 +47,7 @@ export function Login() {
         setShowSuccess(true)
         setTimeout(() => {
           navigate('/')
-        }, 1500)
+        }, 500)
       } else {
         setError('Email ou senha inválidos')
         setLoading(false)

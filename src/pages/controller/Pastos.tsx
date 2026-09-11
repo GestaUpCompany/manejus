@@ -69,6 +69,7 @@ export function Pastos() {
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
   const [showInactive, setShowInactive] = useState(false)
+  const [showOnlyOcupados, setShowOnlyOcupados] = useState(false)
 
   // Paginação
   const [paginaAtual, setPaginaAtual] = useState(1)
@@ -164,7 +165,7 @@ export function Pastos() {
 
   useEffect(() => {
     setPaginaAtual(1)
-  }, [searchTerm, showInactive])
+  }, [searchTerm, showInactive, showOnlyOcupados])
 
   // Abrir formulário de edição direto via query param ?pasto=id (ex: vindo de notificação)
   useEffect(() => {
@@ -178,13 +179,14 @@ export function Pastos() {
     const termo = searchTerm.toLowerCase().trim()
     return pastos.filter((pasto) => {
       if (!showInactive && !pasto.ativo) return false
+      if (showOnlyOcupados && !ocupacaoPorPasto[pasto.id]) return false
       if (!termo) return true
       return (
         pasto.nome.toLowerCase().includes(termo) ||
         (pasto.especie && pasto.especie.toLowerCase().includes(termo))
       )
     })
-  }, [pastos, searchTerm, showInactive])
+  }, [pastos, searchTerm, showInactive, showOnlyOcupados, ocupacaoPorPasto])
 
   const totalPaginas = Math.max(1, Math.ceil(pastosFiltrados.length / ITENS_POR_PAGINA))
   const paginaSegura = Math.min(paginaAtual, totalPaginas)
@@ -662,7 +664,28 @@ export function Pastos() {
 
       {/* Filter Toggle */}
       {!showForm && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowOnlyOcupados(!showOnlyOcupados)}
+            className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
+              showOnlyOcupados
+                ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {showOnlyOcupados ? (
+              <>
+                <span className="sm:hidden">✓ Ocupados</span>
+                <span className="hidden sm:inline">✓ Somente Ocupados</span>
+              </>
+            ) : (
+              <>
+                <span className="sm:hidden">Ocupados</span>
+                <span className="hidden sm:inline">Somente Ocupados</span>
+              </>
+            )}
+          </button>
           <button
             type="button"
             onClick={() => setShowInactive(!showInactive)}
@@ -1098,8 +1121,8 @@ export function Pastos() {
 
       {!showForm && pastosFiltrados.length === 0 ? (
         <EmptyState
-          title={searchTerm ? 'Nenhum pasto encontrado para a busca' : 'Nenhum pasto cadastrado'}
-          action={!searchTerm ? <Button onClick={() => setShowForm(true)} className="text-sm">Criar Primeiro Pasto</Button> : undefined}
+          title={showOnlyOcupados ? 'Nenhum pasto ocupado no momento' : searchTerm ? 'Nenhum pasto encontrado para a busca' : 'Nenhum pasto cadastrado'}
+          action={!searchTerm && !showOnlyOcupados ? <Button onClick={() => setShowForm(true)} className="text-sm">Criar Primeiro Pasto</Button> : undefined}
         />
       ) : !showForm ? (
         <div className="space-y-4">
