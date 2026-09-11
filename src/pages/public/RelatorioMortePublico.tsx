@@ -499,7 +499,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
     return 'Pasto'
   }
 
-  const exportarPDF = async () => {
+  const exportarPDF = async (motor: 'puppeteer' | 'react') => {
     if (!dados || linhasFiltradas.length === 0) return
     try {
       setExportandoPDF(true)
@@ -531,7 +531,6 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
 
       const periodoInicio = dataInicio || (linhasFiltradas[linhasFiltradas.length - 1]?.data ?? '')
       const periodoFim = dataFim || (linhasFiltradas[0]?.data ?? '')
-
       const parametrosPDF = {
         dataInicio: periodoInicio,
         dataFim: periodoFim,
@@ -540,14 +539,9 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
         linhas: linhasFiltradas,
         resumo: resumoParaPDF,
       }
-
-      let blob: Blob
-      try {
-        blob = await gerarRelatorioMortePDFPuppeteer(parametrosPDF)
-      } catch (puppeteerError) {
-        console.warn('Puppeteer indisponível; usando fallback React PDF:', puppeteerError)
-        blob = await gerarRelatorioMortePDFReact(parametrosPDF)
-      }
+      const blob = motor === 'puppeteer'
+        ? await gerarRelatorioMortePDFPuppeteer(parametrosPDF)
+        : await gerarRelatorioMortePDFReact(parametrosPDF)
 
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -559,8 +553,8 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
     } catch (err) {
-      console.error('Erro ao exportar PDF:', err)
-      alert('Erro ao gerar PDF. Tente novamente.')
+      console.error(`Erro ao exportar PDF com ${motor}:`, err)
+      alert(`Erro ao gerar PDF com ${motor === 'puppeteer' ? 'Puppeteer' : 'React PDF'}. Tente novamente.`)
     } finally {
       setExportandoPDF(false)
     }
@@ -701,27 +695,26 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
                   <img src={relatorioInfo.fazenda_logo_url} alt={relatorioInfo?.fazenda_nome || 'Fazenda'} className="h-8 w-auto max-w-[80px] object-contain" />
                 </div>
               )}
-              <button
-                onClick={exportarPDF}
-                disabled={exportandoPDF || linhasFiltradas.length === 0}
-                className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                style={{ color: GREEN_DARK }}
-              >
-                {exportandoPDF ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: GREEN_DARK }}></div>
-                    Gerando...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13l3 3 3-3M12 16V9" />
-                    </svg>
-                    Exportar PDF
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => exportarPDF('puppeteer')}
+                  disabled={exportandoPDF || linhasFiltradas.length === 0}
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  style={{ backgroundColor: GREEN_DARK }}
+                  title="Gera o PDF no servidor com Puppeteer"
+                >
+                  {exportandoPDF ? 'Gerando...' : 'PDF Puppeteer'}
+                </button>
+                <button
+                  onClick={() => exportarPDF('react')}
+                  disabled={exportandoPDF || linhasFiltradas.length === 0}
+                  className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  style={{ color: GREEN_DARK }}
+                  title="Gera o PDF localmente no navegador"
+                >
+                  PDF local
+                </button>
+              </div>
             </div>
           </div>
         </div>

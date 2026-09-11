@@ -6,7 +6,7 @@ Este arquivo registra mudanças já aplicadas no Painel Web. Um chat novo não p
 
 - Adicionada a Serverless Function `api/pdf/morte.ts`, usando `puppeteer-core` e `@sparticuz/chromium` para gerar o PDF no runtime Node.js da Vercel.
 - O cliente prepara logos e gráficos como base64 e envia o payload para a function; o limite aplicado é de 10.000 registros e aproximadamente 4 MB por requisição.
-- O gerador `@react-pdf/renderer` permanece como fallback automático quando a function falha, preservando a geração client-side existente.
+- O relatório público oferece botões separados para gerar com Puppeteer no servidor ou com React PDF localmente; uma falha do Puppeteer não é mais mascarada por fallback automático.
 - A implantação não exige configuração adicional no painel da Vercel; a rota em `api/` é detectada automaticamente. Para execução local, pode-se definir `PUPPETEER_EXECUTABLE_PATH` apontando para um Chrome instalado.
 
 ## Relatório de mortalidade em React PDF (implementado em 2026-09-10)
