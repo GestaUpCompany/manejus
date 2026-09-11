@@ -82,6 +82,7 @@ export function SuplementacaoDetalhes() {
   const [editForm, setEditForm] = useState<EditForm | null>(null)
   const [formulacoes, setFormulacoes] = useState<{ nome: string }[]>([])
   const [fazendaId, setFazendaId] = useState<string | null>(null)
+  const [totalKgCochoLote, setTotalKgCochoLote] = useState<number | null>(null)
   const [leituraDropdownOpen, setLeituraDropdownOpen] = useState(false)
   const [escoreDropdownOpen, setEscoreDropdownOpen] = useState(false)
   const leituraDropdownRef = useRef<HTMLDivElement>(null)
@@ -162,6 +163,23 @@ export function SuplementacaoDetalhes() {
       }
     } else {
       setRegistro(data as RegistroSuplementacao)
+      // Buscar acumulado de kg_cocho do mesmo lote até a data deste registro
+      const reg = data as RegistroSuplementacao
+      if (reg.lote_id && _fazendaId && reg.data) {
+        const { data: lotesData, error: lotesError } = await supabase
+          .from('registros_suplementacao')
+          .select('kg_cocho, data')
+          .eq('fazenda_id', _fazendaId)
+          .eq('lote_id', reg.lote_id)
+          .is('deleted_at', null)
+          .lte('data', reg.data)
+        if (!lotesError && lotesData) {
+          const total = lotesData.reduce((soma: number, r: { kg_cocho?: number | null }) => soma + (r.kg_cocho || 0), 0)
+          setTotalKgCochoLote(total)
+        }
+      } else {
+        setTotalKgCochoLote(null)
+      }
     }
 
     setLoading(false)
@@ -362,6 +380,12 @@ export function SuplementacaoDetalhes() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       <tr><td className="px-4 py-2 text-sm text-gray-900">KG Cocho</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.kg_cocho || 0}</td></tr>
+                      {totalKgCochoLote !== null && (
+                        <tr className="bg-primary/5">
+                          <td className="px-4 py-2 text-sm font-semibold text-primary">Acumulado Lote (até esta data)</td>
+                          <td className="px-4 py-2 text-sm font-bold text-primary text-right">{totalKgCochoLote.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</td>
+                        </tr>
+                      )}
                       <tr><td className="px-4 py-2 text-sm text-gray-900">KG Depósito</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.kg_deposito || 0}</td></tr>
                       <tr><td className="px-4 py-2 text-sm text-gray-900">Nº Cabeças</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{formatValue(registro!.n_cabecas)}</td></tr>
                       <tr><td className="px-4 py-2 text-sm text-gray-900">Qtd Bezerros</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{formatValue(registro!.qtd_bezerros)}</td></tr>

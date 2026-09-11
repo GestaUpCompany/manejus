@@ -542,6 +542,7 @@ export const SUPLEMENTACAO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'formulacao', header: 'Formulação' },
     { source: 'leitura', header: 'Leitura', format: 'number' },
     { source: 'kg_cocho', header: 'Kg Cocho', format: 'number' },
+    { source: 'total_acumulado_lote', header: 'Acumulado Lote (kg)', format: 'number' },
     { source: 'kg_deposito', header: 'Kg Depósito', format: 'number' },
     { source: 'n_cabecas', header: 'Nº Cabeças', format: 'number' },
     { source: 'peso_vivo_kg', header: 'Peso Vivo (kg)', format: 'number' },

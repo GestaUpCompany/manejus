@@ -143,6 +143,33 @@ export function Suplementacao() {
     return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
+  // Somatória de kg_cocho por lote dentro do período filtrado
+  const totalKgCocho = filteredRegistros.reduce((soma, reg) => soma + (reg.kg_cocho || 0), 0)
+  const totalKgCochoPorLote = new Map<string, number>()
+  for (const reg of filteredRegistros) {
+    const key = reg.lote_id || ''
+    totalKgCochoPorLote.set(key, (totalKgCochoPorLote.get(key) || 0) + (reg.kg_cocho || 0))
+  }
+
+  // Acumulado cumulativo por lote: para cada registro, a soma de todos os registros
+  // do mesmo lote até aquela data (em ordem cronológica ascendente)
+  const acumuladoPorRegistro = new Map<string, number>()
+  const registrosPorLoteAsc = new Map<string, typeof filteredRegistros>()
+  for (const reg of filteredRegistros) {
+    const key = reg.lote_id || ''
+    if (!registrosPorLoteAsc.has(key)) registrosPorLoteAsc.set(key, [])
+    registrosPorLoteAsc.get(key)!.push(reg)
+  }
+  for (const [, lista] of registrosPorLoteAsc) {
+    // Ordena por data ascendente para calcular o cumulativo
+    const ordenado = [...lista].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
+    let acumulado = 0
+    for (const reg of ordenado) {
+      acumulado += reg.kg_cocho || 0
+      acumuladoPorRegistro.set(reg.id, acumulado)
+    }
+  }
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -200,7 +227,8 @@ export function Suplementacao() {
                   data_anterior: dataAnterior ? dataAnterior.toISOString() : null,
                   intervalo_dias: intervalo,
                   data_proximo: dataProximo ? dataProximo.toISOString() : null,
-                  intervalo_ate_proximo_dias: intervaloAteProximo
+                  intervalo_ate_proximo_dias: intervaloAteProximo,
+                  total_acumulado_lote: acumuladoPorRegistro.get(reg.id) || 0
                 }
               })
               exportToXLSX(enriched, SUPLEMENTACAO_EXPORT_CONFIG, fazendaNome)
@@ -321,6 +349,35 @@ export function Suplementacao() {
         </Card>
       ) : (
         <>
+          {/* Card de somatória de kg_cocho no período filtrado */}
+          <Card className="bg-white p-4 sm:p-6" disableHover>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wide">Total suplementado no período</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
+                  {totalKgCocho.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {filteredRegistros.length} registro(s) {lotesSelecionados.length > 0 ? `· ${lotesSelecionados.length} lote(s)` : '· todos os lotes'}
+                </p>
+              </div>
+              {lotesSelecionados.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {lotesSelecionados.map((loteId) => {
+                    const lote = lotes.find((l) => l.id === loteId)
+                    const total = totalKgCochoPorLote.get(loteId) || 0
+                    return (
+                      <div key={loteId} className="rounded-lg bg-primary/10 px-3 py-2 text-sm">
+                        <span className="font-medium text-primary">{lote?.nome || '—'}:</span>{' '}
+                        <span className="font-bold text-gray-900">{total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </Card>
+
           {/* Mobile Card View */}
           <div className="sm:hidden space-y-3">
             {filteredRegistros
@@ -374,6 +431,10 @@ export function Suplementacao() {
                     <span className="text-gray-800 font-medium">{registro.kg_cocho || 0}</span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Acumulado Lote:</span>
+                    <span className="text-primary font-semibold">{(acumuladoPorRegistro.get(registro.id) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">KG Depósito:</span>
                     <span className="text-gray-800 font-medium">{registro.kg_deposito || 0}</span>
                   </div>
@@ -399,6 +460,7 @@ export function Suplementacao() {
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KG Cocho</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acumulado Lote</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KG Depósito</th>
                 </tr>
               </thead>
@@ -438,6 +500,9 @@ export function Suplementacao() {
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                         {registro.kg_cocho || 0}
+                      </td>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm font-semibold text-primary">
+                        {(acumuladoPorRegistro.get(registro.id) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                         {registro.kg_deposito || 0}
