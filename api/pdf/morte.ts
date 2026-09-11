@@ -1,4 +1,4 @@
-import { renderMorteHtml, type PDFData } from './morte-template'
+import { renderMorteHtml, type PDFData } from './morte-template.js'
 
 const MAX_LINES = 10_000
 const MAX_BODY_BYTES = 4_000_000
