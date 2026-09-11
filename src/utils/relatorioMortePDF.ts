@@ -48,6 +48,20 @@ export interface ResumoMorte {
   por_categoria: AgregadoItem[]
   por_sexo: AgregadoItem[]
   frequencia_diagnosticos: AgregadoItem[]
+  // Campos opcionais para o PDF (calculados no frontend)
+  taxa_mortalidade?: number | null
+  rebanho_total?: number
+  perda_estimada?: number | null
+  peso_total_perdido?: number | null
+  perda_por_categoria?: Record<string, { peso: number; perda: number; count: number }>
+  insights?: string
+  periodo_anterior?: {
+    total_mortes: number
+    taxa_mortalidade: number | null
+    data_inicio: string
+    data_fim: string
+  } | null
+  variacao_mortes?: number | null
 }
 
 export interface ParametrosRelatorioMorte {
@@ -61,24 +75,24 @@ export interface ParametrosRelatorioMorte {
 
 // === Helpers ===
 
-function formatarDataNumerica(dataStr: string | null | undefined): string {
+export function formatarDataNumerica(dataStr: string | null | undefined): string {
   if (!dataStr) return '—'
   const parts = dataStr.split('-')
   if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`
   return dataStr
 }
 
-function formatarNumero(valor: number | null | undefined, casas = 2, padrao = '—'): string {
+export function formatarNumero(valor: number | null | undefined, casas = 2, padrao = '—'): string {
   if (valor === null || valor === undefined || isNaN(valor as number)) return padrao
   return (valor as number).toFixed(casas).replace('.', ',')
 }
 
-function formatarInteiro(valor: number | null | undefined): string {
+export function formatarInteiro(valor: number | null | undefined): string {
   if (valor === null || valor === undefined || isNaN(valor as number)) return '—'
   return Math.round(valor as number).toString()
 }
 
-async function carregarLogoComoBase64(path: string): Promise<string> {
+export async function carregarLogoComoBase64(path: string): Promise<string> {
   const response = await fetch(path)
   const blob = await response.blob()
   return new Promise((resolve, reject) => {
@@ -142,7 +156,7 @@ const DIAG_LABELS: Record<string, string> = {
   incoordenacaoTremores: 'Incoordenação/tremores',
 }
 
-function labelDiagnostico(chave: string): string {
+export function labelDiagnostico(chave: string): string {
   return DIAG_LABELS[chave] ?? chave
 }
 
@@ -183,7 +197,7 @@ function labelGranularidadeTexto(gran: Granularidade): string {
 
 // === Gráfico de mortes no tempo (granularidade adaptativa) ===
 
-async function renderizarGraficoMortesTempo(
+export async function renderizarGraficoMortesTempo(
   linhas: LinhaMorte[],
   width: number,
   height: number
@@ -203,7 +217,7 @@ async function renderizarGraficoMortesTempo(
   if (dados.length === 0) return null
 
   const canvas = document.createElement('canvas')
-  const pxPerMm = 5
+  const pxPerMm = 8
   canvas.width = Math.round(width * pxPerMm)
   canvas.height = Math.round(height * pxPerMm)
   const ctx = canvas.getContext('2d')
@@ -228,7 +242,7 @@ async function renderizarGraficoMortesTempo(
       responsive: false,
       maintainAspectRatio: false,
       animation: false,
-      layout: { padding: { top: 30, right: 15, bottom: 35, left: 40 } },
+      layout: { padding: { top: 42, right: 18, bottom: 35, left: 40 } },
       plugins: {
         legend: { display: false },
         title: {
@@ -244,7 +258,7 @@ async function renderizarGraficoMortesTempo(
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: MEDIUM_TEXT, font: { size: 11 }, maxRotation: 45, minRotation: 45, precision: 0 },
+          ticks: { color: MEDIUM_TEXT, font: { size: 12 }, maxRotation: 45, minRotation: 0, precision: 0 },
         },
         y: {
           beginAtZero: true,
@@ -254,11 +268,31 @@ async function renderizarGraficoMortesTempo(
             color: DARK_TEXT,
             font: { size: 14, weight: 'bold' },
           },
-          ticks: { color: MEDIUM_TEXT, font: { size: 11 }, precision: 0 },
+          suggestedMax: Math.max(...dados.map((d) => d.count), 1) + 1,
+          ticks: { color: MEDIUM_TEXT, font: { size: 12 }, precision: 0 },
           grid: { color: '#E5E7EB' },
         },
       },
     },
+    plugins: [{
+      id: 'dataLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart
+        chart.data.datasets[0].data.forEach((value, i) => {
+          const meta = chart.getDatasetMeta(0)
+          const bar = meta.data[i]
+          if (!bar) return
+          ctx.save()
+          ctx.fillStyle = DARK_TEXT
+          ctx.font = 'bold 28px sans-serif'
+          ctx.textAlign = 'center'
+          const chartArea = chart.chartArea
+          const labelY = Math.max(bar.y - 6, chartArea.top + 12)
+          ctx.fillText(String(value), bar.x, labelY)
+          ctx.restore()
+        })
+      },
+    }],
   })
 
   const image = chart.toBase64Image()
@@ -268,7 +302,7 @@ async function renderizarGraficoMortesTempo(
 
 // === Gráfico de barras horizontais agregado (causa, categoria, etc.) ===
 
-async function renderizarGraficoBarrasHorizontais(
+export async function renderizarGraficoBarrasHorizontais(
   itens: AgregadoItem[],
   titulo: string,
   width: number,
@@ -279,7 +313,7 @@ async function renderizarGraficoBarrasHorizontais(
   const top = itens.slice(0, 12)
 
   const canvas = document.createElement('canvas')
-  const pxPerMm = 5
+  const pxPerMm = 8
   canvas.width = Math.round(width * pxPerMm)
   canvas.height = Math.round(height * pxPerMm)
   const ctx = canvas.getContext('2d')
@@ -305,7 +339,7 @@ async function renderizarGraficoBarrasHorizontais(
       responsive: false,
       maintainAspectRatio: false,
       animation: false,
-      layout: { padding: { top: 30, right: 20, bottom: 10, left: 10 } },
+      layout: { padding: { top: 35, right: 48, bottom: 10, left: 15 } },
       plugins: {
         legend: { display: false },
         title: {
@@ -313,7 +347,7 @@ async function renderizarGraficoBarrasHorizontais(
           text: titulo,
           align: 'center',
           color: DARK_TEXT,
-          font: { size: 20, weight: 'bold' },
+          font: { size: 22, weight: 'bold' },
           padding: { bottom: 8 },
         },
         tooltip: { enabled: false },
@@ -321,15 +355,40 @@ async function renderizarGraficoBarrasHorizontais(
       scales: {
         x: {
           beginAtZero: true,
+          suggestedMax: Math.max(...top.map((d) => d.valor), 1) + 1,
           ticks: { color: MEDIUM_TEXT, font: { size: 11 }, precision: 0 },
           grid: { color: '#E5E7EB' },
         },
         y: {
           grid: { display: false },
-          ticks: { color: DARK_TEXT, font: { size: 11 } },
+          ticks: { color: DARK_TEXT, font: { size: 12 } },
         },
       },
     },
+    plugins: [{
+      id: 'dataLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart
+        const chartArea = chart.chartArea
+        chart.data.datasets[0].data.forEach((value, i) => {
+          const meta = chart.getDatasetMeta(0)
+          const bar = meta.data[i] as any
+          if (!bar) return
+          const label = String(value)
+          // Em barras horizontais, bar.x representa o extremo da barra.
+          // O rótulo fica sempre fora, evitando texto branco sobre o fundo claro.
+          const x = Math.min(bar.x + 7, chartArea.right + 30)
+          ctx.save()
+          ctx.fillStyle = DARK_TEXT
+          ctx.font = 'bold 28px sans-serif'
+          ctx.textAlign = 'left'
+          // bar.y já é o centro vertical do elemento no Chart.js.
+          // O pequeno ajuste compensa a linha de base da fonte.
+          ctx.fillText(label, x, bar.y + 4)
+          ctx.restore()
+        })
+      },
+    }],
   })
 
   const image = chart.toBase64Image()
@@ -339,7 +398,7 @@ async function renderizarGraficoBarrasHorizontais(
 
 // === Gráfico donut (sexo) ===
 
-async function renderizarGraficoDonut(
+export async function renderizarGraficoDonut(
   itens: AgregadoItem[],
   titulo: string,
   width: number,
@@ -348,7 +407,7 @@ async function renderizarGraficoDonut(
   if (itens.length === 0) return null
 
   const canvas = document.createElement('canvas')
-  const pxPerMm = 5
+  const pxPerMm = 8
   canvas.width = Math.round(width * pxPerMm)
   canvas.height = Math.round(height * pxPerMm)
   const ctx = canvas.getContext('2d')
@@ -370,24 +429,65 @@ async function renderizarGraficoDonut(
       responsive: false,
       maintainAspectRatio: false,
       animation: false,
-      layout: { padding: { top: 30, right: 10, bottom: 10, left: 10 } },
+      cutout: '60%',
+      layout: { padding: { top: 35, right: 10, bottom: 10, left: 10 } },
       plugins: {
         legend: {
           display: true,
-          position: 'right',
-          labels: { color: DARK_TEXT, font: { size: 12 }, boxWidth: 14 },
+          position: 'bottom',
+          labels: { color: DARK_TEXT, font: { size: 20, weight: 'bold' }, boxWidth: 20, padding: 28 },
         },
         title: {
           display: true,
           text: titulo,
           align: 'center',
           color: DARK_TEXT,
-          font: { size: 20, weight: 'bold' },
+          font: { size: 22, weight: 'bold' },
           padding: { bottom: 8 },
         },
         tooltip: { enabled: false },
       },
     },
+    plugins: [{
+      id: 'dataLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx, chartArea } = chart
+        const total = chart.data.datasets[0].data.reduce((s, v) => s + (v as number), 0)
+
+        // Valor e percentual em cada fatia
+        chart.data.datasets[0].data.forEach((value, i) => {
+          const meta = chart.getDatasetMeta(0)
+          const arc = meta.data[i] as any
+          if (!arc) return
+          const val = value as number
+          const pct = total > 0 ? ((val / total) * 100).toFixed(0) : '0'
+          const pos = arc.tooltipPosition()
+          ctx.save()
+          ctx.fillStyle = WHITE
+          ctx.font = 'bold 28px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.fillText(String(val), pos.x, pos.y)
+          ctx.font = '20px sans-serif'
+          ctx.fillText(`${pct}%`, pos.x, pos.y + 30)
+          ctx.restore()
+        })
+
+        // Total no centro do donut
+        if (chartArea && total > 0) {
+          const centerX = (chartArea.left + chartArea.right) / 2
+          const centerY = (chartArea.top + chartArea.bottom) / 2
+          ctx.save()
+          ctx.fillStyle = DARK_TEXT
+          ctx.textAlign = 'center'
+          ctx.font = 'bold 28px sans-serif'
+          ctx.fillText(String(total), centerX, centerY)
+          ctx.font = '20px sans-serif'
+          ctx.fillStyle = MEDIUM_TEXT
+          ctx.fillText('mortes', centerX, centerY + 16)
+          ctx.restore()
+        }
+      },
+    }],
   })
 
   const image = chart.toBase64Image()
@@ -426,7 +526,7 @@ function renderHeader(ctx: RenderContext, isContinuation: boolean) {
   })
 }
 
-function renderPeriodo(ctx: RenderContext, dataInicio: string, dataFim: string) {
+function renderPeriodo(ctx: RenderContext, dataInicio: string, dataFim: string, startY: number): number {
   const { doc, cardBg, darkText, shadowColor } = ctx
   const dataInicioFormatada = formatarDataNumerica(dataInicio)
   const dataFimFormatada = formatarDataNumerica(dataFim)
@@ -435,21 +535,67 @@ function renderPeriodo(ctx: RenderContext, dataInicio: string, dataFim: string) 
   doc.setFont('helvetica', 'bold')
   const periodoW = doc.getTextWidth(periodoText) + 12
   const periodoX = 8
-  const periodoY = 34
+  const periodoH = 10
   setFillColor(doc, shadowColor)
-  doc.roundedRect(periodoX + 0.5, periodoY + 0.5, periodoW, 10, 5, 5, 'F')
+  doc.roundedRect(periodoX + 0.5, startY + 0.5, periodoW, periodoH, 5, 5, 'F')
   setFillColor(doc, cardBg)
-  doc.roundedRect(periodoX, periodoY, periodoW, 10, 5, 5, 'F')
+  doc.roundedRect(periodoX, startY, periodoW, periodoH, 5, 5, 'F')
   setTextColor(doc, darkText)
-  doc.text(periodoText, periodoX + periodoW / 2, periodoY + 6.5, { align: 'center' })
+  doc.text(periodoText, periodoX + periodoW / 2, startY + 6.5, { align: 'center' })
+  return startY + periodoH + 4
+}
+
+// === Insights (narrativa automática) ===
+
+function renderInsights(ctx: RenderContext, insights: string, startY: number): number {
+  if (!insights) return startY
+  const { doc, pageW, darkText, cardBg, shadowColor } = ctx
+
+  const textX = 18
+  const rightMargin = 8
+  const cardW = pageW - 16
+  const textMaxW = cardW - (textX - 8) - rightMargin
+  const lineH = 4.2
+
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  setTextColor(doc, darkText)
+  const linhas = doc.splitTextToSize(insights, textMaxW) as string[]
+  const boxH = linhas.length * lineH + 8
+
+  // Card branco
+  setFillColor(doc, shadowColor)
+  doc.roundedRect(8.5, startY + 0.5, cardW, boxH, 3, 3, 'F')
+  setFillColor(doc, cardBg)
+  doc.roundedRect(8, startY, cardW, boxH, 3, 3, 'F')
+
+  // Ícone de check (círculo verde)
+  setFillColor(doc, GREEN_DARK)
+  doc.circle(13, startY + 5, 1.5, 'F')
+  setTextColor(doc, cardBg)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7)
+  doc.text('✓', 13, startY + 6, { align: 'center' })
+
+  // Texto
+  setTextColor(doc, darkText)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  let y = startY + 6
+  for (const linha of linhas) {
+    doc.text(linha, textX, y)
+    y += lineH
+  }
+
+  return startY + boxH + 4
 }
 
 // === KPIs ===
 
-function renderKPIs(ctx: RenderContext, resumo: ResumoMorte) {
+function renderKPIs(ctx: RenderContext, resumo: ResumoMorte, startY: number): number {
   const { doc, pageW, white, shadowColor } = ctx
-  const kpiY = 50
-  const kpiH = 22
+  const kpiY = startY
+  const kpiH = 16
   const kpiGap = 6
   const totalKpis = 4
   const kpiW = (pageW - 16 - (totalKpis - 1) * kpiGap) / totalKpis
@@ -475,12 +621,93 @@ function renderKPIs(ctx: RenderContext, resumo: ResumoMorte) {
     doc.setFontSize(k.small ? 9 : 13)
     setTextColor(doc, white)
     doc.setFont('helvetica', 'bold')
-    doc.text(k.value, x + kpiW / 2, kpiY + 9, { align: 'center', maxWidth: kpiW - 4 })
+    doc.text(k.value, x + kpiW / 2, kpiY + 7, { align: 'center', maxWidth: kpiW - 4 })
     doc.setFontSize(8)
     setTextColor(doc, white)
     doc.setFont('helvetica', 'normal')
-    doc.text(k.label, x + kpiW / 2, kpiY + 17, { align: 'center' })
+    doc.text(k.label, x + kpiW / 2, kpiY + 12, { align: 'center' })
   })
+
+  return kpiY + kpiH + 4
+}
+
+// === Segunda linha de KPIs: taxa de mortalidade, perda estimada, comparativo ===
+
+function renderKPIsLinha2(ctx: RenderContext, resumo: ResumoMorte, startY: number): number {
+  const { doc, pageW, white, shadowColor } = ctx
+  if (resumo.taxa_mortalidade == null && resumo.perda_estimada == null && !resumo.periodo_anterior) return startY
+
+  const kpiY = startY
+  const kpiH = 16
+  const kpiGap = 6
+  const totalKpis = 3
+  const kpiW = (pageW - 16 - (totalKpis - 1) * kpiGap) / totalKpis
+  const kpiX0 = 8
+
+  // KPI 1: Taxa de mortalidade
+  if (resumo.taxa_mortalidade != null) {
+    const x = kpiX0
+    setFillColor(doc, shadowColor)
+    doc.roundedRect(x + 0.5, kpiY + 0.5, kpiW, kpiH, 4, 4, 'F')
+    setFillColor(doc, GREEN_DARK)
+    doc.roundedRect(x, kpiY, kpiW, kpiH, 4, 4, 'F')
+    doc.setFontSize(13)
+    setTextColor(doc, white)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`${formatarNumero(resumo.taxa_mortalidade, 2)}%`, x + kpiW / 2, kpiY + 7, { align: 'center' })
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Taxa de mortalidade', x + kpiW / 2, kpiY + 12, { align: 'center' })
+    if (resumo.rebanho_total && resumo.rebanho_total > 0) {
+      doc.setFontSize(7)
+      doc.text(`Rebanho: ${formatarInteiro(resumo.rebanho_total)} cab.`, x + kpiW / 2, kpiY + 15, { align: 'center' })
+    }
+  }
+
+  // KPI 2: Perda estimada (R$)
+  if (resumo.perda_estimada != null && resumo.perda_estimada > 0) {
+    const x = kpiX0 + kpiW + kpiGap
+    setFillColor(doc, shadowColor)
+    doc.roundedRect(x + 0.5, kpiY + 0.5, kpiW, kpiH, 4, 4, 'F')
+    setFillColor(doc, '#EF4444')
+    doc.roundedRect(x, kpiY, kpiW, kpiH, 4, 4, 'F')
+    doc.setFontSize(12)
+    setTextColor(doc, white)
+    doc.setFont('helvetica', 'bold')
+    const perdaTxt = `R$ ${resumo.perda_estimada.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    doc.text(perdaTxt, x + kpiW / 2, kpiY + 6, { align: 'center', maxWidth: kpiW - 4 })
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Perda estimada', x + kpiW / 2, kpiY + 12, { align: 'center' })
+    if (resumo.peso_total_perdido != null && resumo.peso_total_perdido > 0) {
+      doc.setFontSize(7)
+      doc.text(`${formatarNumero(resumo.peso_total_perdido, 0)} kg perdidos`, x + kpiW / 2, kpiY + 15, { align: 'center' })
+    }
+  }
+
+  // KPI 3: Comparativo com período anterior
+  if (resumo.periodo_anterior) {
+    const x = kpiX0 + 2 * (kpiW + kpiGap)
+    setFillColor(doc, shadowColor)
+    doc.roundedRect(x + 0.5, kpiY + 0.5, kpiW, kpiH, 4, 4, 'F')
+    setFillColor(doc, GREEN_DARK)
+    doc.roundedRect(x, kpiY, kpiW, kpiH, 4, 4, 'F')
+    doc.setFontSize(11)
+    setTextColor(doc, white)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`${formatarInteiro(resumo.periodo_anterior.total_mortes)} mortes`, x + kpiW / 2, kpiY + 6, { align: 'center' })
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Período anterior', x + kpiW / 2, kpiY + 11, { align: 'center' })
+    const periodoTxt = `${formatarDataNumerica(resumo.periodo_anterior.data_inicio)} a ${formatarDataNumerica(resumo.periodo_anterior.data_fim)}`
+    doc.text(periodoTxt, x + kpiW / 2, kpiY + 15, { align: 'center', maxWidth: kpiW - 4 })
+    if (resumo.periodo_anterior.taxa_mortalidade != null) {
+      doc.setFontSize(6)
+      doc.text(`Taxa: ${formatarNumero(resumo.periodo_anterior.taxa_mortalidade, 2)}%`, x + kpiW / 2, kpiY + 14.5, { align: 'center' })
+    }
+  }
+
+  return kpiY + kpiH + 4
 }
 
 // === Tabela de frequência de diagnósticos ===
@@ -545,7 +772,7 @@ const MAX_ROWS_PER_PAGE = 18
 const COL_WIDTHS = [24, 20, 18, 18, 18, 22, 22, 22, 28] // soma ~210mm (A4 landscape)
 const COL_HEADERS = ['Data', 'Lote', 'Pasto', 'Sexo', 'Idade', 'Peso (kg)', 'Categoria', 'Causa', 'Diagnósticos']
 
-function compactarDiagnosticos(diag: Record<string, DiagnosticoItem> | null): string {
+export function compactarDiagnosticos(diag: Record<string, DiagnosticoItem> | null): string {
   if (!diag) return '—'
   const chaves = Object.keys(diag).filter((k) => diag[k]?.valor === 'S')
   if (chaves.length === 0) return '—'
@@ -649,15 +876,28 @@ export async function gerarRelatorioMortePDF(params: ParametrosRelatorioMorte): 
     lightBg: LIGHT_BG, cardBg: CARD_BG, shadowColor: SHADOW_COLOR,
   }
 
-  // === Página 1: header + período + KPIs + 4 gráficos ===
+  // === Página 1: header + período + insights + KPIs + gráficos ===
   setFillColor(doc, LIGHT_BG)
   doc.rect(0, 0, pageW, pageH, 'F')
   renderHeader(ctx, false)
-  renderPeriodo(ctx, dataInicio, dataFim)
-  renderKPIs(ctx, resumo)
+
+  // Layout dinâmico: cada seção retorna a próxima posição Y
+  let cursorY = 32
+  cursorY = renderPeriodo(ctx, dataInicio, dataFim, cursorY)
+
+  // Insights (narrativa automática)
+  if (resumo.insights) {
+    cursorY = renderInsights(ctx, resumo.insights, cursorY)
+  }
+
+  // KPIs linha 1
+  cursorY = renderKPIs(ctx, resumo, cursorY)
+
+  // KPIs linha 2 (taxa de mortalidade, perda estimada, comparativo)
+  cursorY = renderKPIsLinha2(ctx, resumo, cursorY)
 
   // Layout dos gráficos: 2 colunas x 2 linhas
-  const chartTopY = 78
+  const chartTopY = cursorY
   const chartGap = 4
   const chartLeftX = 8
   const chartRightX = pageW / 2 + 2

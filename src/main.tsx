@@ -1,3 +1,9 @@
+import { Buffer } from 'buffer'
+// Polyfill para @react-pdf/renderer que espera Buffer global no browser
+if (typeof (window as any).Buffer === 'undefined') {
+  (window as any).Buffer = Buffer
+}
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'

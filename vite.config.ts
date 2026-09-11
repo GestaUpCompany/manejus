@@ -19,6 +19,7 @@ export default defineConfig({
           // Mapa da fazenda
           'map': ['maplibre-gl', 'terra-draw', 'terra-draw-maplibre-gl-adapter'],
           // xlsx, exceljs, jspdf, jspdf-autotable e chart.js são carregados sob demanda via dynamic import
+          'react-pdf': ['@react-pdf/renderer'],
         },
       },
     },

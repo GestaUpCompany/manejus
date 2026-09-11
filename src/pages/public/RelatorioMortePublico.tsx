@@ -6,7 +6,9 @@ import {
 } from 'recharts'
 import logoManejus from '/images/manejus360.png'
 import {
-  gerarRelatorioMortePDF,
+  gerarRelatorioMortePDFReact,
+} from '../../utils/relatorioMortePDFReact'
+import {
   type LinhaMorte,
   type ResumoMorte,
   type AgregadoItem,
@@ -511,12 +513,25 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
         por_categoria: porCategoria,
         por_sexo: porSexo,
         frequencia_diagnosticos: frequenciaDiagnosticos,
+        taxa_mortalidade: taxaMortalidade,
+        rebanho_total: rebanhoTotal,
+        perda_estimada: perdaEstimada,
+        peso_total_perdido: pesoTotalPerdido,
+        perda_por_categoria: impactoFinanceiro.porCategoria,
+        insights,
+        periodo_anterior: periodoAnterior ? {
+          total_mortes: periodoAnterior.total_mortes,
+          taxa_mortalidade: periodoAnterior.taxa_mortalidade,
+          data_inicio: periodoAnterior.data_inicio,
+          data_fim: periodoAnterior.data_fim,
+        } : null,
+        variacao_mortes: variacaoMortes,
       }
 
       const periodoInicio = dataInicio || (linhasFiltradas[linhasFiltradas.length - 1]?.data ?? '')
       const periodoFim = dataFim || (linhasFiltradas[0]?.data ?? '')
 
-      const blob = await gerarRelatorioMortePDF({
+      const blob = await gerarRelatorioMortePDFReact({
         dataInicio: periodoInicio,
         dataFim: periodoFim,
         fazendaNome: relatorioInfo.fazenda_nome || '',

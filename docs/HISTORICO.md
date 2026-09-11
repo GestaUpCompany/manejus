@@ -2,6 +2,12 @@
 
 Este arquivo registra mudanças já aplicadas no Painel Web. Um chat novo não precisa ler isto por padrão; consulte quando a pergunta for sobre "por que isso foi feito assim" ou para entender o estado anterior de uma parte do código.
 
+## Relatório de mortalidade em React PDF (implementado em 2026-09-10)
+
+- O PDF público de mortalidade passou a usar `@react-pdf/renderer` com layout declarativo em React, mantendo o gerador jsPDF legado durante a validação.
+- O layout foi refinado para uso com cliente final: identidade visual mais leve, KPIs com bordas e destaque superior, rodapé fixo com período e paginação, páginas separadas para análises e tabelas, e tabelas com quebra por linha.
+- Os gráficos passaram a ser gerados em resolução maior, com espaço reservado para rótulos e melhor tratamento de valores nas barras horizontais.
+
 ## Pastos ↔ Bebedouros: fase 1 (concluída em 2026-07-23)
 
 - Relação migrada de JSONB (`pastos.bebedouros`) para tabela de junção `pasto_bebedouros(pasto_id, bebedouro_id)` com FK e RLS.
