@@ -549,22 +549,40 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
         </div>
       )}
 
-      {/* Conteúdo: um card por lote */}
+      {/* Conteúdo: um card por lote, agrupado por dieta */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {lotesFiltrados.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
             <p className="text-gray-500">Nenhum registro de suplementação encontrado para os filtros selecionados.</p>
           </div>
         ) : (
-          lotesFiltrados.map((lote) => {
+          lotesFiltrados.map((lote, index) => {
             const { consumoMedio, custoMedio } = calcularKPIs(lote)
             const info = lote.info
             const temDados = lote.dados.length > 0
             const temErro = info.erro && info.erro.length > 0
             const { CmsLabel, ConsumoPercentPVLabel, LeituraCochoLabel } = criarLabelsAntiColisao()
 
+            // Separador visual por dieta: renderiza um header quando a dieta muda
+            const dietaAtual = info.dieta || 'Sem dieta'
+            const dietaAnterior = index > 0 ? (lotesFiltrados[index - 1].info.dieta || 'Sem dieta') : null
+            const mudouDieta = dietaAnterior !== null && dietaAnterior !== dietaAtual
+            const primeiraDieta = index === 0
+
             return (
-              <div key={lote.lote_id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div key={lote.lote_id}>
+              {(primeiraDieta || mudouDieta) && (
+                <div className="mb-4 mt-2 first:mt-0">
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-gray-300"></div>
+                    <span className="text-sm font-bold tracking-wide uppercase" style={{ color: GREEN_DARK }}>
+                      🌿 {dietaAtual}
+                    </span>
+                    <div className="h-px flex-1 bg-gray-300"></div>
+                  </div>
+                </div>
+              )}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 {/* Header do lote */}
                 <div className="px-5 py-3 flex items-center justify-between" style={{ backgroundColor: GREEN_DARK }}>
                   <h2 className="text-base font-bold text-white">{lote.lote_nome}</h2>
@@ -746,6 +764,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                 </div>
                   </>
                 )}
+              </div>
               </div>
             )
           })

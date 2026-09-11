@@ -623,9 +623,12 @@ export async function gerarRelatorioConsumoPDF(params: ParametrosRelatorioConsum
   }
 
   let isFirstPage = true
+  let dietaAnterior: string | null = null
 
   for (const lote of lotes) {
     const chunks = chunkDados(lote.dados, MAX_DATA_POINTS_PER_PAGE)
+    const dietaAtual = lote.info.dieta || 'Sem dieta'
+    const mudouDieta = dietaAnterior !== null && dietaAnterior !== dietaAtual
 
     for (let ci = 0; ci < chunks.length; ci++) {
       const chunk = chunks[ci]
@@ -648,7 +651,25 @@ export async function gerarRelatorioConsumoPDF(params: ParametrosRelatorioConsum
         // Página principal: período + KPIs + pills + gráfico
         renderPeriodo(ctx, dataInicio, dataFim)
         const { chartX, chartW } = renderKPIsAndPills(ctx, lote.info, lote.dados, dataInicio, dataFim)
-        const chartY = 58
+
+        // Separador visual de dieta posicionado entre os pills e o gráfico
+        if (dietaAnterior === null || mudouDieta) {
+          const sepY = 56
+          const sepText = `DIETA: ${dietaAtual.toUpperCase()}`
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'bold')
+          setTextColor(doc, greenDark)
+          const sepTextW = doc.getTextWidth(sepText)
+          const sepTextX = pageW / 2 - sepTextW / 2
+          // Linhas à esquerda e à direita
+          doc.setDrawColor(180, 180, 180)
+          doc.setLineWidth(0.3)
+          doc.line(8, sepY, sepTextX - 4, sepY)
+          doc.line(sepTextX + sepTextW + 4, sepY, pageW - 8, sepY)
+          doc.text(sepText, pageW / 2, sepY + 1, { align: 'center' })
+        }
+
+        const chartY = 62
         const chartH = pageH - chartY - 8
         await renderChartOnPage(ctx, chunk, chartX, chartW, chartY, chartH)
       } else {
@@ -660,6 +681,8 @@ export async function gerarRelatorioConsumoPDF(params: ParametrosRelatorioConsum
         await renderChartOnPage(ctx, chunk, chartX, chartW, chartY, chartH)
       }
     }
+
+    dietaAnterior = dietaAtual
   }
 
   return doc.output('blob')
