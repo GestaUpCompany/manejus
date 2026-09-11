@@ -272,6 +272,44 @@ Disparador: quando mencionar "formulacao_insumos", "tabela de junção de insumo
 
 **Disparador**: quando mencionar "peso inicial por categoria", "backfill de peso_inicio", "migration Z", ou problemas com peso inicial de plano vigente após o refactor de lote, lembrar que o backfill foi feito em 3 etapas com precisão decrescente e que planos iniciados pós-migration capturam o peso real automaticamente via `iniciar_plano_lote`.
 
+### Expediente (horário de atividade) + override por funcionário — adicionado em 2026-09-10
+
+**Contexto**: o PWA já tinha RBAC por funcionário (PIN, cadernetas permitidas, controle de acesso). Faltava restringir o acesso ao app fora do horário de atividade da fazenda, com suporte a override por funcionário para turnos diferenciados (ex: vigilância noturna).
+
+**Migration**: `20260910210000_add_expediente.sql`
+
+**Mudança de schema**:
+- `fazendas.expediente_habilitado` boolean (default false)
+- `fazendas.expediente_timezone` text (default `America/Cuiaba`)
+- `fazendas.expediente_dias` JSONB (estrutura `{ "0": { ativo, inicio, fim }, ... }` com chave 0=domingo até 6=sábado)
+- `funcionarios.expediente_override` JSONB nullable (mesma estrutura, quando nulo o funcionário herda o expediente da fazenda)
+- Trigger de RBAC versioning estendida para incrementar `rbac_versao` quando qualquer campo de expediente mudar
+
+**Painel Web** (`CadastrosAuxiliares.tsx`, aba Funcionários):
+- Card colapsável "Horário de expediente" com toggle on/off, fuso horário, e 7 dias da semana com checkbox + horário início/fim
+- Resumo em texto natural acima dos controles (ex: "Seg, Ter, Qua, Qui, Sex 06:00-18:00 | Sáb 06:00-12:00")
+- Toast de confirmação ao ativar/desativar expediente
+- No formulário do funcionário, toggle "Horário personalizado" com os mesmos 7 dias e resumo
+- Cards de funcionários mostram badges: "Acessa o app", "PIN" (verde) ou "Sem PIN" (vermelho), "Horário próprio" (roxo) quando override ativo
+- Lista de cadernetas resumida: "todas (21)" quando tem todas, ou lista parcial quando tem subset
+- Cargo mostrado no card quando funcionário não tem acesso ao app
+- Busca sticky no topo da lista, com contador de funcionários
+- Padrão desativar > excluir (igual a Lotes.tsx): só libera botão Excluir após Desativar; ConfirmModal agora diz "excluído permanentemente"
+- `loadItems` filtra `deleted_at IS NULL` para funcionários
+
+**PWA** (`Home.tsx`, `useExpediente.ts`, `useAppLock.ts`, `configSlice.ts`, `funcionarioAuthService.ts`):
+- `configSlice` armazena `expedienteHabilitado`, `expedienteTimezone`, `expedienteDias`
+- `useExpediente` hook avalia se o horário atual está dentro do expediente, considerando override do funcionário logado (quando nulo, herda fazenda)
+- Suporte a turnos overnight (quando `fim < inicio`, considera ativo se `currentTime >= start OR currentTime <= end`)
+- Tela de bloqueio "Fora do expediente" só aparece quando o funcionário está logado (não antes do login), para permitir que o override individual seja avaliado
+- Revalidação periódica: 30s quando bloqueado por expediente, 10min caso contrário
+- Revalidação em visibilitychange e mensagens do service worker
+- Cache de expediente no IndexedDB, refresh no sync manual e automático
+- Sem logout automático quando expediente acaba: o funcionário permanece logado e o app desbloqueia sozinho quando o horário permite novamente
+
+**Disparador**: quando mencionar "expediente", "horário de atividade", "fora do horário", "bloqueio por horário", "override de expediente", "turno noturno", ou problemas com acesso ao app fora do horário, ler esta seção.
+
+
 ### Relatórios públicos interativos (links compartilháveis) — adicionado em 2026-08-05
 
 Implementado sistema de relatórios interativos com links públicos, estilo Power BI, onde o visitante não precisa login e pode filtrar dados em tempo real via slicers (data, máquina, combustível, operação).
@@ -401,3 +439,16 @@ Bug de dados corrigido junto com a camada 1 (migration `20260904120000_entrada_r
 A camada 2 (mini-gráfico de evolução do peso) está pendente (ver `docs/BACKLOG.md`).
 
 Disparador: quando mencionar "camada 1 do peso", "proveniência do peso", "anotação de peso no card", ou retomar a implementação visual da evolução de peso, ler esta seção.
+
+## Controle de expediente (implementado em 2026-09-10)
+
+Sistema de bloqueio do PWA por horário de expediente, integrado ao RBAC existente. Quando controle_acesso_habilitado = true e expediente_habilitado = true, o PWA bloqueia acesso fora do horário configurado.
+
+**Migration:** 20260910210000_add_expediente.sql adiciona expediente_habilitado, expediente_timezone, expediente_dias (JSONB) na tabela fazendas e expediente_override (JSONB) na tabela funcionarios. Estende o trigger incrementar_rbac_versao_on_toggle para disparar quando campos de expediente mudarem.
+
+**Painel Web:** UI de configuração de expediente na aba Funcionários de CadastrosAuxiliares.tsx, abaixo do toggle de RBAC. Permite definir horário por dia da semana (0=dom..6=sab) com timezone, e override opcional por funcionásrio. Turno noturno (fim < inicio) - tratado automaticamente.
+
+**PWA:** Hook useExpediente valida horário no timezone da fazenda usando Intl.DateTimeFormat. Tela de bloqueio distinta da tela de PIN. Expediente da fazenda persistido via 
+edux-persist (localStorage); override por funcionário no cache IndexedDB. Revalidação em sync manual, sync automático (SW), interval de 10min, e visibilitychange.
+
+Disparador: quando mencionar "expediente", "horário de atividade", "bloqueio por horário", expediente_habilitado, expediente_dias, expediente_override, useExpediente, ler esta seção.

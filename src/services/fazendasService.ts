@@ -51,10 +51,21 @@ export interface Fazenda {
   ativo: boolean
   controle_acesso_habilitado: boolean
   acesso_confinamento: boolean
+  expediente_habilitado?: boolean
+  expediente_timezone?: string
+  expediente_dias?: ExpedienteDias | null
   grupo_id?: string | null
   created_at: string
   updated_at: string
 }
+
+export interface ExpedienteDia {
+  ativo: boolean
+  inicio: string
+  fim: string
+}
+
+export type ExpedienteDias = Record<number, ExpedienteDia>
 
 export async function getFazendas(): Promise<Fazenda[]> {
   const { data, error } = await supabase

@@ -4,6 +4,7 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem, Modal, MultiSelect, useToast } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { updateFazenda } from '../../services/fazendasService'
+import type { ExpedienteDias, ExpedienteDia } from '../../services/fazendasService'
 import { hashPin } from '../../utils/pinHash'
 import { CADERNETAS } from '../../utils/cadernetas'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
@@ -341,6 +342,59 @@ function novoArtigo(tab: TabConfig): string {
   return tab.gender === 'f' ? 'Nova' : 'Novo'
 }
 
+const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+
+const TIMEZONES_BR = [
+  { value: 'America/Cuiaba', label: 'Cuiabá (MT)' },
+  { value: 'America/Sao_Paulo', label: 'São Paulo (SP)' },
+  { value: 'America/Manaus', label: 'Manaus (AM)' },
+  { value: 'America/Fortaleza', label: 'Fortaleza (CE)' },
+  { value: 'America/Recife', label: 'Recife (PE)' },
+  { value: 'America/Bahia', label: 'Salvador (BA)' },
+  { value: 'America/Belem', label: 'Belém (PA)' },
+  { value: 'America/Porto_Velho', label: 'Porto Velho (RO)' },
+  { value: 'America/Boa_Vista', label: 'Boa Vista (RR)' },
+  { value: 'America/Campo_Grande', label: 'Campo Grande (MS)' },
+  { value: 'America/Araguaina', label: 'Araguaína (TO)' },
+]
+
+function defaultExpediente(): ExpedienteDias {
+  return {
+    0: { ativo: false, inicio: '06:00', fim: '18:00' },
+    1: { ativo: true, inicio: '06:00', fim: '18:00' },
+    2: { ativo: true, inicio: '06:00', fim: '18:00' },
+    3: { ativo: true, inicio: '06:00', fim: '18:00' },
+    4: { ativo: true, inicio: '06:00', fim: '18:00' },
+    5: { ativo: true, inicio: '06:00', fim: '18:00' },
+    6: { ativo: true, inicio: '06:00', fim: '12:00' },
+  }
+}
+
+function resumoExpediente(dias: ExpedienteDias): string {
+  const ativos = DIAS_SEMANA
+    .map((nome, dia) => ({ nome, dia, config: dias[dia] }))
+    .filter((d) => d.config?.ativo)
+
+  if (ativos.length === 0) return 'Nenhum dia ativo'
+
+  // Agrupar dias com mesmo horário
+  const grupos: { dias: string[]; inicio: string; fim: string }[] = []
+  for (const d of ativos) {
+    const inicio = d.config!.inicio || '06:00'
+    const fim = d.config!.fim || '18:00'
+    const ultimo = grupos[grupos.length - 1]
+    if (ultimo && ultimo.inicio === inicio && ultimo.fim === fim) {
+      ultimo.dias.push(d.nome.slice(0, 3))
+    } else {
+      grupos.push({ dias: [d.nome.slice(0, 3)], inicio, fim })
+    }
+  }
+
+  return grupos
+    .map((g) => `${g.dias.join(', ')} ${g.inicio}-${g.fim}`)
+    .join(' | ')
+}
+
 export function CadastrosAuxiliares() {
   const { user } = useAuth()
   const toast = useToast()
@@ -364,12 +418,19 @@ export function CadastrosAuxiliares() {
     acessa_app: false,
     pin: '',
     cadernetas_permitidas: [] as string[],
+    expediente_override: null as ExpedienteDias | null,
   })
   const [funcionarioErrors, setFuncionarioErrors] = useState<Record<string, string>>({})
   const [mostrarApenasComAcesso, setMostrarApenasComAcesso] = useState(false)
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [controleAcessoHabilitado, setControleAcessoHabilitado] = useState(false)
   const [controleAcessoLoading, setControleAcessoLoading] = useState(false)
+  const [expedienteHabilitado, setExpedienteHabilitado] = useState(false)
+  const [expedienteTimezone, setExpedienteTimezone] = useState('America/Cuiaba')
+  const [expedienteDias, setExpedienteDias] = useState<ExpedienteDias>(defaultExpediente())
+  const [expedienteLoading, setExpedienteLoading] = useState(false)
+  const [expedienteExpandido, setExpedienteExpandido] = useState(false)
+  const [cadernetasExpandidas, setCadernetasExpandidas] = useState<Record<string, boolean>>({})
 
   // Paginação
   const [paginaAtual, setPaginaAtual] = useState(1)
@@ -418,7 +479,7 @@ export function CadastrosAuxiliares() {
 
     const { data, error } = await supabase
       .from('fazendas')
-      .select('controle_acesso_habilitado')
+      .select('controle_acesso_habilitado, expediente_habilitado, expediente_timezone, expediente_dias')
       .eq('id', id)
       .single()
 
@@ -426,6 +487,13 @@ export function CadastrosAuxiliares() {
       console.error('Erro ao buscar configuração de acesso da fazenda:', error)
     } else if (data) {
       setControleAcessoHabilitado(!!data.controle_acesso_habilitado)
+      setExpedienteHabilitado(!!data.expediente_habilitado)
+      setExpedienteTimezone(data.expediente_timezone || 'America/Cuiaba')
+      setExpedienteDias(
+        data.expediente_dias && typeof data.expediente_dias === 'object'
+          ? { ...defaultExpediente(), ...data.expediente_dias }
+          : defaultExpediente()
+      )
     }
   }
 
@@ -630,11 +698,17 @@ export function CadastrosAuxiliares() {
     if (!fazendaId) return
 
     const tab = tabs.find((t) => t.key === tabKey)!
-    const { data, error } = await supabase
+    let query = supabase
       .from(tab.table)
       .select('*')
       .eq('fazenda_id', fazendaId)
-      .order(tab.orderBy || 'nome', { ascending: true })
+
+    // Tabelas com soft delete (deleted_at) filtram registros excluídos
+    if (tabKey === 'funcionarios') {
+      query = query.is('deleted_at', null)
+    }
+
+    const { data, error } = await query.order(tab.orderBy || 'nome', { ascending: true })
 
     if (error) {
       console.error(`Erro ao buscar ${tab.label}:`, error)
@@ -726,6 +800,7 @@ export function CadastrosAuxiliares() {
         }
 
         data.cadernetas_permitidas = funcionarioRbac.cadernetas_permitidas
+        data.expediente_override = funcionarioRbac.expediente_override
 
         // Gerar pin_hash antes do insert/update para evitar race condition
         // (insert sem pin_hash + update separado podia deixar funcionario em estado quebrado)
@@ -745,6 +820,7 @@ export function CadastrosAuxiliares() {
       } else {
         data.pin_hash = null
         data.cadernetas_permitidas = []
+        data.expediente_override = null
       }
     }
 
@@ -804,6 +880,7 @@ export function CadastrosAuxiliares() {
         acessa_app: !!item.acessa_app,
         pin: '',
         cadernetas_permitidas: Array.isArray(item.cadernetas_permitidas) ? item.cadernetas_permitidas : [],
+        expediente_override: item.expediente_override || null,
       })
     }
 
@@ -825,6 +902,7 @@ export function CadastrosAuxiliares() {
       acessa_app: false,
       pin: '',
       cadernetas_permitidas: [],
+      expediente_override: null,
     })
     setTabStates((prev) => ({
       ...prev,
@@ -952,6 +1030,49 @@ export function CadastrosAuxiliares() {
     } else {
       console.error('Erro ao atualizar controle de acesso da fazenda')
     }
+  }
+
+  const handleToggleExpediente = async () => {
+    if (!fazendaId) return
+    if (!controleAcessoHabilitado) {
+      toast.error('Ative o controle de acesso por funcionário antes de definir o expediente.')
+      return
+    }
+
+    const novoEstado = !expedienteHabilitado
+    setExpedienteLoading(true)
+    const atualizada = await updateFazenda(fazendaId, { expediente_habilitado: novoEstado })
+    setExpedienteLoading(false)
+
+    if (atualizada) {
+      setExpedienteHabilitado(novoEstado)
+      toast.success(novoEstado ? 'Expediente ativado.' : 'Expediente desativado.')
+    } else {
+      toast.error('Erro ao atualizar expediente da fazenda.')
+    }
+  }
+
+  const handleSalvarExpediente = async () => {
+    if (!fazendaId) return
+    setExpedienteLoading(true)
+    const atualizada = await updateFazenda(fazendaId, {
+      expediente_timezone: expedienteTimezone,
+      expediente_dias: expedienteDias,
+    })
+    setExpedienteLoading(false)
+
+    if (atualizada) {
+      toast.success('Expediente salvo com sucesso.')
+    } else {
+      toast.error('Erro ao salvar expediente.')
+    }
+  }
+
+  const handleExpedienteDiaChange = (dia: number, campo: keyof ExpedienteDia, valor: string | boolean) => {
+    setExpedienteDias((prev) => ({
+      ...prev,
+      [dia]: { ...prev[dia], [campo]: valor },
+    }))
   }
 
   const setShowForm = (show: boolean) => {
@@ -1252,9 +1373,117 @@ export function CadastrosAuxiliares() {
           </div>
         )}
 
+        {activeTab === 'funcionarios' && controleAcessoHabilitado && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setExpedienteExpandido(!expedienteExpandido)}
+              className="w-full flex items-center justify-between p-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="text-left">
+                  <p className="text-sm font-medium text-gray-800">Horário de expediente</p>
+                  <p className="text-xs text-gray-500">
+                    {expedienteHabilitado
+                      ? 'Ativado: fora do expediente o app bloqueia acesso.'
+                      : 'Desativado: o app funciona 24h.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div
+                  role="switch"
+                  aria-checked={expedienteHabilitado}
+                  onClick={(e) => { e.stopPropagation(); if (!expedienteLoading) handleToggleExpediente() }}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors cursor-pointer ${expedienteLoading ? 'opacity-50' : ''} ${expedienteHabilitado ? 'bg-primary' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${expedienteHabilitado ? 'translate-x-6' : 'translate-x-1'}`} />
+                </div>
+                <svg
+                  className={`w-5 h-5 text-gray-400 transition-transform ${expedienteExpandido ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+
+            {expedienteExpandido && expedienteHabilitado && (
+              <div className="space-y-4 border-t border-gray-100 p-4 pt-4">
+                <p className="text-xs text-gray-500 italic">
+                  Resumo: {resumoExpediente(expedienteDias)}
+                </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fuso horário</label>
+                  <select
+                    value={expedienteTimezone}
+                    onChange={(e) => setExpedienteTimezone(e.target.value)}
+                    className="w-full sm:max-w-xs border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent min-h-[44px]"
+                  >
+                    {TIMEZONES_BR.map((tz) => (
+                      <option key={tz.value} value={tz.value}>{tz.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">Dias da semana</p>
+                  {DIAS_SEMANA.map((nome, dia) => (
+                    <div key={dia} className="flex items-center gap-3 py-1">
+                      <label className="flex items-center gap-2 w-28 shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={expedienteDias[dia]?.ativo ?? false}
+                          onChange={(e) => handleExpedienteDiaChange(dia, 'ativo', e.target.checked)}
+                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                        />
+                        <span className="text-sm text-gray-700">{nome}</span>
+                      </label>
+                      {(expedienteDias[dia]?.ativo) && (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="time"
+                            value={expedienteDias[dia]?.inicio || '06:00'}
+                            onChange={(e) => handleExpedienteDiaChange(dia, 'inicio', e.target.value)}
+                            className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:border-accent"
+                          />
+                          <span className="text-xs text-gray-400">até</span>
+                          <input
+                            type="time"
+                            value={expedienteDias[dia]?.fim || '18:00'}
+                            onChange={(e) => handleExpedienteDiaChange(dia, 'fim', e.target.value)}
+                            className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:border-accent"
+                          />
+                        </div>
+                      )}
+                      {!(expedienteDias[dia]?.ativo) && (
+                        <span className="text-xs text-gray-400">Sem expediente</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={expedienteLoading}
+                    onClick={handleSalvarExpediente}
+                    className="min-h-[40px]"
+                  >
+                    {expedienteLoading ? 'Salvando...' : 'Salvar expediente'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Search + Add (oculto nas abas com UI própria: equipes e setores) */}
         {activeTab !== 'equipes' && activeTab !== 'setores' && (
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+        <div className="sticky top-0 z-10 bg-gray-50 py-2 -mx-1 px-1 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
             <Input
               type="text"
@@ -1273,6 +1502,11 @@ export function CadastrosAuxiliares() {
                 />
                 Com acesso ao app
               </label>
+            )}
+            {activeTab === 'funcionarios' && filteredItems.length > 0 && (
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                {filteredItems.length} {filteredItems.length === 1 ? 'funcionário' : 'funcionários'}
+              </span>
             )}
           </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
@@ -1658,6 +1892,102 @@ export function CadastrosAuxiliares() {
                             ))}
                           </div>
                         </div>
+
+                        {expedienteHabilitado && (
+                          <div className="space-y-3 border-t border-gray-100 pt-3">
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFuncionarioRbac({
+                                    ...funcionarioRbac,
+                                    expediente_override: funcionarioRbac.expediente_override ? null : defaultExpediente(),
+                                  })
+                                }
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                  funcionarioRbac.expediente_override ? 'bg-primary' : 'bg-gray-300'
+                                }`}
+                              >
+                                <span
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                    funcionarioRbac.expediente_override ? 'translate-x-6' : 'translate-x-1'
+                                  }`}
+                                />
+                              </button>
+                              <label className="text-sm font-medium text-gray-700">
+                                Horário personalizado
+                              </label>
+                              <span className="text-xs text-gray-400">
+                                {funcionarioRbac.expediente_override ? 'Usa horário próprio' : 'Usa horário da fazenda'}
+                              </span>
+                            </div>
+
+                            {funcionarioRbac.expediente_override && (() => {
+                              const override = funcionarioRbac.expediente_override
+                              return (
+                              <div className="space-y-2 pl-2">
+                                <p className="text-xs text-gray-500 italic">
+                                  Resumo: {resumoExpediente(override)}
+                                </p>
+                                {DIAS_SEMANA.map((nome, dia) => (
+                                  <div key={dia} className="flex items-center gap-3 py-0.5">
+                                    <label className="flex items-center gap-2 w-28 shrink-0">
+                                      <input
+                                        type="checkbox"
+                                        checked={override[dia]?.ativo ?? false}
+                                        onChange={(e) =>
+                                          setFuncionarioRbac({
+                                            ...funcionarioRbac,
+                                            expediente_override: {
+                                              ...override,
+                                              [dia]: { ...override[dia], ativo: e.target.checked },
+                                            },
+                                          })
+                                        }
+                                        className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                      />
+                                      <span className="text-xs text-gray-700">{nome}</span>
+                                    </label>
+                                    {(override[dia]?.ativo) && (
+                                      <div className="flex items-center gap-2 flex-1">
+                                        <input
+                                          type="time"
+                                          value={override[dia]?.inicio || '06:00'}
+                                          onChange={(e) =>
+                                            setFuncionarioRbac({
+                                              ...funcionarioRbac,
+                                              expediente_override: {
+                                                ...override,
+                                                [dia]: { ...override[dia], inicio: e.target.value },
+                                              },
+                                            })
+                                          }
+                                          className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:border-accent"
+                                        />
+                                        <span className="text-xs text-gray-400">até</span>
+                                        <input
+                                          type="time"
+                                          value={override[dia]?.fim || '18:00'}
+                                          onChange={(e) =>
+                                            setFuncionarioRbac({
+                                              ...funcionarioRbac,
+                                              expediente_override: {
+                                                ...override,
+                                                [dia]: { ...override[dia], fim: e.target.value },
+                                              },
+                                            })
+                                          }
+                                          className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:border-accent"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                              )
+                            })()}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1716,26 +2046,79 @@ export function CadastrosAuxiliares() {
               >
                 {activeTab === 'funcionarios' && item.acessa_app && (
                   <div className="mb-3 space-y-2">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                      Acessa o app
-                    </span>
-                    {Array.isArray(item.cadernetas_permitidas) && item.cadernetas_permitidas.length > 0 && (
-                      <div>
-                        <p className="text-xs text-gray-500 font-medium mb-1">Cadernetas:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {item.cadernetas_permitidas.map((id: string) => {
-                            const label = CADERNETAS.find((c) => c.id === id)?.label || id
-                            return (
-                              <span key={id} className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
-                                {label}
-                              </span>
-                            )
-                          })}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        Acessa o app
+                      </span>
+                      {item.expediente_override && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800" title="Horário personalizado">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Horário próprio
+                        </span>
+                      )}
+                    </div>
+                    {Array.isArray(item.cadernetas_permitidas) && item.cadernetas_permitidas.length > 0 && (() => {
+                      const total = item.cadernetas_permitidas.length
+                      const conhecidas = CADERNETAS.length
+                      const todas = total >= conhecidas || total >= conhecidas * 0.9
+                      if (todas) {
+                        return (
+                          <p className="text-xs text-gray-500 font-medium">
+                            Cadernetas: todas ({total})
+                          </p>
+                        )
+                      }
+                      const muitas = total > 8
+                      return (
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-gray-500 font-medium">
+                              Cadernetas ({total}):
+                            </p>
+                            {muitas && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setCadernetasExpandidas(prev => ({ ...prev, [item.id]: !prev[item.id] })) }}
+                                className="text-xs text-primary hover:underline"
+                              >
+                                {cadernetasExpandidas[item.id] ? 'ocultar' : 'ver lista'}
+                              </button>
+                            )}
+                          </div>
+                          {(!muitas || cadernetasExpandidas[item.id]) && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {item.cadernetas_permitidas.map((id: string) => {
+                                const label = CADERNETAS.find((c) => c.id === id)?.label || id
+                                return (
+                                  <span key={id} className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
+                                    {label}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
-                      </div>
+                      )
+                    })()}
+                  </div>
+                )}
+                {activeTab === 'funcionarios' && !item.acessa_app && (
+                  <div className="mb-3">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                      Sem acesso ao app
+                    </span>
+                    {item.cargo && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        <span className="font-medium">Cargo:</span> {item.cargo}
+                      </p>
                     )}
                   </div>
                 )}
@@ -1755,7 +2138,7 @@ export function CadastrosAuxiliares() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="flex-1 min-w-[70px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 text-red-600 hover:text-red-700"
+                      className="flex-1 min-w-[70px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 text-gray-700 hover:bg-gray-300"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleToggleActive(item)
@@ -1764,41 +2147,50 @@ export function CadastrosAuxiliares() {
                       {isItemActive(item, currentTab) ? 'Desativar' : 'Ativar'}
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="flex-1 min-w-[70px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 text-red-600 hover:text-red-700"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteClick(item.id)
-                    }}
-                  >
-                    Excluir
-                  </Button>
+                  {activeTab !== 'vagoes' && !isItemActive(item, currentTab) && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="flex-1 min-w-[70px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 bg-red-600 text-white hover:bg-red-700"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteClick(item.id)
+                      }}
+                    >
+                      Excluir
+                    </Button>
+                  )}
                 </div>
               </CardItem>
             ))}
           </div>
 
           {totalPaginas > 1 && (
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
-                disabled={paginaSegura === 1}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Anterior
-              </button>
+            <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-gray-500">
-                Página {paginaSegura} de {totalPaginas}
+                {activeTab === 'funcionarios'
+                  ? `Mostrando ${(paginaSegura - 1) * ITENS_POR_PAGINA + 1}-${Math.min(paginaSegura * ITENS_POR_PAGINA, filteredItems.length)} de ${filteredItems.length}`
+                  : `Mostrando ${(paginaSegura - 1) * ITENS_POR_PAGINA + 1}-${Math.min(paginaSegura * ITENS_POR_PAGINA, filteredItems.length)} de ${filteredItems.length}`}
               </span>
-              <button
-                onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
-                disabled={paginaSegura === totalPaginas}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Próxima
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
+                  disabled={paginaSegura === 1}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <span className="text-xs text-gray-500">
+                  Página {paginaSegura} de {totalPaginas}
+                </span>
+                <button
+                  onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
+                  disabled={paginaSegura === totalPaginas}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Próxima
+                </button>
+              </div>
             </div>
           )}
           </>
@@ -1809,11 +2201,11 @@ export function CadastrosAuxiliares() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
-        title={activeTab === 'vagoes' ? 'Excluir Registro' : 'Inativar Registro'}
+        title={activeTab === 'vagoes' ? 'Excluir Registro' : 'Excluir Registro'}
         message={activeTab === 'vagoes'
           ? 'O registro será excluído permanentemente. Esta ação não pode ser desfeita.'
-          : 'O registro será inativado e não aparecerá mais em novos lançamentos. O histórico é preservado.'}
-        confirmText={activeTab === 'vagoes' ? 'Excluir' : 'Inativar'}
+          : 'O registro será excluído permanentemente e não aparecerá mais na lista. O histórico é preservado. Esta ação não pode ser desfeita.'}
+        confirmText="Excluir"
         cancelText="Cancelar"
         variant="danger"
       />
