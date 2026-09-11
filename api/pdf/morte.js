@@ -56,7 +56,7 @@ function renderMorteHtml(data) {
 ${diagRows || detailRows ? `<section class="page">${header(data)}<p class="eyebrow">Detalhamento</p>${diagRows ? `<h2 class="table-title">Frequência de diagnósticos</h2><table><thead><tr><th style="width:60%;text-align:left;padding-left:4px">Diagnóstico</th><th style="width:25%">Mortes</th><th style="width:15%">%</th></tr></thead><tbody>${diagRows}</tbody></table>` : ''}${detailRows ? `<div class="table-wrap"><h2 class="table-title">Registros detalhados</h2><table><thead><tr><th>Data</th><th>Lote</th><th>Pasto</th><th>Sexo</th><th>Idade</th><th>Peso (kg)</th><th>Categoria</th><th>Causa</th><th>Diagnósticos</th></tr></thead><tbody>${detailRows}</tbody></table></div>` : ''}${footer(data)}</section>` : ''}</body></html>`
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Método não permitido' })
@@ -72,8 +72,10 @@ module.exports = async function handler(req, res) {
 
   let browser
   try {
-    const chromium = require('@sparticuz/chromium')
-    const puppeteer = require('puppeteer-core')
+    const [{ default: chromium }, { default: puppeteer }] = await Promise.all([
+      import('@sparticuz/chromium'),
+      import('puppeteer-core'),
+    ])
 
     const isVercel = Boolean(process.env.VERCEL)
     const executablePath = isVercel ? await chromium.executablePath() : process.env.PUPPETEER_EXECUTABLE_PATH
