@@ -1,1 +1,1 @@
-﻿{"functions":{"api/pdf/morte.ts":{"maxDuration":60,"includeFiles":"node_modules/@sparticuz/chromium/bin/**"},"api/pdf/teste.ts":{}},"rewrites":[{"source":"/((?!api/).*)","destination":"/index.html"}]}
+﻿{"rewrites":[{"source":"/((?!api/).*)","destination":"/index.html"}]}
