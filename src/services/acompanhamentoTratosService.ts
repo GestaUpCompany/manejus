@@ -71,7 +71,8 @@ export async function fetchPlanejadoPorLote(
     .select('id, tipo, quantidade_tratos, data_inicio, data_fim')
     .eq('fazenda_id', fazendaId)
 
-  if (progError || !progs || progs.length === 0) return {}
+  if (progError) throw progError
+  if (!progs || progs.length === 0) return {}
 
   const resultado: Record<string, PlanejadoLote[]> = {}
 
@@ -89,7 +90,8 @@ export async function fetchPlanejadoPorLote(
       `)
       .eq('programacao_id', prog.id)
 
-    if (curraisError || !currais) continue
+    if (curraisError) throw curraisError
+    if (!currais) continue
 
     for (const c of currais) {
       const loteId = c.lote_id
@@ -153,7 +155,8 @@ export async function fetchRealPorLoteDia(
     .lt('data', dataFimExclusive)
     .order('data', { ascending: true })
 
-  if (error || !data) return []
+  if (error) throw error
+  if (!data) return []
 
   // Agrupar por lote_id + data
   const mapa: Record<string, RegistroTratoDia> = {}
@@ -364,11 +367,14 @@ export function cruzarPlanejadoReal(
   return linhas
 }
 
+export const TOLERANCIA_OK_PCT = 5
+export const TOLERANCIA_ALERTA_PCT = 15
+
 function classificarDesvio(desvioPct: number | null): 'ok' | 'alerta' | 'critico' {
   if (desvioPct == null) return 'ok'
   const abs = Math.abs(desvioPct)
-  if (abs <= 5) return 'ok'
-  if (abs <= 15) return 'alerta'
+  if (abs <= TOLERANCIA_OK_PCT) return 'ok'
+  if (abs <= TOLERANCIA_ALERTA_PCT) return 'alerta'
   return 'critico'
 }
 
@@ -446,8 +452,8 @@ export interface ResumoHorario {
   pior_desvio_min: number | null
 }
 
-const TOLERANCIA_OK_MIN = 15
-const TOLERANCIA_ALERTA_MIN = 30
+export const TOLERANCIA_OK_MIN = 15
+export const TOLERANCIA_ALERTA_MIN = 30
 
 function classificarDesvioHorario(desvioMin: number | null): LinhaHorario['status'] {
   if (desvioMin == null) return 'sem_horario'
@@ -482,13 +488,14 @@ export interface DetalheTratoLote {
 export async function fetchDetalheTratosPorLote(
   fazendaId: string,
   dataInicio: string,
-  dataFim: string
+  dataFim: string,
+  lotesFiltro: string[] = []
 ): Promise<Record<string, DetalheTratoLote[]>> {
   const dataFimNext = new Date(dataFim + 'T00:00:00')
   dataFimNext.setDate(dataFimNext.getDate() + 1)
   const dataFimExclusive = dataFimNext.toISOString().substring(0, 10)
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('registros_oferta_trato')
     .select(`
       data,
@@ -507,7 +514,13 @@ export async function fetchDetalheTratosPorLote(
     .order('data', { ascending: true })
     .order('ordem_trato', { ascending: true })
 
-  if (error || !data) return {}
+  if (lotesFiltro.length > 0) {
+    query = query.in('lote_id', lotesFiltro)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  if (!data) return {}
 
   // Buscar timezone da fazenda para converter o timestamp real do registro
   const { data: fazenda } = await supabase
@@ -616,7 +629,8 @@ export async function fetchHorariosTratos(
   }
 
   const { data: registros, error } = await query
-  if (error || !registros || registros.length === 0) return []
+  if (error) throw error
+  if (!registros || registros.length === 0) return []
 
   // Buscar timezone da fazenda
   const { data: fazenda } = await supabase
@@ -818,7 +832,9 @@ export async function fetchFabricaAcompanhamento(
       .lt('data', dataFimExclusive),
   ])
 
-  if (progsRes.error || fabricaRes.error || distribuicaoRes.error) return []
+  if (progsRes.error) throw progsRes.error
+  if (fabricaRes.error) throw fabricaRes.error
+  if (distribuicaoRes.error) throw distribuicaoRes.error
 
   const programas = (progsRes.data || []) as any[]
   const programacaoIds = programas.map((programa) => programa.id)
@@ -828,7 +844,7 @@ export async function fetchFabricaAcompanhamento(
       .select('programacao_id, lote_id, kg_mn_dia')
       .in('programacao_id', programacaoIds)
     : { data: [], error: null }
-  if (curraisRes.error) return []
+  if (curraisRes.error) throw curraisRes.error
 
   const loteIds = [...new Set((curraisRes.data || []).map((curral: any) => curral.lote_id).filter(Boolean))]
   const categoriasRes = loteIds.length > 0
@@ -839,7 +855,7 @@ export async function fetchFabricaAcompanhamento(
       .eq('ativo', true)
       .not('formulacao_id', 'is', null)
     : { data: [], error: null }
-  if (categoriasRes.error) return []
+  if (categoriasRes.error) throw categoriasRes.error
 
   const categoriaPorLote = new Map<string, { id: string; nome: string }>()
   for (const categoria of (categoriasRes.data || []) as any[]) {
