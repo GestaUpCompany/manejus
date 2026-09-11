@@ -1,11 +1,7 @@
-import chromium from '@sparticuz/chromium'
-import puppeteer from 'puppeteer-core'
 import { renderMorteHtml, type PDFData } from './morte-template'
 
 const MAX_LINES = 10_000
 const MAX_BODY_BYTES = 4_000_000
-
-export const config = { maxDuration: 60 }
 
 type Request = { method?: string; body?: unknown }
 type Response = {
@@ -35,8 +31,13 @@ export default async function handler(req: Request, res: Response) {
     return res.status(413).json({ error: 'Payload do relatório excede o limite permitido' })
   }
 
-  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | undefined
+  let browser: { close: () => Promise<void> } | undefined
   try {
+    const [{ default: chromium }, { default: puppeteer }] = await Promise.all([
+      import('@sparticuz/chromium'),
+      import('puppeteer-core'),
+    ])
+
     const isVercel = Boolean(process.env.VERCEL)
     const executablePath = isVercel ? await chromium.executablePath() : process.env.PUPPETEER_EXECUTABLE_PATH
     if (!executablePath) {
@@ -63,7 +64,7 @@ export default async function handler(req: Request, res: Response) {
     return res.status(200).send(Buffer.from(pdf))
   } catch (error) {
     console.error('Erro ao gerar relatório de mortalidade com Puppeteer:', error)
-    return res.status(500).json({ error: 'Não foi possível gerar o PDF' })
+    return res.status(500).json({ error: 'Não foi possível gerar o PDF', detail: String(error) })
   } finally {
     await browser?.close()
   }
