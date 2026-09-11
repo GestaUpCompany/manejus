@@ -8,6 +8,7 @@ import logoManejus from '/images/manejus360.png'
 import {
   gerarRelatorioMortePDFReact,
 } from '../../utils/relatorioMortePDFReact'
+import { gerarRelatorioMortePDFPuppeteer } from '../../utils/relatorioMortePDFPuppeteer'
 import {
   type LinhaMorte,
   type ResumoMorte,
@@ -531,14 +532,22 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
       const periodoInicio = dataInicio || (linhasFiltradas[linhasFiltradas.length - 1]?.data ?? '')
       const periodoFim = dataFim || (linhasFiltradas[0]?.data ?? '')
 
-      const blob = await gerarRelatorioMortePDFReact({
+      const parametrosPDF = {
         dataInicio: periodoInicio,
         dataFim: periodoFim,
         fazendaNome: relatorioInfo.fazenda_nome || '',
         fazendaLogoUrl: relatorioInfo.fazenda_logo_url,
         linhas: linhasFiltradas,
         resumo: resumoParaPDF,
-      })
+      }
+
+      let blob: Blob
+      try {
+        blob = await gerarRelatorioMortePDFPuppeteer(parametrosPDF)
+      } catch (puppeteerError) {
+        console.warn('Puppeteer indisponível; usando fallback React PDF:', puppeteerError)
+        blob = await gerarRelatorioMortePDFReact(parametrosPDF)
+      }
 
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
