@@ -107,6 +107,9 @@ const MORTE_CSS = `
 .detail-table th:nth-child(9){width:28%}
 .detail-table td{font-size:13px;padding:8px 6px;line-height:1.25}
 .detail-table th{font-size:13px;padding:9px 6px}
+.detail-table th, .detail-table td{border-right:1px solid #d8e0db}
+.detail-table th:last-child, .detail-table td:last-child{border-right:none}
+.detail-table tbody tr:nth-child(even){background:#f7faf8}
 `
 
 // Script rodado dentro do browser headless para desenhar os 5 gráficos da

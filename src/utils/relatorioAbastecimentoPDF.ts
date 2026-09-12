@@ -5,10 +5,14 @@ import { renderRelatorioHeader, type HeaderContext } from './relatorioHeaderPDF'
 export interface Agregado {
   label: string
   valor: number
+  marca?: string
+  modelo?: string
 }
 
 export interface DetalheMaquinaPDF {
   maquina: string
+  marca?: string
+  modelo?: string
   totalLitros: number
   numAbastecimentos: number
   mediaLitros: number
@@ -74,7 +78,7 @@ function setTextColor(doc: jsPDF, hex: string) {
   doc.setTextColor(r, g, b)
 }
 
-async function carregarLogoComoBase64(path: string): Promise<string> {
+export async function carregarLogoComoBase64(path: string): Promise<string> {
   const response = await fetch(path)
   const blob = await response.blob()
   return new Promise((resolve, reject) => {

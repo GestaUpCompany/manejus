@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../../services/supabaseClient'
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import logoManejus from '/images/manejus360.png'
-import { gerarPDFRelatorioAbastecimento } from '../../utils/relatorioAbastecimentoPDF'
+import { gerarRelatorioAbastecimentoPDFPuppeteer } from '../../utils/relatorioAbastecimentoPDFPuppeteer'
 import { RelatorioConsumoPublico } from './RelatorioConsumoPublico'
 import { RelatorioTratosPublico } from './RelatorioTratosPublico'
 import { RelatorioMortePublico } from './RelatorioMortePublico'
@@ -35,6 +35,8 @@ const CHART_NO_FOCUS_CSS = `
 
 interface RegistroBruto {
   maquina: string
+  marca?: string
+  modelo?: string
   combustivel: string
   operacao: string
   litros: number
@@ -78,6 +80,78 @@ function formatarData(d: string): string {
   return d
 }
 
+// Abreviacao de marcas no frontend (mesmo mapa do endpoint do PDF).
+const MARCA_ABREV: Record<string, string> = {
+  'John Deere': 'JD',
+  'Jonh Deere': 'JD',
+  'Deere': 'JD',
+  'JohnDeere': 'JD',
+  'Volkswagen': 'VW',
+  'Volks': 'VW',
+  'Massey Ferguson': 'MF',
+  'New Holland': 'NH',
+  'Case': 'Case',
+  'Ford': 'Ford',
+  'JCB': 'JCB',
+  'Honda': 'Honda',
+  'Liugong': 'Liugong',
+}
+
+function normalizarMarca(value: string): string {
+  return String(value).trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function tokensDaMarca(value: string): string[] {
+  return normalizarMarca(value).split(' ')
+}
+
+function abreviarMarca(value: string): string {
+  if (!value) return ''
+  const tokens = tokensDaMarca(value)
+  for (const [marca, abrev] of Object.entries(MARCA_ABREV)) {
+    const alvo = tokensDaMarca(marca)
+    let idx = 0
+    for (const t of tokens) {
+      if (t === alvo[idx]) idx++
+      if (idx === alvo.length) return abrev
+    }
+  }
+  const partes = value.trim().split(/\s+/)
+  return partes[0] || value
+}
+
+function formatarMaquina(d: DetalheMaquina | RegistroBruto): string {
+  if (d.marca) {
+    const modelo = d.modelo ? String(d.modelo).trim() : ''
+    const marca = abreviarMarca(d.marca)
+    if (marca && modelo) return `${marca} ${modelo}`
+    if (modelo) return modelo
+    return marca
+  }
+  // Fallback: procura a marca no inicio da string maquina.
+  const raw = d.maquina || ''
+  if (!raw) return '—'
+  const tokens = tokensDaMarca(raw)
+  const rawLower = raw.toLowerCase()
+  for (const [marca, abrev] of Object.entries(MARCA_ABREV)) {
+    const alvo = tokensDaMarca(marca)
+    let idx = 0
+    let alvoPos = 0
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i] === alvo[idx]) {
+        if (idx === 0) alvoPos = i
+        idx++
+      }
+      if (idx === alvo.length) {
+        const posFim = rawLower.indexOf(alvo.join(' '), rawLower.indexOf(tokens[alvoPos])) + alvo.join(' ').length
+        const resto = raw.slice(posFim).trim()
+        return resto ? `${abrev} ${resto}` : abrev
+      }
+    }
+  }
+  return raw
+}
+
 function agregar(registros: RegistroBruto[], chave: (r: RegistroBruto) => string): Agregado[] {
   const map = new Map<string, number>()
   for (const r of registros) {
@@ -92,6 +166,8 @@ function agregar(registros: RegistroBruto[], chave: (r: RegistroBruto) => string
 
 interface DetalheMaquina {
   maquina: string
+  marca?: string
+  modelo?: string
   totalLitros: number
   numAbastecimentos: number
   mediaLitros: number
@@ -258,7 +334,6 @@ export function RelatorioPublico() {
   }, [dados, filtroMaquina, filtroCombustivel, filtroOperacao])
 
   // Agregacoes a partir dos registros filtrados
-  const porMaquina = useMemo(() => agregar(registrosFiltrados, (r) => r.maquina), [registrosFiltrados])
   const porCombustivel = useMemo(() => agregar(registrosFiltrados, (r) => r.combustivel), [registrosFiltrados])
   const porOperacao = useMemo(() => agregar(registrosFiltrados, (r) => r.operacao), [registrosFiltrados])
 
@@ -284,9 +359,12 @@ export function RelatorioPublico() {
       const combustiveis = Array.from(new Set(regs.map((r) => r.combustivel).filter((v): v is string => !!v))).sort()
       const operadores = Array.from(new Set(regs.map((r) => r.operador).filter((v): v is string => !!v))).sort()
       const placas = Array.from(new Set(regs.map((r) => r.placa).filter((v): v is string => !!v && v.replace(/0/g, '').trim() !== ''))).sort()
+      const first = regs[0]
 
       result.push({
         maquina,
+        marca: first?.marca,
+        modelo: first?.modelo,
         totalLitros: totalLitrosMaq,
         numAbastecimentos: numAbast,
         mediaLitros: media,
@@ -300,6 +378,9 @@ export function RelatorioPublico() {
     }
     return result.sort((a, b) => b.totalLitros - a.totalLitros)
   }, [registrosFiltrados])
+
+  // Agregacao por maquina a partir dos detalhes (inclui marca/modelo para o PDF)
+  const porMaquina = useMemo(() => detalhesPorMaquina.map((d) => ({ label: d.maquina, valor: d.totalLitros, marca: d.marca, modelo: d.modelo })), [detalhesPorMaquina])
 
   // Opcoes de filtro dinamicas: refletem apenas o subconjunto de dados das OUTRAS dimensoes
   const opcoesMaquina = useMemo(() => {
@@ -354,7 +435,7 @@ export function RelatorioPublico() {
     if (!relatorioInfo || !dados) return
     try {
       setExportandoPDF(true)
-      const blob = await gerarPDFRelatorioAbastecimento({
+      const blob = await gerarRelatorioAbastecimentoPDFPuppeteer({
         titulo: relatorioInfo.titulo,
         fazendaNome: relatorioInfo.fazenda_nome,
         fazendaLogoUrl: relatorioInfo.fazenda_logo_url,
@@ -660,7 +741,7 @@ export function RelatorioPublico() {
           {[
             { label: 'Total Litros', value: `${totalLitros.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} L` },
             { label: 'Registros', value: totalRegistros.toLocaleString('pt-BR') },
-            { label: 'Maior Consumidor', value: porMaquina.length > 0 ? porMaquina[0].label : '—' },
+            { label: 'Maior Consumidor', value: detalhesPorMaquina.length > 0 ? formatarMaquina(detalhesPorMaquina[0]) : '—' },
             { label: 'Máquinas', value: porMaquina.length.toString() },
             { label: 'Tipos de combustível', value: porCombustivel.length.toString() },
             { label: 'Operações', value: porOperacao.length.toString() },

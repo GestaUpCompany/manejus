@@ -28,7 +28,7 @@ body{margin:0;background:#e9eeeb;color:#26352e;font-family:Arial,Helvetica,sans-
 .report-title{color:#0b6a42;font-size:26px;font-weight:700;line-height:1.2;margin-top:2px}
 .farm-name{color:#718078;font-size:13px;margin-top:3px}
 .header-right{display:flex;align-items:center;gap:12px}
-.farm-logo{width:110px;height:65px;object-fit:contain}
+.farm-logo{width:60px;height:60px;object-fit:contain}
 .header-section{text-align:right;border-left:1px solid #d8e0db;padding-left:12px;color:#7a8981;font-size:11px;text-transform:uppercase;letter-spacing:1px}
 .header-section strong{display:block;color:#0b6a42;font-size:13px;margin-top:4px;letter-spacing:.2px}
 .section-kicker{color:#0b6a42;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 2mm}
