@@ -243,7 +243,7 @@ const CHARTS_INIT_JS = `
 })();
 `
 
-function renderMorteHtml(input) {
+async function renderMorteHtml(input) {
   const resumo = input.resumo
   const rows = [...input.linhas].sort((a, b) =>
     a.data !== b.data ? b.data.localeCompare(a.data) : (a.lote_nome ?? '').localeCompare(b.lote_nome ?? ''),
@@ -361,11 +361,12 @@ function renderMorteHtml(input) {
     })
     .join('')
 
+  const chartJsScript = await getChartJsScript()
   return htmlDocument({
     title: 'Relatório de Mortalidade',
     extraCss: MORTE_CSS,
     body: `${page1}${page2}${page3}${page4}${detailPages}`,
-    chartJsScript: getChartJsScript(),
+    chartJsScript,
     chartsInit: CHARTS_INIT_JS,
     dataJson: {
       dataInicio: input.dataInicio,
@@ -395,21 +396,26 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('[PDF Morte] Iniciando renderização. Linhas:', body.linhas.length)
+    const html = await renderMorteHtml(body)
+    console.log('[PDF Morte] HTML montado. Bytes:', Buffer.byteLength(html, 'utf8'))
     const pdf = await generatePdf({
-      html: renderMorteHtml(body),
+      html,
       format: 'A4',
       landscape: true,
       beforePdf: async (page) => {
         await page.waitForFunction('window.__chartsReady === true', { timeout: 15000 }).catch(() => {})
       },
     })
+    console.log('[PDF Morte] PDF gerado. Bytes:', pdf.length)
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', 'attachment; filename="relatorio-mortalidade.pdf"')
     res.setHeader('Cache-Control', 'no-store')
     res.setHeader('X-PDF-Renderer', 'puppeteer')
     return res.status(200).send(pdf)
   } catch (error) {
-    console.error('Erro ao gerar relatório de mortalidade com Puppeteer:', error)
+    console.error('[PDF Morte] Erro ao gerar relatório:', error)
+    console.error('[PDF Morte] Stack:', error?.stack || 'sem stack')
     return res.status(500).json({ error: 'Não foi possível gerar o PDF', detail: String(error) })
   }
 }

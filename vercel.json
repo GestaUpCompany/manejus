@@ -5,5 +5,14 @@
       "source": "/:path*",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/pdf/*.js": {
+      "includeFiles": [
+        "node_modules/chart.js/dist/chart.umd.min.js",
+        "node_modules/chart.js/dist/chart.umd.js"
+      ],
+      "maxDuration": 60
+    }
+  }
 }

@@ -1,12 +1,4 @@
-// Carrega o build UMD do Chart.js do node_modules uma única vez por processo e
-// entrega como string pronta para ser injetada inline no HTML que vai para o
-// Puppeteer. Fazer isso no servidor evita que o cliente rasterize gráficos em
-// PNG base64 (que inflava o payload até estourar o limite de body do endpoint).
-//
-// Vercel inclui automaticamente arquivos referenciados por require.resolve() no
-// bundle da função, então isso funciona tanto local quanto em produção.
-
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 
@@ -14,15 +6,39 @@ const requireFromHere = createRequire(import.meta.url)
 
 let cachedScript = null
 
-export function getChartJsScript() {
+function resolveLocalUmd() {
+  // Tenta achar o UMD do Chart.js no filesystem. Em dev ele vem de
+  // node_modules/chart.js/dist/chart.umd.min.js. Em Vercel, o vercel.json
+  // deve incluir esse arquivo no bundle da função.
+  const candidates = []
+  try {
+    const mainPath = requireFromHere.resolve('chart.js')
+    candidates.push(join(dirname(mainPath), 'chart.umd.min.js'))
+    candidates.push(join(dirname(mainPath), 'chart.umd.js'))
+  } catch {}
+  candidates.push(join(process.cwd(), 'node_modules', 'chart.js', 'dist', 'chart.umd.min.js'))
+  candidates.push(join(process.cwd(), 'node_modules', 'chart.js', 'dist', 'chart.umd.js'))
+  for (const p of candidates) {
+    if (p && existsSync(p)) return p
+  }
+  return null
+}
+
+async function fetchFromCdn() {
+  // Fallback de rede: usado se o UMD não foi incluído no bundle. Só atinge
+  // a internet se o arquivo local estiver ausente.
+  const res = await fetch('https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js')
+  if (!res.ok) throw new Error(`Chart.js CDN respondeu ${res.status}`)
+  return res.text()
+}
+
+export async function getChartJsScript() {
   if (cachedScript) return cachedScript
-  // O package.json do chart.js não expõe o UMD em "exports" (nem o próprio
-  // package.json), então resolvemos o entry principal e subimos um nível para
-  // achar o diretório dist. O UMD existe no disco em
-  // node_modules/chart.js/dist/chart.umd.min.js e é incluído no bundle da
-  // função pela análise de arquivos do Vercel.
-  const mainPath = requireFromHere.resolve('chart.js')
-  const chartJsPath = join(dirname(mainPath), 'chart.umd.min.js')
-  cachedScript = readFileSync(chartJsPath, 'utf8')
+  const localPath = resolveLocalUmd()
+  if (localPath) {
+    cachedScript = readFileSync(localPath, 'utf8')
+    return cachedScript
+  }
+  cachedScript = await fetchFromCdn()
   return cachedScript
 }
