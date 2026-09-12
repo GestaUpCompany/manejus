@@ -1,59 +1,384 @@
-const MAX_LINES = 10000
-const MAX_BODY_BYTES = 4000000
+// Endpoint fino do relatório de Mortalidade. Toda a infraestrutura (Chrome,
+// Chart.js, template HTML base, formatadores, labels de diagnóstico) mora em
+// api/pdf/_shared/ para poder ser reaproveitada por outros relatórios
+// Puppeteer (consumo, atividades, etc.). Aqui só existe o que é específico do
+// relatório de morte: composição das páginas, gráficos usados e paginação da
+// tabela de detalhamento.
+
+import { escapeHtml, dateFmt, numFmt, intFmt, moneyFmt, titleCase } from './_shared/formatters.js'
+import { diagLabel } from './_shared/labels.js'
+import { getChartJsScript } from './_shared/chartjs.js'
+import { generatePdf } from './_shared/puppeteer.js'
+import {
+  renderHeader,
+  renderFooter,
+  kpi,
+  page as pageSection,
+  chartCard,
+  htmlDocument,
+} from './_shared/template.js'
+
+// Limites do body do endpoint. Sem imagens de gráfico embutidas (agora
+// renderizadas no servidor), o payload são só JSONs de linhas + resumo + logos.
+// Cada linha de morte tem ~250 bytes em JSON; 20 mil linhas cabem folgadamente
+// em 8MB e ainda sobra espaço pros logos base64.
+const MAX_LINES = 20000
+const MAX_BODY_BYTES = 8_000_000
+
+// Quantas linhas do detalhamento cabem em uma página A4 landscape com o header
+// e o footer padrão. Testado com 13px de fonte e ~30px por linha.
+const DETAIL_ROWS_PER_PAGE = 20
 
 function isPDFData(value) {
   if (!value || typeof value !== 'object') return false
-  return typeof value.dataInicio === 'string' && typeof value.dataFim === 'string' && typeof value.fazendaNome === 'string' && Array.isArray(value.linhas) && !!value.resumo && typeof value.resumo === 'object'
+  return (
+    typeof value.dataInicio === 'string' &&
+    typeof value.dataFim === 'string' &&
+    typeof value.fazendaNome === 'string' &&
+    Array.isArray(value.linhas) &&
+    !!value.resumo &&
+    typeof value.resumo === 'object'
+  )
 }
 
-const escapeHtml = (value) => String(value ?? '—')
-  .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>')
-  .replace(/"/g, '"').replace(/'/g, '&#039;')
-const dateFmt = (value) => {
-  if (!value) return '—'
-  const parts = value.split('-')
-  return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : value
-}
-const numFmt = (value, digits = 2) => value == null || Number.isNaN(value) ? '—' : value.toFixed(digits).replace('.', ',')
-const intFmt = (value) => value == null || Number.isNaN(value) ? '—' : String(Math.round(value))
-const moneyFmt = (value) => value == null || Number.isNaN(value) ? '—' : value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const diagLabel = (value) => ({ inchaco: 'Inchaço', fraturas: 'Fraturas', infeccao: 'Infecção', parasitismo: 'Parasitismo', respiratorio: 'Respiratório', digestivo: 'Digestivo', acidente: 'Acidente', desconhecido: 'Desconhecido' }[value] ?? value)
 const compactDiagnostics = (items) => {
   if (!items) return '—'
-  const labels = Object.values(items).filter(item => item.valor === 'S').map(item => diagLabel(item.chave))
+  const labels = Object.entries(items)
+    .filter(([, item]) => item && item.valor === 'S')
+    .map(([chave]) => diagLabel(chave))
   return labels.length ? labels.join(', ') : '—'
 }
-const image = (src, alt) => src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">` : ''
-function header(data) {
-  return `<header class="header"><div class="header-left">${image(data.logoGestao, 'Logo ManejUs 360')}<div><strong class="system">Manej'Us <b>360</b></strong><strong class="title">Relatório de mortalidade</strong>${data.fazendaNome ? `<span class="muted">${escapeHtml(data.fazendaNome)}</span>` : ''}</div></div>${data.logoFazenda ? `<div class="farm-logo">${image(data.logoFazenda, 'Logo da fazenda')}</div>` : ''}</header>`
-}
-function footer(data) {
-  return `<footer><span>Gesta'Up • Relatório de mortalidade • ${dateFmt(data.dataInicio)} a ${dateFmt(data.dataFim)}</span><span class="page-number"></span></footer>`
-}
-function chart(src) {
-  return `<div class="chart-card">${src ? image(src, 'Gráfico do relatório') : '<span class="empty">Sem dados no período</span>'}</div>`
-}
-function kpi(value, label, sub, red) {
-  return `<div class="kpi ${red ? 'red' : ''}"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span>${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</div>`
+
+function heatmapHtml(matriz) {
+  if (!matriz || !matriz.causas.length || !matriz.categorias.length) return ''
+  const maxVal = Math.max(
+    1,
+    ...matriz.causas.flatMap((c) => matriz.categorias.map((cat) => matriz.matriz[c]?.[cat] || 0)),
+  )
+  const ths = matriz.categorias
+    .map(
+      (cat) =>
+        `<th style="text-align:center;padding:5px 8px;font-size:13px;color:#52635a;border-bottom:1px solid #d8e0db;font-weight:600;background:#fff;white-space:nowrap">${escapeHtml(titleCase(cat))}</th>`,
+    )
+    .join('')
+  const trs = matriz.causas
+    .map((causa) => {
+      const cells = matriz.categorias
+        .map((cat) => {
+          const val = matriz.matriz[causa]?.[cat] || 0
+          const intensity = val / maxVal
+          const bg = val === 0 ? 'transparent' : `rgba(11,106,66,${0.12 + intensity * 0.68})`
+          const color = intensity > 0.5 ? '#fff' : '#26352e'
+          return `<td style="text-align:center;padding:5px 8px;font-size:13px;font-weight:${val > 0 ? 700 : 400};background:${bg};color:${color};border-bottom:1px solid #f0f4f2;min-width:28px">${val}</td>`
+        })
+        .join('')
+      return `<tr><td style="text-align:left;padding:5px 8px;font-size:13px;font-weight:600;color:#26352e;border-bottom:1px solid #f0f4f2;white-space:nowrap;background:#fff">${escapeHtml(diagLabel(causa))}</td>${cells}</tr>`
+    })
+    .join('')
+  return `<div class="heatmap-block"><h2 class="table-title">Causa × Categoria <span>Intensidade por cruzamento</span></h2><table class="heatmap-table" style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:5px 8px;font-size:13px;color:#52635a;border-bottom:1px solid #d8e0db;font-weight:600;background:#fff;white-space:nowrap">Causa \\ Categoria</th>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`
 }
 
-function renderMorteHtml(data) {
-  const resumo = data.resumo
+// CSS específico do relatório de morte (larguras das colunas do detalhamento,
+// grids de página com layout duplo, tabelas auxiliares).
+const MORTE_CSS = `
+.page2-charts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6mm}
+.page2-charts .chart-card{height:92mm}
+.page4-grid{display:grid;grid-template-columns:1fr 1fr;gap:7mm;align-items:start;height:80mm}
+.distribution-insight{border-left:3px solid #c28a27;background:#fffaf0;border-radius:0 5px 5px 0;padding:6px 10px;margin:0 0 3mm;color:#52635a;font-size:14px;line-height:1.35}
+.distribution-insight strong{color:#805d12}
+.diag-freq{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #dce5df;border-radius:6px;overflow:hidden}
+.diag-freq th{background:#0b6a42;color:#fff;font-size:12px;font-weight:700;text-align:left;padding:7px 10px;letter-spacing:.15px}
+.diag-freq td{color:#4f5f56;font-size:13px;padding:7px 10px;border-bottom:1px solid #e5ebe7;vertical-align:middle}
+.diag-freq tr.striped{background:#f7faf8}
+.diag-freq th:nth-child(1){width:40%}
+.diag-freq th:nth-child(2){width:12%}
+.diag-freq th:nth-child(3){width:13%}
+.diag-freq th:nth-child(4){width:35%}
+.diag-bar{height:8px;background:#edf2ee;border-radius:4px;overflow:hidden}
+.diag-bar i{display:block;height:100%;background:linear-gradient(90deg,#0b6a42,#1a8a5a);border-radius:4px}
+.detail-table th:nth-child(1){width:8%}
+.detail-table th:nth-child(2){width:11%}
+.detail-table th:nth-child(3){width:8%}
+.detail-table th:nth-child(4){width:7%}
+.detail-table th:nth-child(5){width:9%}
+.detail-table th:nth-child(6){width:8%}
+.detail-table th:nth-child(7){width:10%}
+.detail-table th:nth-child(8){width:11%}
+.detail-table th:nth-child(9){width:28%}
+.detail-table td{font-size:13px;padding:8px 6px;line-height:1.25}
+.detail-table th{font-size:13px;padding:9px 6px}
+`
+
+// Script rodado dentro do browser headless para desenhar os 5 gráficos da
+// mortalidade. Recebe os dados via window.__reportData. Chart.js é injetado
+// como UMD antes desse script (ver htmlDocument em template.js), então
+// `window.Chart` está disponível. Sinalizamos conclusão com
+// window.__chartsReady = true para o Puppeteer aguardar antes de imprimir.
+const CHARTS_INIT_JS = `
+(function(){
+  var GREEN_DARK = '#0b6a42'
+  var LIGHT_GREEN = '#A8CDB8'
+  var DARK_TEXT = '#26352e'
+  var Chart = window.Chart
+  if (!Chart) { window.__chartsReady = true; return }
+  Chart.defaults.animation = false
+  Chart.defaults.font.family = 'Arial, Helvetica, sans-serif'
+
+  var data = window.__reportData || {}
+
+  function titleCase(s){ return s ? String(s).trim().split(/\\s+/).map(function(w){return w.charAt(0).toUpperCase()+w.slice(1)}).join(' ') : s }
+
+  function determinarGranularidade(numDias){
+    if (numDias <= 31) return 'dia'
+    if (numDias <= 84) return 'semana'
+    return 'mes'
+  }
+  function chaveAgregacao(dataStr, gran){
+    var parts = dataStr.split('-'); var ano=+parts[0], mes=+parts[1], dia=+parts[2]
+    if (gran === 'dia') return { chave: dataStr, label: String(dia).padStart(2,'0')+'/'+String(mes).padStart(2,'0') }
+    if (gran === 'mes'){
+      var nomes=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+      return { chave: ano+'-'+String(mes).padStart(2,'0'), label: nomes[mes-1]+'/'+String(ano).slice(2) }
+    }
+    var d = new Date(ano, mes-1, dia)
+    var dow = d.getDay(); var diff = dow === 0 ? -6 : 1-dow
+    var monday = new Date(ano, mes-1, dia+diff)
+    return {
+      chave: monday.getFullYear()+'-'+String(monday.getMonth()+1).padStart(2,'0')+'-'+String(monday.getDate()).padStart(2,'0'),
+      label: String(monday.getDate()).padStart(2,'0')+'/'+String(monday.getMonth()+1).padStart(2,'0'),
+    }
+  }
+
+  function drawTempo(){
+    var el = document.getElementById('chart-tempo'); if (!el) return
+    var linhas = data.linhas || []
+    if (!linhas.length) return
+    var diasUnicos = new Set(linhas.map(function(l){return l.data}))
+    var gran = determinarGranularidade(diasUnicos.size)
+    var map = new Map()
+    linhas.forEach(function(l){
+      var k = chaveAgregacao(l.data, gran)
+      var ex = map.get(k.chave)
+      if (ex) ex.count += 1; else map.set(k.chave, { chave: k.chave, label: k.label, count: 1 })
+    })
+    if (gran === 'dia'){
+      var sorted = linhas.map(function(l){return l.data}).sort()
+      var inicio = new Date((data.dataInicio || sorted[0]) + 'T12:00:00')
+      var fim = new Date((data.dataFim || sorted[sorted.length-1]) + 'T12:00:00')
+      for (var atual = new Date(inicio); atual <= fim; atual.setDate(atual.getDate()+1)){
+        var ch = atual.getFullYear()+'-'+String(atual.getMonth()+1).padStart(2,'0')+'-'+String(atual.getDate()).padStart(2,'0')
+        if (!map.has(ch)) map.set(ch, { chave: ch, label: String(atual.getDate()).padStart(2,'0')+'/'+String(atual.getMonth()+1).padStart(2,'0'), count: 0 })
+      }
+    }
+    var dados = Array.from(map.values()).sort(function(a,b){return a.chave.localeCompare(b.chave)})
+    new Chart(el, {
+      type: 'bar',
+      data: { labels: dados.map(function(d){return d.label}), datasets: [{ label:'Mortes', data: dados.map(function(d){return d.count}), backgroundColor: GREEN_DARK, borderRadius: 4, borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.85, maxBarThickness: 60 }]},
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        layout: { padding: { top: 18, right: 12, bottom: 6, left: 8 } },
+        plugins: { legend: { display:false }, title:{display:false}, tooltip:{enabled:false} },
+        scales: {
+          x: { grid:{display:false}, ticks:{ color: DARK_TEXT, font:{size:11, weight:'bold'}, maxRotation:45, minRotation:0, autoSkip:true, maxTicksLimit:12 } },
+          y: { beginAtZero:true, title:{ display:true, text:'Mortes', color: DARK_TEXT, font:{size:11, weight:'bold'} }, suggestedMax: Math.max.apply(null, dados.map(function(d){return d.count}).concat([1])) + 1, ticks:{ color: DARK_TEXT, font:{size:11, weight:'bold'}, precision:0 }, grid:{ color:'#E5E7EB' } },
+        },
+      },
+      plugins: [{
+        id: 'dataLabels',
+        afterDatasetsDraw: function(chart){
+          var ctx = chart.ctx
+          chart.data.datasets[0].data.forEach(function(value, i){
+            var bar = chart.getDatasetMeta(0).data[i]
+            if (!bar || Number(value) === 0) return
+            ctx.save(); ctx.fillStyle = DARK_TEXT; ctx.font = 'bold 11px sans-serif'; ctx.textAlign='center'
+            var labelY = Math.max(bar.y - 4, chart.chartArea.top + 8)
+            ctx.fillText(String(value), bar.x, labelY); ctx.restore()
+          })
+        }
+      }]
+    })
+  }
+
+  function drawBarrasHorizontais(canvasId, itens, ordenar){
+    var el = document.getElementById(canvasId); if (!el) return
+    if (!itens || !itens.length) return
+    var top = (ordenar !== false ? itens.slice().sort(function(a,b){return b.valor - a.valor}) : itens.slice()).slice(0, 12)
+    var total = top.reduce(function(sum,it){return sum + it.valor}, 0)
+    new Chart(el, {
+      type: 'bar',
+      data: { labels: top.map(function(d){return titleCase(d.label)}), datasets: [{ data: top.map(function(d){return d.valor}), backgroundColor: top.map(function(_,i){return i === 0 ? GREEN_DARK : LIGHT_GREEN}), borderRadius: 3, borderSkipped: false, barPercentage: 0.55, categoryPercentage: 0.7, maxBarThickness: 40 }]},
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: false,
+        layout: { padding: { top: 6, right: 60, bottom: 4, left: 4 } },
+        plugins: { legend:{display:false}, title:{display:false}, tooltip:{enabled:false} },
+        scales: {
+          x: { beginAtZero:true, suggestedMax: Math.max.apply(null, top.map(function(d){return d.valor}).concat([1])) + 1, ticks:{ color: DARK_TEXT, font:{size:10, weight:'bold'}, precision:0 }, grid:{ color:'#E5E7EB' } },
+          y: { grid:{display:false}, ticks:{ color: DARK_TEXT, font:{size:11, weight:'bold'} } },
+        },
+      },
+      plugins: [{
+        id: 'dataLabels',
+        afterDatasetsDraw: function(chart){
+          var ctx = chart.ctx; var area = chart.chartArea
+          chart.data.datasets[0].data.forEach(function(value, i){
+            var bar = chart.getDatasetMeta(0).data[i]; if (!bar) return
+            var pct = total > 0 ? ((Number(value)/total)*100).toFixed(1).replace('.', ',') : '0,0'
+            var label = value + ' · ' + pct + '%'
+            var x = Math.min(bar.x + 6, area.right + 55)
+            ctx.save(); ctx.fillStyle = DARK_TEXT; ctx.font = 'bold 11px sans-serif'; ctx.textAlign='left'
+            ctx.fillText(label, x, bar.y + 3); ctx.restore()
+          })
+        }
+      }]
+    })
+  }
+
+  drawTempo()
+  drawBarrasHorizontais('chart-causa', (data.resumo && data.resumo.por_causa) || [])
+  drawBarrasHorizontais('chart-categoria', (data.resumo && data.resumo.por_categoria) || [])
+  drawBarrasHorizontais('chart-sexo', (data.resumo && data.resumo.por_sexo) || [])
+  drawBarrasHorizontais('chart-pasto', (data.resumo && data.resumo.por_pasto) || [])
+
+  window.__chartsReady = true
+})();
+`
+
+function renderMorteHtml(input) {
+  const resumo = input.resumo
+  const rows = [...input.linhas].sort((a, b) =>
+    a.data !== b.data ? b.data.localeCompare(a.data) : (a.lote_nome ?? '').localeCompare(b.lote_nome ?? ''),
+  )
   const causa = resumo.causa_mais_frequente ? `${resumo.causa_mais_frequente} (${resumo.causa_mais_frequente_count ?? 0})` : '—'
-  const rows = [...data.linhas].sort((a, b) => a.data !== b.data ? b.data.localeCompare(a.data) : (a.lote_nome ?? '').localeCompare(b.lote_nome ?? ''))
-  const diagTotal = resumo.frequencia_diagnosticos.reduce((sum, item) => sum + item.valor, 0)
-  const diagRows = resumo.frequencia_diagnosticos.map((item, index) => `<tr class="${index % 2 ? '' : 'alt'}"><td>${escapeHtml(diagLabel(item.label))}</td><td>${item.valor}</td><td>${diagTotal ? ((item.valor / diagTotal) * 100).toFixed(1).replace('.', ',') : '0,0'}%</td></tr>`).join('')
-  const detailRows = rows.map((line, index) => `<tr class="${index % 2 ? '' : 'alt'}"><td>${dateFmt(line.data)}</td><td>${escapeHtml(line.lote_nome)}</td><td>${escapeHtml(line.pasto)}</td><td>${escapeHtml(line.sexo)}</td><td>${escapeHtml(line.idade)}</td><td>${numFmt(line.peso_vivo, 0)}</td><td>${escapeHtml(line.categoria)}</td><td>${escapeHtml(line.causa_morte)}</td><td>${escapeHtml(compactDiagnostics(line.diagnosticos))}</td></tr>`).join('')
-  const previous = resumo.periodo_anterior ? `${intFmt(resumo.periodo_anterior.total_mortes)} mortes` : ''
-  const previousSub = resumo.periodo_anterior ? `${dateFmt(resumo.periodo_anterior.data_inicio)} a ${dateFmt(resumo.periodo_anterior.data_fim)}${resumo.periodo_anterior.taxa_mortalidade != null ? ` · Taxa: ${numFmt(resumo.periodo_anterior.taxa_mortalidade)}%` : ''}` : ''
-  const secondKpis = resumo.taxa_mortalidade != null || (resumo.perda_estimada != null && resumo.perda_estimada > 0) || resumo.periodo_anterior
+  const diagnosticos = resumo.frequencia_diagnosticos ?? []
+  const diagnosticoTotal = diagnosticos.reduce((sum, item) => sum + item.valor, 0)
+  const diagnosticosVisiveis = [...diagnosticos].sort((a, b) => b.valor - a.valor).slice(0, 6)
+  const diagnosticoRows = diagnosticosVisiveis
+    .map((item, index) => {
+      const pct = diagnosticoTotal ? (item.valor / diagnosticoTotal) * 100 : 0
+      return `<tr class="${index % 2 ? '' : 'striped'}"><td>${escapeHtml(diagLabel(item.label))}</td><td class="numeric">${item.valor}</td><td class="numeric">${pct.toFixed(1).replace('.', ',')}%</td><td><div class="diag-bar"><i style="width:${Math.max(2, pct)}%"></i></div></td></tr>`
+    })
+    .join('')
 
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><style>
-@page{size:A4 landscape;margin:0}*{box-sizing:border-box}body{margin:0;background:#f5f5f5;color:#1f2937;font-family:Arial,Helvetica,sans-serif;font-size:10px}.page{width:297mm;min-height:210mm;padding:9mm 11mm 16mm;position:relative;page-break-after:always}.page:last-child{page-break-after:auto}.header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0f6437;padding-bottom:4mm;margin-bottom:4mm}.header-left{display:flex;align-items:center;gap:8px}.header-left img{width:40px;height:40px;object-fit:contain}.system{display:block;font-size:12px}.system b{color:#b7791f}.title{display:block;color:#0f6437;font-size:16px;margin-top:2px}.muted,footer{color:#6b7280;font-size:9px}.farm-logo img{width:80px;height:45px;object-fit:contain}.eyebrow{font-size:8px;letter-spacing:1px;text-transform:uppercase;font-weight:bold;color:#0f6437;margin:0 0 2mm}.period{display:inline-block;background:white;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;font-weight:bold;margin-bottom:3mm}.insight{background:#fff;border:1px solid #e5e7eb;border-left:3px solid #0f6437;border-radius:4px;padding:8px;margin-bottom:3mm;line-height:1.45}.insight label{display:block;color:#0f6437;font-weight:bold;font-size:7px;letter-spacing:.6px;text-transform:uppercase;margin-bottom:3px}.kpis{display:flex;gap:6px;margin-bottom:6px}.kpi{flex:1;background:#fff;border:1px solid #d1d5db;border-top:3px solid #0f6437;border-radius:5px;padding:7px;text-align:center;min-height:46px}.kpi.red{border-top-color:#ef4444}.kpi strong,.kpi span,.kpi small{display:block}.kpi strong{font-size:16px;color:#0f6437}.kpi.red strong{color:#ef4444}.kpi span{font-size:8px;color:#6b7280;margin-top:2px}.kpi small{font-size:7px;color:#6b7280;margin-top:1px}.charts{display:flex;gap:8px;height:78mm}.chart-card{flex:1;background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:5px;display:flex;align-items:center;justify-content:center}.chart-card img{width:100%;height:100%;object-fit:contain}.empty{color:#6b7280;font-size:9px}.charts-title{font-size:14px;margin:0 0 3mm}.table-title{font-size:12px;margin:0 0 2mm}.table-wrap{margin-top:5mm}table{width:100%;border-collapse:collapse;table-layout:fixed}th{background:#0f6437;color:#fff;font-size:8px;padding:5px 2px}td{font-size:7px;padding:4px 2px;text-align:center;border-bottom:1px solid #e5e7eb;overflow-wrap:anywhere}td:first-child{text-align:left;padding-left:4px}.alt{background:#f9fafb}th:nth-child(1),td:nth-child(1){width:8%}th:nth-child(2),td:nth-child(2){width:10%}th:nth-child(3),td:nth-child(3){width:8%}th:nth-child(4),td:nth-child(4){width:7%}th:nth-child(5),td:nth-child(5){width:7%}th:nth-child(6),td:nth-child(6){width:8%}th:nth-child(7),td:nth-child(7){width:10%}th:nth-child(8),td:nth-child(8){width:10%}th:nth-child(9),td:nth-child(9){width:32%}footer{position:absolute;bottom:6mm;left:11mm;right:11mm;border-top:1px solid #d1d5db;padding-top:2mm;display:flex;justify-content:space-between}footer .page-number:after{content:'Página ' counter(page) ' de ' counter(pages)}
-</style></head><body>
-<section class="page">${header(data)}<p class="eyebrow">Resumo executivo</p><div class="period">${dateFmt(data.dataInicio)} &nbsp; a &nbsp; ${dateFmt(data.dataFim)}</div>${resumo.insights ? `<div class="insight"><label>Análise do período</label>${escapeHtml(resumo.insights)}</div>` : ''}<div class="kpis">${kpi(intFmt(resumo.total_mortes), 'Total de mortes')}${kpi(numFmt(resumo.media_por_dia), 'Mortes/dia (média)')}${kpi(numFmt(resumo.peso_medio, 1), 'Peso médio (kg)')}${kpi(causa, 'Causa mais frequente')}</div>${secondKpis ? `<div class="kpis">${kpi(resumo.taxa_mortalidade != null ? `${numFmt(resumo.taxa_mortalidade)}%` : '—', 'Taxa de mortalidade', resumo.rebanho_total ? `Rebanho: ${intFmt(resumo.rebanho_total)} cab.` : '')}${kpi(resumo.perda_estimada != null && resumo.perda_estimada > 0 ? `R$ ${moneyFmt(resumo.perda_estimada)}` : '—', 'Perda estimada', resumo.peso_total_perdido ? `${numFmt(resumo.peso_total_perdido, 0)} kg perdidos` : '', true)}${kpi(previous, 'Período anterior', previousSub)}</div>` : ''}<div class="charts">${chart(data.chartTempo)}${chart(data.chartCausa)}</div>${footer(data)}</section>
-<section class="page">${header(data)}<p class="eyebrow">Análise de distribuição</p><h2 class="charts-title">Distribuição das mortes</h2><div class="charts">${chart(data.chartCategoria)}${chart(data.chartSexo)}</div>${footer(data)}</section>
-${diagRows || detailRows ? `<section class="page">${header(data)}<p class="eyebrow">Detalhamento</p>${diagRows ? `<h2 class="table-title">Frequência de diagnósticos</h2><table><thead><tr><th style="width:60%;text-align:left;padding-left:4px">Diagnóstico</th><th style="width:25%">Mortes</th><th style="width:15%">%</th></tr></thead><tbody>${diagRows}</tbody></table>` : ''}${detailRows ? `<div class="table-wrap"><h2 class="table-title">Registros detalhados</h2><table><thead><tr><th>Data</th><th>Lote</th><th>Pasto</th><th>Sexo</th><th>Idade</th><th>Peso (kg)</th><th>Categoria</th><th>Causa</th><th>Diagnósticos</th></tr></thead><tbody>${detailRows}</tbody></table></div>` : ''}${footer(data)}</section>` : ''}</body></html>`
+  const previous = resumo.periodo_anterior ? `${intFmt(resumo.periodo_anterior.total_mortes)} mortes` : '—'
+  const previousSub = resumo.periodo_anterior
+    ? `${dateFmt(resumo.periodo_anterior.data_inicio)} a ${dateFmt(resumo.periodo_anterior.data_fim)}`
+    : 'Sem comparação disponível'
+  const insights =
+    resumo.insights ||
+    `Foram registradas ${intFmt(resumo.total_mortes)} mortes no período, com taxa de mortalidade de ${resumo.taxa_mortalidade != null ? `${numFmt(resumo.taxa_mortalidade)}%` : '—'}.`
+  const totalCategorias = (resumo.por_categoria ?? []).reduce((sum, item) => sum + item.valor, 0)
+  const categoriaPrincipal = [...(resumo.por_categoria ?? [])].sort((a, b) => b.valor - a.valor)[0]
+  const sexoPrincipal = [...(resumo.por_sexo ?? [])].sort((a, b) => b.valor - a.valor)[0]
+  const distribuicaoInsight =
+    categoriaPrincipal && sexoPrincipal
+      ? `${titleCase(categoriaPrincipal.label)} concentra ${totalCategorias ? ((categoriaPrincipal.valor / totalCategorias) * 100).toFixed(1).replace('.', ',') : '0,0'}% das mortes; ${sexoPrincipal.label.toLowerCase()} representa ${resumo.total_mortes ? ((sexoPrincipal.valor / resumo.total_mortes) * 100).toFixed(1).replace('.', ',') : '0,0'}% dos registros.`
+      : ''
+
+  // Paginação da tabela de detalhamento: chunks de DETAIL_ROWS_PER_PAGE
+  const detailChunks = rows.length === 0 ? [[]] : []
+  for (let i = 0; i < rows.length; i += DETAIL_ROWS_PER_PAGE) {
+    detailChunks.push(rows.slice(i, i + DETAIL_ROWS_PER_PAGE))
+  }
+  const totalPages = 4 + detailChunks.length
+
+  const brand = { logoGestao: input.logoGestao, logoFazenda: input.logoFazenda, fazendaNome: input.fazendaNome }
+  const period = { dataInicio: input.dataInicio, dataFim: input.dataFim }
+
+  const hasPor = (arr) => Array.isArray(arr) && arr.length > 0
+
+  const page1 = pageSection(`
+    ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Resumo executivo', sectionLabel: 'Visão geral' })}
+    <p class="section-kicker">Resumo do período</p>
+    <div class="period-badge">${dateFmt(input.dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(input.dataFim)}</div>
+    <div class="insight-box"><span class="insight-label">Análise do período</span>${escapeHtml(insights)}</div>
+    <div class="kpi-grid">
+      ${kpi(intFmt(resumo.total_mortes), 'Total de mortes')}
+      ${kpi(resumo.taxa_mortalidade != null ? `${numFmt(resumo.taxa_mortalidade)}%` : '—', 'Taxa de mortalidade', resumo.rebanho_total ? `Rebanho: ${intFmt(resumo.rebanho_total)} cabeças` : '', 'gold')}
+      ${kpi(numFmt(resumo.media_por_dia, 2), 'Mortes por dia', 'Média do período')}
+      ${kpi(numFmt(resumo.peso_medio, 1), 'Peso médio', 'kg por animal')}
+    </div>
+    <div class="kpi-grid secondary">
+      ${kpi(causa, 'Causa mais frequente')}
+      ${kpi(resumo.perda_estimada != null ? `R$ ${moneyFmt(resumo.perda_estimada)}` : '—', 'Perda estimada', resumo.peso_total_perdido != null ? `${numFmt(resumo.peso_total_perdido, 0)} kg perdidos` : '', 'red')}
+      ${kpi(previous, 'Período anterior', previousSub, 'gold')}
+    </div>
+    ${renderFooter({ ...period, page: 1, totalPages })}
+  `)
+
+  const page2 = pageSection(`
+    ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Distribuição temporal', sectionLabel: 'Análise' })}
+    <p class="section-kicker">Evolução e causas</p>
+    <div class="page2-charts">
+      ${chartCard({ canvasId: 'chart-tempo', title: 'Mortes por dia', subtitle: 'Evolução dos registros no período', hasData: input.linhas.length > 0 })}
+      ${chartCard({ canvasId: 'chart-causa', title: 'Mortes por causa', subtitle: 'Distribuição das causas registradas', hasData: hasPor(resumo.por_causa) })}
+    </div>
+    ${renderFooter({ ...period, page: 2, totalPages })}
+  `)
+
+  const page3 = pageSection(`
+    ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Distribuição demográfica', sectionLabel: 'Análise' })}
+    <p class="section-kicker">Categoria e sexo</p>
+    <div class="page2-charts">
+      ${chartCard({ canvasId: 'chart-categoria', title: 'Mortes por categoria', subtitle: 'Quantidade e participação por categoria', hasData: hasPor(resumo.por_categoria) })}
+      ${chartCard({ canvasId: 'chart-sexo', title: 'Mortes por sexo', subtitle: 'Quantidade e participação por sexo', hasData: hasPor(resumo.por_sexo) })}
+    </div>
+    ${distribuicaoInsight ? `<div class="distribution-insight"><strong>Leitura executiva:</strong> ${escapeHtml(distribuicaoInsight)}</div>` : ''}
+    ${renderFooter({ ...period, page: 3, totalPages })}
+  `)
+
+  const page4 = pageSection(`
+    ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Pastos e cruzamentos', sectionLabel: 'Análise cruzada' })}
+    <p class="section-kicker">Concentração geográfica e causa-categoria</p>
+    <div class="page4-grid">
+      <div>${chartCard({ canvasId: 'chart-pasto', title: 'Mortes por pasto', subtitle: 'Distribuição por pasto', hasData: hasPor(resumo.por_pasto), height: '100%' })}</div>
+      <div>${heatmapHtml(resumo.matriz_causa_categoria)}</div>
+    </div>
+    ${diagnosticoRows ? `<div class="table-block" style="margin-top:10mm"><h2 class="table-title">Diagnósticos mais frequentes <span>${diagnosticosVisiveis.length} de ${diagnosticos.length} categorias</span></h2><table class="diag-freq"><thead><tr><th>Diagnóstico</th><th>Mortes</th><th>% do total</th><th>Distribuição</th></tr></thead><tbody>${diagnosticoRows}</tbody></table></div>` : ''}
+    ${renderFooter({ ...period, page: 4, totalPages })}
+  `)
+
+  const detailHeader = `<thead><tr><th>Data</th><th>Lote</th><th>Pasto</th><th>Sexo</th><th>Idade</th><th>Peso</th><th>Categoria</th><th>Causa</th><th>Diagnósticos</th></tr></thead>`
+  const renderDetailRow = (line, index) =>
+    `<tr class="${index % 2 ? '' : 'striped'}"><td>${dateFmt(line.data)}</td><td>${escapeHtml(line.lote_nome)}</td><td>${escapeHtml(line.pasto)}</td><td>${escapeHtml(line.sexo)}</td><td>${escapeHtml(line.idade)}</td><td class="numeric">${numFmt(line.peso_vivo, 0)}</td><td>${escapeHtml(titleCase(line.categoria))}</td><td>${escapeHtml(line.causa_morte)}</td><td>${escapeHtml(compactDiagnostics(line.diagnosticos))}</td></tr>`
+
+  const detailPages = detailChunks
+    .map((chunk, chunkIndex) => {
+      const startRow = chunkIndex * DETAIL_ROWS_PER_PAGE
+      const bodyRows = chunk.map((line, i) => renderDetailRow(line, startRow + i)).join('')
+      const isFirstChunk = chunkIndex === 0
+      const isLastChunk = chunkIndex === detailChunks.length - 1
+      const suffix = detailChunks.length > 1 ? ` (${chunkIndex + 1}/${detailChunks.length})` : ''
+      const sectionName = `Detalhamento${suffix}`
+      const content = bodyRows
+        ? `<div class="table-block"><h2 class="table-title">Registros detalhados <span>${rows.length} registro(s)${isFirstChunk && !isLastChunk ? ` · exibindo ${startRow + 1}–${startRow + chunk.length}` : detailChunks.length > 1 ? ` · exibindo ${startRow + 1}–${startRow + chunk.length}` : ''}</span></h2><table class="detail-table">${detailHeader}<tbody>${bodyRows}</tbody></table></div>`
+        : '<div class="empty-chart" style="height:40mm">Nenhum registro detalhado no período</div>'
+      return pageSection(`
+        ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: sectionName, sectionLabel: 'Registros' })}
+        <p class="section-kicker">Rastreabilidade dos registros</p>
+        ${content}
+        ${renderFooter({ ...period, page: 4 + chunkIndex + 1, totalPages })}
+      `)
+    })
+    .join('')
+
+  return htmlDocument({
+    title: 'Relatório de Mortalidade',
+    extraCss: MORTE_CSS,
+    body: `${page1}${page2}${page3}${page4}${detailPages}`,
+    chartJsScript: getChartJsScript(),
+    chartsInit: CHARTS_INIT_JS,
+    dataJson: {
+      dataInicio: input.dataInicio,
+      dataFim: input.dataFim,
+      linhas: input.linhas.map((l) => ({ data: l.data })),
+      resumo: {
+        por_causa: resumo.por_causa ?? [],
+        por_categoria: resumo.por_categoria ?? [],
+        por_sexo: resumo.por_sexo ?? [],
+        por_pasto: resumo.por_pasto ?? [],
+      },
+    },
+  })
 }
 
 export default async function handler(req, res) {
@@ -61,7 +386,6 @@ export default async function handler(req, res) {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Método não permitido' })
   }
-
   const body = req.body
   if (!isPDFData(body) || body.linhas.length > MAX_LINES) {
     return res.status(400).json({ error: 'Payload de relatório inválido ou grande demais' })
@@ -70,42 +394,22 @@ export default async function handler(req, res) {
     return res.status(413).json({ error: 'Payload do relatório excede o limite permitido' })
   }
 
-  let browser
   try {
-    const [{ default: chromium }, { default: puppeteer }] = await Promise.all([
-      import('@sparticuz/chromium'),
-      import('puppeteer-core'),
-    ])
-
-    const isVercel = Boolean(process.env.VERCEL)
-    const executablePath = isVercel ? await chromium.executablePath() : process.env.PUPPETEER_EXECUTABLE_PATH
-    if (!executablePath) {
-      throw new Error('PUPPETEER_EXECUTABLE_PATH não está configurado para execução local')
-    }
-    browser = await puppeteer.launch({
-      args: isVercel ? chromium.args : [],
-      defaultViewport: { width: 1280, height: 900 },
-      executablePath,
-      headless: true,
-    })
-    const page = await browser.newPage()
-    await page.setContent(renderMorteHtml(body), { waitUntil: 'load' })
-    const pdf = await page.pdf({
+    const pdf = await generatePdf({
+      html: renderMorteHtml(body),
       format: 'A4',
       landscape: true,
-      printBackground: true,
-      preferCSSPageSize: true,
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
+      beforePdf: async (page) => {
+        await page.waitForFunction('window.__chartsReady === true', { timeout: 15000 }).catch(() => {})
+      },
     })
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', 'attachment; filename="relatorio-mortalidade.pdf"')
     res.setHeader('Cache-Control', 'no-store')
     res.setHeader('X-PDF-Renderer', 'puppeteer')
-    return res.status(200).send(Buffer.from(pdf))
+    return res.status(200).send(pdf)
   } catch (error) {
     console.error('Erro ao gerar relatório de mortalidade com Puppeteer:', error)
     return res.status(500).json({ error: 'Não foi possível gerar o PDF', detail: String(error) })
-  } finally {
-    if (browser) await browser.close()
   }
 }

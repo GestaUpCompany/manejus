@@ -5,9 +5,6 @@ import {
   LabelList,
 } from 'recharts'
 import logoManejus from '/images/manejus360.png'
-import {
-  gerarRelatorioMortePDFReact,
-} from '../../utils/relatorioMortePDFReact'
 import { gerarRelatorioMortePDFPuppeteer } from '../../utils/relatorioMortePDFPuppeteer'
 import {
   type LinhaMorte,
@@ -357,7 +354,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
 
     // Taxa de mortalidade
     if (taxaMortalidade != null) {
-      partes.push(`A taxa de mortalidade no período foi ${formatarNumero(taxaMortalidade, 2)}% do rebanho (${formatarInteiro(rebanhoTotal)} cabeças).`)
+      partes.push(`A taxa de mortalidade no período foi ${formatarNumero(taxaMortalidade, 2)}% (${formatarInteiro(totalMortes)} ${totalMortes === 1 ? 'morte' : 'mortes'} em um rebanho de ${formatarInteiro(rebanhoTotal)} cabeças).`)
     }
 
     // Comparação com período anterior
@@ -499,7 +496,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
     return 'Pasto'
   }
 
-  const exportarPDF = async (motor: 'puppeteer' | 'react') => {
+  const exportarPDF = async () => {
     if (!dados || linhasFiltradas.length === 0) return
     try {
       setExportandoPDF(true)
@@ -513,6 +510,12 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
         por_causa: porCausa,
         por_categoria: porCategoria,
         por_sexo: porSexo,
+        por_pasto: porPasto,
+        matriz_causa_categoria: {
+          causas: heatmapCausaCategoria.causas,
+          categorias: heatmapCausaCategoria.categorias,
+          matriz: heatmapCausaCategoria.matriz,
+        },
         frequencia_diagnosticos: frequenciaDiagnosticos,
         taxa_mortalidade: taxaMortalidade,
         rebanho_total: rebanhoTotal,
@@ -539,9 +542,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
         linhas: linhasFiltradas,
         resumo: resumoParaPDF,
       }
-      const blob = motor === 'puppeteer'
-        ? await gerarRelatorioMortePDFPuppeteer(parametrosPDF)
-        : await gerarRelatorioMortePDFReact(parametrosPDF)
+      const blob = await gerarRelatorioMortePDFPuppeteer(parametrosPDF)
 
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -553,8 +554,8 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
     } catch (err) {
-      console.error(`Erro ao exportar PDF com ${motor}:`, err)
-      alert(`Erro ao gerar PDF com ${motor === 'puppeteer' ? 'Puppeteer' : 'React PDF'}. Tente novamente.`)
+      console.error('Erro ao exportar PDF com Puppeteer:', err)
+      alert('Erro ao gerar PDF. Tente novamente.')
     } finally {
       setExportandoPDF(false)
     }
@@ -697,22 +698,13 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
               )}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => exportarPDF('puppeteer')}
+                  onClick={exportarPDF}
                   disabled={exportandoPDF || linhasFiltradas.length === 0}
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  style={{ backgroundColor: GREEN_DARK }}
-                  title="Gera o PDF no servidor com Puppeteer"
+                  className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  style={{ color: GREEN_DARK, borderColor: GREEN_DARK }}
+                  title="Baixar relatório em PDF"
                 >
-                  {exportandoPDF ? 'Gerando...' : 'PDF Puppeteer'}
-                </button>
-                <button
-                  onClick={() => exportarPDF('react')}
-                  disabled={exportandoPDF || linhasFiltradas.length === 0}
-                  className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  style={{ color: GREEN_DARK }}
-                  title="Gera o PDF localmente no navegador"
-                >
-                  PDF local
+                  {exportandoPDF ? 'Gerando...' : 'Baixar PDF'}
                 </button>
               </div>
             </div>

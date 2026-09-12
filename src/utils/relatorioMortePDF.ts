@@ -47,6 +47,12 @@ export interface ResumoMorte {
   por_causa: AgregadoItem[]
   por_categoria: AgregadoItem[]
   por_sexo: AgregadoItem[]
+  por_pasto?: AgregadoItem[]
+  matriz_causa_categoria?: {
+    causas: string[]
+    categorias: string[]
+    matriz: Record<string, Record<string, number>>
+  }
   frequencia_diagnosticos: AgregadoItem[]
   // Campos opcionais para o PDF (calculados no frontend)
   taxa_mortalidade?: number | null
@@ -160,6 +166,11 @@ export function labelDiagnostico(chave: string): string {
   return DIAG_LABELS[chave] ?? chave
 }
 
+function titleCase(s: string | null | undefined): string {
+  if (!s) return s ?? ''
+  return s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
 // === Granularidade adaptativa ===
 
 type Granularidade = 'dia' | 'semana' | 'mes'
@@ -189,18 +200,14 @@ function chaveAgregacao(data: string, gran: Granularidade): { chave: string; lab
   }
 }
 
-function labelGranularidadeTexto(gran: Granularidade): string {
-  if (gran === 'dia') return 'por dia'
-  if (gran === 'semana') return 'por semana'
-  return 'por mês'
-}
-
 // === Gráfico de mortes no tempo (granularidade adaptativa) ===
 
 export async function renderizarGraficoMortesTempo(
   linhas: LinhaMorte[],
   width: number,
-  height: number
+  height: number,
+  dataInicio?: string,
+  dataFim?: string
 ): Promise<string | null> {
   if (linhas.length === 0) return null
   const diasUnicos = new Set(linhas.map((l) => l.data))
@@ -212,6 +219,14 @@ export async function renderizarGraficoMortesTempo(
     const existing = porPeriodo.get(chave)
     if (existing) existing.count += 1
     else porPeriodo.set(chave, { chave, label, count: 1 })
+  }
+  if (gran === 'dia') {
+    const inicio = new Date(`${dataInicio ?? linhas.map((l) => l.data).sort()[0]}T12:00:00`)
+    const fim = new Date(`${dataFim ?? linhas.map((l) => l.data).sort()[linhas.length - 1]}T12:00:00`)
+    for (const atual = new Date(inicio); atual <= fim; atual.setDate(atual.getDate() + 1)) {
+      const chave = `${atual.getFullYear()}-${String(atual.getMonth() + 1).padStart(2, '0')}-${String(atual.getDate()).padStart(2, '0')}`
+      if (!porPeriodo.has(chave)) porPeriodo.set(chave, { chave, label: `${String(atual.getDate()).padStart(2, '0')}/${String(atual.getMonth() + 1).padStart(2, '0')}`, count: 0 })
+    }
   }
   const dados = Array.from(porPeriodo.values()).sort((a, b) => a.chave.localeCompare(b.chave))
   if (dados.length === 0) return null
@@ -234,31 +249,25 @@ export async function renderizarGraficoMortesTempo(
         backgroundColor: GREEN_DARK,
         borderRadius: 4,
         borderSkipped: false,
-        barPercentage: 0.6,
+        barPercentage: 0.7,
         categoryPercentage: 0.85,
+        maxBarThickness: 80,
       }],
     },
     options: {
       responsive: false,
       maintainAspectRatio: false,
       animation: false,
-      layout: { padding: { top: 42, right: 18, bottom: 35, left: 40 } },
+      layout: { padding: { top: 18, right: 24, bottom: 38, left: 48 } },
       plugins: {
         legend: { display: false },
-        title: {
-          display: true,
-          text: `Mortes ${labelGranularidadeTexto(gran)}`,
-          align: 'center',
-          color: DARK_TEXT,
-          font: { size: 22, weight: 'bold' },
-          padding: { bottom: 8 },
-        },
+        title: { display: false },
         tooltip: { enabled: false },
       },
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: MEDIUM_TEXT, font: { size: 12 }, maxRotation: 45, minRotation: 0, precision: 0 },
+          ticks: { color: DARK_TEXT, font: { size: 36, weight: 'bold' }, maxRotation: 45, minRotation: 0, precision: 0, autoSkip: true, maxTicksLimit: 8 },
         },
         y: {
           beginAtZero: true,
@@ -266,10 +275,10 @@ export async function renderizarGraficoMortesTempo(
             display: true,
             text: 'Mortes',
             color: DARK_TEXT,
-            font: { size: 14, weight: 'bold' },
+            font: { size: 30, weight: 'bold' },
           },
           suggestedMax: Math.max(...dados.map((d) => d.count), 1) + 1,
-          ticks: { color: MEDIUM_TEXT, font: { size: 12 }, precision: 0 },
+          ticks: { color: DARK_TEXT, font: { size: 30, weight: 'bold' }, precision: 0 },
           grid: { color: '#E5E7EB' },
         },
       },
@@ -281,10 +290,10 @@ export async function renderizarGraficoMortesTempo(
         chart.data.datasets[0].data.forEach((value, i) => {
           const meta = chart.getDatasetMeta(0)
           const bar = meta.data[i]
-          if (!bar) return
+          if (!bar || Number(value) === 0) return
           ctx.save()
           ctx.fillStyle = DARK_TEXT
-          ctx.font = 'bold 28px sans-serif'
+          ctx.font = 'bold 38px sans-serif'
           ctx.textAlign = 'center'
           const chartArea = chart.chartArea
           const labelY = Math.max(bar.y - 6, chartArea.top + 12)
@@ -309,8 +318,8 @@ export async function renderizarGraficoBarrasHorizontais(
   height: number
 ): Promise<string | null> {
   if (itens.length === 0) return null
-  // Top 12 para não poluir
-  const top = itens.slice(0, 12)
+  const top = [...itens].sort((a, b) => b.valor - a.valor).slice(0, 12)
+  const total = top.reduce((sum, item) => sum + item.valor, 0)
 
   const canvas = document.createElement('canvas')
   const pxPerMm = 8
@@ -323,15 +332,16 @@ export async function renderizarGraficoBarrasHorizontais(
   const chart = new ChartMod.default(ctx, {
     type: 'bar',
     data: {
-      labels: top.map((d) => d.label),
+      labels: top.map((d) => titleCase(d.label)),
       datasets: [{
         label: titulo,
         data: top.map((d) => d.valor),
-        backgroundColor: top.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
+        backgroundColor: top.map((_, i) => i === 0 ? GREEN_DARK : '#A8CDB8'),
         borderRadius: 3,
         borderSkipped: false,
-        barPercentage: 0.7,
-        categoryPercentage: 0.9,
+        barPercentage: 0.45,
+        categoryPercentage: 0.6,
+        maxBarThickness: 60,
       }],
     },
     options: {
@@ -339,29 +349,22 @@ export async function renderizarGraficoBarrasHorizontais(
       responsive: false,
       maintainAspectRatio: false,
       animation: false,
-      layout: { padding: { top: 35, right: 48, bottom: 10, left: 15 } },
+      layout: { padding: { top: 18, right: 95, bottom: 14, left: 20 } },
       plugins: {
         legend: { display: false },
-        title: {
-          display: true,
-          text: titulo,
-          align: 'center',
-          color: DARK_TEXT,
-          font: { size: 22, weight: 'bold' },
-          padding: { bottom: 8 },
-        },
+        title: { display: false },
         tooltip: { enabled: false },
       },
       scales: {
         x: {
           beginAtZero: true,
           suggestedMax: Math.max(...top.map((d) => d.valor), 1) + 1,
-          ticks: { color: MEDIUM_TEXT, font: { size: 11 }, precision: 0 },
+          ticks: { color: DARK_TEXT, font: { size: 36, weight: 'bold' }, precision: 0 },
           grid: { color: '#E5E7EB' },
         },
         y: {
           grid: { display: false },
-          ticks: { color: DARK_TEXT, font: { size: 12 } },
+          ticks: { color: DARK_TEXT, font: { size: 36, weight: 'bold' } },
         },
       },
     },
@@ -374,23 +377,92 @@ export async function renderizarGraficoBarrasHorizontais(
           const meta = chart.getDatasetMeta(0)
           const bar = meta.data[i] as any
           if (!bar) return
-          const label = String(value)
+          const pct = total > 0 ? ((Number(value) / total) * 100).toFixed(1).replace('.', ',') : '0,0'
+          const label = `${value} · ${pct}%`
           // Em barras horizontais, bar.x representa o extremo da barra.
           // O rótulo fica sempre fora, evitando texto branco sobre o fundo claro.
-          const x = Math.min(bar.x + 7, chartArea.right + 30)
+          const x = Math.min(bar.x + 9, chartArea.right + 80)
           ctx.save()
           ctx.fillStyle = DARK_TEXT
-          ctx.font = 'bold 28px sans-serif'
+          ctx.font = 'bold 38px sans-serif'
           ctx.textAlign = 'left'
           // bar.y já é o centro vertical do elemento no Chart.js.
           // O pequeno ajuste compensa a linha de base da fonte.
-          ctx.fillText(label, x, bar.y + 4)
+          ctx.fillText(label, x, bar.y + 5)
           ctx.restore()
         })
       },
     }],
   })
 
+  const image = chart.toBase64Image()
+  chart.destroy()
+  return image
+}
+
+// === Gráfico de sexo ===
+
+export async function renderizarGraficoSexo(
+  itens: AgregadoItem[],
+  width: number,
+  height: number
+): Promise<string | null> {
+  if (itens.length === 0) return null
+  const dados = [...itens].sort((a, b) => b.valor - a.valor)
+  const total = dados.reduce((sum, item) => sum + item.valor, 0)
+  const canvas = document.createElement('canvas')
+  const pxPerMm = 8
+  canvas.width = Math.round(width * pxPerMm)
+  canvas.height = Math.round(height * pxPerMm)
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+
+  const ChartMod = await import('chart.js/auto')
+  const chart = new ChartMod.default(ctx, {
+    type: 'bar',
+    data: {
+      labels: dados.map((item) => titleCase(item.label)),
+      datasets: [{
+        data: dados.map((item) => item.valor),
+        backgroundColor: dados.map((_, index) => index === 0 ? GREEN_DARK : '#A8CDB8'),
+        borderRadius: 5,
+        borderSkipped: false,
+        barPercentage: 0.45,
+        categoryPercentage: 0.6,
+        maxBarThickness: 60,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: false,
+      maintainAspectRatio: false,
+      animation: false,
+      layout: { padding: { top: 18, right: 130, bottom: 16, left: 18 } },
+      plugins: { legend: { display: false }, title: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { beginAtZero: true, max: Math.max(total, 1), ticks: { display: false }, grid: { display: false }, border: { display: false } },
+        y: { grid: { display: false }, ticks: { color: DARK_TEXT, font: { size: 36, weight: 'bold' } }, border: { display: false } },
+      },
+    },
+    plugins: [{
+      id: 'sexoLabels',
+      afterDatasetsDraw(chart) {
+        const meta = chart.getDatasetMeta(0)
+        const context = chart.ctx
+        dados.forEach((item, index) => {
+          const bar = meta.data[index] as any
+          if (!bar) return
+          const pct = total > 0 ? ((item.valor / total) * 100).toFixed(1).replace('.', ',') : '0,0'
+          context.save()
+          context.fillStyle = DARK_TEXT
+          context.font = 'bold 38px sans-serif'
+          context.textAlign = 'left'
+          context.fillText(`${item.valor} · ${pct}%`, Math.min(bar.x + 10, chart.chartArea.right + 95), bar.y + 6)
+          context.restore()
+        })
+      },
+    }],
+  })
   const image = chart.toBase64Image()
   chart.destroy()
   return image
@@ -435,14 +507,14 @@ export async function renderizarGraficoDonut(
         legend: {
           display: true,
           position: 'bottom',
-          labels: { color: DARK_TEXT, font: { size: 20, weight: 'bold' }, boxWidth: 20, padding: 28 },
+          labels: { color: DARK_TEXT, font: { size: 30, weight: 'bold' }, boxWidth: 20, padding: 28 },
         },
         title: {
           display: true,
           text: titulo,
           align: 'center',
           color: DARK_TEXT,
-          font: { size: 22, weight: 'bold' },
+          font: { size: 36, weight: 'bold' },
           padding: { bottom: 8 },
         },
         tooltip: { enabled: false },
@@ -464,10 +536,10 @@ export async function renderizarGraficoDonut(
           const pos = arc.tooltipPosition()
           ctx.save()
           ctx.fillStyle = WHITE
-          ctx.font = 'bold 28px sans-serif'
+          ctx.font = 'bold 38px sans-serif'
           ctx.textAlign = 'center'
           ctx.fillText(String(val), pos.x, pos.y)
-          ctx.font = '20px sans-serif'
+          ctx.font = '36px sans-serif'
           ctx.fillText(`${pct}%`, pos.x, pos.y + 30)
           ctx.restore()
         })
@@ -479,9 +551,9 @@ export async function renderizarGraficoDonut(
           ctx.save()
           ctx.fillStyle = DARK_TEXT
           ctx.textAlign = 'center'
-          ctx.font = 'bold 28px sans-serif'
+          ctx.font = 'bold 38px sans-serif'
           ctx.fillText(String(total), centerX, centerY)
-          ctx.font = '20px sans-serif'
+          ctx.font = '36px sans-serif'
           ctx.fillStyle = MEDIUM_TEXT
           ctx.fillText('mortes', centerX, centerY + 16)
           ctx.restore()
