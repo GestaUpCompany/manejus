@@ -7,6 +7,8 @@ import morteHandler from './api/pdf/morte.js'
 import consumoHandler from './api/pdf/consumo.js'
 // @ts-ignore
 import abastecimentoHandler from './api/pdf/abastecimento.js'
+// @ts-ignore
+import bebedourosHandler from './api/pdf/bebedouros.js'
 
 function localPdfApi(): Plugin {
   return {
@@ -56,6 +58,7 @@ function localPdfApi(): Plugin {
       register('/api/pdf/morte', morteHandler)
       register('/api/pdf/consumo', consumoHandler)
       register('/api/pdf/abastecimento', abastecimentoHandler)
+      register('/api/pdf/bebedouros', bebedourosHandler)
     },
   }
 }

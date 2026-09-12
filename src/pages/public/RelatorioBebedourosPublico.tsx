@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../../services/supabaseClient'
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import logoManejus from '/images/manejus360.png'
-import { gerarRelatorioBebedourosPDF } from '../../utils/relatorioBebedourosPDF'
+import { gerarRelatorioBebedourosPDFPuppeteer } from '../../utils/relatorioBebedourosPDFPuppeteer'
 
 const GREEN_DARK = '#0F6437'
 
@@ -536,7 +536,7 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
         responsavel: o.responsavel || '',
       }))
 
-      const blob = await gerarRelatorioBebedourosPDF({
+      const blob = await gerarRelatorioBebedourosPDFPuppeteer({
         titulo: relatorioInfo.titulo || 'Relatório de Bebedouros',
         fazendaNome: relatorioInfo.fazenda_nome,
         fazendaLogoUrl: relatorioInfo.fazenda_logo_url,
@@ -580,7 +580,7 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
     } catch (err) {
-      console.error('Erro ao exportar PDF:', err)
+      console.error('Erro ao exportar PDF com Puppeteer:', err)
       alert('Erro ao gerar PDF. Tente novamente.')
     } finally {
       setExportandoPDF(false)

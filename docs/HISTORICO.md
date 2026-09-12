@@ -2,6 +2,31 @@
 
 Este arquivo registra mudanças já aplicadas no Painel Web. Um chat novo não precisa ler isto por padrão; consulte quando a pergunta for sobre "por que isso foi feito assim" ou para entender o estado anterior de uma parte do código.
 
+## Relatório de bebedouros com Puppeteer (implementado em 2026-09-12)
+
+- Migrado de jsPDF client-side para Puppeteer server-side, seguindo o mesmo padrão de `morte.js`, `consumo.js` e `abastecimento.js`.
+- Criado `api/pdf/bebedouros.js` (endpoint fino) e `src/utils/relatorioBebedourosPDFPuppeteer.ts` (wrapper client).
+- KPIs preservaram o estilo com barra lateral colorida por status (verde/ambar/vermelho/cinza) via componente local `kpiStatus()`, não o `kpi()` padrão do template, porque a cor carrega semântica de status.
+- Dois modos mutuamente exclusivos na Seção 1: "dia único" (KPIs de limpezas do dia + gráfico de intervalo) e "período" (KPIs de status + alerta de maior atraso + gráfico de dias desde última limpeza).
+- Gráfico de período paginado por espaço vertical disponível (pre-chunk dinâmico: primeira página cabe menos por causa dos KPIs/alerta, continuação cabe mais), não por N fixo como os outros relatórios.
+- Linha tracejada de meta individual por bebedouro portada via plugin Chart.js `metaLinha`/`metaLinhaDia`.
+- Tabela de ocorrências com texto livre paginada em 15 linhas por página (antes cortava silenciosamente em 60 sem aviso).
+- Footer padronizado com `renderFooter` (período + Página X de Y); "gerado em {data/hora}" removido pelo mesmo motivo dos outros três.
+- Rota `/api/pdf/bebedouros` registrada no `vite.config.ts` para desenvolvimento local.
+- Implementação jsPDF legada preservada em `src/utils/relatorioBebedourosPDF.ts`.
+
+## Relatório de abastecimento com Puppeteer (implementado em 2026-09-11)
+
+- Migrado de jsPDF client-side para Puppeteer server-side, seguindo o mesmo padrão de `morte.js` e `consumo.js`.
+- Criado `api/pdf/abastecimento.js` (endpoint fino) e `src/utils/relatorioAbastecimentoPDFPuppeteer.ts` (wrapper client).
+- RPC `get_dados_relatorio_abastecimento` atualizado com `LEFT JOIN` em `maquinas_veiculos` para retornar `marca` (nome) e `modelo` separados, preservando o campo legado `maquina` como fallback.
+- Abreviação de marcas no endpoint e no frontend: John Deere → JD, Volkswagen → VW, Massey Ferguson → MF, New Holland → NH, etc. Marcas desconhecidas mantêm o nome original.
+- Layout: página 1 com KPIs laterais e gráfico de litros por máquina; página 2 com gráficos de combustível e operação lado a lado; páginas seguintes com tabelas de detalhamento por máquina e operacional, ambas paginadas.
+- Tabelas com bordas verticais entre colunas e zebra striping, padrão aplicado também ao relatório de morte.
+- Logo da fazenda padronizada em 60x60px no template compartilhado, mesma dimensão da logo do sistema.
+- Rota `/api/pdf/abastecimento` registrada no `vite.config.ts` para desenvolvimento local.
+- Implementação jsPDF legada preservada em `src/utils/relatorioAbastecimentoPDF.ts`.
+
 ## Relatório de mortalidade com Puppeteer (implementado em 2026-09-11)
 
 - Adicionada a Serverless Function `api/pdf/morte.ts`, usando `puppeteer-core` e `@sparticuz/chromium` para gerar o PDF no runtime Node.js da Vercel.

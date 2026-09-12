@@ -35,10 +35,17 @@ api/pdf/
 └─ <relatorio>.js     ← endpoint fino: monta HTML específico, valida body, chama generatePdf()
 ```
 
-Cada endpoint (`api/pdf/morte.js`, futuramente `api/pdf/consumo.js`, etc.)
+Cada endpoint (`api/pdf/morte.js`, `api/pdf/consumo.js`, `api/pdf/abastecimento.js`)
 concentra apenas o que é específico daquele relatório: composição das páginas,
 gráficos e CSS extra. Tudo o mais (Chrome, Chart.js, template) vem do
 `_shared`.
+
+## Relatórios já migrados para Puppeteer
+
+- **Mortalidade** (`api/pdf/morte.js`): resumo executivo + 5 gráficos + tabela de detalhamento paginada. KPIs em grid de 4 colunas. Tabelas com bordas verticais e zebra striping.
+- **Consumo** (`api/pdf/consumo.js`): relatório multi-lote com gráficos de evolução por lote, tabela de detalhamento e seção de dieta.
+- **Abastecimento** (`api/pdf/abastecimento.js`): KPIs laterais + 3 gráficos de barras (máquina, combustível, operação) + 2 tabelas de detalhamento paginadas. Usa `LEFT JOIN` com `maquinas_veiculos` para retornar `marca` e `modelo` separados via RPC, e abrevia marcas conhecidas (John Deere → JD, Volkswagen → VW, Massey Ferguson → MF, etc) no endpoint e no frontend.
+- **Bebedouros** (`api/pdf/bebedouros.js`): dois modos mutuamente exclusivos na Seção 1 (dia único vs período), KPIs com barra lateral colorida por status (componente local `kpiStatus`, não o `kpi()` padrão), gráfico de período paginado por espaço vertical disponível (pre-chunk dinâmico, não N fixo), linha tracejada de meta individual por bebedouro, tabela de ocorrências com texto livre paginada em 15 linhas por página.
 
 ## Payload: gráficos são desenhados no servidor
 
@@ -62,11 +69,22 @@ fazenda.
 ## Paginação de tabelas longas
 
 Tabelas de detalhamento são quebradas em N linhas por página HTML (ver
-`DETAIL_ROWS_PER_PAGE` em `morte.js` = 20). Cada chunk vira uma
-`<section class="page">` com header/footer próprios, e o footer mostra
+`DETAIL_ROWS_PER_PAGE` em `morte.js` = 20, `abastecimento.js` = 18). Cada chunk
+vira uma `<section class="page">` com header/footer próprios, e o footer mostra
 `Página X de Y` com `Y` calculado dinamicamente. `overflow:hidden` do
 `.page` deixa de ser um problema porque o conteúdo já foi paginado antes de
 renderizar.
+
+## Estilo de tabelas
+
+Todos os relatórios Puppeteer usam o mesmo padrão de tabela de detalhamento,
+definido no CSS específico de cada endpoint:
+
+- Bordas verticais entre colunas (`border-right: 1px solid #d8e0db` na última
+  coluna removida).
+- Zebra striping em linhas pares (`tbody tr:nth-child(even){background:#f7faf8}`).
+- Linha de total destacada com fundo verde claro e texto verde escuro.
+- Colunas de texto alinhadas à esquerda, colunas numéricas à direita.
 
 ## Como criar um relatório Puppeteer novo
 
@@ -87,6 +105,8 @@ renderizar.
 7. Do lado do client, criar `src/utils/relatorio<Nome>PDFPuppeteer.ts`
    seguindo o padrão de `relatorioMortePDFPuppeteer.ts`: só carrega logos e
    POSTa o payload cru.
+8. Registrar a rota `/api/pdf/<nome>` no `vite.config.ts` (função
+   `localPdfApi`) para funcionar em desenvolvimento local.
 
 ## Como criar um relatório jsPDF novo
 
