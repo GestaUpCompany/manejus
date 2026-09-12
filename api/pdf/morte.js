@@ -128,71 +128,41 @@ const CHARTS_INIT_JS = `
 
   function titleCase(s){ return s ? String(s).trim().split(/\\s+/).map(function(w){return w.charAt(0).toUpperCase()+w.slice(1)}).join(' ') : s }
 
-  function determinarGranularidade(numDias){
-    if (numDias <= 31) return 'dia'
-    if (numDias <= 84) return 'semana'
-    return 'mes'
-  }
-  function chaveAgregacao(dataStr, gran){
-    var parts = dataStr.split('-'); var ano=+parts[0], mes=+parts[1], dia=+parts[2]
-    if (gran === 'dia') return { chave: dataStr, label: String(dia).padStart(2,'0')+'/'+String(mes).padStart(2,'0') }
-    if (gran === 'mes'){
-      var nomes=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
-      return { chave: ano+'-'+String(mes).padStart(2,'0'), label: nomes[mes-1]+'/'+String(ano).slice(2) }
-    }
-    var d = new Date(ano, mes-1, dia)
-    var dow = d.getDay(); var diff = dow === 0 ? -6 : 1-dow
-    var monday = new Date(ano, mes-1, dia+diff)
-    return {
-      chave: monday.getFullYear()+'-'+String(monday.getMonth()+1).padStart(2,'0')+'-'+String(monday.getDate()).padStart(2,'0'),
-      label: String(monday.getDate()).padStart(2,'0')+'/'+String(monday.getMonth()+1).padStart(2,'0'),
-    }
-  }
-
-  function drawTempo(){
-    var el = document.getElementById('chart-tempo'); if (!el) return
+  function drawLote(){
+    var el = document.getElementById('chart-lote'); if (!el) return
     var linhas = data.linhas || []
     if (!linhas.length) return
-    var diasUnicos = new Set(linhas.map(function(l){return l.data}))
-    var gran = determinarGranularidade(diasUnicos.size)
     var map = new Map()
     linhas.forEach(function(l){
-      var k = chaveAgregacao(l.data, gran)
-      var ex = map.get(k.chave)
-      if (ex) ex.count += 1; else map.set(k.chave, { chave: k.chave, label: k.label, count: 1 })
+      var nome = l.lote_nome || 'Sem lote'
+      var ex = map.get(nome)
+      if (ex) ex.count += 1; else map.set(nome, { label: nome, count: 1 })
     })
-    if (gran === 'dia'){
-      var sorted = linhas.map(function(l){return l.data}).sort()
-      var inicio = new Date((data.dataInicio || sorted[0]) + 'T12:00:00')
-      var fim = new Date((data.dataFim || sorted[sorted.length-1]) + 'T12:00:00')
-      for (var atual = new Date(inicio); atual <= fim; atual.setDate(atual.getDate()+1)){
-        var ch = atual.getFullYear()+'-'+String(atual.getMonth()+1).padStart(2,'0')+'-'+String(atual.getDate()).padStart(2,'0')
-        if (!map.has(ch)) map.set(ch, { chave: ch, label: String(atual.getDate()).padStart(2,'0')+'/'+String(atual.getMonth()+1).padStart(2,'0'), count: 0 })
-      }
-    }
-    var dados = Array.from(map.values()).sort(function(a,b){return a.chave.localeCompare(b.chave)})
+    var dados = Array.from(map.values()).sort(function(a,b){return b.count - a.count}).slice(0, 12)
+    var total = dados.reduce(function(s,d){return s + d.count}, 0)
     new Chart(el, {
       type: 'bar',
-      data: { labels: dados.map(function(d){return d.label}), datasets: [{ label:'Mortes', data: dados.map(function(d){return d.count}), backgroundColor: GREEN_DARK, borderRadius: 4, borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.85, maxBarThickness: 60 }]},
+      data: { labels: dados.map(function(d){return d.label}), datasets: [{ label:'Mortes', data: dados.map(function(d){return d.count}), backgroundColor: dados.map(function(_,i){return i === 0 ? GREEN_DARK : LIGHT_GREEN}), borderRadius: 3, borderSkipped: false, barPercentage: 0.55, categoryPercentage: 0.7, maxBarThickness: 40 }]},
       options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: { top: 18, right: 12, bottom: 6, left: 8 } },
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: false,
+        layout: { padding: { top: 6, right: 60, bottom: 4, left: 4 } },
         plugins: { legend: { display:false }, title:{display:false}, tooltip:{enabled:false} },
         scales: {
-          x: { grid:{display:false}, ticks:{ color: DARK_TEXT, font:{size:11, weight:'bold'}, maxRotation:45, minRotation:0, autoSkip:true, maxTicksLimit:12 } },
-          y: { beginAtZero:true, title:{ display:true, text:'Mortes', color: DARK_TEXT, font:{size:11, weight:'bold'} }, suggestedMax: Math.max.apply(null, dados.map(function(d){return d.count}).concat([1])) + 1, ticks:{ color: DARK_TEXT, font:{size:11, weight:'bold'}, precision:0 }, grid:{ color:'#E5E7EB' } },
+          x: { beginAtZero:true, suggestedMax: Math.max.apply(null, dados.map(function(d){return d.count}).concat([1])) + 1, ticks:{ color: DARK_TEXT, font:{size:10, weight:'bold'}, precision:0 }, grid:{ color:'#E5E7EB' } },
+          y: { grid:{display:false}, ticks:{ color: DARK_TEXT, font:{size:11, weight:'bold'} } },
         },
       },
       plugins: [{
         id: 'dataLabels',
         afterDatasetsDraw: function(chart){
-          var ctx = chart.ctx
+          var ctx = chart.ctx; var area = chart.chartArea
           chart.data.datasets[0].data.forEach(function(value, i){
-            var bar = chart.getDatasetMeta(0).data[i]
-            if (!bar || Number(value) === 0) return
-            ctx.save(); ctx.fillStyle = DARK_TEXT; ctx.font = 'bold 11px sans-serif'; ctx.textAlign='center'
-            var labelY = Math.max(bar.y - 4, chart.chartArea.top + 8)
-            ctx.fillText(String(value), bar.x, labelY); ctx.restore()
+            var bar = chart.getDatasetMeta(0).data[i]; if (!bar) return
+            var pct = total > 0 ? ((Number(value)/total)*100).toFixed(1).replace('.', ',') : '0,0'
+            var label = value + ' · ' + pct + '%'
+            var x = Math.min(bar.x + 6, area.right + 55)
+            ctx.save(); ctx.fillStyle = DARK_TEXT; ctx.font = 'bold 11px sans-serif'; ctx.textAlign='left'
+            ctx.fillText(label, x, bar.y + 3); ctx.restore()
           })
         }
       }]
@@ -233,7 +203,7 @@ const CHARTS_INIT_JS = `
     })
   }
 
-  drawTempo()
+  drawLote()
   drawBarrasHorizontais('chart-causa', (data.resumo && data.resumo.por_causa) || [])
   drawBarrasHorizontais('chart-categoria', (data.resumo && data.resumo.por_categoria) || [])
   drawBarrasHorizontais('chart-sexo', (data.resumo && data.resumo.por_sexo) || [])
@@ -309,7 +279,7 @@ async function renderMorteHtml(input) {
     ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Distribuição temporal', sectionLabel: 'Análise' })}
     <p class="section-kicker">Evolução e causas</p>
     <div class="page2-charts">
-      ${chartCard({ canvasId: 'chart-tempo', title: 'Mortes por dia', subtitle: 'Evolução dos registros no período', hasData: input.linhas.length > 0 })}
+      ${chartCard({ canvasId: 'chart-lote', title: 'Mortes por lote', subtitle: 'Concentração por lote no período', hasData: input.linhas.length > 0 })}
       ${chartCard({ canvasId: 'chart-causa', title: 'Mortes por causa', subtitle: 'Distribuição das causas registradas', hasData: hasPor(resumo.por_causa) })}
     </div>
     ${renderFooter({ ...period, page: 2, totalPages })}
@@ -371,7 +341,7 @@ async function renderMorteHtml(input) {
     dataJson: {
       dataInicio: input.dataInicio,
       dataFim: input.dataFim,
-      linhas: input.linhas.map((l) => ({ data: l.data })),
+      linhas: input.linhas.map((l) => ({ data: l.data, lote_nome: l.lote_nome })),
       resumo: {
         por_causa: resumo.por_causa ?? [],
         por_categoria: resumo.por_categoria ?? [],
