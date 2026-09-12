@@ -66,7 +66,7 @@ function formatarInteiro(valor: number | null | undefined): string {
   return Math.round(valor).toString()
 }
 
-async function carregarLogoComoBase64(path: string): Promise<string> {
+export async function carregarLogoComoBase64(path: string): Promise<string> {
   const response = await fetch(path)
   const blob = await response.blob()
   return new Promise((resolve, reject) => {

@@ -6,7 +6,9 @@ import {
 } from 'recharts'
 import logoManejus from '/images/manejus360.png'
 import {
-  gerarRelatorioConsumoPDF,
+  gerarRelatorioConsumoPDFPuppeteer,
+} from '../../utils/relatorioConsumoPDFPuppeteer'
+import {
   type DadoRelatorioConsumo,
   type InfoLote,
   type LoteRelatorio,
@@ -323,10 +325,12 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
         dados: l.dados,
       }))
 
-      const blob = await gerarRelatorioConsumoPDF({
+      const blob = await gerarRelatorioConsumoPDFPuppeteer({
         dataInicio: dataInicio || dados.lotes[0]?.dados[0]?.data || '',
         dataFim: dataFim || dados.lotes[0]?.dados[dados.lotes[0]?.dados.length - 1]?.data || '',
         lotes: lotesRelatorio,
+        fazendaNome: relatorioInfo.fazenda_nome || '',
+        fazendaLogoUrl: relatorioInfo.fazenda_logo_url,
       })
 
       const url = URL.createObjectURL(blob)
