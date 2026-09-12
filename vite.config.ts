@@ -1,7 +1,9 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+// @ts-ignore -- modulos .js sem declaracao de tipos, carregados em dev local
 import morteHandler from './api/pdf/morte.js'
+// @ts-ignore
 import consumoHandler from './api/pdf/consumo.js'
 
 function localPdfApi(): Plugin {
