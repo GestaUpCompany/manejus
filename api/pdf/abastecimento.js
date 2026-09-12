@@ -454,7 +454,7 @@ async function renderAbastecimentoHtml(input) {
     <div class="period-badge">${dateFmt(filtros.dataInicio) || 'Início'} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(filtros.dataFim) || 'Hoje'}</div>
     ${pillsHtml(filtros)}
     <div class="abast-body">
-      ${kpisHtml(input)}
+      ${kpisHtml({ ...input, porMaquina: porMaquinaFmt })}
       <div class="charts-col" style="gap:0">
         ${chartCard({ canvasId: 'chart-maquina', title: 'Litros por Máquina/Veículo', subtitle: 'Distribuição total no período', hasData: porMaquina.length > 0, height: '120mm' })}
       </div>
