@@ -261,6 +261,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
   const porCategoria = useMemo(() => agregar((l) => l.categoria), [linhasFiltradas])
   const porSexo = useMemo(() => agregar((l) => l.sexo), [linhasFiltradas])
   const porPasto = useMemo(() => agregar((l) => l.pasto), [linhasFiltradas])
+  const porLote = useMemo(() => agregar((l) => l.lote_nome), [linhasFiltradas])
 
   // === KPIs calculados das linhas filtradas ===
   const totalMortes = linhasFiltradas.length
@@ -395,44 +396,8 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
     return partes.join(' ')
   }, [totalMortes, taxaMortalidade, rebanhoTotal, variacaoMortes, periodoAnterior, causaMaisFrequente, causaMaisFrequenteCount, porCategoria, porPasto, perdaEstimada, pesoTotalPerdido])
 
-  // === Gráfico de mortes no tempo (granularidade adaptativa) ===
-  const diasUnicos = useMemo(() => new Set(linhasFiltradas.map((l) => l.data)).size, [linhasFiltradas])
-  const granularidade = useMemo<'dia' | 'semana' | 'mes'>(() => {
-    if (diasUnicos <= 31) return 'dia'
-    if (diasUnicos <= 84) return 'semana'
-    return 'mes'
-  }, [diasUnicos])
-  const labelGranularidade = granularidade === 'dia' ? 'por dia' : granularidade === 'semana' ? 'por semana' : 'por mês'
-
-  function chaveAgregacao(data: string, gran: 'dia' | 'semana' | 'mes'): { chave: string; label: string } {
-    const [ano, mes, dia] = data.split('-').map(Number)
-    if (gran === 'dia') return { chave: data, label: `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}` }
-    if (gran === 'mes') {
-      const nomes = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
-      return { chave: `${ano}-${String(mes).padStart(2, '0')}`, label: `${nomes[mes - 1]}/${String(ano).slice(2)}` }
-    }
-    const d = new Date(ano, mes - 1, dia)
-    const dayOfWeek = d.getDay()
-    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-    const monday = new Date(ano, mes - 1, dia + diff)
-    return {
-      chave: `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`,
-      label: `${String(monday.getDate()).padStart(2, '0')}/${String(monday.getMonth() + 1).padStart(2, '0')}`,
-    }
-  }
-
-  const dadosGraficoTempo = useMemo(() => {
-    const porPeriodo = new Map<string, { chave: string; label: string; count: number }>()
-    for (const l of linhasFiltradas) {
-      const { chave, label } = chaveAgregacao(l.data, granularidade)
-      const existing = porPeriodo.get(chave)
-      if (existing) existing.count += 1
-      else porPeriodo.set(chave, { chave, label, count: 1 })
-    }
-    return Array.from(porPeriodo.values())
-      .sort((a, b) => a.chave.localeCompare(b.chave))
-      .map((d) => ({ data: d.label, count: d.count }))
-  }, [linhasFiltradas, granularidade])
+  // === Gráfico de mortes por lote ===
+  const dadosGraficoLote = useMemo(() => porLote.slice(0, 12), [porLote])
 
   const temFiltrosAtivos = filtroLote.size > 0 || filtroCausa.size > 0 || filtroCategoria.size > 0 || filtroSexo.size > 0 || filtroPasto.size > 0 || dataInicio || dataFim
 
@@ -887,20 +852,28 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
 
             {/* Gráficos: 2 colunas */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Mortes no tempo */}
+              {/* Mortes por lote */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Mortes {labelGranularidade}</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-1">Mortes por lote</h3>
+                <p className="text-[10px] text-gray-400 mb-3">Clique nas barras para filtrar</p>
                 <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={dadosGraficoTempo} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+                  <BarChart data={dadosGraficoLote} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis dataKey="data" tick={{ fontSize: 11, fill: '#6B7280' }} angle={-45} textAnchor="end" height={60} />
-                    <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} allowDecimals={false} />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: '#6B7280' }} allowDecimals={false} />
+                    <YAxis type="category" dataKey="label" tick={{ fontSize: 11, fill: '#6B7280' }} width={80} />
                     <Tooltip
                       formatter={(v: any) => [`${v} morte(s)`, '']}
                       contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E5E7EB' }}
                     />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]} fill={GREEN_DARK} cursor="pointer">
-                      <LabelList dataKey="count" position="top" style={{ fontSize: 11, fill: '#374151', fontWeight: 600 }} />
+                    <Bar dataKey="valor" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(d: any) => d?.label && toggleItem('lote', d.label)}>
+                      {dadosGraficoLote.map((item, i) => (
+                        <Cell
+                          key={`l-${i}`}
+                          fill={CHART_COLORS[i % CHART_COLORS.length]}
+                          opacity={filtroLote.size === 0 || filtroLote.has(item.label) ? 1 : 0.35}
+                        />
+                      ))}
+                      <LabelList dataKey="valor" position="right" style={{ fontSize: 11, fill: '#374151', fontWeight: 600 }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
