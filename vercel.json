@@ -7,10 +7,7 @@
   ],
   "functions": {
     "api/pdf/*.js": {
-      "includeFiles": [
-        "node_modules/chart.js/dist/chart.umd.min.js",
-        "node_modules/chart.js/dist/chart.umd.js"
-      ],
+      "includeFiles": "node_modules/chart.js/dist/chart.umd.min.js",
       "maxDuration": 60
     }
   }
