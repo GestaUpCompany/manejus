@@ -104,6 +104,13 @@ const CHARTS_INIT_JS = `
     var maxCms = Math.max.apply(null, dados.map(function(d){return d.trato_kg_cab_dia}).concat([1]))
     var maxPv = Math.max.apply(null, dados.map(function(d){return d.consumo_percent_pv}).concat([1]))
 
+    // Para poucas barras (1 a 3) o Chart.js estica o tamanho. Limitamos
+    // a largura para não virar uma faixa gigante no gráfico.
+    var narrow = dados.length <= 3
+    var barPercentage = narrow ? 0.5 : 0.55
+    var categoryPercentage = narrow ? 0.5 : 0.8
+    var maxBarThickness = narrow ? 120 : undefined
+
     new Chart(el, {
       type: 'bar',
       data: {
@@ -117,8 +124,9 @@ const CHARTS_INIT_JS = `
             borderSkipped: false,
             yAxisID: 'y',
             order: 1,
-            barPercentage: 0.55,
-            categoryPercentage: 0.8,
+            barPercentage: barPercentage,
+            categoryPercentage: categoryPercentage,
+            maxBarThickness: maxBarThickness,
           },
           {
             type: 'line',
