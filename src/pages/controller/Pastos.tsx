@@ -935,9 +935,29 @@ export function Pastos() {
                 value={formData.especie}
                 onChange={(e) => setFormData({ ...formData, especie: e.target.value })}
                 required
-                placeholder="Ex: Brachiaria"
+                placeholder="Ex: Marandu"
                 className="border-gray-200 focus:border-accent text-sm"
               />
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {[
+                  'Marandu', 'Piatã', 'Xaraés', 'Decumbens', 'Humidicola', 'Ruziziensis',
+                  'Mombaça', 'Tanzânia', 'Massai', 'Aruana', 'BRS Zuri',
+                  'Tifton 85', 'Andropogon', 'Hemarthria',
+                ].map((sug) => (
+                  <button
+                    key={sug}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, especie: sug })}
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+                      formData.especie === sug
+                        ? 'bg-green-700 text-white border-green-700'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    {sug}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-end">
