@@ -53,6 +53,7 @@ const Frigorificos = laz(() => import('./pages/controller/Frigorificos'), 'Frigo
 const CausasMorte = laz(() => import('./pages/controller/CausasMorte'), 'CausasMorte')
 const Racas = laz(() => import('./pages/controller/Racas'), 'Racas')
 const CadastrosAuxiliares = laz(() => import('./pages/controller/CadastrosAuxiliares'), 'CadastrosAuxiliares')
+const EstoqueCombustivel = laz(() => import('./pages/controller/EstoqueCombustivel'), 'EstoqueCombustivel')
 const Rotinas = laz(() => import('./pages/controller/Rotinas'), 'Rotinas')
 const AuditoriaRotinas = laz(() => import('./pages/controller/AuditoriaRotinas'), 'AuditoriaRotinas')
 const Atividades = laz(() => import('./pages/controller/Atividades'), 'Atividades')
@@ -475,6 +476,16 @@ function App() {
               <ControllerRoute>
                 <ControllerLayout>
                   <CadastrosAuxiliares />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/estoque-combustivel"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <EstoqueCombustivel />
                 </ControllerLayout>
               </ControllerRoute>
             }
