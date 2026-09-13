@@ -47,7 +47,6 @@ const HistoricoPlanos = laz(() => import('./pages/controller/HistoricoPlanos'), 
 const Funcionarios = laz(() => import('./pages/controller/Funcionarios'), 'Funcionarios')
 const Medicamentos = laz(() => import('./pages/controller/Medicamentos'), 'Medicamentos')
 const Insumos = laz(() => import('./pages/controller/Insumos'), 'Insumos')
-const ItensSupermercado = laz(() => import('./pages/controller/ItensSupermercado'), 'ItensSupermercado')
 const Formulacoes = laz(() => import('./pages/controller/Formulacoes'), 'Formulacoes')
 const Fornecedores = laz(() => import('./pages/controller/Fornecedores'), 'Fornecedores')
 const Frigorificos = laz(() => import('./pages/controller/Frigorificos'), 'Frigorificos')
@@ -416,16 +415,6 @@ function App() {
               <ControllerRoute>
                 <ControllerLayout>
                   <Insumos />
-                </ControllerLayout>
-              </ControllerRoute>
-            }
-          />
-          <Route
-            path="/controller/itens-supermercado"
-            element={
-              <ControllerRoute>
-                <ControllerLayout>
-                  <ItensSupermercado />
                 </ControllerLayout>
               </ControllerRoute>
             }

@@ -148,19 +148,6 @@ const tabs: TabConfig[] = [
     icon: iconOperacional,
   },
   {
-    key: 'itens-supermercado',
-    label: 'Itens de Supermercado',
-    singular: 'Item de Supermercado',
-    table: 'itens_supermercado',
-    fields: [
-      { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do item' },
-      { name: 'unidade_medida', label: 'Unidade de Medida', placeholder: 'Ex: kg, un, litro' },
-    ],
-    searchPlaceholder: 'Buscar item...',
-    category: 'Operacional',
-    icon: iconOperacional,
-  },
-  {
     key: 'itens-cantina',
     label: 'Itens da Cantina',
     singular: 'Item da Cantina',
