@@ -13,6 +13,7 @@ interface Tanque {
   capacidade_maxima_l: number
   saldo_atual_l: number
   limite_alerta_l: number
+  custo_medio_l: number
   ativo: boolean
   deleted_at: string | null
 }
@@ -25,6 +26,8 @@ interface AbastecimentoPendente {
   total_abastecido: number
   operador_motorista: string
   placa: string | null
+  tanque_id: string | null
+  tanque_nome: string | null
 }
 
 const TIPOS_COMBUSTIVEL = [
@@ -49,6 +52,9 @@ export function EstoqueCombustivel() {
   const [modalEntrada, setModalEntrada] = useState(false)
   const [modalBaixa, setModalBaixa] = useState<AbastecimentoPendente | null>(null)
   const [modalBaixaTodos, setModalBaixaTodos] = useState(false)
+  const [modalHistorico, setModalHistorico] = useState<Tanque | null>(null)
+  const [historicoMovs, setHistoricoMovs] = useState<any[]>([])
+  const [historicoLoading, setHistoricoLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -58,21 +64,22 @@ export function EstoqueCombustivel() {
     tipo_combustivel: '',
     capacidade_maxima_l: '',
     limite_alerta_l: '',
+    saldo_inicial_l: '',
+    preco_inicial_l: '',
   })
 
-  // Form entrada
+  // Form entrada (valor total unico, preco derivado)
   const [entradaForm, setEntradaForm] = useState({
     tanque_id: '',
     quantidade_l: '',
-    preco_por_litro: '',
+    valor_total: '',
     fornecedor: '',
     observacao: '',
   })
 
-  // Form baixa
+  // Form baixa (preco automatico do custo medio)
   const [baixaForm, setBaixaForm] = useState({
     tanque_id: '',
-    preco_por_litro: '',
     observacao: '',
   })
 
@@ -89,7 +96,7 @@ export function EstoqueCombustivel() {
           .order('tipo_combustivel'),
         supabase
           .from('registros_abastecimento')
-          .select('id, data, maquina_veiculo, combustivel, total_abastecido, operador_motorista, placa')
+          .select('id, data, maquina_veiculo, combustivel, total_abastecido, operador_motorista, placa, tanque_id, tanque_nome')
           .eq('fazenda_id', fazendaId)
           .is('deleted_at', null)
           .is('baixa_estoque_id', null)
@@ -124,7 +131,7 @@ export function EstoqueCombustivel() {
 
   useEffect(() => {
     if (!user) return
-    (async () => {
+    ;(async () => {
       const fid = await getFazendaIdForUser(user.id)
       setFazendaId(fid)
       if (fid) getFazendaNome(fid).then(setFazendaNome)
@@ -137,6 +144,7 @@ export function EstoqueCombustivel() {
 
   // Helpers
   const saldoTotal = tanques.reduce((sum, t) => sum + Number(t.saldo_atual_l), 0)
+  const valorEstoque = tanques.reduce((sum, t) => sum + Number(t.saldo_atual_l) * Number(t.custo_medio_l), 0)
   const tanquesEmAlerta = tanques.filter((t) => Number(t.saldo_atual_l) <= Number(t.limite_alerta_l) && t.limite_alerta_l > 0)
 
   const tanquesAtivos = tanques.filter((t) => t.ativo)
@@ -150,9 +158,11 @@ export function EstoqueCombustivel() {
         tipo_combustivel: tanque.tipo_combustivel,
         capacidade_maxima_l: String(tanque.capacidade_maxima_l),
         limite_alerta_l: String(tanque.limite_alerta_l),
+        saldo_inicial_l: '',
+        preco_inicial_l: '',
       })
     } else {
-      setTanqueForm({ nome: '', tipo_combustivel: '', capacidade_maxima_l: '', limite_alerta_l: '' })
+      setTanqueForm({ nome: '', tipo_combustivel: '', capacidade_maxima_l: '', limite_alerta_l: '', saldo_inicial_l: '', preco_inicial_l: '' })
     }
     setModalTanque(true)
   }
@@ -173,8 +183,27 @@ export function EstoqueCombustivel() {
         const { error } = await supabase.from('tanques_combustivel').update(payload).eq('id', tanqueEditando.id)
         if (error) throw error
       } else {
-        const { error } = await supabase.from('tanques_combustivel').insert(payload)
+        const { data: newTanque, error } = await supabase.from('tanques_combustivel').insert(payload).select('id').single()
         if (error) throw error
+
+        // Se houver saldo inicial, inserir movimentacao de estoque_inicial
+        const saldoInicial = parseFloat(tanqueForm.saldo_inicial_l) || 0
+        const precoInicial = parseFloat(tanqueForm.preco_inicial_l) || 0
+        if (saldoInicial > 0 && precoInicial > 0) {
+          const valorTotal = saldoInicial * precoInicial
+          const { error: movError } = await supabase.from('movimentacoes_combustivel').insert({
+            fazenda_id: fazendaId,
+            tanque_id: newTanque.id,
+            tipo_movimentacao: 'entrada',
+            quantidade_l: saldoInicial,
+            valor_total: parseFloat(valorTotal.toFixed(2)),
+            preco_por_litro: precoInicial,
+            data: new Date().toISOString().split('T')[0],
+            origem: 'estoque_inicial',
+            observacao: 'Saldo inicial do tanque',
+          })
+          if (movError) throw movError
+        }
       }
       setModalTanque(false)
       loadAll()
@@ -185,23 +214,28 @@ export function EstoqueCombustivel() {
     }
   }
 
-  // Handlers entrada
+  // Handlers entrada (valor total unico, preco derivado)
   const abrirModalEntrada = () => {
-    setEntradaForm({ tanque_id: '', quantidade_l: '', preco_por_litro: '', fornecedor: '', observacao: '' })
+    setEntradaForm({ tanque_id: '', quantidade_l: '', valor_total: '', fornecedor: '', observacao: '' })
     setModalEntrada(true)
   }
 
   const salvarEntrada = async () => {
-    if (!fazendaId || !entradaForm.tanque_id || !entradaForm.quantidade_l) return
+    if (!fazendaId || !entradaForm.tanque_id || !entradaForm.quantidade_l || !entradaForm.valor_total) return
     setSubmitting(true)
     setError(null)
     try {
+      const litros = parseFloat(entradaForm.quantidade_l)
+      const valorTotal = parseFloat(entradaForm.valor_total)
+      const precoPorLitro = litros > 0 ? valorTotal / litros : 0
+
       const { error } = await supabase.from('movimentacoes_combustivel').insert({
         fazenda_id: fazendaId,
         tanque_id: entradaForm.tanque_id,
         tipo_movimentacao: 'entrada',
-        quantidade_l: parseFloat(entradaForm.quantidade_l),
-        preco_por_litro: entradaForm.preco_por_litro ? parseFloat(entradaForm.preco_por_litro) : null,
+        quantidade_l: litros,
+        valor_total: valorTotal,
+        preco_por_litro: precoPorLitro,
         data: new Date().toISOString().split('T')[0],
         origem: 'painel_entrada',
         fornecedor: entradaForm.fornecedor || null,
@@ -217,13 +251,14 @@ export function EstoqueCombustivel() {
     }
   }
 
-  // Handlers baixa
+  // Handlers baixa (preco automatico do custo medio do tanque)
   const abrirModalBaixa = (abastecimento: AbastecimentoPendente) => {
-    // Auto-sugerir tanque pelo tipo de combustível
-    const tanqueSugerido = tanquesAtivos.find((t) => t.tipo_combustivel === abastecimento.combustivel)
+    // Usar tanque_id do abastecimento se informado, senão sugerir por tipo de combustivel
+    const tanqueSugerido = abastecimento.tanque_id
+      ? tanquesAtivos.find((t) => t.id === abastecimento.tanque_id)
+      : tanquesAtivos.find((t) => t.tipo_combustivel === abastecimento.combustivel)
     setBaixaForm({
       tanque_id: tanqueSugerido?.id || '',
-      preco_por_litro: '',
       observacao: '',
     })
     setModalBaixa(abastecimento)
@@ -234,13 +269,17 @@ export function EstoqueCombustivel() {
     setSubmitting(true)
     setError(null)
     try {
-      // Inserir movimentação de baixa
+      // Buscar custo medio do tanque selecionado
+      const tanque = tanquesAtivos.find((t) => t.id === baixaForm.tanque_id)
+      const custoMedio = tanque ? Number(tanque.custo_medio_l) : 0
+
+      // Inserir movimentacao de baixa com preco = custo medio do tanque
       const { data: movData, error: movError } = await supabase.from('movimentacoes_combustivel').insert({
         fazenda_id: fazendaId,
         tanque_id: baixaForm.tanque_id,
         tipo_movimentacao: 'baixa',
         quantidade_l: modalBaixa.total_abastecido,
-        preco_por_litro: baixaForm.preco_por_litro ? parseFloat(baixaForm.preco_por_litro) : null,
+        preco_por_litro: custoMedio,
         data: modalBaixa.data,
         origem: 'painel_baixa',
         registro_abastecimento_id: modalBaixa.id,
@@ -249,7 +288,7 @@ export function EstoqueCombustivel() {
 
       if (movError) throw movError
 
-      // Vincular abastecimento à baixa
+      // Vincular abastecimento a baixa
       const { error: updError } = await supabase
         .from('registros_abastecimento')
         .update({ baixa_estoque_id: movData.id })
@@ -260,7 +299,7 @@ export function EstoqueCombustivel() {
       setModalBaixa(null)
       loadAll()
     } catch (err: any) {
-      setError(err.message || 'Erro ao dar baixa. Verifique se há saldo suficiente no tanque.')
+      setError(err.message || 'Erro ao dar baixa. Verifique se ha saldo suficiente no tanque.')
     } finally {
       setSubmitting(false)
     }
@@ -273,14 +312,19 @@ export function EstoqueCombustivel() {
     let sucessos = 0
     let falhas = 0
     for (const ab of abastecimentosPendentes) {
-      const tanque = tanquesAtivos.find((t) => t.tipo_combustivel === ab.combustivel)
+      // Usar tanque_id do abastecimento se informado, senão sugerir por tipo de combustivel
+      const tanque = ab.tanque_id
+        ? tanquesAtivos.find((t) => t.id === ab.tanque_id)
+        : tanquesAtivos.find((t) => t.tipo_combustivel === ab.combustivel)
       if (!tanque) { falhas++; continue }
       try {
+        const custoMedio = Number(tanque.custo_medio_l)
         const { data: movData, error: movError } = await supabase.from('movimentacoes_combustivel').insert({
           fazenda_id: fazendaId,
           tanque_id: tanque.id,
           tipo_movimentacao: 'baixa',
           quantidade_l: ab.total_abastecido,
+          preco_por_litro: custoMedio,
           data: ab.data,
           origem: 'painel_baixa',
           registro_abastecimento_id: ab.id,
@@ -302,6 +346,27 @@ export function EstoqueCombustivel() {
       setError(`${sucessos} baixas com sucesso, ${falhas} falhas (verifique saldo dos tanques)`)
     }
     setSubmitting(false)
+  }
+
+  // Handler histórico
+  const abrirModalHistorico = async (tanque: Tanque) => {
+    setModalHistorico(tanque)
+    setHistoricoLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('movimentacoes_combustivel')
+        .select('id, tipo_movimentacao, quantidade_l, preco_por_litro, valor_total, data, origem, fornecedor, observacao, created_at, registro_abastecimento_id')
+        .eq('tanque_id', tanque.id)
+        .order('data', { ascending: false })
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      setHistoricoMovs(data || [])
+    } catch (err: any) {
+      console.error('Erro ao carregar histórico:', err)
+      setHistoricoMovs([])
+    } finally {
+      setHistoricoLoading(false)
+    }
   }
 
   if (loading) {
@@ -347,6 +412,10 @@ export function EstoqueCombustivel() {
           <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{saldoTotal.toLocaleString('pt-BR')} L</p>
         </Card>
         <Card className="bg-white p-4 sm:p-5" disableHover>
+          <p className="text-xs sm:text-sm text-gray-500 font-medium">Valor em Estoque</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">R$ {valorEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        </Card>
+        <Card className="bg-white p-4 sm:p-5" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Consumo do Mês</p>
           <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{kpiMes.consumo_l.toLocaleString('pt-BR')} L</p>
         </Card>
@@ -354,11 +423,19 @@ export function EstoqueCombustivel() {
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Custo do Mês</p>
           <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">R$ {kpiMes.custo_rs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </Card>
-        <Card className={`p-4 sm:p-5 ${tanquesEmAlerta.length > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`} disableHover>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium">Tanques em Alerta</p>
-          <p className={`text-xl sm:text-2xl font-bold mt-1 ${tanquesEmAlerta.length > 0 ? 'text-red-600' : 'text-gray-900'}`}>{tanquesEmAlerta.length}</p>
-        </Card>
       </div>
+
+      {/* Alerta de tanques baixos */}
+      {tanquesEmAlerta.length > 0 && (
+        <div className="bg-red-50 border border-red-300 rounded-xl p-4">
+          <p className="text-sm font-semibold text-red-700">
+            {tanquesEmAlerta.length} tanque(s) com estoque baixo:
+          </p>
+          <p className="text-xs text-red-600 mt-1">
+            {tanquesEmAlerta.map((t) => t.nome).join(', ')}
+          </p>
+        </div>
+      )}
 
       {/* Tanques */}
       <div>
@@ -378,6 +455,7 @@ export function EstoqueCombustivel() {
                 ? Math.min(100, (Number(tanque.saldo_atual_l) / Number(tanque.capacidade_maxima_l)) * 100)
                 : 0
               const emAlerta = tanque.limite_alerta_l > 0 && Number(tanque.saldo_atual_l) <= Number(tanque.limite_alerta_l)
+              const valorTanque = Number(tanque.saldo_atual_l) * Number(tanque.custo_medio_l)
               return (
                 <Card key={tanque.id} className="bg-white p-4 sm:p-5" disableHover>
                   <div className="flex justify-between items-start mb-3">
@@ -385,17 +463,27 @@ export function EstoqueCombustivel() {
                       <p className="font-semibold text-gray-800">{tanque.nome}</p>
                       <p className="text-xs text-gray-500">{tanque.tipo_combustivel}</p>
                     </div>
-                    {emAlerta && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                        Alerta
-                      </span>
-                    )}
-                    <button
-                      onClick={() => abrirModalTanque(tanque)}
-                      className="text-blue-500 text-sm hover:underline ml-2"
-                    >
-                      Editar
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {emAlerta && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                          Alerta
+                        </span>
+                      )}
+                      <button
+                        onClick={() => abrirModalTanque(tanque)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                        title="Editar tanque"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => abrirModalHistorico(tanque)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+                        title="Ver histórico"
+                      >
+                        Histórico
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
@@ -403,6 +491,14 @@ export function EstoqueCombustivel() {
                       <span className="font-semibold text-gray-900">
                         {Number(tanque.saldo_atual_l).toLocaleString('pt-BR')} L
                       </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Custo médio</span>
+                      <span className="text-gray-700">R$ {Number(tanque.custo_medio_l).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}/L</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Valor em estoque</span>
+                      <span className="font-semibold text-gray-900">R$ {valorTanque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Capacidade</span>
@@ -413,7 +509,7 @@ export function EstoqueCombustivel() {
                       <span className="text-gray-700">{Number(tanque.limite_alerta_l).toLocaleString('pt-BR')} L</span>
                     </div>
                   </div>
-                  {/* Barra de ocupação */}
+                  {/* Barra de ocupacao */}
                   <div className="mt-3">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
@@ -454,6 +550,7 @@ export function EstoqueCombustivel() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Máquina/Veículo</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Combustível</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanque</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total (L)</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Operador</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ação</th>
@@ -461,12 +558,15 @@ export function EstoqueCombustivel() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {abastecimentosPendentes.map((ab) => {
-                  const temTanque = tanquesAtivos.some((t) => t.tipo_combustivel === ab.combustivel)
+                  const temTanque = ab.tanque_id
+                    ? tanquesAtivos.some((t) => t.id === ab.tanque_id)
+                    : tanquesAtivos.some((t) => t.tipo_combustivel === ab.combustivel)
                   return (
                     <tr key={ab.id}>
                       <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatDate(ab.data)}</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{ab.maquina_veiculo || '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{ab.combustivel || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{ab.tanque_nome || '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ab.total_abastecido} L</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{ab.operador_motorista || '-'}</td>
                       <td className="px-4 py-3">
@@ -527,6 +627,28 @@ export function EstoqueCombustivel() {
             onChange={(e) => setTanqueForm({ ...tanqueForm, limite_alerta_l: e.target.value })}
           />
           <p className="text-xs text-gray-500">Alerta dispara quando o saldo ficar abaixo deste valor.</p>
+          {!tanqueEditando && (
+            <>
+              <div className="border-t pt-4 mt-2">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Campos opcionais</p>
+                <Input
+                  label="Saldo Inicial (L)"
+                  type="number"
+                  placeholder="Ex: 1800"
+                  value={tanqueForm.saldo_inicial_l}
+                  onChange={(e) => setTanqueForm({ ...tanqueForm, saldo_inicial_l: e.target.value })}
+                />
+                <Input
+                  label="Preço por Litro Inicial (R$)"
+                  type="number"
+                  placeholder="Ex: 5.99"
+                  value={tanqueForm.preco_inicial_l}
+                  onChange={(e) => setTanqueForm({ ...tanqueForm, preco_inicial_l: e.target.value })}
+                />
+                <p className="text-xs text-gray-500">Define o saldo e custo médio inicial do tanque. O custo médio será ajustado conforme novas entradas forem registradas.</p>
+              </div>
+            </>
+          )}
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="secondary" onClick={() => setModalTanque(false)}>Cancelar</Button>
             <Button onClick={salvarTanque} disabled={submitting || !tanqueForm.nome || !tanqueForm.tipo_combustivel || !tanqueForm.capacidade_maxima_l}>
@@ -561,12 +683,14 @@ export function EstoqueCombustivel() {
             required
           />
           <Input
-            label="Preço por Litro (R$)"
+            label="Valor Total (R$)"
             type="number"
-            placeholder="Ex: 5.99"
-            value={entradaForm.preco_por_litro}
-            onChange={(e) => setEntradaForm({ ...entradaForm, preco_por_litro: e.target.value })}
+            placeholder="Ex: 5990.00"
+            value={entradaForm.valor_total}
+            onChange={(e) => setEntradaForm({ ...entradaForm, valor_total: e.target.value })}
+            required
           />
+          <p className="text-xs text-gray-500">O preço por litro é calculado automaticamente: valor total ÷ quantidade.</p>
           <Input
             label="Fornecedor"
             placeholder="Ex: Posto São João"
@@ -581,59 +705,63 @@ export function EstoqueCombustivel() {
           />
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="secondary" onClick={() => setModalEntrada(false)}>Cancelar</Button>
-            <Button onClick={salvarEntrada} disabled={submitting || !entradaForm.tanque_id || !entradaForm.quantidade_l}>
+            <Button onClick={salvarEntrada} disabled={submitting || !entradaForm.tanque_id || !entradaForm.quantidade_l || !entradaForm.valor_total}>
               {submitting ? 'Salvando...' : 'Registrar Entrada'}
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Modal: Dar Baixa */}
+      {/* Modal: Dar Baixa (preco automatico do custo medio) */}
       <Modal
         isOpen={!!modalBaixa}
         onClose={() => setModalBaixa(null)}
         title="Dar Baixa no Estoque"
         size="md"
       >
-        {modalBaixa && (
-          <div className="space-y-4">
-            <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-              <p className="text-sm"><span className="text-gray-500">Data:</span> <span className="font-medium">{formatDate(modalBaixa.data)}</span></p>
-              <p className="text-sm"><span className="text-gray-500">Máquina:</span> <span className="font-medium">{modalBaixa.maquina_veiculo || '-'}</span></p>
-              <p className="text-sm"><span className="text-gray-500">Combustível:</span> <span className="font-medium">{modalBaixa.combustivel}</span></p>
-              <p className="text-sm"><span className="text-gray-500">Total:</span> <span className="font-medium">{modalBaixa.total_abastecido} L</span></p>
+        {modalBaixa && (() => {
+          const tanqueSelecionado = tanquesAtivos.find((t) => t.id === baixaForm.tanque_id)
+          const custoMedio = tanqueSelecionado ? Number(tanqueSelecionado.custo_medio_l) : 0
+          const valorBaixa = Number(modalBaixa.total_abastecido) * custoMedio
+          return (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+                <p className="text-sm"><span className="text-gray-500">Data:</span> <span className="font-medium">{formatDate(modalBaixa.data)}</span></p>
+                <p className="text-sm"><span className="text-gray-500">Máquina:</span> <span className="font-medium">{modalBaixa.maquina_veiculo || '-'}</span></p>
+                <p className="text-sm"><span className="text-gray-500">Combustível:</span> <span className="font-medium">{modalBaixa.combustivel}</span></p>
+                <p className="text-sm"><span className="text-gray-500">Total:</span> <span className="font-medium">{modalBaixa.total_abastecido} L</span></p>
+              </div>
+              <Select
+                label="Tanque para Baixa"
+                options={tanquesAtivos
+                  .filter((t) => t.tipo_combustivel === modalBaixa.combustivel)
+                  .map((t) => ({ value: t.id, label: `${t.nome} (Saldo: ${Number(t.saldo_atual_l).toLocaleString('pt-BR')} L)` }))}
+                value={baixaForm.tanque_id}
+                onChange={(val) => setBaixaForm({ ...baixaForm, tanque_id: val })}
+                placeholder="Selecione o tanque..."
+                required
+              />
+              {tanqueSelecionado && (
+                <div className="bg-blue-50 rounded-lg p-3 space-y-1">
+                  <p className="text-sm"><span className="text-gray-500">Custo médio do tanque:</span> <span className="font-medium">R$ {custoMedio.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}/L</span></p>
+                  <p className="text-sm"><span className="text-gray-500">Valor da baixa:</span> <span className="font-semibold">R$ {valorBaixa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
+                </div>
+              )}
+              <Input
+                label="Observação"
+                placeholder="Detalhes adicionais (opcional)"
+                value={baixaForm.observacao}
+                onChange={(e) => setBaixaForm({ ...baixaForm, observacao: e.target.value })}
+              />
+              <div className="flex gap-2 justify-end pt-2">
+                <Button variant="secondary" onClick={() => setModalBaixa(null)}>Cancelar</Button>
+                <Button onClick={salvarBaixa} disabled={submitting || !baixaForm.tanque_id}>
+                  {submitting ? 'Dando baixa...' : 'Confirmar Baixa'}
+                </Button>
+              </div>
             </div>
-            <Select
-              label="Tanque para Baixa"
-              options={tanquesAtivos
-                .filter((t) => t.tipo_combustivel === modalBaixa.combustivel)
-                .map((t) => ({ value: t.id, label: `${t.nome} (Saldo: ${Number(t.saldo_atual_l).toLocaleString('pt-BR')} L)` }))}
-              value={baixaForm.tanque_id}
-              onChange={(val) => setBaixaForm({ ...baixaForm, tanque_id: val })}
-              placeholder="Selecione o tanque..."
-              required
-            />
-            <Input
-              label="Preço por Litro (R$)"
-              type="number"
-              placeholder="Ex: 5.99"
-              value={baixaForm.preco_por_litro}
-              onChange={(e) => setBaixaForm({ ...baixaForm, preco_por_litro: e.target.value })}
-            />
-            <Input
-              label="Observação"
-              placeholder="Detalhes adicionais (opcional)"
-              value={baixaForm.observacao}
-              onChange={(e) => setBaixaForm({ ...baixaForm, observacao: e.target.value })}
-            />
-            <div className="flex gap-2 justify-end pt-2">
-              <Button variant="secondary" onClick={() => setModalBaixa(null)}>Cancelar</Button>
-              <Button onClick={salvarBaixa} disabled={submitting || !baixaForm.tanque_id}>
-                {submitting ? 'Dando baixa...' : 'Confirmar Baixa'}
-              </Button>
-            </div>
-          </div>
-        )}
+          )
+        })()}
       </Modal>
 
       {/* Confirm: Baixar Todos */}
@@ -642,10 +770,124 @@ export function EstoqueCombustivel() {
         onClose={() => setModalBaixaTodos(false)}
         onConfirm={baixarTodos}
         title="Dar Baixa em Todos"
-        message={`Confirmar baixa de ${abastecimentosPendentes.length} abastecimento(s) pendente(s)? O saldo de cada tanque será decrementado conforme o tipo de combustível de cada abastecimento. Abastecimentos sem tanque correspondente serão ignorados.`}
+        message={`Confirmar baixa de ${abastecimentosPendentes.length} abastecimento(s) pendente(s)? O saldo de cada tanque será decrementado conforme o tipo de combustível de cada abastecimento. O custo da baixa usa o custo médio de cada tanque. Abastecimentos sem tanque correspondente serão ignorados.`}
         confirmText="Confirmar"
         variant="warning"
       />
+
+      {/* Modal: Histórico do Tanque */}
+      <Modal
+        isOpen={!!modalHistorico}
+        onClose={() => setModalHistorico(null)}
+        title={modalHistorico ? `Histórico — ${modalHistorico.nome}` : 'Histórico'}
+        size="lg"
+      >
+        {modalHistorico && (() => {
+          const entradas = historicoMovs.filter((m) => m.tipo_movimentacao === 'entrada')
+          const saidas = historicoMovs.filter((m) => m.tipo_movimentacao === 'baixa')
+          const totalEntradasL = entradas.reduce((sum, m) => sum + Number(m.quantidade_l), 0)
+          const totalSaidasL = saidas.reduce((sum, m) => sum + Number(m.quantidade_l), 0)
+          const totalEntradasRS = entradas.reduce((sum, m) => sum + Number(m.valor_total || (Number(m.quantidade_l) * Number(m.preco_por_litro))), 0)
+          const totalSaidasRS = saidas.reduce((sum, m) => sum + Number(m.quantidade_l) * Number(m.preco_por_litro), 0)
+          const custoMedio = Number(modalHistorico.custo_medio_l)
+          const saldoAtual = Number(modalHistorico.saldo_atual_l)
+
+          return (
+            <div className="space-y-4">
+              {/* Métricas resumidas */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500">Saldo Atual</p>
+                  <p className="text-lg font-bold text-gray-900">{saldoAtual.toLocaleString('pt-BR')} L</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500">Custo Médio</p>
+                  <p className="text-lg font-bold text-gray-900">R$ {custoMedio.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-3">
+                  <p className="text-xs text-green-600">Total Entradas</p>
+                  <p className="text-lg font-bold text-green-700">{totalEntradasL.toLocaleString('pt-BR')} L</p>
+                  <p className="text-xs text-green-600">R$ {totalEntradasRS.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div className="bg-red-50 rounded-lg p-3">
+                  <p className="text-xs text-red-600">Total Saídas</p>
+                  <p className="text-lg font-bold text-red-700">{totalSaidasL.toLocaleString('pt-BR')} L</p>
+                  <p className="text-xs text-red-600">R$ {totalSaidasRS.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Linha do Tempo</h4>
+                {historicoLoading ? (
+                  <div className="text-center py-8 text-gray-500">Carregando movimentações...</div>
+                ) : historicoMovs.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">Nenhuma movimentação registrada.</div>
+                ) : (
+                  <div className="max-h-96 overflow-y-auto space-y-2">
+                    {historicoMovs.map((mov) => {
+                      const isEntrada = mov.tipo_movimentacao === 'entrada'
+                      const valor = Number(mov.valor_total || (Number(mov.quantidade_l) * Number(mov.preco_por_litro)))
+                      const origemLabel: Record<string, string> = {
+                        estoque_inicial: 'Estoque Inicial',
+                        painel_entrada: 'Entrada Manual',
+                        pwa_entrada: 'Entrada PWA',
+                        painel_baixa: 'Baixa Manual',
+                        pwa_baixa: 'Baixa PWA',
+                      }
+                      return (
+                        <div
+                          key={mov.id}
+                          className={`flex items-start gap-3 rounded-lg border p-3 ${
+                            isEntrada ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                          }`}
+                        >
+                          <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                            isEntrada ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {isEntrada ? '↑' : '↓'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {isEntrada ? 'Entrada' : 'Saída'} — {Number(mov.quantidade_l).toLocaleString('pt-BR')} L
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {formatDate(mov.data)} · {origemLabel[mov.origem] || mov.origem || '-'}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-gray-900">
+                                  R$ {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  R$ {Number(mov.preco_por_litro).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}/L
+                                </p>
+                              </div>
+                            </div>
+                            {(mov.fornecedor || mov.observacao) && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {mov.fornecedor && `Fornecedor: ${mov.fornecedor}`}
+                                {mov.fornecedor && mov.observacao && ' · '}
+                                {mov.observacao}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button variant="secondary" onClick={() => setModalHistorico(null)}>Fechar</Button>
+              </div>
+            </div>
+          )
+        })()}
+      </Modal>
     </div>
   )
 }
