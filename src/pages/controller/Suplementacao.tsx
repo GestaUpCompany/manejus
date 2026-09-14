@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
@@ -55,6 +55,7 @@ export function Suplementacao() {
   const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
   const [loteDropdownOpen, setLoteDropdownOpen] = useState(false)
   const loteDropdownRef = useRef<HTMLDivElement>(null)
+  const [composicoesFormulacoes, setComposicoesFormulacoes] = useState<Record<string, { nome: string; mn_percent: number }[]>>({})
 
   useEffect(() => {
     loadRegistros()
@@ -117,6 +118,54 @@ export function Suplementacao() {
       setRegistros(data as RegistroSuplementacao[])
     }
 
+    // Carregar composição de insumos de todas as formulações da fazenda
+    const { data: formRows } = await supabase
+      .from('formulacoes')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+
+    const composicoes: Record<string, { nome: string; mn_percent: number }[]> = {}
+
+    if (formRows && formRows.length > 0) {
+      const formIds = formRows.map(f => f.id)
+      const { data: insumoRows } = await supabase
+        .from('formulacao_insumos')
+        .select('formulacao_id, formula_teor_ms, insumos!inner(nome, teor_ms)')
+        .in('formulacao_id', formIds)
+
+      if (insumoRows) {
+        const porForm: Record<string, { nome: string; teor_ms: number; formula_teor_ms: number }[]> = {}
+        for (const row of insumoRows as unknown as {
+          formulacao_id: string
+          formula_teor_ms: number
+          insumos: { nome: string; teor_ms: number }
+        }[]) {
+          if (!porForm[row.formulacao_id]) porForm[row.formulacao_id] = []
+          porForm[row.formulacao_id].push({
+            nome: row.insumos.nome,
+            teor_ms: row.insumos.teor_ms || 0,
+            formula_teor_ms: row.formula_teor_ms || 0,
+          })
+        }
+
+        for (const f of formRows) {
+          const insumos = porForm[f.id]
+          if (!insumos || insumos.length === 0) continue
+          let totalBruta = 0
+          const brutas = insumos.map(i => {
+            const bruta = i.teor_ms > 0 ? i.formula_teor_ms / (i.teor_ms / 100) : 0
+            totalBruta += bruta
+            return { nome: i.nome, bruta }
+          })
+          composicoes[f.nome] = totalBruta > 0
+            ? brutas.map(b => ({ nome: b.nome, mn_percent: (b.bruta / totalBruta) * 100 }))
+            : []
+        }
+      }
+    }
+
+    setComposicoesFormulacoes(composicoes)
+
     setLoading(false)
   }
 
@@ -150,6 +199,22 @@ export function Suplementacao() {
     const key = reg.lote_id || ''
     totalKgCochoPorLote.set(key, (totalKgCochoPorLote.get(key) || 0) + (reg.kg_cocho || 0))
   }
+
+  // Kg por insumo: distribui kg_cocho de cada registro entre os insumos da sua formulação
+  const kgPorInsumo = useMemo(() => {
+    const acumulado: Record<string, number> = {}
+    for (const reg of filteredRegistros) {
+      const kg = reg.kg_cocho || 0
+      if (!kg || !reg.formulacao) continue
+      const comp = composicoesFormulacoes[reg.formulacao]
+      if (!comp || comp.length === 0) continue
+      for (const ins of comp) {
+        const kgInsumo = kg * (ins.mn_percent / 100)
+        acumulado[ins.nome] = (acumulado[ins.nome] || 0) + kgInsumo
+      }
+    }
+    return acumulado
+  }, [filteredRegistros, composicoesFormulacoes])
 
   // Acumulado cumulativo por lote: para cada registro, a soma de todos os registros
   // do mesmo lote até aquela data (em ordem cronológica ascendente)
@@ -376,6 +441,19 @@ export function Suplementacao() {
                 </div>
               )}
             </div>
+            {Object.keys(kgPorInsumo).length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Total por insumo</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(kgPorInsumo).sort((a, b) => b[1] - a[1]).map(([nome, kg]) => (
+                    <div key={nome} className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-sm">
+                      <span className="font-medium text-gray-700">{nome}:</span>{' '}
+                      <span className="font-bold text-gray-900">{kg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Mobile Card View */}

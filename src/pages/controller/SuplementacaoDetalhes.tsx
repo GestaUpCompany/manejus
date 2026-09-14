@@ -83,6 +83,8 @@ export function SuplementacaoDetalhes() {
   const [formulacoes, setFormulacoes] = useState<{ nome: string }[]>([])
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [totalKgCochoLote, setTotalKgCochoLote] = useState<number | null>(null)
+  const [kgPorInsumo, setKgPorInsumo] = useState<Record<string, number> | null>(null)
+  const [kgPorInsumoRegistro, setKgPorInsumoRegistro] = useState<Record<string, number> | null>(null)
   const [leituraDropdownOpen, setLeituraDropdownOpen] = useState(false)
   const [escoreDropdownOpen, setEscoreDropdownOpen] = useState(false)
   const leituraDropdownRef = useRef<HTMLDivElement>(null)
@@ -168,7 +170,7 @@ export function SuplementacaoDetalhes() {
       if (reg.lote_id && _fazendaId && reg.data) {
         const { data: lotesData, error: lotesError } = await supabase
           .from('registros_suplementacao')
-          .select('kg_cocho, data')
+          .select('kg_cocho, data, formulacao')
           .eq('fazenda_id', _fazendaId)
           .eq('lote_id', reg.lote_id)
           .is('deleted_at', null)
@@ -176,9 +178,108 @@ export function SuplementacaoDetalhes() {
         if (!lotesError && lotesData) {
           const total = lotesData.reduce((soma: number, r: { kg_cocho?: number | null }) => soma + (r.kg_cocho || 0), 0)
           setTotalKgCochoLote(total)
+
+          // Calcular kg por insumo: para cada registro, distribuir kg_cocho
+          // proporcionalmente entre os insumos da sua formulação (base MN).
+          const registrosFiltrados = lotesData as { kg_cocho?: number | null; formulacao?: string | null }[]
+          const nomesFormulacoes = Array.from(new Set(
+            registrosFiltrados.map(r => r.formulacao).filter((f): f is string => !!f)
+          ))
+
+          const composicoes: Record<string, { nome: string; mn_percent: number }[]> = {}
+
+          if (nomesFormulacoes.length > 0) {
+            // Buscar ids das formulações por nome
+            const { data: formRows } = await supabase
+              .from('formulacoes')
+              .select('id, nome')
+              .eq('fazenda_id', _fazendaId)
+              .in('nome', nomesFormulacoes)
+
+            const formMap = new Map<string, string>()
+            if (formRows) {
+              for (const f of formRows) {
+                formMap.set(f.nome, f.id)
+              }
+            }
+
+            // Buscar insumos de cada formulação
+            const formIds = Array.from(formMap.values())
+            if (formIds.length > 0) {
+              const { data: insumoRows } = await supabase
+                .from('formulacao_insumos')
+                .select('formulacao_id, formula_teor_ms, insumos!inner(nome, teor_ms)')
+                .in('formulacao_id', formIds)
+
+              if (insumoRows) {
+                // Agrupar por formulacao_id
+                const porForm: Record<string, { nome: string; teor_ms: number; formula_teor_ms: number }[]> = {}
+                for (const row of insumoRows as unknown as {
+                  formulacao_id: string
+                  formula_teor_ms: number
+                  insumos: { nome: string; teor_ms: number }
+                }[]) {
+                  if (!porForm[row.formulacao_id]) porForm[row.formulacao_id] = []
+                  porForm[row.formulacao_id].push({
+                    nome: row.insumos.nome,
+                    teor_ms: row.insumos.teor_ms || 0,
+                    formula_teor_ms: row.formula_teor_ms || 0,
+                  })
+                }
+
+                // Calcular mn_percent de cada insumo por formulação
+                for (const [nomeForm, formId] of formMap.entries()) {
+                  const insumos = porForm[formId]
+                  if (!insumos || insumos.length === 0) continue
+                  let totalBruta = 0
+                  const brutas = insumos.map(i => {
+                    const bruta = i.teor_ms > 0 ? i.formula_teor_ms / (i.teor_ms / 100) : 0
+                    totalBruta += bruta
+                    return { nome: i.nome, bruta }
+                  })
+                  composicoes[nomeForm] = totalBruta > 0
+                    ? brutas.map(b => ({ nome: b.nome, mn_percent: (b.bruta / totalBruta) * 100 }))
+                    : []
+                }
+              }
+            }
+          }
+
+          // Distribuir kg_cocho de cada registro entre os insumos
+          const acumulado: Record<string, number> = {}
+          for (const r of registrosFiltrados) {
+            const kg = r.kg_cocho || 0
+            if (!kg || !r.formulacao) continue
+            const comp = composicoes[r.formulacao]
+            if (!comp || comp.length === 0) continue
+            for (const ins of comp) {
+              const kgInsumo = kg * (ins.mn_percent / 100)
+              acumulado[ins.nome] = (acumulado[ins.nome] || 0) + kgInsumo
+            }
+          }
+
+          setKgPorInsumo(Object.keys(acumulado).length > 0 ? acumulado : null)
+
+          // Breakdown por insumo deste registro específico
+          const regKg = reg.kg_cocho || 0
+          const regComp = reg.formulacao ? composicoes[reg.formulacao] : null
+          if (regKg && regComp && regComp.length > 0) {
+            const regInsumos: Record<string, number> = {}
+            for (const ins of regComp) {
+              regInsumos[ins.nome] = regKg * (ins.mn_percent / 100)
+            }
+            setKgPorInsumoRegistro(regInsumos)
+          } else {
+            setKgPorInsumoRegistro(null)
+          }
+        } else {
+          setKgPorInsumo(null)
+          setKgPorInsumoRegistro(null)
         }
       } else {
         setTotalKgCochoLote(null)
+        setKgPorInsumo(null)
+        setKgPorInsumoRegistro(null)
       }
     }
 
@@ -380,12 +481,24 @@ export function SuplementacaoDetalhes() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       <tr><td className="px-4 py-2 text-sm text-gray-900">KG Cocho</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.kg_cocho || 0}</td></tr>
+                      {kgPorInsumoRegistro && Object.entries(kgPorInsumoRegistro).sort((a, b) => b[1] - a[1]).map(([nome, kg]) => (
+                        <tr key={nome} className="bg-blue-50/50">
+                          <td className="px-4 py-2 text-sm text-gray-700 pl-8">↳ {nome}</td>
+                          <td className="px-4 py-2 text-sm text-gray-700 text-right">{kg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</td>
+                        </tr>
+                      ))}
                       {totalKgCochoLote !== null && (
                         <tr className="bg-primary/5">
                           <td className="px-4 py-2 text-sm font-semibold text-primary">Acumulado Lote (até esta data)</td>
                           <td className="px-4 py-2 text-sm font-bold text-primary text-right">{totalKgCochoLote.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</td>
                         </tr>
                       )}
+                      {kgPorInsumo && Object.entries(kgPorInsumo).sort((a, b) => b[1] - a[1]).map(([nome, kg]) => (
+                        <tr key={nome} className="bg-gray-50">
+                          <td className="px-4 py-2 text-sm text-gray-700 pl-8">↳ {nome}</td>
+                          <td className="px-4 py-2 text-sm text-gray-700 text-right">{kg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</td>
+                        </tr>
+                      ))}
                       <tr><td className="px-4 py-2 text-sm text-gray-900">KG Depósito</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.kg_deposito || 0}</td></tr>
                       <tr><td className="px-4 py-2 text-sm text-gray-900">Nº Cabeças</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{formatValue(registro!.n_cabecas)}</td></tr>
                       <tr><td className="px-4 py-2 text-sm text-gray-900">Qtd Bezerros</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{formatValue(registro!.qtd_bezerros)}</td></tr>

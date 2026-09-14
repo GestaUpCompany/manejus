@@ -23,6 +23,19 @@ Disparador: antes de rodar qualquer SQL que toque dados de `lote_categorias`, `p
 - Lint: `npm run lint`
 - Test: `npm run test` (vitest run)
 
+## Fluxo de abertura do painel via chrome-devtools
+
+Sempre que o usuário pedir para "abrir devtools", "abrir o painel no chrome-devtools", "iniciar devtools", ou qualquer variação que mencione devtools combinado com abrir/iniciar o painel, seguir este fluxo:
+
+1. Subir `npm run dev` em background (shell com `timeout: 0`).
+2. Aguardar a mensagem de ready do Vite e extrair a porta da linha `Local: http://localhost:<porta>/` (a porta pode variar; não assumir 5173).
+3. Chamar `list_pages` no MCP `chrome-devtools` para obter o `pageId` ativo.
+4. Chamar `navigate_page` no MCP `chrome-devtools` apontando para `http://localhost:<porta>` usando a porta extraída do passo 2.
+
+Não usar `browser_preview` quando o pedido mencionar devtools; usar exclusivamente o MCP `chrome-devtools`.
+
+Disparador: "abrir devtools", "abre devtools", "iniciar devtools", "abrir painel no chrome-devtools", ou frases equivalentes que combinem "devtools" com abertura/início do painel.
+
 ## Fluxo de migrations estruturais (obrigatório)
 
 Migrations estruturais (CREATE/ALTER TABLE, triggers, policies, índices, functions) devem seguir este fluxo rigorosamente:
