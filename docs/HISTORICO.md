@@ -506,3 +506,45 @@ Sistema de bloqueio do PWA por horário de expediente, integrado ao RBAC existen
 edux-persist (localStorage); override por funcionário no cache IndexedDB. Revalidação em sync manual, sync automático (SW), interval de 10min, e visibilitychange.
 
 Disparador: quando mencionar "expediente", "horário de atividade", "bloqueio por horário", expediente_habilitado, expediente_dias, expediente_override, useExpediente, ler esta seção.
+
+### Equipe em registros_movimentacao — adicionado em 2026-09-12
+
+Migration `20260912120000_add_equipe_movimentacao.sql`. Adiciona colunas `equipe integer` e `equipe_nomes jsonb` em `registros_movimentacao`, seguindo o mesmo padrão já existente em `registros_rodeio`. Permite registrar quantos peões participaram do manejo de movimentação e seus nomes.
+
+Disparador: quando mencionar "equipe em movimentação", "equipe_nomes em registros_movimentacao", ou problemas com registro de equipe em movimentação, ler esta seção.
+
+### Itens cantina (substitui itens_supermercado) — adicionado em 2026-09-13
+
+Migrations `20260913120000_create_itens_cantina_table.sql` e `20260913130000_drop_itens_supermercado.sql`.
+
+1. **Tabela `itens_cantina`**: catálogo de alimentos da cantina com `classificacao` (Perecíveis, Não Perecíveis, Bebidas, Limpeza/Higiene, Hortifruti, Carnes) e `unidade_medida` (kg, g, L, mL, Unidade, Pacote). Substitui `itens_supermercado` que não tinha classificação nem unidade. RLS no padrão das demais tabelas de cadastro (authenticated full access).
+2. **Drop `itens_supermercado`**: 23 itens migrados para `itens_cantina` via backfill prévio validado. Tabela dropada com CASCADE. Página `ItensSupermercado.tsx` removida do `App.tsx` e do `CadastrosAuxiliares.tsx`.
+
+Disparador: quando mencionar "itens cantina", "itens supermercado", "catálogo da cantina", ou problemas com cadastro de itens de cantina, ler esta seção.
+
+### Sugestões de espécies de capim no cadastro de pastos — adicionado em 2026-09-13
+
+Commit `22d84a6`. `Pastos.tsx` passou a oferecer sugestões de espécies de capim (datalist) no campo de espécie, facilitando o cadastro e padronizando nomes. Mudança apenas de UI, sem migration.
+
+Disparador: quando mencionar "espécies de capim", "sugestões de capim", "datalist de capim", ou problemas com o campo de espécie no cadastro de pastos, ler esta seção.
+
+### Controle de estoque de combustível — adicionado em 2026-09-13
+
+Sistema de controle de múltiplos tanques de combustível por fazenda, com movimentações de entrada/baixa/ajuste, cálculo automático de saldo e custo médio ponderado (WAC).
+
+**Migrations** (5 arquivos, todas aplicadas via `db push`):
+- `20260915120000_create_estoque_combustivel.sql`: cria `tanques_combustivel` (id, fazenda_id, nome, tipo_combustivel, capacidade_maxima_l, saldo_atual_l, limite_alerta_l, ativo, deleted_at) e `movimentacoes_combustivel` (id, fazenda_id, tanque_id, tipo_movimentacao, quantidade_l, preco_por_litro, data, origem, registro_abastecimento_id, fornecedor, observacao). Unique partial index `(fazenda_id, tipo_combustivel) WHERE deleted_at IS NULL`. RLS authenticated. Adiciona `baixa_estoque_id` em `registros_abastecimento` linkando a baixa no tanque. Trigger `update_tanque_saldo` recalcula saldo a cada INSERT/UPDATE/DELETE.
+- `20260915130000_add_local_id_movimentacoes_combustivel.sql`: adiciona `local_id TEXT` + índice único parcial para sync idempotente do PWA.
+- `20260915140000_precision_wac_combustivel.sql`: ajusta precisão numérica (`numeric(12,3)` litros, `numeric(12,4)` preços/custo médio, `numeric(12,2)` valores monetários), adiciona `valor_total` em movimentações (obrigatório em entradas, nulo em baixas/ajustes via constraint `chk_movimentacao_valor_total`), adiciona `custo_medio_l` em tanques. Cria função `recalcular_custo_medio_tanque` (WAC movel) e substitui o trigger por `update_tanque_saldo_custo` que atualiza saldo e custo médio. Em UPDATE, recalcula do zero (WAC não é invertível sem histórico).
+- `20260915150000_add_tanque_to_registros_abastecimento.sql`: adiciona `tanque_id` (FK) e `tanque_nome` em `registros_abastecimento`. Linkagem passiva: o operador no PWA indica qual tanque usou, a baixa continua manual no Painel Web.
+- `20260915160000_add_estoque_inicial_origem.sql`: adiciona `'estoque_inicial'` na constraint de `origem` de movimentacoes, permitindo registrar o saldo inicial do tanque como movimentação de auditoria.
+
+**Painel Web** (`EstoqueCombustivel.tsx`, grupo "Estoque" no sidebar com item "Combustível"):
+- KPIs no topo: saldo total, consumo do mês, custo total, alertas.
+- Cards de tanques com % de ocupação, cor de alerta quando abaixo do `limite_alerta_l`.
+- Timeline de histórico por tanque (entradas, baixas, ajustes).
+- Lista de abastecimentos pendentes de baixa com botão individual e "Dar baixa em todos".
+
+**Tipos de combustível suportados**: Álcool, Gasolina, Diesel S10, Diesel Comum.
+
+Disparador: quando mencionar "combustível", "tanque de combustível", "estoque de combustível", "WAC combustível", "custo médio por litro", "baixa de combustível", "movimentacoes_combustivel", "tanques_combustivel", ou retomar o assunto de controle de combustível, ler esta seção.

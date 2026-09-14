@@ -83,3 +83,8 @@ Quando mencionar qualquer um destes tópicos, ler a seção correspondente em `d
 - "dupla contagem", "cabeças duplicadas", "quant_atual inflado", `calculate_quant_atual` → `docs/HISTORICO.md` (Fix de dupla contagem)
 - "renomear acesso_id", "peão não consegue logar após renomear fazenda", `peoes.fazenda_id` stale → `docs/HISTORICO.md` (Sincronização de peoes.fazenda_id)
 - "camada 1 do peso", "proveniência do peso", "anotação de peso no card" → `docs/HISTORICO.md` (Proveniência do peso: camada 1)
+- "expediente", "horário de atividade", "bloqueio por horário", `expediente_habilitado`, `expediente_dias`, `expediente_override`, `useExpediente` → `docs/HISTORICO.md` (Controle de expediente)
+- "equipe em movimentação", `equipe_nomes` em `registros_movimentacao` → `docs/HISTORICO.md` (Equipe em registros_movimentacao)
+- "itens cantina", "itens supermercado", "catálogo da cantina" → `docs/HISTORICO.md` (Itens cantina)
+- "espécies de capim", "sugestões de capim", "datalist de capim" → `docs/HISTORICO.md` (Sugestões de espécies de capim)
+- "combustível", "tanque de combustível", "estoque de combustível", "WAC combustível", "custo médio por litro", `movimentacoes_combustivel`, `tanques_combustivel` → `docs/HISTORICO.md` (Controle de estoque de combustível)
