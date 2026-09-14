@@ -2,6 +2,18 @@
 
 Este arquivo registra mudanças já aplicadas no Painel Web. Um chat novo não precisa ler isto por padrão; consulte quando a pergunta for sobre "por que isso foi feito assim" ou para entender o estado anterior de uma parte do código.
 
+## Sincronização de histórico de pasto ao editar lote (2026-09-14)
+
+**Problema**: ao editar o pasto de um lote no formulário de Lotes (`Lotes.tsx`), o `lotes.pasto_id` era atualizado diretamente sem criar `registros_pastagens` nem fechar/abrir `lote_pasto_historico` e `lote_modulo_historico`. O trigger `trg_registros_pastagens_mover_lote` só dispara via `registros_pastagens`, então a edição direta deixava o histórico stale. No PWA, o `PastagensPage` consultava `registros_pastagens` via `getUltimoStatusPastoCached` e bloqueava pastos como "ocupados" quando não tinham lote ativo.
+
+**Correção aplicada**:
+1. RPC `sincronizar_historico_pasto_lote_edit(p_lote_id, p_pasto_id_anterior, p_pasto_id_novo)` criada (migrations `20260914160100` e `20260914160200`). Fecha o `lote_pasto_historico` aberto, abre um novo, atualiza `individuos.pasto_atual`, e gerencia `lote_modulo_historico` (fechar antigo, abrir novo se mudou de módulo). Usa `set_config('app.skip_sync_lote_modulo', 'true', true)` para evitar duplicação via trigger `trg_sync_lote_modulo_historico`, mesmo padrão do `processar_movimentacao_pastagem`.
+2. `Lotes.tsx`: após o UPDATE do lote, se o `pasto_id` mudou e não é confinamento, chama a RPC via `supabase.rpc('sincronizar_historico_pasto_lote_edit', ...)`. Erro na sincronização não bloqueia o salvamento do lote, mas exibe toast de aviso.
+
+**Teste** (fazenda `d649c65e-16ab-4b77-a84b-df937aa41cc3`): lote "Teste 2" movido de P20 (Módulo 2) para P30 (Módulo 1) via RPC. Históricos sincronizados corretamente. Teste revertido.
+
+**Disparador**: quando mencionar "editar pasto do lote", "sincronizar histórico de pasto", `sincronizar_historico_pasto_lote_edit`, ou "pasto ocupado sem lote no PWA", lembrar que a edição administrativa agora sincroniza o histórico via RPC.
+
 ## Upload de logo da fazenda pelo controller (2026-09-14)
 
 - O controller agora pode atualizar o logo da própria fazenda sem depender do admin. Antes, o upload de logo só existia nas telas de admin (`NovaFazenda.tsx` e `EditarFazenda.tsx`).
@@ -659,3 +671,38 @@ Cenários resultantes:
 Validado na fazenda de testes: abastecimento de Álcool (sem tanques de Álcool cadastrados) salvou com sucesso, `tanque_id = NULL` no banco, zero movimentações de baixa geradas.
 
 Disparador: quando mencionar "tanque opcional", "abastecimento sem tanque", "fazenda sem tanque", "onboarding combustível", "bloqueio de abastecimento", ou problemas com fazendas que não conseguem lançar abastecimentos por falta de tanque cadastrado, ler esta seção.
+
+### Correção de peso real por categoria do lote — adicionado em 2026-09-14
+
+Migration `20260914210000_correcao_peso_categoria.sql`. Substitui o fluxo inline de ajuste de peso (que só permitia aumentar e não guardava histórico) por um recurso dedicado de correção de peso real medido na balança.
+
+**Problema do fluxo anterior:** o `peso_vivo_atual_kg_cab` em `lote_categorias` é uma estimativa projetada pelo cron `update_dados_lotes` a partir da GMD do plano. Quando o usuário pesa os animais na balança, o peso real pode ser maior ou menor que a projeção (GMD superestimado ou subestimado). O fluxo inline em `Lotes.tsx` bloqueava correções para baixo (`pesoAtual < pesoOriginal`), não guardava o valor anterior nem quem/motivo, e sempre setava `data_ajuste_peso = today` em vez da data real da pesagem.
+
+**Solução implementada:**
+
+1. **Tabela `peso_correcoes`** (auditoria): `fazenda_id, lote_id, lote_categoria_id, peso_anterior_kg_cab, peso_novo_kg_cab, data_pesagem, motivo, usuario_id, created_at`. RLS por `fazenda_id` (mesmo padrão de `lote_categorias`).
+2. **RPC `corrigir_peso_categoria(p_lote_categoria_id, p_peso_novo_kg_cab, p_data_pesagem, p_motivo, p_usuario_id)`**: valida peso positivo e data não futura, busca o peso anterior, insere na auditoria, atualiza `peso_vivo_atual_kg_cab = p_peso_novo_kg_cab` e `data_ajuste_peso = p_data_pesagem`. A trigger existente `trigger_recalc_peso_lote_cat` dispara automaticamente (AFTER UPDATE OF data_ajuste_peso, peso_vivo_atual_kg_cab) com `p_ajuste_manual=true`, recalculando `peso_vivo_kg` em `registros_suplementacao` e em cascata `consumo_pct_pv`.
+3. **Modal `CorrigirPesoModal.tsx`**: UI dedicada com peso projetado atual (read-only), peso real medido (obrigatório), data da pesagem (obrigatório, default hoje, max hoje), motivo (opcional), e info box explicando o impacto. Mostra a diferença em kg e % entre projetado e real.
+4. **Botão "Corrigir peso"** no card de categoria em `Lotes.tsx`, abaixo do campo "Peso Vivo Atual". Só aparece se a categoria já está salva (`cat.id`) e tem peso definido. Após confirmar, recarrega as categorias do lote via `atualizarCategoriasNoForm` e `loadLotes`.
+
+**Interação com sistemas existentes:**
+- Cron `update_dados_lotes`: após a correção, projeta incrementalmente a partir de `data_ajuste_peso = data_pesagem` (`peso_vivo_atual_kg_cab + gmd * (CURRENT_DATE - data_ajuste_peso)`). Sem dupla contagem.
+- Trigger `recalcular_peso_vivo_lote`: recalcula `peso_vivo_kg` em `registros_suplementacao` projetando a partir do peso real na data da pesagem. Em cascata, `trigger_recalc_pct_pv_on_peso_change` recalcula `consumo_pct_pv`.
+- Snapshots (`criar_snapshot_entrada`, `recategorizar_lote_categoria`): capturam o peso corrigido via `to_jsonb(lc.*)`. Recategorização copia `peso_entrada_kg_cab = peso_vivo_atual_kg_cab` (corrigido) e `data_ajuste_peso=NULL` para a nova categoria.
+- Export XLSX: já inclui `data_ajuste_peso` e `peso_vivo_atual_kg_cab`.
+
+**Validação inline preservada:** a trava que bloqueia `pesoAtual < pesoOriginal` no formulário inline permanece para prevenir diminuições acidentais por typo. Correções intencionais (incluindo diminuições) passam pelo modal dedicado via RPC, que não passa por essa validação.
+
+Validado na fazenda de testes (`d649c65e`): correção de 450 → 445 kg (para baixo) com data 2026-09-14 atualizou peso, data_ajuste_peso e registrou auditoria. Validações de peso negativo e data futura rejeitaram corretamente. Restauração para 450 kg com data 2026-09-12 funcionou.
+
+Disparador: quando mencionar "correção de peso", "peso real medido", "peso_correcoes", "corrigir_peso_categoria", "CorrigirPesoModal", "ajuste de peso real", ou problemas com peso projetado vs peso real, ler esta seção.
+
+### Ajuste de densidade do gráfico de consumo no PDF — adicionado em 2026-09-14
+
+Alterado `MAX_DATA_POINTS_PER_PAGE` em `api/pdf/consumo.js` de `20` para `12`.
+
+**Problema:** o gráfico de "Consumo Médio %PV" do relatório de consumo (Puppeteer) aguardava acumular 20 dias/barras para quebrar em uma página de continuação. Com 20 pontos, as barras e rótulos ficavam muito densos e ilegíveis em A4 landscape antes da quebra.
+
+**Solução:** reduzir o limite para 12 pontos de dados por página. A partir de 13 barras, o lote é dividido em páginas de continuação, mantendo a legibilidade dos rótulos de CMS, %PV e leitura de cocho. A lógica de `chunkDados` e paginação já existente continua valendo; apenas o tamanho do chunk mudou.
+
+Disparador: quando mencionar "gráfico denso", "limite de barras", "continuação do gráfico de consumo", `MAX_DATA_POINTS_PER_PAGE` no PDF de consumo, ou problemas de legibilidade das barras do relatório de consumo, ler esta seção.

@@ -7,6 +7,7 @@ import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, useToast
 import { PlanoNutricionalLoteModal } from '../../components/plano-nutricional/PlanoNutricionalLoteModal'
 import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plano-nutricional/PlanoNutricionalDraftModal'
 import { RevisarNovoLoteModal } from '../../components/lotes/RevisarNovoLoteModal'
+import { CorrigirPesoModal } from '../../components/lotes/CorrigirPesoModal'
 import { LoteCard } from '../../components/lotes/LoteCard'
 import { LoteFilters } from '../../components/lotes/LoteFilters'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
@@ -211,6 +212,7 @@ export function Lotes() {
     categoriasAlteradas: { categoria: string; pesoOriginal: number; novoPeso: number }[]
   } | null>(null)
   const [pendingSubmitData, setPendingSubmitData] = useState<{ loteId: string; recalculatedCategorias: LoteCategoria[] } | null>(null)
+  const [corrigirPesoCat, setCorrigirPesoCat] = useState<LoteCategoria | null>(null)
 
   const categoriasOpcoes = useMemo(() => {
     const baseCategorias = [
@@ -1189,6 +1191,29 @@ export function Lotes() {
       }
       setSubmitting(false)
       return
+    }
+
+    // Sincronizar lote_pasto_historico e lote_modulo_historico quando o pasto
+    // do lote muda na edição. O trigger trg_registros_pastagens_mover_lote só
+    // dispara via registros_pastagens; a edição direta de lotes.pasto_id aqui
+    // precisa chamar a RPC para fechar o histórico antigo e abrir o novo.
+    if (editingLote && !isConfinamento) {
+      const pastoAnterior = editingLote.pasto_id || null
+      const pastoNovo = formData.pasto_id || null
+      if (pastoAnterior !== pastoNovo) {
+        const { error: syncError } = await supabase.rpc(
+          'sincronizar_historico_pasto_lote_edit',
+          {
+            p_lote_id: loteId,
+            p_pasto_id_anterior: pastoAnterior,
+            p_pasto_id_novo: pastoNovo,
+          }
+        )
+        if (syncError) {
+          console.error('Erro ao sincronizar histórico de pasto:', syncError)
+          toast.error('Lote salvo, mas houve erro ao sincronizar o histórico de pasto. Verifique o console.')
+        }
+      }
     }
 
     // Gerenciar associação do lote com curral
@@ -2949,6 +2974,15 @@ export function Lotes() {
                                 cat.peso_vivo_atual_kg_cab < (originalPesos[cat.categoria.toLowerCase()] ?? 0) && (
                                 <p className="text-xs text-red-600 mt-1">O peso atual não pode ser menor que o peso original.</p>
                               )}
+                              {cat.id && cat.peso_vivo_atual_kg_cab != null && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCorrigirPesoCat(cat)}
+                                  className="text-xs text-accent hover:text-accent-dark mt-1 underline"
+                                >
+                                  Corrigir peso
+                                </button>
+                              )}
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
@@ -3780,6 +3814,26 @@ export function Lotes() {
           confirmText="Confirmar alteração do peso atual"
           cancelText="Cancelar"
           variant="warning"
+        />
+      )}
+
+      {corrigirPesoCat && editingLote && (
+        <CorrigirPesoModal
+          isOpen={!!corrigirPesoCat}
+          onClose={() => setCorrigirPesoCat(null)}
+          loteCategoriaId={corrigirPesoCat.id!}
+          categoriaNome={corrigirPesoCat.categoria}
+          pesoProjetadoAtual={corrigirPesoCat.peso_vivo_atual_kg_cab ?? null}
+          gmd={corrigirPesoCat.gmd ?? null}
+          dataAjusteAtual={corrigirPesoCat.data_ajuste_peso ?? null}
+          usuarioId={user?.id}
+          onCorrigido={async () => {
+            setCorrigirPesoCat(null)
+            if (editingLote) {
+              await atualizarCategoriasNoForm(editingLote.id)
+              await loadLotes()
+            }
+          }}
         />
       )}
 
