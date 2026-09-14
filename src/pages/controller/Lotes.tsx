@@ -2978,7 +2978,7 @@ export function Lotes() {
                                 <button
                                   type="button"
                                   onClick={() => setCorrigirPesoCat(cat)}
-                                  className="text-xs text-accent hover:text-accent-dark mt-1 underline"
+                                  className="text-xs text-green-600 hover:text-green-700 mt-1 underline font-medium"
                                 >
                                   Corrigir peso
                                 </button>
@@ -3037,44 +3037,6 @@ export function Lotes() {
                             </div>
                           </div>
                         </div>
-
-                        {/* Proveniência do peso */}
-                        {(() => {
-                          const entradas = cat.ultima_entrada || []
-                          const gmdNum = cat.gmd ? Number(String(cat.gmd).replace(',', '.')) : null
-                          const dataAjuste = cat.data_ajuste_peso
-                          const temPlanoAtivo = cat.planos_cadastrados?.some((p: any) => p.ativo) || !!cat.formulacao_id
-                          if (entradas.length === 0 && (!gmdNum || !dataAjuste || !temPlanoAtivo)) return null
-                          const diasGmd = dataAjuste
-                            ? Math.max(0, Math.floor((Date.now() - new Date(dataAjuste).getTime()) / 86400000))
-                            : 0
-                          const gmdAcumulado = gmdNum ? (gmdNum * diasGmd).toFixed(1) : null
-                          return (
-                            <div className="mb-4 rounded-lg bg-gray-50 border border-gray-200 px-3 py-2">
-                              <div className="flex flex-col gap-0.5 text-xs text-gray-500">
-                                {entradas.map((entr, idx) => (
-                                  <div key={idx}>
-                                    <span className="font-semibold text-gray-600">Entrada</span>
-                                    {' em '}
-                                    {new Date(entr.data).toLocaleDateString('pt-BR')}
-                                    {': +'}
-                                    {entr.numero_cabecas}
-                                    {' cab a '}
-                                    {Number(entr.peso_vivo_atual_kg).toFixed(0)}
-                                    {' kg'}
-                                  </div>
-                                ))}
-                                {gmdNum && dataAjuste && temPlanoAtivo && (
-                                  <div>
-                                    <span className="font-semibold text-gray-600">GMD</span>
-                                    {` ${gmdNum} kg/dia`}
-                                    {diasGmd > 0 ? ` x ${diasGmd} dias = +${gmdAcumulado} kg` : ' (hoje)'}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })()}
 
                         {/* Meta */}
                         <div className="mb-4">

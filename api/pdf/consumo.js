@@ -32,7 +32,7 @@ const MAX_BODY_BYTES = 8_000_000
 
 // Quantos pontos de dados cabem em um gráfico por página A4 landscape antes de
 // a legenda/eixos ficarem ilegíveis. Mesmo valor usado pelo jsPDF.
-const MAX_DATA_POINTS_PER_PAGE = 20
+const MAX_DATA_POINTS_PER_PAGE = 12
 
 function isPDFData(value) {
   if (!value || typeof value !== 'object') return false
