@@ -117,6 +117,7 @@ const RastreioCadernetas = laz(() => import('./pages/controller/RastreioCadernet
 const Notificacoes = laz(() => import('./pages/controller/Notificacoes'), 'Notificacoes')
 const AssistenteIA = laz(() => import('./pages/controller/AssistenteIA'), 'AssistenteIA')
 const Relatorios = laz(() => import('./pages/controller/Relatorios'), 'Relatorios')
+const Configuracoes = laz(() => import('./pages/controller/Configuracoes'), 'Configuracoes')
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -1095,6 +1096,17 @@ function App() {
               <ControllerRoute>
                 <ControllerLayout>
                   <Relatorios />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+
+          <Route
+            path="/controller/configuracoes"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <Configuracoes />
                 </ControllerLayout>
               </ControllerRoute>
             }

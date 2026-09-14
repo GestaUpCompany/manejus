@@ -2,6 +2,14 @@
 
 Este arquivo registra mudanças já aplicadas no Painel Web. Um chat novo não precisa ler isto por padrão; consulte quando a pergunta for sobre "por que isso foi feito assim" ou para entender o estado anterior de uma parte do código.
 
+## Upload de logo da fazenda pelo controller (2026-09-14)
+
+- O controller agora pode atualizar o logo da própria fazenda sem depender do admin. Antes, o upload de logo só existia nas telas de admin (`NovaFazenda.tsx` e `EditarFazenda.tsx`).
+- Criada a página `Configuracoes.tsx` em `src/pages/controller/`, acessível pela rota `/controller/configuracoes`, com seção "Logo da Fazenda": preview da logo atual, seleção de nova imagem, e botão "Salvar Logo" que deleta a logo antiga do bucket `logos`, faz upload da nova via `uploadLogo`, e grava a URL em `fazendas.logo_url` via `updateFazenda`.
+- A opção "Configurações" no menu do usuário (avatar no Header) foi descomentada e ligada à nova rota via `useNavigate`. A intenção é que essa tela cresça como hub de configurações do controller, sem poluir o sidebar.
+- Escopo restrito a `logo_url`: nenhum outro campo da fazenda (`ativo`, `acesso_confinamento`, `grupo_id`, `acesso_id`) é exposto ao controller, pois esses são decisões administrativas.
+- Nenhuma migration necessária: a policy de update da tabela `fazendas` (`user_has_fazenda_access`) e a policy de upload do bucket `logos` já permitiam as duas operações para o controller.
+
 ## Relatório público de consumo com fallback para plano do lote (2026-09-14)
 
 - A RPC `get_dados_relatorio_consumo` só considerava plano nutricional vinculado à categoria (`lote_categoria_id`) e os campos `lote_categorias.formulacao_id`/`data_meta_projetada`. Lotes com plano ativo no nível do lote (`planos_nutricionais.lote_id`, `lote_categoria_id NULL`) ficavam com pills vazios, e o Lote 13 perdia dieta, período e data prevista após a edição do lote sobrescrever os campos da categoria com NULL.
