@@ -46,6 +46,11 @@ interface RegistroBruto {
   placa?: string
   total_bomba?: number
   observacao?: string
+  odometro?: number | null
+  odometro_anterior?: number | null
+  trabalho_periodo?: number | null
+  unidade_trabalho?: string | null
+  consumo_por_unidade?: number | null
 }
 
 interface DadosRelatorio {
@@ -177,6 +182,9 @@ interface DetalheMaquina {
   combustiveis: string[]
   operadores: string[]
   placas: string[]
+  unidadeTrabalho: string | null
+  totalTrabalho: number | null
+  consumoMedio: number | null
 }
 
 type Dimensao = 'maquina' | 'combustivel' | 'operacao'
@@ -361,6 +369,11 @@ export function RelatorioPublico() {
       const placas = Array.from(new Set(regs.map((r) => r.placa).filter((v): v is string => !!v && v.replace(/0/g, '').trim() !== ''))).sort()
       const first = regs[0]
 
+      // Agregados de trabalho no periodo e consumo por unidade
+      const unidadeTrabalho = first?.unidade_trabalho ?? null
+      const totalTrabalho = regs.reduce((s, r) => s + (r.trabalho_periodo ? Number(r.trabalho_periodo) : 0), 0)
+      const consumoMedio = totalTrabalho > 0 ? totalLitrosMaq / totalTrabalho : null
+
       result.push({
         maquina,
         marca: first?.marca,
@@ -374,6 +387,9 @@ export function RelatorioPublico() {
         combustiveis,
         operadores,
         placas,
+        unidadeTrabalho,
+        totalTrabalho: totalTrabalho > 0 ? totalTrabalho : null,
+        consumoMedio,
       })
     }
     return result.sort((a, b) => b.totalLitros - a.totalLitros)
@@ -1111,6 +1127,8 @@ export function RelatorioPublico() {
                   <th className="text-right py-2 px-3 font-medium text-gray-600">Nº abast.</th>
                   <th className="text-right py-2 px-3 font-medium text-gray-600">Média/abast. (L)</th>
                   <th className="text-right py-2 px-3 font-medium text-gray-600">Maior abast. (L)</th>
+                  <th className="text-right py-2 px-3 font-medium text-gray-600">Trabalho no período</th>
+                  <th className="text-right py-2 px-3 font-medium text-gray-600">Consumo médio</th>
                   <th className="text-center py-2 px-3 font-medium text-gray-600">Período</th>
                   <th className="text-left py-2 px-3 font-medium text-gray-600">Combustíveis</th>
                 </tr>
@@ -1130,6 +1148,16 @@ export function RelatorioPublico() {
                       <td className="py-2 px-3 text-right text-gray-700">{d.numAbastecimentos}</td>
                       <td className="py-2 px-3 text-right text-gray-700">{d.mediaLitros.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</td>
                       <td className="py-2 px-3 text-right text-gray-700">{d.maiorAbastecimento.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</td>
+                      <td className="py-2 px-3 text-right text-gray-700">
+                        {d.totalTrabalho != null && d.unidadeTrabalho
+                          ? `${d.totalTrabalho.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${d.unidadeTrabalho}`
+                          : '—'}
+                      </td>
+                      <td className="py-2 px-3 text-right text-gray-700">
+                        {d.consumoMedio != null && d.unidadeTrabalho
+                          ? `${d.consumoMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} L/${d.unidadeTrabalho}`
+                          : '—'}
+                      </td>
                       <td className="py-2 px-3 text-center text-gray-600 text-xs whitespace-nowrap">
                         {d.primeiraData !== '—' ? `${formatarData(d.primeiraData)} a ${formatarData(d.ultimaData)}` : '—'}
                       </td>
@@ -1145,7 +1173,7 @@ export function RelatorioPublico() {
                     <td className="py-2 px-3 text-right text-gray-900">{totalLitros.toLocaleString('pt-BR')} L</td>
                     <td className="py-2 px-3 text-right text-gray-500">100%</td>
                     <td className="py-2 px-3 text-right text-gray-700">{totalRegistros}</td>
-                    <td colSpan={4}></td>
+                    <td colSpan={6}></td>
                   </tr>
                 </tfoot>
               )}

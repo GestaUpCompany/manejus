@@ -18,7 +18,7 @@ interface RegistroAbastecimento {
   total_abastecido: number
   total_bomba?: number
   combustivel: string
-  odometro_horimetro: string
+  odometro_horimetro: number | null
   tipo_operacao: string
   tipo_operacao_outros?: string
   observacao?: string

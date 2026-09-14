@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, Select, Modal, ConfirmModal, CardSkeleton, EmptyState } from '../../components/ui'
+import { Button, Card, Input, Select, Modal, CardSkeleton, EmptyState } from '../../components/ui'
 import { getFazendaIdForUser, getFazendaNome } from '../../utils/fazendaContext'
 import { formatDate } from '../../utils/formatDate'
 
@@ -18,18 +18,6 @@ interface Tanque {
   deleted_at: string | null
 }
 
-interface AbastecimentoPendente {
-  id: string
-  data: string
-  maquina_veiculo: string
-  combustivel: string
-  total_abastecido: number
-  operador_motorista: string
-  placa: string | null
-  tanque_id: string | null
-  tanque_nome: string | null
-}
-
 const TIPOS_COMBUSTIVEL = [
   { value: 'Álcool', label: 'Álcool' },
   { value: 'Gasolina', label: 'Gasolina' },
@@ -43,15 +31,12 @@ export function EstoqueCombustivel() {
   const [fazendaNome, setFazendaNome] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [tanques, setTanques] = useState<Tanque[]>([])
-  const [abastecimentosPendentes, setAbastecimentosPendentes] = useState<AbastecimentoPendente[]>([])
   const [kpiMes, setKpiMes] = useState({ consumo_l: 0, custo_rs: 0 })
 
   // Modais
   const [modalTanque, setModalTanque] = useState(false)
   const [tanqueEditando, setTanqueEditando] = useState<Tanque | null>(null)
   const [modalEntrada, setModalEntrada] = useState(false)
-  const [modalBaixa, setModalBaixa] = useState<AbastecimentoPendente | null>(null)
-  const [modalBaixaTodos, setModalBaixaTodos] = useState(false)
   const [modalHistorico, setModalHistorico] = useState<Tanque | null>(null)
   const [historicoMovs, setHistoricoMovs] = useState<any[]>([])
   const [historicoLoading, setHistoricoLoading] = useState(false)
@@ -77,31 +62,17 @@ export function EstoqueCombustivel() {
     observacao: '',
   })
 
-  // Form baixa (preco automatico do custo medio)
-  const [baixaForm, setBaixaForm] = useState({
-    tanque_id: '',
-    observacao: '',
-  })
-
   const loadAll = useCallback(async () => {
     if (!fazendaId) return
     setLoading(true)
     try {
-      const [tanquesRes, pendentesRes, kpiRes] = await Promise.all([
+      const [tanquesRes, kpiRes] = await Promise.all([
         supabase
           .from('tanques_combustivel')
           .select('*')
           .eq('fazenda_id', fazendaId)
           .is('deleted_at', null)
           .order('tipo_combustivel'),
-        supabase
-          .from('registros_abastecimento')
-          .select('id, data, maquina_veiculo, combustivel, total_abastecido, operador_motorista, placa, tanque_id, tanque_nome')
-          .eq('fazenda_id', fazendaId)
-          .is('deleted_at', null)
-          .is('baixa_estoque_id', null)
-          .order('data', { ascending: false })
-          .order('created_at', { ascending: false }),
         supabase
           .from('movimentacoes_combustivel')
           .select('quantidade_l, preco_por_litro')
@@ -111,11 +82,9 @@ export function EstoqueCombustivel() {
       ])
 
       if (tanquesRes.error) throw tanquesRes.error
-      if (pendentesRes.error) throw pendentesRes.error
       if (kpiRes.error) throw kpiRes.error
 
       setTanques(tanquesRes.data as Tanque[])
-      setAbastecimentosPendentes(pendentesRes.data as AbastecimentoPendente[])
 
       const movs = kpiRes.data || []
       const consumo = movs.reduce((sum, m) => sum + Number(m.quantidade_l), 0)
@@ -249,103 +218,6 @@ export function EstoqueCombustivel() {
     } finally {
       setSubmitting(false)
     }
-  }
-
-  // Handlers baixa (preco automatico do custo medio do tanque)
-  const abrirModalBaixa = (abastecimento: AbastecimentoPendente) => {
-    // Usar tanque_id do abastecimento se informado, senão sugerir por tipo de combustivel
-    const tanqueSugerido = abastecimento.tanque_id
-      ? tanquesAtivos.find((t) => t.id === abastecimento.tanque_id)
-      : tanquesAtivos.find((t) => t.tipo_combustivel === abastecimento.combustivel)
-    setBaixaForm({
-      tanque_id: tanqueSugerido?.id || '',
-      observacao: '',
-    })
-    setModalBaixa(abastecimento)
-  }
-
-  const salvarBaixa = async () => {
-    if (!fazendaId || !modalBaixa || !baixaForm.tanque_id) return
-    setSubmitting(true)
-    setError(null)
-    try {
-      // Buscar custo medio do tanque selecionado
-      const tanque = tanquesAtivos.find((t) => t.id === baixaForm.tanque_id)
-      const custoMedio = tanque ? Number(tanque.custo_medio_l) : 0
-
-      // Inserir movimentacao de baixa com preco = custo medio do tanque
-      const { data: movData, error: movError } = await supabase.from('movimentacoes_combustivel').insert({
-        fazenda_id: fazendaId,
-        tanque_id: baixaForm.tanque_id,
-        tipo_movimentacao: 'baixa',
-        quantidade_l: modalBaixa.total_abastecido,
-        preco_por_litro: custoMedio,
-        data: modalBaixa.data,
-        origem: 'painel_baixa',
-        registro_abastecimento_id: modalBaixa.id,
-        observacao: baixaForm.observacao || null,
-      }).select('id').single()
-
-      if (movError) throw movError
-
-      // Vincular abastecimento a baixa
-      const { error: updError } = await supabase
-        .from('registros_abastecimento')
-        .update({ baixa_estoque_id: movData.id })
-        .eq('id', modalBaixa.id)
-
-      if (updError) throw updError
-
-      setModalBaixa(null)
-      loadAll()
-    } catch (err: any) {
-      setError(err.message || 'Erro ao dar baixa. Verifique se ha saldo suficiente no tanque.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const baixarTodos = async () => {
-    if (!fazendaId || abastecimentosPendentes.length === 0) return
-    setSubmitting(true)
-    setError(null)
-    let sucessos = 0
-    let falhas = 0
-    for (const ab of abastecimentosPendentes) {
-      // Usar tanque_id do abastecimento se informado, senão sugerir por tipo de combustivel
-      const tanque = ab.tanque_id
-        ? tanquesAtivos.find((t) => t.id === ab.tanque_id)
-        : tanquesAtivos.find((t) => t.tipo_combustivel === ab.combustivel)
-      if (!tanque) { falhas++; continue }
-      try {
-        const custoMedio = Number(tanque.custo_medio_l)
-        const { data: movData, error: movError } = await supabase.from('movimentacoes_combustivel').insert({
-          fazenda_id: fazendaId,
-          tanque_id: tanque.id,
-          tipo_movimentacao: 'baixa',
-          quantidade_l: ab.total_abastecido,
-          preco_por_litro: custoMedio,
-          data: ab.data,
-          origem: 'painel_baixa',
-          registro_abastecimento_id: ab.id,
-        }).select('id').single()
-        if (movError) throw movError
-        const { error: updError } = await supabase
-          .from('registros_abastecimento')
-          .update({ baixa_estoque_id: movData.id })
-          .eq('id', ab.id)
-        if (updError) throw updError
-        sucessos++
-      } catch {
-        falhas++
-      }
-    }
-    setModalBaixaTodos(false)
-    loadAll()
-    if (falhas > 0) {
-      setError(`${sucessos} baixas com sucesso, ${falhas} falhas (verifique saldo dos tanques)`)
-    }
-    setSubmitting(false)
   }
 
   // Handler histórico
@@ -526,68 +398,6 @@ export function EstoqueCombustivel() {
         )}
       </div>
 
-      {/* Abastecimentos pendentes de baixa */}
-      <div>
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800">
-            Abastecimentos Pendentes de Baixa
-          </h3>
-          {abastecimentosPendentes.length > 0 && (
-            <Button variant="secondary" size="sm" onClick={() => setModalBaixaTodos(true)}>
-              Dar Baixa em Todos ({abastecimentosPendentes.length})
-            </Button>
-          )}
-        </div>
-        {abastecimentosPendentes.length === 0 ? (
-          <Card className="bg-white p-6 text-center" disableHover>
-            <p className="text-gray-600">Nenhum abastecimento pendente de baixa</p>
-          </Card>
-        ) : (
-          <Card className="bg-white overflow-x-auto" disableHover>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Máquina/Veículo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Combustível</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanque</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total (L)</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Operador</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {abastecimentosPendentes.map((ab) => {
-                  const temTanque = ab.tanque_id
-                    ? tanquesAtivos.some((t) => t.id === ab.tanque_id)
-                    : tanquesAtivos.some((t) => t.tipo_combustivel === ab.combustivel)
-                  return (
-                    <tr key={ab.id}>
-                      <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{formatDate(ab.data)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{ab.maquina_veiculo || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{ab.combustivel || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{ab.tanque_nome || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{ab.total_abastecido} L</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{ab.operador_motorista || '-'}</td>
-                      <td className="px-4 py-3">
-                        <Button
-                          size="sm"
-                          onClick={() => abrirModalBaixa(ab)}
-                          disabled={!temTanque}
-                          title={temTanque ? 'Dar baixa no estoque' : `Nenhum tanque de ${ab.combustivel} cadastrado`}
-                        >
-                          Dar Baixa
-                        </Button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </Card>
-        )}
-      </div>
-
       {/* Modal: Configurar Tanque */}
       <Modal
         isOpen={modalTanque}
@@ -712,69 +522,6 @@ export function EstoqueCombustivel() {
         </div>
       </Modal>
 
-      {/* Modal: Dar Baixa (preco automatico do custo medio) */}
-      <Modal
-        isOpen={!!modalBaixa}
-        onClose={() => setModalBaixa(null)}
-        title="Dar Baixa no Estoque"
-        size="md"
-      >
-        {modalBaixa && (() => {
-          const tanqueSelecionado = tanquesAtivos.find((t) => t.id === baixaForm.tanque_id)
-          const custoMedio = tanqueSelecionado ? Number(tanqueSelecionado.custo_medio_l) : 0
-          const valorBaixa = Number(modalBaixa.total_abastecido) * custoMedio
-          return (
-            <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-                <p className="text-sm"><span className="text-gray-500">Data:</span> <span className="font-medium">{formatDate(modalBaixa.data)}</span></p>
-                <p className="text-sm"><span className="text-gray-500">Máquina:</span> <span className="font-medium">{modalBaixa.maquina_veiculo || '-'}</span></p>
-                <p className="text-sm"><span className="text-gray-500">Combustível:</span> <span className="font-medium">{modalBaixa.combustivel}</span></p>
-                <p className="text-sm"><span className="text-gray-500">Total:</span> <span className="font-medium">{modalBaixa.total_abastecido} L</span></p>
-              </div>
-              <Select
-                label="Tanque para Baixa"
-                options={tanquesAtivos
-                  .filter((t) => t.tipo_combustivel === modalBaixa.combustivel)
-                  .map((t) => ({ value: t.id, label: `${t.nome} (Saldo: ${Number(t.saldo_atual_l).toLocaleString('pt-BR')} L)` }))}
-                value={baixaForm.tanque_id}
-                onChange={(val) => setBaixaForm({ ...baixaForm, tanque_id: val })}
-                placeholder="Selecione o tanque..."
-                required
-              />
-              {tanqueSelecionado && (
-                <div className="bg-blue-50 rounded-lg p-3 space-y-1">
-                  <p className="text-sm"><span className="text-gray-500">Custo médio do tanque:</span> <span className="font-medium">R$ {custoMedio.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}/L</span></p>
-                  <p className="text-sm"><span className="text-gray-500">Valor da baixa:</span> <span className="font-semibold">R$ {valorBaixa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>
-                </div>
-              )}
-              <Input
-                label="Observação"
-                placeholder="Detalhes adicionais (opcional)"
-                value={baixaForm.observacao}
-                onChange={(e) => setBaixaForm({ ...baixaForm, observacao: e.target.value })}
-              />
-              <div className="flex gap-2 justify-end pt-2">
-                <Button variant="secondary" onClick={() => setModalBaixa(null)}>Cancelar</Button>
-                <Button onClick={salvarBaixa} disabled={submitting || !baixaForm.tanque_id}>
-                  {submitting ? 'Dando baixa...' : 'Confirmar Baixa'}
-                </Button>
-              </div>
-            </div>
-          )
-        })()}
-      </Modal>
-
-      {/* Confirm: Baixar Todos */}
-      <ConfirmModal
-        isOpen={modalBaixaTodos}
-        onClose={() => setModalBaixaTodos(false)}
-        onConfirm={baixarTodos}
-        title="Dar Baixa em Todos"
-        message={`Confirmar baixa de ${abastecimentosPendentes.length} abastecimento(s) pendente(s)? O saldo de cada tanque será decrementado conforme o tipo de combustível de cada abastecimento. O custo da baixa usa o custo médio de cada tanque. Abastecimentos sem tanque correspondente serão ignorados.`}
-        confirmText="Confirmar"
-        variant="warning"
-      />
-
       {/* Modal: Histórico do Tanque */}
       <Modal
         isOpen={!!modalHistorico}
@@ -831,9 +578,9 @@ export function EstoqueCombustivel() {
                       const origemLabel: Record<string, string> = {
                         estoque_inicial: 'Estoque Inicial',
                         painel_entrada: 'Entrada Manual',
-                        pwa_entrada: 'Entrada PWA',
-                        painel_baixa: 'Baixa Manual',
-                        pwa_baixa: 'Baixa PWA',
+                        pwa_entrada: 'Entrada via App',
+                        auto_baixa: 'Baixa Automática',
+                        painel_ajuste: 'Ajuste Manual',
                       }
                       return (
                         <div

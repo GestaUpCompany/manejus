@@ -566,3 +566,71 @@ Disparador: quando mencionar "combustível", "tanque de combustível", "estoque 
 ### Remoção do unique constraint de tanque por tipo — adicionado em 2026-09-14
 
 Removido o unique partial index `idx_tanques_combustivel_unique_tipo_fazenda` que impedia múltiplos tanques ativos do mesmo tipo de combustível por fazenda. O sistema agora permite dois ou mais tanques do mesmo tipo (ex: dois tanques de Diesel S10). Migration `20260915170000_drop_unique_tanque_tipo_fazenda.sql`. O frontend (PWA e Painel Web) já tratava o caso de múltiplos tanques do mesmo tipo (seleção manual quando `tanquesFiltrados.length > 1`), então nenhuma mudança de UI foi necessária.
+
+### Baixa automática de estoque via trigger + odômetro numeric + relatório com horas/km trabalhadas — adicionado em 2026-09-15
+
+Três mudanças coordenadas no fluxo de abastecimento, compartilhando o mesmo banco Supabase entre PWA e Painel Web.
+
+**1. Baixa automática de estoque via trigger (migration `20260915180000_baixa_automatica_abastecimento.sql`)**
+
+A baixa de combustível era manual: o PWA criava o `registros_abastecimento`, o Painel Web listava pendentes e o gerente clicava "Dar Baixa". Agora a inserção do abastecimento cria a baixa atomicamente no banco, com trava de saldo server-side.
+
+Trigger `trg_baixa_automatica_abastecimento` AFTER INSERT ON `registros_abastecimento`:
+- Locka o tanque com `SELECT ... FOR UPDATE`.
+- Rejeita saldo insuficiente com `RAISE EXCEPTION`.
+- Insere `movimentacoes_combustivel` com `tipo_movimentacao='baixa'`, `origem='auto_baixa'`, `preco_por_litro = custo_medio_l do tanque`, `registro_abastecimento_id = NEW.id`.
+- Atualiza `baixa_estoque_id` do abastecimento com o ID da movimentação criada.
+- A trigger existente `update_tanque_saldo_custo` recalcula saldo e custo médio em cascata.
+
+A UI de baixa manual foi removida do `EstoqueCombustivel.tsx`: seção "Abastecimentos Pendentes de Baixa", modal de baixa individual, modal "Dar Baixa em Todos", handlers `abrirModalBaixa`/`salvarBaixa`/`baixarTodos`, interface `AbastecimentoPendente`, state `abastecimentosPendentes`/`modalBaixa`/`modalBaixaTodos`/`baixaForm`. O `origemLabel` do histórico atualizado: `auto_baixa: 'Baixa Automática'`, removidos `painel_baixa` e `pwa_baixa`.
+
+O PWA passou a exigir seleção de tanque obrigatória e valida saldo contra cache local antes de salvar (botão SALVAR disabled + aviso vermelho quando `totalAbastecido > tanque.saldo_atual_l`). A trigger do banco permanece a proteção autoritativa contra concorrência e cache stale.
+
+**2. Odômetro/horímetro numeric + toggle "sem horímetro" (migration `20260915190000_odometro_horimetro_numeric.sql`)**
+
+Coluna `registros_abastecimento.odometro_horimetro` migrada de `text` para `numeric(12,3)` nullable. Backfill de 18 valores inválidos: strings numéricas brasileiras ("4.721.6" → 4721.6, "2326,2" → 2326.2) convertidas, textos não-numéricos ("Não marca") e valor absurdo em notação científica convertidos para NULL. Resultado: 410 non-null, 6 null de 416 total.
+
+PWA: campo odômetro/horímetro permanece required por padrão, com botão toggle "Clique aqui se essa máquina/veículo não possui horímetro/odômetro". Quando ativo: input fica disabled/read-only, placeholder muda para "Sem horímetro/odômetro", validation passa sem leitura, e o valor salvo é `NULL` (não string vazia). Bug corrigido em `validation.ts`: a função `validateAbastecimento` checava `odometro` como obrigatório hardcoded; agora lê `data.semHorimetro` para pular a validação. O flag `semHorimetro` é removido do payload antes de persistir no IndexedDB e nunca chega ao Supabase.
+
+`syncService.ts` atualizado para enviar `odometro_horimetro` como `Number(normalizarNumeroString(...))` ou `null`, nunca como string. Interfaces do Painel Web (`RegistrosAbastecimento.tsx`, `RegistrosAbastecimentoDetalhes.tsx`) atualizadas de `string` para `number | null`.
+
+**3. Relatório de abastecimento com horas/km trabalhadas (migration `20260915200000_rpc_abastecimento_trabalho_periodo.sql`)**
+
+RPC `get_dados_relatorio_abastecimento` reescrita com CTE + `LAG` window function para calcular trabalho entre abastecimentos consecutivos da mesma máquina/veículo.
+
+Particionamento: `PARTITION BY COALESCE(maquina_veiculo_id::text, maquina_veiculo)` (fallback por nome quando não há ID). Ordenação: `data, created_at`. O `LAG` é calculado sobre TODOS os registros da fazenda (sem filtro de data) para que o primeiro abastecimento dentro de um período filtrado ainda tenha a leitura anterior.
+
+Campos novos no JSON de cada registro:
+- `odometro_anterior`: leitura do abastecimento anterior (NULL para o primeiro).
+- `trabalho_periodo`: diferença positiva entre leitura atual e anterior (NULL se não há anterior, se diferença ≤ 0, ou se leitura é NULL).
+- `unidade_trabalho`: `'h'` para máquinas, `'km'` para veículos, `NULL` se tipo desconhecido (derivado de `maquinas_veiculos.tipo` via LEFT JOIN).
+- `consumo_por_unidade`: `ROUND(total_abastecido / diferenca, 3)` quando calculável, `NULL` caso contrário.
+
+Painel Web: `RelatorioPublico.tsx` adicionou 2 colunas na tabela de detalhamento por máquina: "Trabalho no período" (ex: "200.141 h" ou "12 km") e "Consumo médio" (ex: "0.952 L/h" ou "4.667 L/km"), ambas com "—" quando indisponível. Agregação por máquina soma `trabalho_periodo` de todos os registros e calcula consumo médio = totalLitros / totalTrabalho. `DetalheMaquina` ganhou campos `unidadeTrabalho`, `totalTrabalho`, `consumoMedio`.
+
+PDF (`api/pdf/abastecimento.js`): tabela 1 "Detalhamento por Máquina" ganhou 2 colunas (Trabalho, Consumo) com as mesmas regras de exibição. CSS ajustado de 8 para 10 colunas.
+
+Validado na fazenda de testes: Liugong 835 H (máquina) mostrou 83h, 92h, 287h, 68h trabalhadas entre abastecimentos consecutivos com consumo L/h correto. Jactor Uniport 2500 (veículo) mostrou 12 km com 4.667 L/km. Primeiros abastecimentos de cada máquina mostram "—" como esperado.
+
+Disparador: quando mencionar "baixa automática", "trigger de baixa", "auto_baixa", "odômetro numeric", "horímetro numeric", "toggle sem horímetro", "horas trabalhadas", "km percorridos", "consumo L/h", "consumo L/km", "trabalho no período", "LAG abastecimento", ou retomar o fluxo de baixa de combustível, ler esta seção.
+
+### Correção de dados: odômetros com ponto interpretado como decimal — adicionado em 2026-09-15
+
+Após validar o relatório público da Fazenda Marcon contra o banco, identificamos dois padrões de erro de digitação em `registros_abastecimento.odometro_horimetro` que inflacionavam as horas/km trabalhadas calculadas pela RPC com `LAG`:
+
+1. **Ponto como separador de milhar interpretado como decimal**: operador digitava `4.824` (quatro mil oitocentos e vinte e quatro), a função `normalizarNumero` em `frontend/src/utils/formatNumber.ts` interpretava como `4.824` (quatro e oitocentos e vinte e quatro milésimos). 11 registros afetados (Case W20E, JCB, JCB Retroescavadeira, John Deere 6100, Liugong 835 H, Massey MF 4410, SDLG L936H, Stihl Motosserra MS 170).
+
+2. **Dígito extra (valor 10x maior)**: operador digitava um dígito a mais, produzindo valores como `62416` em vez de `6241.6`. 12 registros afetados (Case W20E, Liugong 835 H, Mercedes 1113, Valtra BH180, Valtra BM 125, Valtra 750, Volkswagen Amarok, Volkswagem VW Amarok, John Deere Gator 1).
+
+3. **Leituras ambíguas (4000 em vez de 4860/4873)**: 2 registros do Liugong 835 H com `4000.000` que não encaixam em nenhum padrão claro. Setados como `NULL` (a RPC já pula o cálculo de `trabalho_periodo` quando a leitura é `NULL`).
+
+Correção pontual aplicada via MCP (25 registros no total, sem migration, pois dependem de dados existentes e não são idempotentes).
+
+**Mudança defensiva em `normalizarNumero`** (`frontend/src/utils/formatNumber.ts`): adicionada regra para um ponto com exatamente 3 dígitos após, tratando como separador de milhar (pt-BR): `"4.824" → 4824`. Caso contrário, continua tratando como decimal: `"4.8" → 4.8`, `"4.8245" → 4.8245`. A mudança é segura porque:
+- Campos `type="number"` já normalizam via navegador (não enviam `N.NNN`).
+- `setDecimalInput` em `AbastecimentoPage.tsx` já remove pontos (`replace(/[^\d,]/g, '')`).
+- A regra só afeta strings com padrão `N.NNN` que chegam de fontes legacy (importação, sync antigo).
+
+Validado no relatório público da Fazenda Marcon: Liugong 835 H passou de 62.912 h para 627,5 h (2,507 L/h), Volkswagen Amarok de 103.699 km para 212,5 km (1,388 L/km), Mercedes 1113 de 14.077 km para 41,9 km (8,897 L/km), John Deere Gator 1 de 155.945 km para 115,4 km (1,353 L/km).
+
+Disparador: quando mencionar "odômetro com ponto", "horímetro inflado", "horas trabalhadas absurdas", "consumo L/h irreal", "normalizarNumero", "ponto como milhar", ou problemas com valores de odômetro/horímetro 10x ou 1000x maiores que o esperado, ler esta seção.

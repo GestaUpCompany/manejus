@@ -164,7 +164,7 @@ const ABASTECIMENTO_CSS = `
 .abast-pill{background:#0b6a42;color:#fff;border-radius:5px;padding:5px 10px;text-align:center;min-width:0;flex:1 1 80px}
 .abast-pill .pill-value{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .abast-pill .pill-label{font-size:10px;opacity:.9;margin-top:1px}
-.period-badge{background:#f7f9f8;border:1px solid #e5ebe7;color:#4f5f56}
+.period-badge{background:#f2f2f2;border:1px solid #e0e0e0;color:#4a5a55}
 .abast-body{display:grid;grid-template-columns:40mm 1fr;gap:6px;flex:1;min-height:0}
 .kpi-col{display:flex;flex-direction:column;gap:5px}
 .kpi-col .kpi-card{min-height:0;padding:6px 8px}
@@ -174,14 +174,16 @@ const ABASTECIMENTO_CSS = `
 .charts-col .chart-card{height:auto}
 .chart-main{height:120mm}
 .chart-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;height:135mm}
-.detail-table th:nth-child(1){width:22%}
-.detail-table th:nth-child(2){width:11%}
-.detail-table th:nth-child(3){width:8%}
-.detail-table th:nth-child(4){width:9%}
-.detail-table th:nth-child(5){width:9%}
-.detail-table th:nth-child(6){width:9%}
-.detail-table th:nth-child(7){width:12%}
-.detail-table th:nth-child(8){width:20%}
+.detail-table th:nth-child(1){width:18%}
+.detail-table th:nth-child(2){width:8%}
+.detail-table th:nth-child(3){width:6%}
+.detail-table th:nth-child(4){width:7%}
+.detail-table th:nth-child(5){width:7%}
+.detail-table th:nth-child(6){width:7%}
+.detail-table th:nth-child(7){width:9%}
+.detail-table th:nth-child(8){width:9%}
+.detail-table th:nth-child(9){width:10%}
+.detail-table th:nth-child(10){width:19%}
 .detail-table td{font-size:12px;padding:6px 5px;line-height:1.25}
 .detail-table th{font-size:11px;padding:6px 5px}
 .detail-table tr.total-row{font-weight:700;background:#eef5f0}
@@ -385,15 +387,21 @@ function kpisHtml(dados) {
 }
 
 function detailTable1Html(detalhes, totalLitros, totalRegistros) {
-  const header = `<thead><tr><th>Máquina/Veículo</th><th>Litros</th><th>% Total</th><th>Nº abast.</th><th>Média (L)</th><th>Maior (L)</th><th>Período</th><th>Combustíveis</th></tr></thead>`
+  const header = `<thead><tr><th>Máquina/Veículo</th><th>Litros</th><th>% Total</th><th>Nº abast.</th><th>Média (L)</th><th>Maior (L)</th><th>Trabalho</th><th>Consumo</th><th>Período</th><th>Combustíveis</th></tr></thead>`
   const rows = detalhes
     .map((d) => {
       const pct = totalLitros > 0 ? (d.totalLitros / totalLitros) * 100 : 0
       const periodo = `${dateShortFmt(d.primeiraData)}-${dateShortFmt(d.ultimaData)}`
-      return `<tr><td>${escapeHtml(d.maquina)}</td><td class="numeric">${intFmtLocale(d.totalLitros)} L</td><td class="numeric">${numFmt(pct, 1)}%</td><td class="numeric">${intFmtLocale(d.numAbastecimentos)}</td><td class="numeric">${intFmtLocale(d.mediaLitros)}</td><td class="numeric">${intFmtLocale(d.maiorAbastecimento)}</td><td>${escapeHtml(periodo)}</td><td>${escapeHtml(d.combustiveis.join(', ') || '—')}</td></tr>`
+      const trabalho = d.totalTrabalho != null && d.unidadeTrabalho
+        ? `${intFmtLocale(d.totalTrabalho)} ${d.unidadeTrabalho}`
+        : '—'
+      const consumo = d.consumoMedio != null && d.unidadeTrabalho
+        ? `${numFmt(d.consumoMedio, 3)} L/${d.unidadeTrabalho}`
+        : '—'
+      return `<tr><td>${escapeHtml(d.maquina)}</td><td class="numeric">${intFmtLocale(d.totalLitros)} L</td><td class="numeric">${numFmt(pct, 1)}%</td><td class="numeric">${intFmtLocale(d.numAbastecimentos)}</td><td class="numeric">${intFmtLocale(d.mediaLitros)}</td><td class="numeric">${intFmtLocale(d.maiorAbastecimento)}</td><td class="numeric">${trabalho}</td><td class="numeric">${consumo}</td><td>${escapeHtml(periodo)}</td><td>${escapeHtml(d.combustiveis.join(', ') || '—')}</td></tr>`
     })
     .join('')
-  const totalRow = `<tr class="total-row"><td>Total</td><td class="numeric">${intFmtLocale(totalLitros)} L</td><td class="numeric">100%</td><td class="numeric">${intFmtLocale(totalRegistros)}</td><td></td><td></td><td></td><td></td></tr>`
+  const totalRow = `<tr class="total-row"><td>Total</td><td class="numeric">${intFmtLocale(totalLitros)} L</td><td class="numeric">100%</td><td class="numeric">${intFmtLocale(totalRegistros)}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`
   return `<table class="detail-table">${header}<tbody>${rows}${totalRow}</tbody></table>`
 }
 
