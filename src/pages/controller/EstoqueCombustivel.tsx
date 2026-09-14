@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, Select, Modal, CardSkeleton, EmptyState } from '../../components/ui'
+import { Button, Card, Input, Select, Modal, ConfirmModal, CardSkeleton, EmptyState } from '../../components/ui'
 import { getFazendaIdForUser, getFazendaNome } from '../../utils/fazendaContext'
 import { formatDate } from '../../utils/formatDate'
 
@@ -40,6 +40,9 @@ export function EstoqueCombustivel() {
   const [modalHistorico, setModalHistorico] = useState<Tanque | null>(null)
   const [historicoMovs, setHistoricoMovs] = useState<any[]>([])
   const [historicoLoading, setHistoricoLoading] = useState(false)
+  const [modalExcluirTanque, setModalExcluirTanque] = useState<Tanque | null>(null)
+  const [tanquesExcluidos, setTanquesExcluidos] = useState<Tanque[]>([])
+  const [mostrarLixeira, setMostrarLixeira] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -53,11 +56,11 @@ export function EstoqueCombustivel() {
     preco_inicial_l: '',
   })
 
-  // Form entrada (valor total unico, preco derivado)
+  // Form entrada (preco por litro digitado, valor total derivado)
   const [entradaForm, setEntradaForm] = useState({
     tanque_id: '',
     quantidade_l: '',
-    valor_total: '',
+    preco_por_litro: '',
     fornecedor: '',
     observacao: '',
   })
@@ -66,7 +69,7 @@ export function EstoqueCombustivel() {
     if (!fazendaId) return
     setLoading(true)
     try {
-      const [tanquesRes, kpiRes] = await Promise.all([
+      const [tanquesRes, kpiRes, excluidosRes] = await Promise.all([
         supabase
           .from('tanques_combustivel')
           .select('*')
@@ -79,12 +82,20 @@ export function EstoqueCombustivel() {
           .eq('fazenda_id', fazendaId)
           .eq('tipo_movimentacao', 'baixa')
           .gte('data', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]),
+        supabase
+          .from('tanques_combustivel')
+          .select('*')
+          .eq('fazenda_id', fazendaId)
+          .not('deleted_at', 'is', null)
+          .order('deleted_at', { ascending: false }),
       ])
 
       if (tanquesRes.error) throw tanquesRes.error
       if (kpiRes.error) throw kpiRes.error
+      if (excluidosRes.error) throw excluidosRes.error
 
       setTanques(tanquesRes.data as Tanque[])
+      setTanquesExcluidos(excluidosRes.data as Tanque[])
 
       const movs = kpiRes.data || []
       const consumo = movs.reduce((sum, m) => sum + Number(m.quantidade_l), 0)
@@ -185,18 +196,18 @@ export function EstoqueCombustivel() {
 
   // Handlers entrada (valor total unico, preco derivado)
   const abrirModalEntrada = () => {
-    setEntradaForm({ tanque_id: '', quantidade_l: '', valor_total: '', fornecedor: '', observacao: '' })
+    setEntradaForm({ tanque_id: '', quantidade_l: '', preco_por_litro: '', fornecedor: '', observacao: '' })
     setModalEntrada(true)
   }
 
   const salvarEntrada = async () => {
-    if (!fazendaId || !entradaForm.tanque_id || !entradaForm.quantidade_l || !entradaForm.valor_total) return
+    if (!fazendaId || !entradaForm.tanque_id || !entradaForm.quantidade_l || !entradaForm.preco_por_litro) return
     setSubmitting(true)
     setError(null)
     try {
       const litros = parseFloat(entradaForm.quantidade_l)
-      const valorTotal = parseFloat(entradaForm.valor_total)
-      const precoPorLitro = litros > 0 ? valorTotal / litros : 0
+      const precoPorLitro = parseFloat(entradaForm.preco_por_litro)
+      const valorTotal = litros * precoPorLitro
 
       const { error } = await supabase.from('movimentacoes_combustivel').insert({
         fazenda_id: fazendaId,
@@ -238,6 +249,44 @@ export function EstoqueCombustivel() {
       setHistoricoMovs([])
     } finally {
       setHistoricoLoading(false)
+    }
+  }
+
+  // Handler excluir tanque (soft delete)
+  const excluirTanque = async () => {
+    if (!modalExcluirTanque) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      const { error } = await supabase
+        .from('tanques_combustivel')
+        .update({ deleted_at: new Date().toISOString(), ativo: false })
+        .eq('id', modalExcluirTanque.id)
+      if (error) throw error
+      setModalExcluirTanque(null)
+      loadAll()
+    } catch (err: any) {
+      setError(err.message || 'Erro ao excluir tanque')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Handler restaurar tanque (undo soft delete)
+  const restaurarTanque = async (tanque: Tanque) => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      const { error } = await supabase
+        .from('tanques_combustivel')
+        .update({ deleted_at: null, ativo: true })
+        .eq('id', tanque.id)
+      if (error) throw error
+      loadAll()
+    } catch (err: any) {
+      setError(err.message || 'Erro ao restaurar tanque')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -354,6 +403,13 @@ export function EstoqueCombustivel() {
                         title="Ver histórico"
                       >
                         Histórico
+                      </button>
+                      <button
+                        onClick={() => setModalExcluirTanque(tanque)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100"
+                        title="Excluir tanque"
+                      >
+                        Excluir
                       </button>
                     </div>
                   </div>
@@ -493,14 +549,30 @@ export function EstoqueCombustivel() {
             required
           />
           <Input
-            label="Valor Total (R$)"
+            label="Preço por Litro (R$)"
             type="number"
-            placeholder="Ex: 5990.00"
-            value={entradaForm.valor_total}
-            onChange={(e) => setEntradaForm({ ...entradaForm, valor_total: e.target.value })}
+            placeholder="Ex: 6.50"
+            value={entradaForm.preco_por_litro}
+            onChange={(e) => setEntradaForm({ ...entradaForm, preco_por_litro: e.target.value })}
             required
           />
-          <p className="text-xs text-gray-500">O preço por litro é calculado automaticamente: valor total ÷ quantidade.</p>
+          {entradaForm.quantidade_l && entradaForm.preco_por_litro && (() => {
+            const litros = parseFloat(entradaForm.quantidade_l) || 0
+            const preco = parseFloat(entradaForm.preco_por_litro) || 0
+            const total = litros * preco
+            if (total > 0) {
+              return (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <span className="font-bold">Valor total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="block text-xs mt-0.5">{litros.toLocaleString('pt-BR')} L × R$ {preco.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}/L</span>
+                  </p>
+                </div>
+              )
+            }
+            return null
+          })()}
+          <p className="text-xs text-gray-500">O valor total é calculado automaticamente: preço por litro × quantidade.</p>
           <Input
             label="Fornecedor"
             placeholder="Ex: Posto São João"
@@ -515,7 +587,7 @@ export function EstoqueCombustivel() {
           />
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="secondary" onClick={() => setModalEntrada(false)}>Cancelar</Button>
-            <Button onClick={salvarEntrada} disabled={submitting || !entradaForm.tanque_id || !entradaForm.quantidade_l || !entradaForm.valor_total}>
+            <Button onClick={salvarEntrada} disabled={submitting || !entradaForm.tanque_id || !entradaForm.quantidade_l || !entradaForm.preco_por_litro}>
               {submitting ? 'Salvando...' : 'Registrar Entrada'}
             </Button>
           </div>
@@ -579,8 +651,9 @@ export function EstoqueCombustivel() {
                         estoque_inicial: 'Estoque Inicial',
                         painel_entrada: 'Entrada Manual',
                         pwa_entrada: 'Entrada via App',
-                        auto_baixa: 'Baixa Automática',
+                        painel_baixa: 'Baixa Manual',
                         painel_ajuste: 'Ajuste Manual',
+                        manual: 'Manual',
                       }
                       return (
                         <div
@@ -592,7 +665,7 @@ export function EstoqueCombustivel() {
                           <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
                             isEntrada ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                           }`}>
-                            {isEntrada ? '↑' : '↓'}
+                            {isEntrada ? '↓' : '↑'}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start">
@@ -635,6 +708,69 @@ export function EstoqueCombustivel() {
           )
         })()}
       </Modal>
+
+      {/* Confirm: Excluir Tanque */}
+      <ConfirmModal
+        isOpen={!!modalExcluirTanque}
+        onClose={() => setModalExcluirTanque(null)}
+        onConfirm={excluirTanque}
+        title="Excluir Tanque"
+        message={
+          modalExcluirTanque
+            ? Number(modalExcluirTanque.saldo_atual_l) > 0
+              ? `Excluir "${modalExcluirTanque.nome}"? Este tanque possui ${Number(modalExcluirTanque.saldo_atual_l).toLocaleString('pt-BR')} L em saldo. O saldo sairá da contagem total do estoque. As movimentações históricas serão preservadas.`
+              : `Excluir "${modalExcluirTanque.nome}"? As movimentações históricas serão preservadas.`
+            : ''
+        }
+        confirmText="Excluir"
+        variant="danger"
+      />
+
+      {/* Lixeira: Tanques Excluídos */}
+      {tanquesExcluidos.length > 0 && (
+        <div>
+          <button
+            onClick={() => setMostrarLixeira(!mostrarLixeira)}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <span>{mostrarLixeira ? '▼' : '▶'}</span>
+            Tanques Excluídos ({tanquesExcluidos.length})
+          </button>
+          {mostrarLixeira && (
+            <div className="mt-3 space-y-2">
+              {tanquesExcluidos.map((tanque) => (
+                <Card key={tanque.id} className="bg-gray-50 p-3 sm:p-4 border border-gray-200" disableHover>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-gray-600">{tanque.nome}</p>
+                      <p className="text-xs text-gray-400">
+                        {tanque.tipo_combustivel} · Saldo final: {Number(tanque.saldo_atual_l).toLocaleString('pt-BR')} L
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => abrirModalHistorico(tanque)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100"
+                        title="Ver histórico"
+                      >
+                        Histórico
+                      </button>
+                      <button
+                        onClick={() => restaurarTanque(tanque)}
+                        disabled={submitting}
+                        className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 transition-colors hover:bg-green-100 disabled:opacity-50"
+                        title="Restaurar tanque"
+                      >
+                        Restaurar
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
