@@ -548,3 +548,7 @@ Sistema de controle de múltiplos tanques de combustível por fazenda, com movim
 **Tipos de combustível suportados**: Álcool, Gasolina, Diesel S10, Diesel Comum.
 
 Disparador: quando mencionar "combustível", "tanque de combustível", "estoque de combustível", "WAC combustível", "custo médio por litro", "baixa de combustível", "movimentacoes_combustivel", "tanques_combustivel", ou retomar o assunto de controle de combustível, ler esta seção.
+
+### Remoção do unique constraint de tanque por tipo — adicionado em 2026-09-14
+
+Removido o unique partial index `idx_tanques_combustivel_unique_tipo_fazenda` que impedia múltiplos tanques ativos do mesmo tipo de combustível por fazenda. O sistema agora permite dois ou mais tanques do mesmo tipo (ex: dois tanques de Diesel S10). Migration `20260915170000_drop_unique_tanque_tipo_fazenda.sql`. O frontend (PWA e Painel Web) já tratava o caso de múltiplos tanques do mesmo tipo (seleção manual quando `tanquesFiltrados.length > 1`), então nenhuma mudança de UI foi necessária.
