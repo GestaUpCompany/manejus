@@ -987,6 +987,28 @@ export function Lotes() {
         planosPorCategoria[p.lote_categoria_id].push({ id: p.id, nome: p.nome, ativo: p.ativo, ordem: p.ordem, data_inicio: p.data_inicio, data_fim: p.data_fim, peso_inicio_kg_cab: p.peso_inicio_kg_cab })
       })
 
+      // Anexar plano ativo do lote às categorias sem plano próprio (exceto bezerro/bezerra ao pé)
+      const { data: planosLoteData } = await supabase
+        .from('planos_nutricionais')
+        .select('id, lote_id, lote_categoria_id, nome, ativo, ordem, data_inicio, data_fim, peso_inicio_kg_cab')
+        .eq('lote_id', loteId)
+        .is('lote_categoria_id', null)
+        .order('ordem', { ascending: true })
+      const planoLoteVigente = (planosLoteData || []).find((p: any) => p.ativo && !p.data_fim)
+      if (planoLoteVigente) {
+        for (const cat of (catsData || [])) {
+          const catLower = (cat.categoria || '').toLowerCase()
+          if (['bezerro ao pé', 'bezerro ao pe', 'bezerra ao pé', 'bezerra ao pe'].includes(catLower)) continue
+          if (!planosPorCategoria[cat.id] || planosPorCategoria[cat.id].length === 0) {
+            planosPorCategoria[cat.id] = [{
+              id: planoLoteVigente.id, nome: planoLoteVigente.nome, ativo: planoLoteVigente.ativo,
+              ordem: planoLoteVigente.ordem, data_inicio: planoLoteVigente.data_inicio,
+              data_fim: planoLoteVigente.data_fim, peso_inicio_kg_cab: planoLoteVigente.peso_inicio_kg_cab,
+            }]
+          }
+        }
+      }
+
       // Merge: preservar edições do usuário, atualizar campos que o RPC altera
       setFormData((prev) => {
         const updatedCategorias = prev.categorias.map((formCat) => {
@@ -1130,7 +1152,8 @@ export function Lotes() {
       data_liberacao_sisbov: formData.data_liberacao_sisbov || null,
       periodo_liberacao_sisbov: formData.periodo_liberacao_sisbov || null,
       data_embarque_prevista: formData.data_embarque_prevista || null,
-      formulacao_id: formData.formulacao_lote_id || null,
+      // formulacao_id do lote é gerenciado pelos fluxos de plano (iniciar/encerrar/migrar).
+      // Não enviar pelo formulário para evitar sobrescrever com valor stale.
     }
 
     let loteId: string
@@ -1247,6 +1270,19 @@ export function Lotes() {
       .single()
     const fazendaId = loteData?.fazenda_id || ''
 
+    // Verificar se o lote já tem um plano ativo no nível do lote.
+    // Se sim, não criar planos de categoria duplicados no save do formulário.
+    const { data: planoLoteAtivo } = await supabase
+      .from('planos_nutricionais')
+      .select('id')
+      .eq('lote_id', loteId)
+      .is('lote_categoria_id', null)
+      .eq('ativo', true)
+      .is('data_fim', null)
+      .limit(1)
+
+    const loteTemPlanoAtivo = !!(planoLoteAtivo && planoLoteAtivo.length > 0)
+
     // Buscar categorias existentes (apenas ativas) para preservar IDs e planos
     // Categorias encerradas por recategorização não devem ser tocadas nem deletadas
     const { data: existingCategorias } = await supabase
@@ -1328,6 +1364,22 @@ export function Lotes() {
         delete categoriaPayload.quant_atual
       }
 
+      // Se a categoria tem plano vigente (próprio ou herdado do lote), os campos
+      // formulacao_id, estrategia_nutricional, peso_vivo_meta_kg_cab, consumo_meta,
+      // gmd, data_meta_projetada e dias_restantes_meta são gerenciados pelos fluxos
+      // de plano (iniciar/encerrar/migrar) e pelo cron. Não sobrescrever pelo
+      // formulário de lote, senão editar o lote desvincula a categoria do plano.
+      const hasPlanoVigente = !!(cat.planos_cadastrados?.some((p: any) => p.ativo && !p.data_fim))
+      if (hasPlanoVigente) {
+        delete categoriaPayload.formulacao_id
+        delete categoriaPayload.estrategia_nutricional
+        delete categoriaPayload.peso_vivo_meta_kg_cab
+        delete categoriaPayload.consumo_meta_porcentagem_pesovivo
+        delete categoriaPayload.gmd
+        delete categoriaPayload.data_meta_projetada
+        delete categoriaPayload.dias_restantes_meta
+      }
+
       try {
         let savedId = categoriaId
         if (categoriaId) {
@@ -1350,13 +1402,14 @@ export function Lotes() {
         savedCategoryIds.push(savedId)
 
         // Criar planos nutricionais se a categoria ainda não tiver nenhum
+        // e o lote não tiver plano ativo no nível do lote (evita duplicar plano)
         const { data: planosExistentes } = await supabase
           .from('planos_nutricionais')
           .select('id')
           .eq('lote_categoria_id', savedId)
           .limit(1)
 
-        if (!planosExistentes || planosExistentes.length === 0) {
+        if (!loteTemPlanoAtivo && (!planosExistentes || planosExistentes.length === 0)) {
           let planosParaInserir: any[] = []
 
           if (cat.planos_rascunho && cat.planos_rascunho.length > 0) {
@@ -1605,6 +1658,29 @@ export function Lotes() {
       planosPorCategoria[p.lote_categoria_id].push({ id: p.id, nome: p.nome, ativo: p.ativo, ordem: p.ordem, data_inicio: p.data_inicio, data_fim: p.data_fim, peso_inicio_kg_cab: p.peso_inicio_kg_cab })
     })
 
+    // Anexar plano ativo do lote (modelo plano por lote) às categorias sem plano próprio,
+    // exceto bezerro/bezerra ao pé (seguem GMD próprio, não herdam plano do lote).
+    const { data: planosLoteData } = await supabase
+      .from('planos_nutricionais')
+      .select('id, lote_id, lote_categoria_id, nome, ativo, ordem, data_inicio, data_fim, peso_inicio_kg_cab')
+      .eq('lote_id', lote.id)
+      .is('lote_categoria_id', null)
+      .order('ordem', { ascending: true })
+    const planoLoteVigente = (planosLoteData || []).find((p: any) => p.ativo && !p.data_fim)
+    if (planoLoteVigente) {
+      for (const cat of updatedCategorias) {
+        const catLower = (cat.categoria || '').toLowerCase()
+        if (['bezerro ao pé', 'bezerro ao pe', 'bezerra ao pé', 'bezerra ao pe'].includes(catLower)) continue
+        if (!planosPorCategoria[cat.id] || planosPorCategoria[cat.id].length === 0) {
+          planosPorCategoria[cat.id] = [{
+            id: planoLoteVigente.id, nome: planoLoteVigente.nome, ativo: planoLoteVigente.ativo,
+            ordem: planoLoteVigente.ordem, data_inicio: planoLoteVigente.data_inicio,
+            data_fim: planoLoteVigente.data_fim, peso_inicio_kg_cab: planoLoteVigente.peso_inicio_kg_cab,
+          }]
+        }
+      }
+    }
+
     // Buscar a última Entrada por categoria para anotação de proveniência do peso
     const { data: ultimasEntradasData } = await supabase
       .from('registros_movimentacao')
@@ -1813,7 +1889,7 @@ export function Lotes() {
     try {
       const nowIso = new Date().toISOString()
 
-      // 1. Encerrar planos nutricionais ativos do lote
+      // 1. Encerrar planos nutricionais ativos do lote (plano por lote)
       const { error: planoError } = await supabase
         .from('planos_nutricionais')
         .update({ ativo: false, data_fim: nowIso })
@@ -1824,6 +1900,24 @@ export function Lotes() {
         toast.error('Erro ao encerrar planos nutricionais do lote. Exclusão cancelada.')
         setDeleting(false)
         return
+      }
+
+      // 1b. Encerrar planos nutricionais ativos vinculados a categorias do lote (modelo antigo)
+      const { data: catsAtivas } = await supabase
+        .from('lote_categorias')
+        .select('id')
+        .eq('lote_id', id)
+        .eq('ativo', true)
+      const catsAtivasIds = (catsAtivas || []).map((c: any) => c.id)
+      if (catsAtivasIds.length > 0) {
+        const { error: planoCatError } = await supabase
+          .from('planos_nutricionais')
+          .update({ ativo: false, data_fim: nowIso })
+          .in('lote_categoria_id', catsAtivasIds)
+          .eq('ativo', true)
+        if (planoCatError) {
+          console.error('Erro ao encerrar planos de categoria do lote:', planoCatError)
+        }
       }
 
       // 2. Encerrar lote_categorias ativas (ativo=false + data_fim=now)
@@ -1996,7 +2090,7 @@ export function Lotes() {
     if (todosCategoriaIds.length > 0) {
       const { data, error } = await supabase
         .from('planos_nutricionais')
-        .select('id, lote_categoria_id, formulacao_id, periodo_dias, peso_meta_kg, gmd_planejado, data_inicio, ativo')
+        .select('id, lote_categoria_id, lote_id, formulacao_id, periodo_dias, peso_meta_kg, gmd_planejado, data_inicio, ativo')
         .in('lote_categoria_id', todosCategoriaIds)
         .eq('ativo', true)
       if (error) {
@@ -2005,11 +2099,40 @@ export function Lotes() {
       planosData = data || []
     }
 
-    // Indexar planos por lote_categoria_id (vigente = ativo true; pega o primeiro)
+    // Buscar também planos vigentes no nível do lote (modelo plano por lote)
+    const loteIdsExport = lotesVisiveis.map((l: any) => l.id).filter(Boolean)
+    if (loteIdsExport.length > 0) {
+      const { data: planosLote, error: errLote } = await supabase
+        .from('planos_nutricionais')
+        .select('id, lote_categoria_id, lote_id, formulacao_id, periodo_dias, peso_meta_kg, gmd_planejado, data_inicio, ativo')
+        .in('lote_id', loteIdsExport)
+        .is('lote_categoria_id', null)
+        .eq('ativo', true)
+      if (errLote) {
+        console.error('Erro ao buscar planos de lote para export:', errLote)
+      }
+      if (planosLote) planosData = planosData.concat(planosLote)
+    }
+
+    // Indexar planos por lote_categoria_id (vigente = ativo true; pega o primeiro).
+    // Para planos de lote (lote_categoria_id null), indexa por cada categoria do lote.
     const planoVigentePorCategoria: Record<string, any> = {}
     for (const p of planosData) {
-      if (!planoVigentePorCategoria[p.lote_categoria_id]) {
-        planoVigentePorCategoria[p.lote_categoria_id] = p
+      if (p.lote_categoria_id) {
+        if (!planoVigentePorCategoria[p.lote_categoria_id]) {
+          planoVigentePorCategoria[p.lote_categoria_id] = p
+        }
+      } else if (p.lote_id) {
+        // Plano do lote: aplicar a categorias do lote que ainda não têm plano próprio
+        for (const lote of lotesVisiveis) {
+          if (lote.id === p.lote_id) {
+            for (const cat of (lote.categorias || [])) {
+              if (cat.id && !planoVigentePorCategoria[cat.id]) {
+                planoVigentePorCategoria[cat.id] = p
+              }
+            }
+          }
+        }
       }
     }
 

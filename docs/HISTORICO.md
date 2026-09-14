@@ -2,6 +2,20 @@
 
 Este arquivo registra mudanças já aplicadas no Painel Web. Um chat novo não precisa ler isto por padrão; consulte quando a pergunta for sobre "por que isso foi feito assim" ou para entender o estado anterior de uma parte do código.
 
+## Relatório público de consumo com fallback para plano do lote (2026-09-14)
+
+- A RPC `get_dados_relatorio_consumo` só considerava plano nutricional vinculado à categoria (`lote_categoria_id`) e os campos `lote_categorias.formulacao_id`/`data_meta_projetada`. Lotes com plano ativo no nível do lote (`planos_nutricionais.lote_id`, `lote_categoria_id NULL`) ficavam com pills vazios, e o Lote 13 perdia dieta, período e data prevista após a edição do lote sobrescrever os campos da categoria com NULL.
+- CTE `cats_por_lote` agora traz também o plano ativo do lote via `LATERAL` e a personalização em `plano_categoria_personalizacao`. `dieta`, `dias` e `data_prevista_final` usam `COALESCE` preferindo plano da categoria, depois plano do lote, depois `lotes.formulacao_id`. `data_prevista_final` ganha fallback `data_inicio + periodo_dias` quando `data_meta_projetada` está ausente.
+- `Lotes.tsx` passa a anexar o plano vigente do lote às categorias sem plano próprio (exceto bezerro/bezerra ao pé) ao carregar o formulário, e o save de edição do lote não sobrescreve `formulacao_id`, `estrategia_nutricional`, `peso_vivo_meta_kg_cab` e `consumo_meta_porcentagem_pesovivo` quando a categoria tem plano vigente, evitando desvinculação ao renomear/editar o lote.
+- Backfill pontual da categoria bezerro do Lote 13 (fazenda f8be22c5) reaplicou os campos do plano ativo `Recria 1,5%` com backup prévio em `backup_lote_categorias_20260914`.
+- Backfill sistêmico em outras fazendas (Guanabara, Marcon, Santa Cecília, GBJ Mirandópolis e fazenda de testes): 20 categorias ativas sob plano de lote com campos divergentes ou nulos foram alinhadas ao plano/formulação ativos (`formulacao_id`, `estrategia_nutricional`, `peso_vivo_meta_kg_cab`, `consumo_meta_porcentagem_pesovivo`, `gmd`, `data_meta_projetada`), excluindo bezerro/bezerra ao pé. Backup prévio em `backup_lote_categorias_20260914_sistemico`. Após o backfill, zero divergências em 72 categorias sob plano de lote.
+- Auditoria dos fluxos de escrita em `Lotes.tsx`: o save do lote não envia mais `formulacao_id` (gerenciado pelos fluxos de plano); o save de categorias com plano vigente não sobrescreve `gmd`, `data_meta_projetada` e `dias_restantes_meta` além dos campos já protegidos; o save não cria planos de categoria duplicados quando o lote já tem plano ativo por lote; a exclusão de lote encerra também planos de categoria legados; a exportação XLSX passa a incluir planos vigentes no nível do lote.
+
+## Ajuste no tamanho da logo da fazenda em PDFs (2026-09-14)
+
+- A logo da fazenda no cabeçalho dos relatórios Puppeteer passou a respeitar a altura máxima de 60px sem ser forçada a um quadrado de 60x60, permitindo que logos com proporção diferente de 1:1 ocupem mais espaço visual e fiquem proporcionais à logo do sistema.
+- CSS ajustado em `api/pdf/_shared/template.js`: `.farm-logo` agora usa `max-width:120px; max-height:60px; width:auto; height:auto; object-fit:contain`.
+
 ## Relatório de bebedouros com Puppeteer (implementado em 2026-09-12)
 
 - Migrado de jsPDF client-side para Puppeteer server-side, seguindo o mesmo padrão de `morte.js`, `consumo.js` e `abastecimento.js`.
