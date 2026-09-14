@@ -642,3 +642,20 @@ Correção pontual aplicada via MCP (25 registros no total, sem migration, pois 
 Validado no relatório público da Fazenda Marcon: Liugong 835 H passou de 62.912 h para 627,5 h (2,507 L/h), Volkswagen Amarok de 103.699 km para 212,5 km (1,388 L/km), Mercedes 1113 de 14.077 km para 41,9 km (8,897 L/km), John Deere Gator 1 de 155.945 km para 115,4 km (1,353 L/km).
 
 Disparador: quando mencionar "odômetro com ponto", "horímetro inflado", "horas trabalhadas absurdas", "consumo L/h irreal", "normalizarNumero", "ponto como milhar", ou problemas com valores de odômetro/horímetro 10x ou 1000x maiores que o esperado, ler esta seção.
+
+### Tanque opcional no abastecimento para fazendas sem tanques cadastrados — adicionado em 2026-09-14
+
+O PWA exigia seleção de tanque obrigatória sempre que um combustível era selecionado no formulário de abastecimento. Isso bloqueava fazendas que ainda não cadastraram tanques no Painel Web, impedindo o registro de abastecimentos mesmo sem controle de estoque.
+
+Mudança no PWA (`AbastecimentoPage.tsx`): `tanqueId` só é obrigatório quando `tanquesFiltrados.length > 0`. Quando não há tanques cadastrados para o combustível selecionado, o formulário exibe um aviso âmbar informativo ("Nenhum tanque de {combustível} cadastrado. O abastecimento será registrado sem controle de estoque.") em vez de bloquear o salvamento.
+
+A trigger `trg_baixa_automatica_abastecimento` no banco já tem guard `IF NEW.tanque_id IS NULL THEN RETURN NEW`, então abastecimentos sem tanque vinculado passam sem gerar baixa. O `syncService.ts` já converte `tanqueId` vazio para `null` antes de enviar ao Supabase. Nenhuma mudança de banco foi necessária.
+
+Cenários resultantes:
+- Fazenda sem tanques: abastecimento salva com `tanque_id = NULL`, trigger skipa, sem controle de estoque.
+- Fazenda com tanques de Diesel S10 mas não de Gasolina: Diesel S10 exige tanque e faz baixa automática; Gasolina permite salvar sem tanque.
+- Onboarding: a fazenda cadastra tanques com saldo inicial no Painel Web, o PWA sincroniza via cache, e os abastecimentos passam a ter baixa automática.
+
+Validado na fazenda de testes: abastecimento de Álcool (sem tanques de Álcool cadastrados) salvou com sucesso, `tanque_id = NULL` no banco, zero movimentações de baixa geradas.
+
+Disparador: quando mencionar "tanque opcional", "abastecimento sem tanque", "fazenda sem tanque", "onboarding combustível", "bloqueio de abastecimento", ou problemas com fazendas que não conseguem lançar abastecimentos por falta de tanque cadastrado, ler esta seção.
