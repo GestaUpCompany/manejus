@@ -164,7 +164,6 @@ const ABASTECIMENTO_CSS = `
 .abast-pill{background:#0b6a42;color:#fff;border-radius:5px;padding:5px 10px;text-align:center;min-width:0;flex:1 1 80px}
 .abast-pill .pill-value{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .abast-pill .pill-label{font-size:10px;opacity:.9;margin-top:1px}
-.period-badge{background:#f2f2f2;border:1px solid #e0e0e0;color:#4a5a55}
 .abast-body{display:grid;grid-template-columns:40mm 1fr;gap:6px;flex:1;min-height:0}
 .kpi-col{display:flex;flex-direction:column;gap:5px}
 .kpi-col .kpi-card{min-height:0;padding:6px 8px}

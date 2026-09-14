@@ -96,7 +96,7 @@ const MORTE_CSS = `
 .diag-freq th:nth-child(4){width:35%}
 .diag-bar{height:8px;background:#edf2ee;border-radius:4px;overflow:hidden}
 .diag-bar i{display:block;height:100%;background:linear-gradient(90deg,#0b6a42,#1a8a5a);border-radius:4px}
-.detail-table th:nth-child(1){width:8%}
+.detail-table th:nth-child(1){width:11%}
 .detail-table th:nth-child(2){width:11%}
 .detail-table th:nth-child(3){width:8%}
 .detail-table th:nth-child(4){width:7%}
@@ -104,7 +104,7 @@ const MORTE_CSS = `
 .detail-table th:nth-child(6){width:8%}
 .detail-table th:nth-child(7){width:10%}
 .detail-table th:nth-child(8){width:11%}
-.detail-table th:nth-child(9){width:28%}
+.detail-table th:nth-child(9){width:25%}
 .detail-table td{font-size:13px;padding:8px 6px;line-height:1.25}
 .detail-table th{font-size:13px;padding:9px 6px}
 .detail-table th, .detail-table td{border-right:1px solid #d8e0db}

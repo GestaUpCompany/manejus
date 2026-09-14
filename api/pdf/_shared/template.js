@@ -32,7 +32,7 @@ body{margin:0;background:#e9eeeb;color:#26352e;font-family:Arial,Helvetica,sans-
 .header-section{text-align:right;border-left:1px solid #d8e0db;padding-left:12px;color:#7a8981;font-size:11px;text-transform:uppercase;letter-spacing:1px}
 .header-section strong{display:block;color:#0b6a42;font-size:13px;margin-top:4px;letter-spacing:.2px}
 .section-kicker{color:#0b6a42;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 2mm}
-.period-badge{display:inline-flex;align-items:center;background:#f0f6f2;border:1px solid #d3e4d9;border-radius:5px;color:#0b6a42;font-size:14px;font-weight:700;padding:6px 11px;margin-bottom:4mm}
+.period-badge{display:inline-flex;align-items:center;align-self:flex-start;background:#f0f6f2;border:1px solid #d3e4d9;border-radius:5px;color:#0b6a42;font-size:14px;font-weight:700;padding:6px 11px;margin-bottom:4mm}
 .insight-box{border-left:3px solid #0b6a42;background:#f6f9f7;border-radius:0 5px 5px 0;padding:7px 10px;margin-bottom:3mm;line-height:1.4;color:#52635a}
 .insight-label{display:block;color:#0b6a42;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
 .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:7px}
