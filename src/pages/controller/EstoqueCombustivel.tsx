@@ -31,6 +31,7 @@ export function EstoqueCombustivel() {
   const [fazendaNome, setFazendaNome] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [tanques, setTanques] = useState<Tanque[]>([])
+  const [fornecedores, setFornecedores] = useState<{ id: string; nome: string }[]>([])
   const [kpiMes, setKpiMes] = useState({ consumo_l: 0, custo_rs: 0 })
 
   // Modais
@@ -46,7 +47,7 @@ export function EstoqueCombustivel() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Form ajuste (saldo absoluto, nao altera custo medio)
+  // Form ajuste (saldo absoluto, não altera custo medio)
   const [modalAjuste, setModalAjuste] = useState<Tanque | null>(null)
   const [ajusteForm, setAjusteForm] = useState({
     novo_saldo_l: '',
@@ -69,6 +70,7 @@ export function EstoqueCombustivel() {
     quantidade_l: '',
     preco_por_litro: '',
     fornecedor: '',
+    nota_fiscal: '',
     observacao: '',
   })
 
@@ -76,13 +78,19 @@ export function EstoqueCombustivel() {
     if (!fazendaId) return
     setLoading(true)
     try {
-      const [tanquesRes, kpiRes, excluidosRes] = await Promise.all([
+      const [tanquesRes, fornRes, kpiRes, excluidosRes] = await Promise.all([
         supabase
           .from('tanques_combustivel')
           .select('*')
           .eq('fazenda_id', fazendaId)
           .is('deleted_at', null)
           .order('tipo_combustivel'),
+        supabase
+          .from('fornecedores')
+          .select('id, nome')
+          .eq('fazenda_id', fazendaId)
+          .eq('ativo', true)
+          .order('nome'),
         supabase
           .from('movimentacoes_combustivel')
           .select('quantidade_l, preco_por_litro')
@@ -98,10 +106,12 @@ export function EstoqueCombustivel() {
       ])
 
       if (tanquesRes.error) throw tanquesRes.error
+      if (fornRes.error) throw fornRes.error
       if (kpiRes.error) throw kpiRes.error
       if (excluidosRes.error) throw excluidosRes.error
 
       setTanques(tanquesRes.data as Tanque[])
+      setFornecedores((fornRes.data as { id: string; nome: string }[]) || [])
       setTanquesExcluidos(excluidosRes.data as Tanque[])
 
       const movs = kpiRes.data || []
@@ -176,6 +186,10 @@ export function EstoqueCombustivel() {
         // Se houver saldo inicial, registrar movimentacao
         const saldoInicial = parseFloat(tanqueForm.saldo_inicial_l) || 0
         const precoInicial = parseFloat(tanqueForm.preco_inicial_l) || 0
+        const capacidadeMaxima = parseFloat(tanqueForm.capacidade_maxima_l) || 0
+        if (capacidadeMaxima > 0 && saldoInicial > capacidadeMaxima) {
+          throw new Error(`Saldo inicial (${saldoInicial} L) não pode ultrapassar a capacidade do tanque (${capacidadeMaxima} L).`)
+        }
         if (saldoInicial > 0 && precoInicial > 0) {
           // Com preco: entrada normal (WAC calcula custo medio)
           const valorTotal = saldoInicial * precoInicial
@@ -216,7 +230,7 @@ export function EstoqueCombustivel() {
 
   // Handlers entrada (valor total unico, preco derivado)
   const abrirModalEntrada = () => {
-    setEntradaForm({ tanque_id: '', quantidade_l: '', preco_por_litro: '', fornecedor: '', observacao: '' })
+    setEntradaForm({ tanque_id: '', quantidade_l: '', preco_por_litro: '', fornecedor: '', nota_fiscal: '', observacao: '' })
     setModalEntrada(true)
   }
 
@@ -225,9 +239,13 @@ export function EstoqueCombustivel() {
     setSubmitting(true)
     setError(null)
     try {
+      const tanque = tanques.find((t) => t.id === entradaForm.tanque_id)
       const litros = parseFloat(entradaForm.quantidade_l)
       const precoPorLitro = parseFloat(entradaForm.preco_por_litro)
       const valorTotal = litros * precoPorLitro
+      if (tanque && Number(tanque.capacidade_maxima_l) > 0 && (Number(tanque.saldo_atual_l) + litros) > Number(tanque.capacidade_maxima_l)) {
+        throw new Error(`Quantidade excede a capacidade do tanque ${tanque.nome}. Capacidade: ${Number(tanque.capacidade_maxima_l)} L, saldo atual: ${Number(tanque.saldo_atual_l)} L, sobra: ${Number(tanque.capacidade_maxima_l) - Number(tanque.saldo_atual_l)} L.`)
+      }
 
       const { error } = await supabase.from('movimentacoes_combustivel').insert({
         fazenda_id: fazendaId,
@@ -239,6 +257,7 @@ export function EstoqueCombustivel() {
         data: new Date().toISOString().split('T')[0],
         origem: 'painel_entrada',
         fornecedor: entradaForm.fornecedor || null,
+        nota_fiscal: entradaForm.nota_fiscal || null,
         observacao: entradaForm.observacao || null,
       })
       if (error) throw error
@@ -258,7 +277,10 @@ export function EstoqueCombustivel() {
     try {
       const { data, error } = await supabase
         .from('movimentacoes_combustivel')
-        .select('id, tipo_movimentacao, quantidade_l, preco_por_litro, valor_total, data, origem, fornecedor, observacao, created_at, registro_abastecimento_id')
+        .select(`
+          id, tipo_movimentacao, quantidade_l, preco_por_litro, valor_total, data, origem, fornecedor, observacao, created_at, registro_abastecimento_id,
+          registro_abastecimento:registros_abastecimento!movimentacoes_combustivel_registro_abastecimento_id_fkey(id, maquina_veiculo)
+        `)
         .eq('tanque_id', tanque.id)
         .order('data', { ascending: false })
         .order('created_at', { ascending: false })
@@ -310,7 +332,7 @@ export function EstoqueCombustivel() {
     }
   }
 
-  // Handler ajuste de saldo (define saldo absoluto, nao altera custo medio)
+  // Handler ajuste de saldo (define saldo absoluto, não altera custo medio)
   const abrirModalAjuste = (tanque: Tanque) => {
     setModalAjuste(tanque)
     setAjusteForm({
@@ -325,6 +347,9 @@ export function EstoqueCombustivel() {
     setError(null)
     try {
       const novoSaldo = parseFloat(ajusteForm.novo_saldo_l)
+      if (Number(modalAjuste.capacidade_maxima_l) > 0 && novoSaldo > Number(modalAjuste.capacidade_maxima_l)) {
+        throw new Error(`Novo saldo não pode ultrapassar a capacidade do tanque ${modalAjuste.nome}. Capacidade: ${Number(modalAjuste.capacidade_maxima_l)} L, ajuste solicitado: ${novoSaldo} L.`)
+      }
       const { error } = await supabase.from('movimentacoes_combustivel').insert({
         fazenda_id: fazendaId,
         tanque_id: modalAjuste.id,
@@ -373,7 +398,7 @@ export function EstoqueCombustivel() {
         </div>
       </div>
 
-      {error && (
+      {error && !modalTanque && !modalEntrada && !modalAjuste && (
         <div className="bg-red-50 border border-red-300 rounded-xl p-4">
           <p className="text-sm text-red-700">{error}</p>
           <button onClick={() => setError(null)} className="text-xs text-red-500 underline mt-1">Fechar</button>
@@ -518,7 +543,7 @@ export function EstoqueCombustivel() {
       {/* Modal: Configurar Tanque */}
       <Modal
         isOpen={modalTanque}
-        onClose={() => setModalTanque(false)}
+        onClose={() => { setModalTanque(false); setError(null) }}
         title={tanqueEditando ? 'Editar Tanque' : 'Novo Tanque'}
         size="md"
       >
@@ -576,8 +601,13 @@ export function EstoqueCombustivel() {
               </div>
             </>
           )}
+          {error && (
+            <div className="bg-red-50 border border-red-300 rounded-lg p-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="secondary" onClick={() => setModalTanque(false)}>Cancelar</Button>
+            <Button variant="secondary" onClick={() => { setModalTanque(false); setError(null) }}>Cancelar</Button>
             <Button onClick={salvarTanque} disabled={submitting || !tanqueForm.nome || !tanqueForm.tipo_combustivel || !tanqueForm.capacidade_maxima_l}>
               {submitting ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -588,7 +618,7 @@ export function EstoqueCombustivel() {
       {/* Modal: Registrar Entrada */}
       <Modal
         isOpen={modalEntrada}
-        onClose={() => setModalEntrada(false)}
+        onClose={() => { setModalEntrada(false); setError(null) }}
         title="Registrar Entrada de Combustível"
         size="md"
       >
@@ -634,11 +664,18 @@ export function EstoqueCombustivel() {
             return null
           })()}
           <p className="text-xs text-gray-500">O valor total é calculado automaticamente: preço por litro × quantidade.</p>
-          <Input
+          <Select
             label="Fornecedor"
-            placeholder="Ex: Posto São João"
+            options={[{ value: '', label: 'Selecione o fornecedor...' }, ...fornecedores.map((f) => ({ value: f.nome, label: f.nome }))]}
             value={entradaForm.fornecedor}
-            onChange={(e) => setEntradaForm({ ...entradaForm, fornecedor: e.target.value })}
+            onChange={(val) => setEntradaForm({ ...entradaForm, fornecedor: val })}
+            placeholder="Selecione o fornecedor..."
+          />
+          <Input
+            label="Nota Fiscal"
+            placeholder="Número ou chave da NF"
+            value={entradaForm.nota_fiscal}
+            onChange={(e) => setEntradaForm({ ...entradaForm, nota_fiscal: e.target.value })}
           />
           <Input
             label="Observação"
@@ -646,8 +683,13 @@ export function EstoqueCombustivel() {
             value={entradaForm.observacao}
             onChange={(e) => setEntradaForm({ ...entradaForm, observacao: e.target.value })}
           />
+          {error && (
+            <div className="bg-red-50 border border-red-300 rounded-lg p-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="secondary" onClick={() => setModalEntrada(false)}>Cancelar</Button>
+            <Button variant="secondary" onClick={() => { setModalEntrada(false); setError(null) }}>Cancelar</Button>
             <Button onClick={salvarEntrada} disabled={submitting || !entradaForm.tanque_id || !entradaForm.quantidade_l || !entradaForm.preco_por_litro}>
               {submitting ? 'Salvando...' : 'Registrar Entrada'}
             </Button>
@@ -698,7 +740,7 @@ export function EstoqueCombustivel() {
 
               {/* Timeline */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Linha do Tempo</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Histórico</h4>
                 {historicoLoading ? (
                   <div className="text-center py-8 text-gray-500">Carregando movimentações...</div>
                 ) : historicoMovs.length === 0 ? (
@@ -710,10 +752,10 @@ export function EstoqueCombustivel() {
                       const valor = Number(mov.valor_total || (Number(mov.quantidade_l) * Number(mov.preco_por_litro)))
                       const origemLabel: Record<string, string> = {
                         estoque_inicial: 'Estoque Inicial',
-                        painel_entrada: 'Entrada Manual',
+                        painel_entrada: 'Entrada via Site',
                         pwa_entrada: 'Entrada via App',
-                        auto_baixa: 'Baixa Automática',
-                        painel_ajuste: 'Ajuste Manual',
+                        auto_baixa: 'Abastecimento',
+                        painel_ajuste: 'Ajuste via Site',
                         manual: 'Manual',
                       }
                       return (
@@ -735,7 +777,11 @@ export function EstoqueCombustivel() {
                                   {isEntrada ? 'Entrada' : 'Saída'} — {Number(mov.quantidade_l).toLocaleString('pt-BR')} L
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                  {formatDate(mov.data)} · {origemLabel[mov.origem] || mov.origem || '-'}
+                                  {(() => {
+                                    const maquina = mov.registro_abastecimento?.maquina_veiculo
+                                    const label = origemLabel[mov.origem] || mov.origem || '-'
+                                    return `${formatDate(mov.data)} · ${label}${maquina ? ` · ${maquina}` : ''}`
+                                  })()}
                                 </p>
                               </div>
                               <div className="text-right">
@@ -790,7 +836,7 @@ export function EstoqueCombustivel() {
       {/* Modal: Ajustar Saldo */}
       <Modal
         isOpen={!!modalAjuste}
-        onClose={() => setModalAjuste(null)}
+        onClose={() => { setModalAjuste(null); setError(null) }}
         title={modalAjuste ? `Ajustar Saldo — ${modalAjuste.nome}` : 'Ajustar Saldo'}
         size="md"
       >
@@ -817,8 +863,13 @@ export function EstoqueCombustivel() {
             value={ajusteForm.observacao}
             onChange={(e) => setAjusteForm({ ...ajusteForm, observacao: e.target.value })}
           />
+          {error && (
+            <div className="bg-red-50 border border-red-300 rounded-lg p-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="secondary" onClick={() => setModalAjuste(null)}>Cancelar</Button>
+            <Button variant="secondary" onClick={() => { setModalAjuste(null); setError(null) }}>Cancelar</Button>
             <Button onClick={salvarAjuste} disabled={submitting || !ajusteForm.novo_saldo_l}>
               {submitting ? 'Salvando...' : 'Ajustar'}
             </Button>
