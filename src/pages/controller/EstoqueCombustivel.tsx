@@ -483,7 +483,7 @@ export function EstoqueCombustivel() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Custo médio</span>
-                      <span className="text-gray-700">R$ {Number(tanque.custo_medio_l).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}/L</span>
+                      <span className="text-gray-700">R$ {Number(tanque.custo_medio_l).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/L</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Valor em estoque</span>
@@ -626,7 +626,7 @@ export function EstoqueCombustivel() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-800">
                     <span className="font-bold">Valor total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    <span className="block text-xs mt-0.5">{litros.toLocaleString('pt-BR')} L × R$ {preco.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}/L</span>
+                    <span className="block text-xs mt-0.5">{litros.toLocaleString('pt-BR')} L × R$ {preco.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/L</span>
                   </p>
                 </div>
               )
@@ -682,7 +682,7 @@ export function EstoqueCombustivel() {
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500">Custo Médio</p>
-                  <p className="text-lg font-bold text-gray-900">R$ {custoMedio.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</p>
+                  <p className="text-lg font-bold text-gray-900">R$ {custoMedio.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-3">
                   <p className="text-xs text-green-600">Total Entradas</p>
@@ -743,7 +743,7 @@ export function EstoqueCombustivel() {
                                   R$ {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                  R$ {Number(mov.preco_por_litro).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}/L
+                                  R$ {Number(mov.preco_por_litro).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/L
                                 </p>
                               </div>
                             </div>
