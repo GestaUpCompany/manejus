@@ -371,12 +371,12 @@ export function EstoqueSuplementacao() {
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Saldo atual</span>
             <span className={`font-semibold ${negativo ? 'text-red-600' : 'text-gray-900'}`}>
-              {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg
+              {saldo.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
             </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Custo médio</span>
-            <span className="text-gray-700">R$ {custo.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}/kg</span>
+            <span className="text-gray-700">R$ {custo.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Valor em estoque</span>
@@ -469,7 +469,7 @@ export function EstoqueSuplementacao() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch">
         <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Saldo Insumos</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{saldoTotalInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{saldoTotalInsumos.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
         </Card>
         <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Valor Insumos</p>
@@ -477,7 +477,7 @@ export function EstoqueSuplementacao() {
         </Card>
         <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Saldo Produtos Finais</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{saldoTotalFormulacoes.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{saldoTotalFormulacoes.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
         </Card>
         <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Valor Produtos Finais</p>
@@ -702,11 +702,11 @@ export function EstoqueSuplementacao() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <div className="bg-green-50 rounded-lg p-3">
                   <p className="text-xs text-green-600">Total Entradas</p>
-                  <p className="text-lg font-bold text-green-700">{totalEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg</p>
+                  <p className="text-lg font-bold text-green-700">{totalEntradas.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
                 </div>
                 <div className="bg-red-50 rounded-lg p-3">
                   <p className="text-xs text-red-600">Total Saídas</p>
-                  <p className="text-lg font-bold text-red-700">{totalSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg</p>
+                  <p className="text-lg font-bold text-red-700">{totalSaidas.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500">Ajustes</p>
@@ -742,7 +742,7 @@ export function EstoqueSuplementacao() {
                             <div className="flex justify-between items-start">
                               <div>
                                 <p className="text-sm font-semibold text-gray-900">
-                                  {TIPO_MOV_LABEL[mov.tipo_movimentacao] || mov.tipo_movimentacao} — {Number(mov.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg
+                                  {TIPO_MOV_LABEL[mov.tipo_movimentacao] || mov.tipo_movimentacao} — {Number(mov.quantidade).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
                                 </p>
                                 <p className="text-xs text-gray-500">
                                   {mov.data ? formatDate(mov.data) : '-'} · {ORIGEM_LABEL[mov.origem || ''] || mov.origem || '-'}
@@ -755,7 +755,7 @@ export function EstoqueSuplementacao() {
                                   </p>
                                   {mov.custo_unitario && (
                                     <p className="text-xs text-gray-500">
-                                      R$ {Number(mov.custo_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}/kg
+                                      R$ {Number(mov.custo_unitario).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg
                                     </p>
                                   )}
                                 </div>
