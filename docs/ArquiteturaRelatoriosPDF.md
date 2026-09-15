@@ -49,7 +49,7 @@ gráficos e CSS extra. Tudo o mais (Chrome, Chart.js, template) vem do
 
 ## Composição do relatório mensal geral
 
-O relatório mensal geral usa `/api/pdf/geral` para reunir Abastecimento, Consumo, Bebedouros e Mortes em uma única execução do Chromium. Cada endpoint individual exporta sua função de montagem HTML, e `api/pdf/_shared/reportRegistry.js` mantém a whitelist dos tipos aceitos. O compositor em `api/pdf/_shared/reportComposer.js` extrai as páginas e estilos dos documentos individuais, acrescenta a capa, preserva a ordem enviada e substitui a paginação local por uma sequência global.
+O relatório mensal geral usa `/api/pdf/geral` para reunir Abastecimento, Consumo, Bebedouros e Mortes em uma única execução do Chromium. Cada endpoint individual exporta sua função de montagem HTML, e `api/pdf/_shared/reportRegistry.js` mantém a whitelist dos tipos aceitos. O compositor em `api/pdf/_shared/reportComposer.js` extrai as páginas e estilos dos documentos individuais, acrescenta a capa, preserva a ordem enviada, inclui uma página final de encerramento com `Atenciosamente,` e substitui a paginação local por uma sequência global.
 
 A tela autenticada usa RPCs `*_fazenda`, que validam `user_has_fazenda_access` e reutilizam as RPCs públicas existentes dentro da mesma transação. O endpoint geral também exige Bearer token e confirma o vínculo antes de ler a logo institucional e a capa no bucket privado `relatorios-gerais`.
 

@@ -1,5 +1,11 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Página final de encerramento no relatório geral (2026-09-15)
+
+- O relatório geral passou a terminar com uma página profissional contendo `Atenciosamente,`, `Gesta'Up`, a identidade Manej'Us 360 e os logos institucionais sobre o fundo verde padrão. A página não usa a imagem de fundo da capa nem exibe o rótulo `Encerramento`.
+- Os logos da capa e da página final passaram a usar uma única faixa institucional translúcida, sem cartões brancos individuais; o logo da fazenda recebe tratamento de mistura para reduzir visualmente o fundo branco original.
+- A nova página entra na paginação global e não altera os PDFs individuais.
+
 ## Proteção do rodapé nos PDFs Puppeteer (2026-09-15)
 
 - A área inferior reservada para o rodapé dos PDFs Puppeteer foi ampliada para impedir que tabelas encostem ou invadam a paginação.

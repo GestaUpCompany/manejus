@@ -5,7 +5,7 @@ import { excluirImagemCapa, enviarImagemCapa, listarImagensCapa, type ImagemCapa
 interface Props {
   fazendaId: string
   selecionada: string | null
-  onSelect: (path: string | null) => void
+  onSelect: (path: string | null, previewUrl?: string) => void
   disabled?: boolean
 }
 
@@ -52,7 +52,7 @@ export function RelatorioCapaGallery({ fazendaId, selecionada, onSelect, disable
     if (!excluir) return
     try {
       await excluirImagemCapa(excluir.path)
-      if (selecionada === excluir.path) onSelect(null)
+      if (selecionada === excluir.path) onSelect(null, '')
       setExcluir(null)
       await carregar()
     } catch {
@@ -76,14 +76,14 @@ export function RelatorioCapaGallery({ fazendaId, selecionada, onSelect, disable
       </div>
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <button type="button" disabled={disabled} onClick={() => onSelect(null)} className={`aspect-[1.414/1] rounded-lg border-2 bg-gradient-to-br from-green-900 via-green-700 to-blue-900 p-3 text-left text-xs font-semibold text-white ${selecionada === null ? 'border-amber-400 ring-2 ring-amber-200' : 'border-transparent'}`}>
+        <button type="button" disabled={disabled} onClick={() => onSelect(null, '')} className={`aspect-[1.414/1] rounded-lg border-2 bg-gradient-to-br from-green-900 via-green-700 to-blue-900 p-3 text-left text-xs font-semibold text-white ${selecionada === null ? 'border-amber-400 ring-2 ring-amber-200' : 'border-transparent'}`}>
           Capa institucional
         </button>
         {loading ? (
           <div className="aspect-[1.414/1] animate-pulse rounded-lg bg-gray-100" />
         ) : imagens.map((imagem) => (
           <div key={imagem.path} className={`group relative aspect-[1.414/1] overflow-hidden rounded-lg border-2 ${selecionada === imagem.path ? 'border-amber-400 ring-2 ring-amber-200' : 'border-gray-200'}`}>
-            <button type="button" disabled={disabled} onClick={() => onSelect(imagem.path)} className="h-full w-full" title={imagem.nome}>
+            <button type="button" disabled={disabled} onClick={() => onSelect(imagem.path, imagem.previewUrl)} className="h-full w-full" title={imagem.nome}>
               <img src={imagem.previewUrl} alt={imagem.nome} className="h-full w-full object-cover" />
             </button>
             <button type="button" disabled={disabled} onClick={() => setExcluir(imagem)} className="absolute right-1 top-1 rounded bg-white/90 px-2 py-1 text-[10px] font-semibold text-red-700 shadow opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100">
