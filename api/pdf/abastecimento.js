@@ -424,7 +424,7 @@ function chunkArray(arr, size) {
   return chunks
 }
 
-async function renderAbastecimentoHtml(input) {
+export async function renderAbastecimentoHtml(input) {
   const { titulo, fazendaNome, logoGestao, logoFazenda, filtros, porMaquina, porCombustivel, porOperacao, totalLitros, totalRegistros, detalhesPorMaquina } = input
   const brand = { logoGestao, logoFazenda, fazendaNome }
   const period = { dataInicio: filtros.dataInicio, dataFim: filtros.dataFim }

@@ -47,6 +47,16 @@ gráficos e CSS extra. Tudo o mais (Chrome, Chart.js, template) vem do
 - **Abastecimento** (`api/pdf/abastecimento.js`): KPIs laterais + 3 gráficos de barras (máquina, combustível, operação) + 2 tabelas de detalhamento paginadas. Usa `LEFT JOIN` com `maquinas_veiculos` para retornar `marca` e `modelo` separados via RPC, e abrevia marcas conhecidas (John Deere → JD, Volkswagen → VW, Massey Ferguson → MF, etc) no endpoint e no frontend.
 - **Bebedouros** (`api/pdf/bebedouros.js`): dois modos mutuamente exclusivos na Seção 1 (dia único vs período), KPIs com barra lateral colorida por status (componente local `kpiStatus`, não o `kpi()` padrão), gráfico de período paginado por espaço vertical disponível (pre-chunk dinâmico, não N fixo), linha tracejada de meta individual por bebedouro, tabela de ocorrências com texto livre paginada em 15 linhas por página.
 
+## Composição do relatório mensal geral
+
+O relatório mensal geral usa `/api/pdf/geral` para reunir Abastecimento, Consumo, Bebedouros e Mortes em uma única execução do Chromium. Cada endpoint individual exporta sua função de montagem HTML, e `api/pdf/_shared/reportRegistry.js` mantém a whitelist dos tipos aceitos. O compositor em `api/pdf/_shared/reportComposer.js` extrai as páginas e estilos dos documentos individuais, acrescenta a capa, preserva a ordem enviada e substitui a paginação local por uma sequência global.
+
+A tela autenticada usa RPCs `*_fazenda`, que validam `user_has_fazenda_access` e reutilizam as RPCs públicas existentes dentro da mesma transação. O endpoint geral também exige Bearer token e confirma o vínculo antes de ler a logo institucional e a capa no bucket privado `relatorios-gerais`.
+
+O período é obrigatório e inclusivo, limitado a 31 dias. O cliente bloqueia payloads acima de 4 MB antes do POST, e o endpoint repete a validação. A resposta do PDF é escrita em blocos para evitar o limite tradicional de resposta da Vercel. Uma seção selecionada sem dados gera uma página explícita de ausência de registros.
+
+Para adicionar outro relatório Puppeteer ao documento geral, implemente seu carregador no catálogo do cliente, exporte sua função de montagem HTML e registre o mesmo identificador em `reportRegistry.js` com a regra `hasData`.
+
 ## Payload: gráficos são desenhados no servidor
 
 **Regra:** o client **não envia PNGs base64 de gráfico**. Enviar imagem

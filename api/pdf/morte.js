@@ -216,7 +216,7 @@ const CHARTS_INIT_JS = `
 })();
 `
 
-async function renderMorteHtml(input) {
+export async function renderMorteHtml(input) {
   const resumo = input.resumo
   const rows = [...input.linhas].sort((a, b) =>
     a.data !== b.data ? b.data.localeCompare(a.data) : (a.lote_nome ?? '').localeCompare(b.lote_nome ?? ''),

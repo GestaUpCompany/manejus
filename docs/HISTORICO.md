@@ -2,6 +2,17 @@
 
 Este arquivo registra mudanças já aplicadas no Painel Web. Um chat novo não precisa ler isto por padrão; consulte quando a pergunta for sobre "por que isso foi feito assim" ou para entender o estado anterior de uma parte do código.
 
+## Relatório mensal geral com composição Puppeteer (2026-09-15)
+
+- A página de Relatórios do controller ganhou o configurador `Relatório Mensal Completo`, que reúne Abastecimento, Consumo, Bebedouros e Mortes em um único PDF.
+- O intervalo é obrigatório, inclusivo e limitado a 31 dias. Os quatro relatórios começam selecionados, podem ser reordenados por controles acessíveis e recebem exatamente as mesmas datas, sem filtros internos adicionais.
+- `api/pdf/geral.js` autentica o usuário, valida o vínculo com a fazenda e compõe capa e seções em uma única execução do Chromium. A paginação é global, e relatórios selecionados sem dados recebem uma página explícita.
+- A capa A4 paisagem contém Manej'Us 360, GestaUp Company, logo e nome da fazenda, título `Relatórios Mensais`, subtítulo `Registros Operacionais` e mês/ano inteligente. O fundo pode usar uma imagem da biblioteca privada ou o gradiente institucional.
+- O bucket privado `relatorios-gerais` armazena a logo institucional em `system/gestaupcompany.png` e fundos em `<fazenda_id>/capas/`. Não há tabela de metadados nem persistência dos PDFs gerados.
+- A migration `20260916000010_relatorio_geral_storage_e_acesso` criou o bucket, policies por fazenda e wrappers autenticados das quatro fontes de dados, preservando as RPCs públicas existentes.
+- O payload é limitado preventivamente a 4 MB, mantém uma única cópia de cada logo, a capa é lida diretamente do Storage e a resposta do PDF é enviada em blocos.
+- Teste funcional na fazenda `d649c65e-16ab-4b77-a84b-df937aa41cc3`: Abastecimento + Bebedouros gerou 8 páginas; os quatro relatórios geraram 15 páginas para o período inclusivo de 29 dias entre 18/08/2026 e 15/09/2026. Capa, gráficos, ordem, datas e paginação global foram conferidos no Chrome.
+
 ## Auto-instanciação de itens no estoque de suplementos (2026-09-15)
 
 **O que foi feito**: eliminação do passo manual "Instanciar Item" no `EstoqueSuplementacao.tsx`. Todos os insumos e formulações passam a ter `controla_estoque = true` por padrão desde a criação. Itens existentes foram backfillados para `controla_estoque = true` via migration `20260916000008_auto_instantiate_estoque_suplementos`.

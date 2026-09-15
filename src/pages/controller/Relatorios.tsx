@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import { useToast, PageSkeleton, ConfirmModal } from '../../components/ui'
+import { RelatorioGeralModal } from '../../components/relatorios/RelatorioGeralModal'
 
 interface RelatorioPublico {
   id: string
@@ -67,7 +68,9 @@ export function Relatorios() {
   const toast = useToast()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [fazendaNome, setFazendaNome] = useState<string | null>(null)
+  const [fazendaLogoUrl, setFazendaLogoUrl] = useState<string | null>(null)
   const [acessoConfinamento, setAcessoConfinamento] = useState(false)
+  const [modalRelatorioGeral, setModalRelatorioGeral] = useState(false)
   const [linksAtivos, setLinksAtivos] = useState<RelatorioPublico[]>([])
   const [loading, setLoading] = useState(true)
   const [modalAberto, setModalAberto] = useState(false)
@@ -91,10 +94,11 @@ export function Relatorios() {
     if (fid) {
       const { data: fazendaData } = await supabase
         .from('fazendas')
-        .select('nome, acesso_confinamento')
+        .select('nome, logo_url, acesso_confinamento')
         .eq('id', fid)
         .maybeSingle()
       setFazendaNome(fazendaData?.nome ?? null)
+      setFazendaLogoUrl(fazendaData?.logo_url ?? null)
       setAcessoConfinamento(fazendaData?.acesso_confinamento ?? false)
       await carregarLinks(fid)
     }
@@ -274,6 +278,21 @@ export function Relatorios() {
           </button>
         </div>
       </div>
+
+      {fazendaId && fazendaNome && (
+        <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-green-900 via-green-700 to-blue-900 p-6 text-white shadow-sm">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-100">Relatório consolidado</p>
+              <h2 className="mt-2 text-2xl font-bold">Relatório Mensal Completo</h2>
+              <p className="mt-2 text-sm text-green-50">Reúna Abastecimento, Consumo, Bebedouros e Mortes em um único PDF, com período comum, ordem personalizada e capa institucional.</p>
+            </div>
+            <button type="button" onClick={() => setModalRelatorioGeral(true)} className="shrink-0 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-green-800 shadow-sm transition-colors hover:bg-green-50">
+              Montar relatório
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Relatórios disponíveis */}
       <div>
@@ -517,6 +536,16 @@ export function Relatorios() {
             )}
           </div>
         </div>
+      )}
+
+      {fazendaId && fazendaNome && (
+        <RelatorioGeralModal
+          isOpen={modalRelatorioGeral}
+          onClose={() => setModalRelatorioGeral(false)}
+          fazendaId={fazendaId}
+          fazendaNome={fazendaNome}
+          fazendaLogoUrl={fazendaLogoUrl}
+        />
       )}
 
       <ConfirmModal

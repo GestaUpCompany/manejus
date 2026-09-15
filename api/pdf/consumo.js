@@ -345,7 +345,7 @@ function kpisHtml(info, dados) {
   return `<div class="kpi-col">${cards.map((c) => kpi(c.value, c.label)).join('')}</div>`
 }
 
-async function renderConsumoHtml(input) {
+export async function renderConsumoHtml(input) {
   const { dataInicio, dataFim, fazendaNome, logoGestao, logoFazenda, lotes } = input
   const brand = { logoGestao, logoFazenda, fazendaNome }
   const period = { dataInicio, dataFim }

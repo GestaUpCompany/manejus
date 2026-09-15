@@ -9,11 +9,15 @@ import consumoHandler from './api/pdf/consumo.js'
 import abastecimentoHandler from './api/pdf/abastecimento.js'
 // @ts-ignore
 import bebedourosHandler from './api/pdf/bebedouros.js'
+// @ts-ignore
+import geralHandler from './api/pdf/geral.js'
 
 function localPdfApi(): Plugin {
   return {
     name: 'local-pdf-api',
     configureServer(server) {
+      process.env.VITE_SUPABASE_URL ||= server.config.env.VITE_SUPABASE_URL
+      process.env.VITE_SUPABASE_ANON_KEY ||= server.config.env.VITE_SUPABASE_ANON_KEY
       const register = (
         path: string,
         handler: (req: any, res: any) => Promise<void>,
@@ -49,9 +53,15 @@ function localPdfApi(): Plugin {
             send(value: Buffer) {
               res.end(value)
             },
+            write(value: Buffer) {
+              return res.write(value)
+            },
+            end(value?: Buffer) {
+              res.end(value)
+            },
           }
 
-          await handler({ method: req.method, body }, apiResponse)
+          await handler({ method: req.method, body, headers: req.headers }, apiResponse)
         })
       }
 
@@ -59,6 +69,7 @@ function localPdfApi(): Plugin {
       register('/api/pdf/consumo', consumoHandler)
       register('/api/pdf/abastecimento', abastecimentoHandler)
       register('/api/pdf/bebedouros', bebedourosHandler)
+      register('/api/pdf/geral', geralHandler)
     },
   }
 }

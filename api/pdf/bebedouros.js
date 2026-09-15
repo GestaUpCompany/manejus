@@ -500,7 +500,7 @@ function chunkArray(arr, size) {
 
 // === Montagem das páginas ===
 
-async function renderBebedourosHtml(input) {
+export async function renderBebedourosHtml(input) {
   const { titulo, fazendaNome, logoGestao, logoFazenda } = input
   const brand = { logoGestao, logoFazenda, fazendaNome }
   const ehDiaUnico = input.ehDiaUnico
