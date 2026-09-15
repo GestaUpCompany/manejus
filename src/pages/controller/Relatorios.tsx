@@ -248,34 +248,11 @@ export function Relatorios() {
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
-            <p className="text-gray-600 mt-1">
-              Gere relatórios em PDF ou crie links públicos interativos para compartilhar.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowInactive(!showInactive)}
-            className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
-              showInactive
-                ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            {showInactive ? (
-              <>
-                <span className="sm:hidden">✓ Mostrando</span>
-                <span className="hidden sm:inline">✓ Mostrando Desativados</span>
-              </>
-            ) : (
-              <>
-                <span className="sm:hidden">Mostrar</span>
-                <span className="hidden sm:inline">Mostrar Desativados</span>
-              </>
-            )}
-          </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
+          <p className="text-gray-600 mt-1">
+            Gere relatórios em PDF ou crie links públicos interativos para compartilhar.
+          </p>
         </div>
       </div>
 
@@ -293,6 +270,30 @@ export function Relatorios() {
           </div>
         </div>
       )}
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowInactive(!showInactive)}
+          className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
+            showInactive
+              ? 'bg-primary text-white border-primary hover:bg-primary/90'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          {showInactive ? (
+            <>
+              <span className="sm:hidden">✓ Mostrando</span>
+              <span className="hidden sm:inline">✓ Mostrando Desativados</span>
+            </>
+          ) : (
+            <>
+              <span className="sm:hidden">Mostrar</span>
+              <span className="hidden sm:inline">Mostrar Desativados</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Relatórios disponíveis */}
       <div>
