@@ -38,7 +38,7 @@ const MAX_BODY_BYTES = 8_000_000
 // Linhas de detalhamento por página. Cada <tr> com 13px de fonte e ~30px de
 // altura cabe ~18 linhas em A4 landscape com header/footer. Mesmo cálculo do
 // morte.js (20), arredondado para 18 por causa das 8 colunas da tabela 1.
-const DETAIL_ROWS_PER_PAGE = 18
+const DETAIL_ROWS_PER_PAGE = 14
 
 function isPDFData(value) {
   if (!value || typeof value !== 'object') return false

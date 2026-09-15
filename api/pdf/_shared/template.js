@@ -18,7 +18,7 @@ export const BASE_CSS = `
 @page{size:A4 landscape;margin:0}
 *{box-sizing:border-box}
 body{margin:0;background:#e9eeeb;color:#26352e;font-family:Arial,Helvetica,sans-serif;font-size:14px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.page{width:297mm;height:210mm;background:#fff;padding:12mm 14mm 16mm;position:relative;page-break-after:always;overflow:hidden}
+.page{width:297mm;height:210mm;background:#fff;padding:12mm 14mm 25mm;position:relative;page-break-after:always;overflow:hidden}
 .page:last-child{page-break-after:auto}
 .report-header{height:22mm;display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #cfdad3;margin-bottom:5mm;padding-bottom:4mm}
 .brand-block{display:flex;align-items:center;gap:10px}
@@ -60,7 +60,7 @@ th{background:#0b6a42;color:#fff;font-size:11px;font-weight:700;text-align:left;
 td{color:#4f5f56;font-size:11px;padding:5px;border-bottom:1px solid #e5ebe7;vertical-align:top;overflow-wrap:anywhere}
 td.numeric{text-align:right;font-variant-numeric:tabular-nums}
 .striped{background:#f7faf8}
-.report-footer{position:absolute;bottom:7mm;left:14mm;right:14mm;border-top:1px solid #dce5df;padding-top:3mm;color:#84938a;font-size:11px;display:flex;justify-content:space-between}
+.report-footer{position:absolute;z-index:2;bottom:7mm;left:14mm;right:14mm;border-top:1px solid #dce5df;padding-top:3mm;background:#fff;color:#84938a;font-size:11px;display:flex;justify-content:space-between}
 `
 
 const imageTag = (src, alt, className = '') =>

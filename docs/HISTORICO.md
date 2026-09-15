@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Proteção do rodapé nos PDFs Puppeteer (2026-09-15)
+
+- A área inferior reservada para o rodapé dos PDFs Puppeteer foi ampliada para impedir que tabelas encostem ou invadam a paginação.
+- As tabelas de Abastecimento, Mortes e Ocorrências de Bebedouros passaram a usar chunks menores por página, mantendo a continuação na página seguinte antes da faixa do rodapé.
+- O rodapé ganhou fundo branco e camada própria para preservar legibilidade quando o conteúdo chega próximo da área inferior.
+- O compositor e os testes de regressão continuam usando paginação global e validam a reserva de espaço do rodapé.
+
 Este arquivo registra mudanças já aplicadas no Painel Web. Um chat novo não precisa ler isto por padrão; consulte quando a pergunta for sobre "por que isso foi feito assim" ou para entender o estado anterior de uma parte do código.
 
 ## Relatório mensal geral com composição Puppeteer (2026-09-15)

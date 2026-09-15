@@ -42,7 +42,7 @@ const MAX_BODY_BYTES = 8_000_000
 // e font-size 11px ocupa ~30px de altura. 15 linhas cabem confortavelmente
 // em A4 landscape com header/footer. Menos que os 18 do abastecimento
 // porque as colunas de texto livre são mais altas.
-const OCCURRENCES_PER_PAGE = 15
+const OCCURRENCES_PER_PAGE = 10
 
 // === Dimensões para paginação dinâmica do gráfico de período ===
 // A4 landscape = 297x210mm. Após padding (12+16mm), header (22+5mm) e footer

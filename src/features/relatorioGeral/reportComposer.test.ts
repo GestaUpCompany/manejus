@@ -35,6 +35,8 @@ describe('compositor do relatório geral', () => {
     expect(html).toContain('Sem registros no período')
     expect(html).toContain('Página 1 de 2')
     expect(html).toContain('Página 2 de 2')
+    expect(html).toContain('padding:12mm 14mm 25mm')
+    expect(html).toContain('z-index:2')
   })
 
   it('compõe renderizadores diferentes e mantém a ordem informada', async () => {

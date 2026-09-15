@@ -27,7 +27,7 @@ const MAX_BODY_BYTES = 8_000_000
 
 // Quantas linhas do detalhamento cabem em uma página A4 landscape com o header
 // e o footer padrão. Testado com 13px de fonte e ~30px por linha.
-const DETAIL_ROWS_PER_PAGE = 20
+const DETAIL_ROWS_PER_PAGE = 15
 
 function isPDFData(value) {
   if (!value || typeof value !== 'object') return false

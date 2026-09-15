@@ -76,7 +76,6 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
       toast.success('Relatório mensal gerado com sucesso.')
       onClose()
     } catch (err) {
-      console.error('Erro ao gerar relatório mensal:', err)
       toast.error(err instanceof Error ? err.message : 'Não foi possível gerar o relatório mensal.')
     } finally {
       setGerando(false)

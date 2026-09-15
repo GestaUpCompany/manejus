@@ -5,7 +5,7 @@ import { BASE_CSS } from './template.js'
 const COVER_CSS = `
 .cover-page{padding:0;overflow:hidden;color:#fff;background:linear-gradient(135deg,#083f2a 0%,#0b6a42 45%,#153b59 100%)}
 .cover-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.cover-overlay{position:absolute;inset:0;background:linear-gradient(100deg,rgba(5,42,28,.95) 0%,rgba(11,106,66,.79) 48%,rgba(21,59,89,.58) 100%)}
+.cover-overlay{position:absolute;inset:0;background:linear-gradient(100deg,rgba(5,42,28,.98) 0%,rgba(11,106,66,.86) 48%,rgba(21,59,89,.60) 100%)}
 .cover-shape{position:absolute;width:145mm;height:145mm;border:1px solid rgba(255,255,255,.13);border-radius:50%;right:-48mm;top:-52mm}
 .cover-shape.second{width:90mm;height:90mm;right:17mm;top:128mm}
 .cover-content{position:relative;height:100%;padding:18mm 20mm 13mm;display:flex;flex-direction:column;z-index:1}
@@ -18,8 +18,8 @@ const COVER_CSS = `
 .cover-subtitle{font-size:23px;color:#d8e9df;margin-bottom:10mm}
 .cover-period{display:inline-flex;align-self:flex-start;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);border-radius:7px;padding:9px 14px;font-size:17px;font-weight:700}
 .cover-footer{display:flex;align-items:flex-end;justify-content:space-between;border-top:1px solid rgba(255,255,255,.28);padding-top:5mm}
-.cover-organizations{display:flex;align-items:center;gap:14px}.cover-logo-box{height:20mm;min-width:30mm;max-width:50mm;background:rgba(255,255,255,.94);border-radius:7px;padding:5px;display:flex;align-items:center;justify-content:center}.cover-logo-box img{max-width:100%;max-height:100%;object-fit:contain}
-.cover-farm{font-size:15px;font-weight:700}.cover-farm span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#cce4d6;margin-bottom:3px}
+.cover-organizations{display:flex;align-items:center;gap:14px}.cover-logo-box{height:20mm;min-width:30mm;max-width:50mm;background:rgba(255,255,255,.94);border-radius:7px;padding:5px;display:flex;align-items:center;justify-content:center}.cover-logo-box.company{width:42mm}.cover-logo-box.farm{width:36mm}.cover-logo-box img{max-width:100%;max-height:100%;object-fit:contain}
+.cover-farm{font-size:17px;font-weight:700;line-height:1.15;color:#fff}.cover-farm span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#d9eee2;margin-bottom:4px}
 .cover-page-number{font-size:10px;color:#d5e4dc;align-self:flex-end}
 .empty-report-content{height:120mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:#f7faf8;border:1px solid #dce5df;border-radius:8px}.empty-report-content strong{font-size:24px;color:#0b6a42;margin-bottom:8px}.empty-report-content span{font-size:14px;color:#718078}
 `
@@ -50,7 +50,7 @@ function renderCover({ fazendaNome, logoGestao, logoFazenda, logoEmpresa, imagem
     <div class="cover-content">
       <div class="cover-brand">${image(logoGestao, 'ManejUs 360')}<div class="cover-brand-name">Manej'Us <b>360</b></div></div>
       <div class="cover-main"><div class="cover-kicker">Gestão integrada da fazenda</div><h1 class="cover-title">Relatórios Mensais</h1><div class="cover-subtitle">Registros Operacionais</div><div class="cover-period">${escapeHtml(periodoLabel)}</div></div>
-      <div class="cover-footer"><div class="cover-organizations"><div class="cover-logo-box">${image(logoEmpresa, 'GestaUp Company')}</div>${logoFazenda ? `<div class="cover-logo-box">${image(logoFazenda, 'Logo da fazenda')}</div>` : ''}<div class="cover-farm"><span>Fazenda</span>${escapeHtml(fazendaNome)}</div></div><div class="cover-page-number">Página 1 de ${totalPages}</div></div>
+      <div class="cover-footer"><div class="cover-organizations"><div class="cover-logo-box company">${image(logoEmpresa, 'GestaUp Company')}</div>${logoFazenda ? `<div class="cover-logo-box farm">${image(logoFazenda, 'Logo da fazenda')}</div>` : ''}<div class="cover-farm"><span>Fazenda</span>${escapeHtml(fazendaNome)}</div></div><div class="cover-page-number">Página 1 de ${totalPages}</div></div>
     </div>
   </section>`
 }
