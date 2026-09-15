@@ -2,6 +2,25 @@
 
 Este arquivo registra mudanças já aplicadas no Painel Web. Um chat novo não precisa ler isto por padrão; consulte quando a pergunta for sobre "por que isso foi feito assim" ou para entender o estado anterior de uma parte do código.
 
+## Estoque de suplementos: promoção do schema da branch para produção (2026-09-15)
+
+**O que foi feito**: 7 migrations estruturais (20260916000000 a 20260916000006) aplicadas em produção via `supabase db push`, promovendo o schema que estava em desenvolvimento na branch `estoque-suplementos`. Branch deletada após promoção.
+
+**Migrations aplicadas**:
+- **A** (`20260916000000`): campos de estoque em `formulacoes` (`estoque_atual`, `estoque_minimo`, `custo_unitario`, `custo_total_estoque`, `controla_estoque`) + `controla_estoque` e `estoque_minimo` em `insumos`.
+- **B** (`20260916000001`): tabela `movimentacoes_estoque_suplementos` com RLS, índices, constraint única `(registro_origem_id, item_tipo, item_id, tipo_movimentacao)` para idempotência do sync.
+- **C** (`20260916000002`): funções WAC (`recalcular_custo_medio_item`, `update_estoque_suplemento`) + trigger `trg_update_estoque_suplemento` na tabela de movimentações. Custo médio ponderado móvel mantido automaticamente.
+- **D** (`20260916000003`): `formulacao_id` em `registros_saida_insumos` e `registros_suplementacao` + backfill por nome (`dieta_produzida`/`formulacao` → `formulacoes.nome`).
+- **E** (`20260916000004`): triggers nas tabelas de itens (`entrada_insumos_itens`, `saida_insumos_itens`, `registros_fabrica_confinamento_insumos`, `registros_suplementacao`) que chamam `inserir_movimentacao_estoque`. Inclui `expandir_premix_componentes` para expansão recursiva de premix (limite 3 níveis) na baixa de fábrica.
+- **F** (`20260916000005`): `formulacao_id`, `lote`, `validade` em `entrada_insumos_itens` + constraint XOR `chk_item_alvo` + `local_id` em `saida_insumos_itens`.
+- **G** (`20260916000006`): **dropa triggers e funções legados** (`atualizar_estoque_entrada`, `atualizar_estoque_saida`, `atualizar_estoque_item_entrada`, etc.) que causavam dupla contagem. Tabela `movimentacao_estoque` marcada como DEPRECATED, mantida para auditoria histórica.
+
+**Arquitetura do fluxo**: PWA grava entrada/saída de insumos → trigger nos itens → `inserir_movimentacao_estoque` → `movimentacoes_estoque_suplementos` → trigger WAC → atualiza `insumos.estoque_atual`/`formulacoes.estoque_atual` + `custo_unitario`. Painel Web lê saldos em `EstoqueSuplementacao.tsx` e gerencia instanciação, entradas manuais, ajustes e histórico. PWA lê saldos via `cadastroCache.ts` (`getSaldoInsumosCached`, `getSaldoFormulacoesCached`).
+
+**Transição**: `estoque_atual` existente em `insumos` é preservado. Novos triggers assumem o controle a partir dos valores atuais. `custo_unitario` começa em 0 para insumos não instanciados; o controller precisa instanciar via "Instanciar Item" no EstoqueSuplementacao para definir custo inicial e ativar o controle.
+
+**Disparador**: quando mencionar "estoque de suplementos", "movimentacoes_estoque_suplementos", "WAC de suplementos", `controla_estoque`, "triggers legados de estoque", "dupla contagem de estoque", ou "branch estoque-suplementos", lembrar que o schema foi promovido em 2026-09-15 e os triggers legados foram removidos.
+
 ## Sincronização de histórico de pasto ao editar lote (2026-09-14)
 
 **Problema**: ao editar o pasto de um lote no formulário de Lotes (`Lotes.tsx`), o `lotes.pasto_id` era atualizado diretamente sem criar `registros_pastagens` nem fechar/abrir `lote_pasto_historico` e `lote_modulo_historico`. O trigger `trg_registros_pastagens_mover_lote` só dispara via `registros_pastagens`, então a edição direta deixava o histórico stale. No PWA, o `PastagensPage` consultava `registros_pastagens` via `getUltimoStatusPastoCached` e bloqueava pastos como "ocupados" quando não tinham lote ativo.
