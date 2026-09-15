@@ -73,8 +73,16 @@ export function EstoqueSuplementacao() {
   const [insumos, setInsumos] = useState<InsumoItem[]>([])
   const [formulacoes, setFormulacoes] = useState<FormulacaoItem[]>([])
 
+  // Filtro: mostrar apenas itens com movimentação
+  const [mostrarApenasComMovimentacao, setMostrarApenasComMovimentacao] = useState(true)
+  const [itemsComMovimentacao, setItemsComMovimentacao] = useState<Set<string>>(new Set())
+
+  // Edição inline de estoque mínimo
+  const [editandoMinimoId, setEditandoMinimoId] = useState<string | null>(null)
+  const [valorMinimoEditando, setValorMinimoEditando] = useState('')
+  const [salvandoMinimo, setSalvandoMinimo] = useState(false)
+
   // Modais
-  const [modalInstanciar, setModalInstanciar] = useState(false)
   const [modalEntrada, setModalEntrada] = useState(false)
   const [modalAjuste, setModalAjuste] = useState(false)
   const [modalHistorico, setModalHistorico] = useState<{ tipo: ItemTipo; id: string; nome: string } | null>(null)
@@ -82,15 +90,6 @@ export function EstoqueSuplementacao() {
   const [historicoLoading, setHistoricoLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Form instanciar
-  const [instanciarForm, setInstanciarForm] = useState({
-    item_tipo: 'insumo' as ItemTipo,
-    item_id: '',
-    estoque_inicial: '',
-    custo_unitario: '',
-    estoque_minimo: '',
-  })
 
   // Form entrada
   const [entradaForm, setEntradaForm] = useState({
@@ -113,7 +112,7 @@ export function EstoqueSuplementacao() {
     if (!fazendaId) return
     setLoading(true)
     try {
-      const [insumosRes, formulacoesRes] = await Promise.all([
+      const [insumosRes, formulacoesRes, movsRes] = await Promise.all([
         supabase
           .from('insumos')
           .select('id, nome, tipo, unidade, estoque_atual, estoque_minimo, custo_unitario, controla_estoque, ativo')
@@ -125,13 +124,23 @@ export function EstoqueSuplementacao() {
           .eq('fazenda_id', fazendaId)
           .is('deleted_at', null)
           .order('nome'),
+        supabase
+          .from('movimentacoes_estoque_suplementos')
+          .select('item_id')
+          .eq('fazenda_id', fazendaId)
+          .is('deleted_at', null),
       ])
 
       if (insumosRes.error) throw insumosRes.error
       if (formulacoesRes.error) throw formulacoesRes.error
+      if (movsRes.error) throw movsRes.error
 
       setInsumos((insumosRes.data as InsumoItem[]) || [])
       setFormulacoes((formulacoesRes.data as FormulacaoItem[]) || [])
+
+      // Set de item_ids que possuem pelo menos uma movimentação
+      const idsComMov = new Set<string>((movsRes.data || []).map((m: any) => m.item_id))
+      setItemsComMovimentacao(idsComMov)
     } catch (err) {
       console.error('Erro ao carregar estoque:', err)
       setError('Erro ao carregar dados do estoque')
@@ -153,73 +162,49 @@ export function EstoqueSuplementacao() {
     loadAll()
   }, [loadAll])
 
-  // Filtrar apenas itens com controle de estoque ativo
-  const insumosControlados = insumos.filter((i) => i.controla_estoque && i.ativo)
-  const formulacoesControladas = formulacoes.filter((f) => f.controla_estoque && f.ativo)
+  // Filtrar itens ativos (controla_estoque é true por padrão agora)
+  const insumosAtivos = insumos.filter((i) => i.ativo)
+  const formulacoesAtivas = formulacoes.filter((f) => f.ativo)
 
-  const saldoTotalInsumos = insumosControlados.reduce((sum, i) => sum + Number(i.estoque_atual), 0)
-  const valorTotalInsumos = insumosControlados.reduce((sum, i) => sum + Number(i.estoque_atual) * Number(i.custo_unitario), 0)
-  const saldoTotalFormulacoes = formulacoesControladas.reduce((sum, f) => sum + Number(f.estoque_atual), 0)
-  const valorTotalFormulacoes = formulacoesControladas.reduce((sum, f) => sum + Number(f.estoque_atual) * Number(f.custo_unitario), 0)
+  // Aplicar filtro de movimentação se ativo
+  const insumosFiltrados = mostrarApenasComMovimentacao
+    ? insumosAtivos.filter((i) => itemsComMovimentacao.has(i.id))
+    : insumosAtivos
+  const formulacoesFiltradas = mostrarApenasComMovimentacao
+    ? formulacoesAtivas.filter((f) => itemsComMovimentacao.has(f.id))
+    : formulacoesAtivas
 
-  const insumosEmAlerta = insumosControlados.filter((i) => i.estoque_minimo > 0 && Number(i.estoque_atual) <= Number(i.estoque_minimo))
-  const formulacoesEmAlerta = formulacoesControladas.filter((f) => f.estoque_minimo > 0 && Number(f.estoque_atual) <= Number(f.estoque_minimo))
+  const saldoTotalInsumos = insumosAtivos.reduce((sum, i) => sum + Number(i.estoque_atual), 0)
+  const valorTotalInsumos = insumosAtivos.reduce((sum, i) => sum + Number(i.estoque_atual) * Number(i.custo_unitario), 0)
+  const saldoTotalFormulacoes = formulacoesAtivas.reduce((sum, f) => sum + Number(f.estoque_atual), 0)
+  const valorTotalFormulacoes = formulacoesAtivas.reduce((sum, f) => sum + Number(f.estoque_atual) * Number(f.custo_unitario), 0)
+
+  const insumosEmAlerta = insumosAtivos.filter((i) => i.estoque_minimo > 0 && Number(i.estoque_atual) <= Number(i.estoque_minimo))
+  const formulacoesEmAlerta = formulacoesAtivas.filter((f) => f.estoque_minimo > 0 && Number(f.estoque_atual) <= Number(f.estoque_minimo))
 
   // Handlers
-  const abrirModalInstanciar = () => {
-    setInstanciarForm({ item_tipo: 'insumo', item_id: '', estoque_inicial: '', custo_unitario: '', estoque_minimo: '' })
-    setModalInstanciar(true)
-  }
-
-  const salvarInstanciacao = async () => {
-    if (!fazendaId || !instanciarForm.item_id) return
-    setSubmitting(true)
-    setError(null)
+  const salvarEstoqueMinimo = async (itemTipo: ItemTipo, itemId: string) => {
+    const novoMinimo = parseFloat(valorMinimoEditando) || 0
+    setSalvandoMinimo(true)
     try {
-      const tabela = instanciarForm.item_tipo === 'insumo' ? 'insumos' : 'formulacoes'
-      const saldoInicial = parseFloat(instanciarForm.estoque_inicial) || 0
-      const custoUnitario = parseFloat(instanciarForm.custo_unitario) || 0
-      const estoqueMinimo = parseFloat(instanciarForm.estoque_minimo) || 0
-
-      // 1. Marcar controla_estoque = true e definir estoque_minimo
-      const updatePayload: Record<string, unknown> = {
-        controla_estoque: true,
-        estoque_minimo: estoqueMinimo,
-      }
-      if (instanciarForm.item_tipo === 'insumo') {
-        updatePayload.custo_unitario = custoUnitario
-      }
-
+      const tabela = itemTipo === 'insumo' ? 'insumos' : 'formulacoes'
       const { error: updError } = await supabase
         .from(tabela)
-        .update(updatePayload)
-        .eq('id', instanciarForm.item_id)
+        .update({ estoque_minimo: novoMinimo })
+        .eq('id', itemId)
       if (updError) throw updError
-
-      // 2. Se houver saldo inicial, inserir movimentação de estoque_inicial
-      if (saldoInicial > 0) {
-        const { error: movError } = await supabase.from('movimentacoes_estoque_suplementos').insert({
-          fazenda_id: fazendaId,
-          item_tipo: instanciarForm.item_tipo,
-          item_id: instanciarForm.item_id,
-          tipo_movimentacao: 'entrada',
-          quantidade: saldoInicial,
-          custo_unitario: custoUnitario,
-          valor_total: Math.round(saldoInicial * custoUnitario * 100) / 100,
-          origem: 'estoque_inicial',
-          data: new Date().toISOString().split('T')[0],
-          observacao: 'Saldo inicial',
-        })
-        if (movError) throw movError
-      }
-
-      setModalInstanciar(false)
+      setEditandoMinimoId(null)
       loadAll()
     } catch (err: any) {
-      setError(err.message || 'Erro ao instanciar item')
+      setError(err.message || 'Erro ao atualizar estoque mínimo')
     } finally {
-      setSubmitting(false)
+      setSalvandoMinimo(false)
     }
+  }
+
+  const iniciarEdicaoMinimo = (itemId: string, valorAtual: number) => {
+    setEditandoMinimoId(itemId)
+    setValorMinimoEditando(String(valorAtual))
   }
 
   const abrirModalEntrada = () => {
@@ -315,24 +300,15 @@ export function EstoqueSuplementacao() {
     }
   }
 
-  // Opções para selects
-  const insumosOptions = insumosControlados.map((i) => ({
+  // Opções para selects (todos os itens ativos, não apenas os com movimentação)
+  const insumosOptions = insumosAtivos.map((i) => ({
     value: i.id,
     label: `${i.nome}${i.unidade ? ` (${i.unidade})` : ''}`,
   }))
-  const formulacoesOptions = formulacoesControladas.map((f) => ({
+  const formulacoesOptions = formulacoesAtivas.map((f) => ({
     value: f.id,
     label: `${f.nome}${f.e_premix ? ' (premix)' : ''}`,
   }))
-
-  // Itens não instanciados (para o modal de instanciar)
-  const insumosNaoInstanciados = insumos.filter((i) => !i.controla_estoque && i.ativo)
-  const formulacoesNaoInstanciadas = formulacoes.filter((f) => !f.controla_estoque && f.ativo)
-
-  const itensNaoInstanciadosOptions =
-    instanciarForm.item_tipo === 'insumo'
-      ? insumosNaoInstanciados.map((i) => ({ value: i.id, label: i.nome }))
-      : formulacoesNaoInstanciadas.map((f) => ({ value: f.id, label: f.nome }))
 
   if (loading) {
     return (
@@ -351,6 +327,8 @@ export function EstoqueSuplementacao() {
     const valorEstoque = saldo * custo
     const emAlerta = item.estoque_minimo > 0 && saldo <= Number(item.estoque_minimo)
     const negativo = saldo < 0
+    const temMovimentacao = itemsComMovimentacao.has(item.id)
+    const editandoEste = editandoMinimoId === item.id
 
     return (
       <Card key={item.id} className="bg-white p-4 sm:p-5" disableHover>
@@ -360,6 +338,7 @@ export function EstoqueSuplementacao() {
             <p className="text-xs text-gray-500">
               {tipo === 'insumo' ? 'Insumo' : 'Produto Final'}
               {tipo === 'formulacao' && (item as FormulacaoItem).e_premix && ' · Premix'}
+              {!temMovimentacao && <span className="text-gray-400"> · Sem movimentação</span>}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -393,9 +372,46 @@ export function EstoqueSuplementacao() {
             <span className="text-gray-500">Valor em estoque</span>
             <span className="font-semibold text-gray-900">R$ {valorEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between items-center text-sm">
             <span className="text-gray-500">Estoque mínimo</span>
-            <span className="text-gray-700">{Number(item.estoque_minimo).toLocaleString('pt-BR')} kg</span>
+            {editandoEste ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  value={valorMinimoEditando}
+                  onChange={(e) => setValorMinimoEditando(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') salvarEstoqueMinimo(tipo, item.id)
+                    if (e.key === 'Escape') setEditandoMinimoId(null)
+                  }}
+                  className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-right text-sm"
+                  autoFocus
+                  disabled={salvandoMinimo}
+                />
+                <button
+                  onClick={() => salvarEstoqueMinimo(tipo, item.id)}
+                  disabled={salvandoMinimo}
+                  className="rounded bg-blue-500 px-1.5 py-0.5 text-xs font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
+                >
+                  OK
+                </button>
+                <button
+                  onClick={() => setEditandoMinimoId(null)}
+                  disabled={salvandoMinimo}
+                  className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-semibold text-gray-600 hover:bg-gray-300"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => iniciarEdicaoMinimo(item.id, Number(item.estoque_minimo))}
+                className="font-medium text-gray-700 hover:text-blue-600 hover:underline"
+                title="Clique para editar o estoque mínimo"
+              >
+                {Number(item.estoque_minimo).toLocaleString('pt-BR')} kg
+              </button>
+            )}
           </div>
         </div>
       </Card>
@@ -411,7 +427,6 @@ export function EstoqueSuplementacao() {
           {fazendaNome && <p className="text-sm text-gray-500 mt-1">{fazendaNome}</p>}
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="secondary" onClick={abrirModalInstanciar}>Instanciar Item</Button>
           <Button variant="secondary" onClick={abrirModalAjuste}>Ajuste</Button>
           <Button onClick={abrirModalEntrada}>Registrar Entrada</Button>
         </div>
@@ -456,118 +471,75 @@ export function EstoqueSuplementacao() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
-        <button
-          onClick={() => setTab('insumos')}
-          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
-            tab === 'insumos' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Insumos ({insumosControlados.length})
-        </button>
-        <button
-          onClick={() => setTab('formulacoes')}
-          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
-            tab === 'formulacoes' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Produtos Finais ({formulacoesControladas.length})
-        </button>
+      {/* Filtro + Tabs */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="flex gap-2 border-b border-gray-200">
+          <button
+            onClick={() => setTab('insumos')}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+              tab === 'insumos' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Insumos ({insumosFiltrados.length}{mostrarApenasComMovimentacao && insumosFiltrados.length < insumosAtivos.length ? ` de ${insumosAtivos.length}` : ''})
+          </button>
+          <button
+            onClick={() => setTab('formulacoes')}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+              tab === 'formulacoes' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Produtos Finais ({formulacoesFiltradas.length}{mostrarApenasComMovimentacao && formulacoesFiltradas.length < formulacoesAtivas.length ? ` de ${formulacoesAtivas.length}` : ''})
+          </button>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={mostrarApenasComMovimentacao}
+            onChange={(e) => setMostrarApenasComMovimentacao(e.target.checked)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          Mostrar apenas itens com movimentação
+        </label>
       </div>
 
       {/* Lista de itens */}
       {tab === 'insumos' ? (
-        insumosControlados.length === 0 ? (
+        insumosFiltrados.length === 0 ? (
           <Card className="bg-white p-6" disableHover>
             <EmptyState
-              title="Nenhum insumo instanciado"
-              description="Instancie insumos para controlar o estoque de suplementação."
-              action={<Button onClick={abrirModalInstanciar}>Instanciar Item</Button>}
+              title={insumosAtivos.length === 0 ? "Nenhum insumo cadastrado" : "Nenhum insumo com movimentação"}
+              description={insumosAtivos.length === 0
+                ? "Cadastre insumos na aba de Insumos para que eles apareçam aqui automaticamente."
+                : "Todos os insumos ativos ainda estão sem movimentação. Registre uma entrada ou desmarque o filtro para ver todos."}
+              action={insumosAtivos.length > 0
+                ? <Button variant="secondary" onClick={() => setMostrarApenasComMovimentacao(false)}>Mostrar todos</Button>
+                : undefined}
             />
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {insumosControlados.map((i) => renderCard(i, 'insumo'))}
+            {insumosFiltrados.map((i) => renderCard(i, 'insumo'))}
           </div>
         )
       ) : (
-        formulacoesControladas.length === 0 ? (
+        formulacoesFiltradas.length === 0 ? (
           <Card className="bg-white p-6" disableHover>
             <EmptyState
-              title="Nenhum produto final instanciado"
-              description="Instancie formulações com controle de estoque para acompanhar o saldo de produtos acabados."
-              action={<Button onClick={abrirModalInstanciar}>Instanciar Item</Button>}
+              title={formulacoesAtivas.length === 0 ? "Nenhum produto final cadastrado" : "Nenhum produto final com movimentação"}
+              description={formulacoesAtivas.length === 0
+                ? "Cadastre formulações para que elas apareçam aqui automaticamente."
+                : "Todos os produtos finais ativos ainda estão sem movimentação. Registre uma entrada ou desmarque o filtro para ver todos."}
+              action={formulacoesAtivas.length > 0
+                ? <Button variant="secondary" onClick={() => setMostrarApenasComMovimentacao(false)}>Mostrar todos</Button>
+                : undefined}
             />
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {formulacoesControladas.map((f) => renderCard(f, 'formulacao'))}
+            {formulacoesFiltradas.map((f) => renderCard(f, 'formulacao'))}
           </div>
         )
       )}
-
-      {/* Modal: Instanciar Item */}
-      <Modal isOpen={modalInstanciar} onClose={() => setModalInstanciar(false)} title="Instanciar Item de Estoque" size="md">
-        <div className="space-y-4">
-          <Select
-            label="Tipo de item"
-            options={[
-              { value: 'insumo', label: 'Insumo' },
-              { value: 'formulacao', label: 'Produto Final (Formulação)' },
-            ]}
-            value={instanciarForm.item_tipo}
-            onChange={(val) => setInstanciarForm({ ...instanciarForm, item_tipo: val as ItemTipo, item_id: '' })}
-            placeholder="Selecione..."
-            required
-          />
-          <Select
-            label="Item"
-            options={itensNaoInstanciadosOptions}
-            value={instanciarForm.item_id}
-            onChange={(val) => setInstanciarForm({ ...instanciarForm, item_id: val })}
-            placeholder="Selecione o item..."
-            required
-          />
-          {itensNaoInstanciadosOptions.length === 0 && (
-            <p className="text-xs text-gray-500">
-              {instanciarForm.item_tipo === 'insumo'
-                ? 'Todos os insumos ativos já estão instanciados ou não há insumos cadastrados.'
-                : 'Todas as formulações ativas já estão instanciadas ou não há formulações cadastradas.'}
-            </p>
-          )}
-          <Input
-            label="Saldo Inicial (kg)"
-            type="number"
-            placeholder="Ex: 1000"
-            value={instanciarForm.estoque_inicial}
-            onChange={(e) => setInstanciarForm({ ...instanciarForm, estoque_inicial: e.target.value })}
-          />
-          <Input
-            label="Custo Unitário Inicial (R$/kg)"
-            type="number"
-            placeholder="Ex: 2.50"
-            value={instanciarForm.custo_unitario}
-            onChange={(e) => setInstanciarForm({ ...instanciarForm, custo_unitario: e.target.value })}
-          />
-          <Input
-            label="Estoque Mínimo (kg)"
-            type="number"
-            placeholder="Ex: 200"
-            value={instanciarForm.estoque_minimo}
-            onChange={(e) => setInstanciarForm({ ...instanciarForm, estoque_minimo: e.target.value })}
-          />
-          <p className="text-xs text-gray-500">
-            Instanciar ativa o controle de estoque para este item. O saldo inicial e custo médio serão ajustados conforme novas entradas forem registradas.
-          </p>
-          <div className="flex gap-2 justify-end pt-2">
-            <Button variant="secondary" onClick={() => setModalInstanciar(false)}>Cancelar</Button>
-            <Button onClick={salvarInstanciacao} disabled={submitting || !instanciarForm.item_id}>
-              {submitting ? 'Salvando...' : 'Instanciar'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Modal: Registrar Entrada */}
       <Modal isOpen={modalEntrada} onClose={() => setModalEntrada(false)} title="Registrar Entrada" size="md">

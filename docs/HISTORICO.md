@@ -2,6 +2,22 @@
 
 Este arquivo registra mudanças já aplicadas no Painel Web. Um chat novo não precisa ler isto por padrão; consulte quando a pergunta for sobre "por que isso foi feito assim" ou para entender o estado anterior de uma parte do código.
 
+## Auto-instanciação de itens no estoque de suplementos (2026-09-15)
+
+**O que foi feito**: eliminação do passo manual "Instanciar Item" no `EstoqueSuplementacao.tsx`. Todos os insumos e formulações passam a ter `controla_estoque = true` por padrão desde a criação. Itens existentes foram backfillados para `controla_estoque = true` via migration `20260916000008_auto_instantiate_estoque_suplementos`.
+
+**Mudanças técnicas**:
+- Migration estrutural `20260916000008` altera o `DEFAULT` de `controla_estoque` para `true` nas tabelas `insumos` e `formulacoes` e faz UPDATE em registros existentes.
+- `EstoqueSuplementacao.tsx` reescrito: removido modal de "Instanciar", opções de itens não instanciados e estado `instanciarForm`.
+- Adicionado filtro "Mostrar apenas itens com movimentação" (default ativado) para reduzir ruído de itens sem entradas/saídas registradas.
+- Adicionada edição inline de `estoque_minimo` em cada card: clique no valor, digite e confirma; salva direto no banco e recarrega a lista.
+- Dashboard agrega saldos e alertas a partir de todos os itens ativos, não apenas os com `controla_estoque = true`.
+
+**Motivação**: o passo de "Instanciar" criava atrito e um modo de falha silencioso (suplementações não descontavam estoque se o usuário esquecesse de instanciar). O gate `controla_estoque` não fazia sentido no domínio, pois todo insumo/formulação consumido na suplementação é um produto físico. A edição inline de estoque mínimo substitui a configuração que antes era feita no modal de instanciar.
+
+**Teste** (fazenda `d649c65e-16ab-4b77-a84b-df937aa41cc3`): após `supabase db push`, a página de Estoque de Suplementação exibiu todos os 12 insumos e 4 produtos finais ativos sem precisar de instanciar. O filtro ocultou/exibiu itens com movimentação corretamente. A edição inline de estoque mínimo salvou o valor e o alerta disparou quando o saldo ficou abaixo do mínimo. Valor de teste revertido via MCP.
+
+**Disparador**: quando mencionar "estoque de suplementos", "instanciar item", `controla_estoque`, "estoque mínimo" ou "itens sem movimentação", lembrar que o controle de estoque é automático desde a criação e o estoque mínimo é editável inline no dashboard.
 ## Estoque de suplementos: promoção do schema da branch para produção (2026-09-15)
 
 **O que foi feito**: 7 migrations estruturais (20260916000000 a 20260916000006) aplicadas em produção via `supabase db push`, promovendo o schema que estava em desenvolvimento na branch `estoque-suplementos`. Branch deletada após promoção.

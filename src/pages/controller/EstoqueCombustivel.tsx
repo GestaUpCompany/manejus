@@ -800,7 +800,7 @@ export function EstoqueCombustivel() {
               <span className="font-bold">Saldo atual:</span> {modalAjuste ? Number(modalAjuste.saldo_atual_l).toLocaleString('pt-BR') : '0'} L
             </p>
             <p className="text-xs text-amber-700 mt-1">
-              O ajuste define o saldo absoluto do tanque (usado em inventario fisico). O custo medio nao e alterado.
+              O ajuste define o saldo absoluto do tanque (usado em inventário físico). O custo médio não é alterado.
             </p>
           </div>
           <Input
