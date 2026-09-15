@@ -46,6 +46,13 @@ export function EstoqueCombustivel() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Form ajuste (saldo absoluto, nao altera custo medio)
+  const [modalAjuste, setModalAjuste] = useState<Tanque | null>(null)
+  const [ajusteForm, setAjusteForm] = useState({
+    novo_saldo_l: '',
+    observacao: '',
+  })
+
   // Form tanque
   const [tanqueForm, setTanqueForm] = useState({
     nome: '',
@@ -166,10 +173,11 @@ export function EstoqueCombustivel() {
         const { data: newTanque, error } = await supabase.from('tanques_combustivel').insert(payload).select('id').single()
         if (error) throw error
 
-        // Se houver saldo inicial, inserir movimentacao de estoque_inicial
+        // Se houver saldo inicial, registrar movimentacao
         const saldoInicial = parseFloat(tanqueForm.saldo_inicial_l) || 0
         const precoInicial = parseFloat(tanqueForm.preco_inicial_l) || 0
         if (saldoInicial > 0 && precoInicial > 0) {
+          // Com preco: entrada normal (WAC calcula custo medio)
           const valorTotal = saldoInicial * precoInicial
           const { error: movError } = await supabase.from('movimentacoes_combustivel').insert({
             fazenda_id: fazendaId,
@@ -181,6 +189,18 @@ export function EstoqueCombustivel() {
             data: new Date().toISOString().split('T')[0],
             origem: 'estoque_inicial',
             observacao: 'Saldo inicial do tanque',
+          })
+          if (movError) throw movError
+        } else if (saldoInicial > 0) {
+          // Sem preco: ajuste define saldo absoluto, custo medio fica 0 ate a primeira entrada real
+          const { error: movError } = await supabase.from('movimentacoes_combustivel').insert({
+            fazenda_id: fazendaId,
+            tanque_id: newTanque.id,
+            tipo_movimentacao: 'ajuste',
+            quantidade_l: saldoInicial,
+            data: new Date().toISOString().split('T')[0],
+            origem: 'estoque_inicial',
+            observacao: 'Saldo inicial do tanque (sem custo)',
           })
           if (movError) throw movError
         }
@@ -285,6 +305,40 @@ export function EstoqueCombustivel() {
       loadAll()
     } catch (err: any) {
       setError(err.message || 'Erro ao restaurar tanque')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Handler ajuste de saldo (define saldo absoluto, nao altera custo medio)
+  const abrirModalAjuste = (tanque: Tanque) => {
+    setModalAjuste(tanque)
+    setAjusteForm({
+      novo_saldo_l: String(tanque.saldo_atual_l),
+      observacao: '',
+    })
+  }
+
+  const salvarAjuste = async () => {
+    if (!fazendaId || !modalAjuste || !ajusteForm.novo_saldo_l) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      const novoSaldo = parseFloat(ajusteForm.novo_saldo_l)
+      const { error } = await supabase.from('movimentacoes_combustivel').insert({
+        fazenda_id: fazendaId,
+        tanque_id: modalAjuste.id,
+        tipo_movimentacao: 'ajuste',
+        quantidade_l: novoSaldo,
+        data: new Date().toISOString().split('T')[0],
+        origem: 'painel_ajuste',
+        observacao: ajusteForm.observacao || 'Ajuste de inventario',
+      })
+      if (error) throw error
+      setModalAjuste(null)
+      loadAll()
+    } catch (err: any) {
+      setError(err.message || 'Erro ao ajustar saldo')
     } finally {
       setSubmitting(false)
     }
@@ -405,6 +459,13 @@ export function EstoqueCombustivel() {
                         Histórico
                       </button>
                       <button
+                        onClick={() => abrirModalAjuste(tanque)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100"
+                        title="Ajustar saldo"
+                      >
+                        Ajustar
+                      </button>
+                      <button
                         onClick={() => setModalExcluirTanque(tanque)}
                         className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100"
                         title="Excluir tanque"
@@ -511,7 +572,7 @@ export function EstoqueCombustivel() {
                   value={tanqueForm.preco_inicial_l}
                   onChange={(e) => setTanqueForm({ ...tanqueForm, preco_inicial_l: e.target.value })}
                 />
-                <p className="text-xs text-gray-500">Define o saldo e custo médio inicial do tanque. O custo médio será ajustado conforme novas entradas forem registradas.</p>
+                <p className="text-xs text-gray-500">Define o saldo inicial do tanque. Com preço, o custo médio é calculado (WAC); sem preço, o saldo é definido como ajuste e o custo médio fica R$ 0 até a primeira entrada real.</p>
               </div>
             </>
           )}
@@ -651,7 +712,7 @@ export function EstoqueCombustivel() {
                         estoque_inicial: 'Estoque Inicial',
                         painel_entrada: 'Entrada Manual',
                         pwa_entrada: 'Entrada via App',
-                        painel_baixa: 'Baixa Manual',
+                        auto_baixa: 'Baixa Automática',
                         painel_ajuste: 'Ajuste Manual',
                         manual: 'Manual',
                       }
@@ -725,6 +786,45 @@ export function EstoqueCombustivel() {
         confirmText="Excluir"
         variant="danger"
       />
+
+      {/* Modal: Ajustar Saldo */}
+      <Modal
+        isOpen={!!modalAjuste}
+        onClose={() => setModalAjuste(null)}
+        title={modalAjuste ? `Ajustar Saldo — ${modalAjuste.nome}` : 'Ajustar Saldo'}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-sm text-amber-800">
+              <span className="font-bold">Saldo atual:</span> {modalAjuste ? Number(modalAjuste.saldo_atual_l).toLocaleString('pt-BR') : '0'} L
+            </p>
+            <p className="text-xs text-amber-700 mt-1">
+              O ajuste define o saldo absoluto do tanque (usado em inventario fisico). O custo medio nao e alterado.
+            </p>
+          </div>
+          <Input
+            label="Novo Saldo (L)"
+            type="number"
+            placeholder="Ex: 1850"
+            value={ajusteForm.novo_saldo_l}
+            onChange={(e) => setAjusteForm({ ...ajusteForm, novo_saldo_l: e.target.value })}
+            required
+          />
+          <Input
+            label="Motivo do Ajuste"
+            placeholder="Ex: Inventario fisico, evaporacao, correcao"
+            value={ajusteForm.observacao}
+            onChange={(e) => setAjusteForm({ ...ajusteForm, observacao: e.target.value })}
+          />
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="secondary" onClick={() => setModalAjuste(null)}>Cancelar</Button>
+            <Button onClick={salvarAjuste} disabled={submitting || !ajusteForm.novo_saldo_l}>
+              {submitting ? 'Salvando...' : 'Ajustar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Lixeira: Tanques Excluídos */}
       {tanquesExcluidos.length > 0 && (

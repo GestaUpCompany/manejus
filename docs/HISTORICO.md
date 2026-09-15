@@ -691,6 +691,36 @@ Validado na fazenda de testes: abastecimento de Álcool (sem tanques de Álcool 
 
 Disparador: quando mencionar "tanque opcional", "abastecimento sem tanque", "fazenda sem tanque", "onboarding combustível", "bloqueio de abastecimento", ou problemas com fazendas que não conseguem lançar abastecimentos por falta de tanque cadastrado, ler esta seção.
 
+### Saldo negativo + ajuste de inventário + correções de UX em combustível — adicionado em 2026-09-15
+
+Cinco correções coordenadas no módulo de combustível, resolvendo problemas identificados em auditoria do módulo.
+
+**1. Saldo negativo permitido (migration `20260916000007_allow_negative_saldo_combustivel.sql`)**
+
+A trigger `baixa_automatica_abastecimento` rejeitava abastecimentos com saldo insuficiente via `RAISE EXCEPTION`, fazendo rollback do INSERT inteiro de `registros_abastecimento`. O registro de consumo físico era perdido quando o cache do PWA estava stale. Agora o saldo pode ficar negativo: a baixa é registrada, o abastecimento é preservado, e o saldo negativo sinaliza necessidade de entrada de reconciliação.
+
+Mudanças no banco: removido o `CHECK (saldo_atual_l >= 0)` de `tanques_combustivel`; removido `RAISE EXCEPTION` de saldo insuficiente da trigger; removido `GREATEST(0, ...)` das funções `update_tanque_saldo_custo` e `recalcular_custo_medio_tanque`; WAC ajustado para tratar `saldo <= 0` como reset de custo médio na próxima entrada (saldo negativo = estoque consumido antes de entrada, custo anterior não representa mais o estoque físico).
+
+PWA (`AbastecimentoPage.tsx`): o aviso de saldo insuficiente deixou de bloquear o save e passou a ser informativo (âmbar em vez de vermelho). Removido o early return em `handleSalvar` e `!!saldoInsuficiente` do disabled do botão SALVAR.
+
+**2. `origemLabel` corrigido no histórico do Painel Web**
+
+O `origemLabel` em `EstoqueCombustivel.tsx` tinha `painel_baixa: 'Baixa Manual'` (origem que não existe mais) e faltava `auto_baixa`. Como toda baixa agora vem da trigger com `origem='auto_baixa'`, o histórico exibia a string crua "auto_baixa" para 100% das saídas. Corrigido: `auto_baixa: 'Baixa Automática'` no mapa, `painel_baixa` removido.
+
+**3. UI de ajuste de saldo no Painel Web**
+
+Adicionado botão "Ajustar" nos cards de tanque e modal de ajuste em `EstoqueCombustivel.tsx`. O ajuste insere `movimentacoes_combustivel` com `tipo_movimentacao='ajuste'`, `origem='painel_ajuste'`, definindo saldo absoluto (inventário físico) sem alterar custo médio. A trigger `update_tanque_saldo_custo` já tratava `ajuste` (define `saldo_atual_l = NEW.quantidade_l`); faltava apenas a UI.
+
+**4. Update otimista do cache de tanques no PWA**
+
+Após salvar entrada de combustível ou abastecimento offline, o cache de tanques não era atualizado localmente, causando validação stale no próximo registro. Adicionada função `updateTanqueSaldoCache(fazendaId, tanqueId, delta)` em `cadastroCache.ts` que incrementa/decrementa o saldo do tanque no cache em memória e persiste no IndexedDB. Chamada em `EntradaCombustivelPage.tsx` (delta +litros) e `AbastecimentoPage.tsx` (delta -totalAbastecido) após save bem-sucedido, com atualização do state local `tanquesDisponiveis`.
+
+**5. Saldo inicial sem preço**
+
+`salvarTanque` em `EstoqueCombustivel.tsx` exigia `precoInicial > 0` para registrar saldo inicial, bloqueando fazendas que têm combustível no tanque mas não sabem o custo de aquisição. Agora: com preço, cria `entrada` (WAC normal); sem preço, cria `ajuste` (saldo absoluto, custo médio fica R$ 0 até a primeira entrada real). A constraint `chk_movimentacao_valor_total` exige `valor_total > 0` em entradas, por isso o caminho sem preço usa `ajuste` (`valor_total IS NULL`).
+
+Disparador: quando mencionar "saldo negativo", "abastecimento perdido", "RAISE EXCEPTION saldo", "ajuste de inventário", "ajuste de saldo", "cache stale tanque", "update otimista tanque", "saldo inicial sem preço", "origemLabel auto_baixa", ou retomar correções do módulo de combustível, ler esta seção.
+
 ### Correção de peso real por categoria do lote — adicionado em 2026-09-14
 
 Migration `20260914210000_correcao_peso_categoria.sql`. Substitui o fluxo inline de ajuste de peso (que só permitia aumentar e não guardava histórico) por um recurso dedicado de correção de peso real medido na balança.
