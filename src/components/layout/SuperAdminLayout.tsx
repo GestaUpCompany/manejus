@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Header } from './Header'
 import { Sidebar, SidebarItem } from './Sidebar'
 import { ImpersonationBar } from '../ImpersonationBar'
@@ -57,6 +58,7 @@ const superAdminItems: SidebarItem[] = [
 
 export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const navigate = useNavigate()
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -70,35 +72,52 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
               <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">Plataforma</p>
               <p className="text-xs text-gray-400 mt-0.5">Super Administrador</p>
             </div>
-            <Sidebar items={superAdminItems} />
+            <Sidebar items={superAdminItems} title="Plataforma" />
           </div>
         </aside>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-50 animate-fade-in">
-            <div className="bg-white w-64 h-full p-4 overflow-y-auto animate-slide-in">
+          <div
+            className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-50 animate-fade-in"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Menu de navegação"
+              className="bg-white w-64 h-full p-4 overflow-y-auto animate-slide-in"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between mb-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Navegação</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider" aria-hidden="true">Plataforma</p>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 rounded-lg transition-all"
+                  className="p-2 rounded-lg transition-all hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  aria-label="Fechar menu"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-              <nav className="space-y-2">
+              <nav className="space-y-0.5" aria-label="Itens de navegação">
                 {superAdminItems.map((item) => (
                   <button
                     key={item.path}
                     onClick={() => {
-                      window.location.href = item.path
+                      navigate(item.path)
                       setMobileMenuOpen(false)
                     }}
-                    className="w-full text-left px-4 py-3 rounded-lg transition-all text-gray-700 hover:bg-gray-100"
+                    className="w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium border-l-[3px] flex items-center gap-3 text-gray-700 border-transparent hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    aria-label={`Ir para ${item.label}`}
                   >
+                    {item.icon && (
+                      <span className="flex-shrink-0 text-gray-400" aria-hidden="true">
+                        {item.icon}
+                      </span>
+                    )}
                     {item.label}
                   </button>
                 ))}
@@ -112,9 +131,10 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="md:hidden mb-4 p-2 bg-white border-2 border-gray-300 rounded-lg transition-all"
+            aria-label="Abrir menu de navegação"
+            className="md:hidden mb-4 p-2 bg-white border-2 border-gray-300 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>

@@ -1,5 +1,17 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Redesign do sidebar: hierarquia visual, acessibilidade e command palette (2026-09-15)
+
+- O sidebar do `ControllerLayout` foi reorganizado em 4 seções semânticas (Principal, Operação, Insumos & Estoque, Sistema) com headers e divisores visuais, eliminando a lista plana de 12 itens sem hierarquia.
+- Estado ativo refinado: `bg-primary/15` + barra esquerda 3px no pai, `bg-primary/20` no filho, corrigindo a inversão de peso onde o filho ficava mais escuro que o pai.
+- Ícones resolvidos: "Estoque" ganhou ícone distinto de "Insumos" (caixa/archive vs cubo 3D); "Assistente de IA" convertido de `fill` para `stroke` outline, unificando o set visual.
+- Submenu com hierarquia real: conector visual `border-l`, indentação `ml-3`, chevron-right 14px no lugar do bullet, densidade calibrada (`py-2` no nível 1, `py-1.5` no nível 2).
+- Colapso funcional com flyout: no modo `w-20`, grupos expansíveis exibem popover à direita no hover (CSS puro via `group-hover`), restaurando acesso aos ~20 destinos de submenu.
+- Auto-scroll ao item ativo no mount e ao trocar de rota via `scrollIntoView({ block: 'nearest' })`.
+- Command palette (Ctrl+K): busca fuzzy por nome em todos os 25 destinos, navegação por teclado (↑↓ Enter Escape), acessibilidade com `role="listbox"`/`role="option"`/`aria-selected`.
+- Acessibilidade completa: `role="navigation"` no aside, `aria-current="page"`, `aria-expanded`/`aria-haspopup` nos grupos, `role="group"` nos submenus, `focus-visible:ring-2` em todos os botões, `aria-hidden` em SVGs decorativos.
+- Unificação parcial: `Sidebar.tsx` atualizado com as mesmas melhorias de acessibilidade e estado ativo; `AdminLayout` e `SuperAdminLayout` corrigidos (troca de `window.location.href` por `useNavigate`, acessibilidade no drawer mobile e botões). **Débito técnico**: a unificação estrutural completa (extrair um componente único de sidebar do `ControllerLayout` e migrar os três layouts para usá-lo) permanece pendente, pois exigiria estender a interface `SidebarItem` para suportar seções, grupos, flyout e command palette.
+
 ## Página final de encerramento no relatório geral (2026-09-15)
 
 - O relatório geral passou a terminar com uma página profissional contendo `Atenciosamente,`, `Gesta'Up`, a identidade Manej'Us 360 e os logos institucionais sobre o fundo verde padrão. A página não usa a imagem de fundo da capa nem exibe o rótulo `Encerramento`.

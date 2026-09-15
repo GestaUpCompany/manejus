@@ -17,7 +17,7 @@ interface SidebarProps {
   title?: string
 }
 
-export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen = false, setMobileMenuOpen }: SidebarProps) {
+export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen = false, setMobileMenuOpen, title }: SidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -37,7 +37,7 @@ export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen =
     const handleTouchMove = (e: TouchEvent) => {
       const currentX = e.touches[0].clientX
       const diff = startX - currentX
-      
+
       if (diff > 50 && setMobileMenuOpen) {
         setMobileMenuOpen(false)
       }
@@ -55,58 +55,66 @@ export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen =
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r-2 border-gray-200 min-h-screen transition-all duration-300 hidden md:block`}>
+      <aside
+        className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r-2 border-gray-200 min-h-screen transition-all duration-300 hidden md:block`}
+        role="navigation"
+        aria-label={title || 'Navegação principal'}
+      >
         <div className="p-4">
-          <div className="flex items-center justify-between mb-6">
-            {!isCollapsed && <h2 className="text-lg font-bold text-gray-800">Menu</h2>}
-            <button
-              onClick={onToggle}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
-              title={isCollapsed ? 'Expandir menu' : 'Colapsar menu'}
-            >
-              <svg
-                className={`w-5 h-5 transition-transform ${isCollapsed ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          {onToggle && (
+            <div className="flex items-center justify-between mb-6">
+              {!isCollapsed && <h2 className="text-lg font-bold text-gray-800" aria-hidden="true">{title || 'Menu'}</h2>}
+              <button
+                onClick={onToggle}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                aria-label={isCollapsed ? 'Expandir menu' : 'Colapsar menu'}
+                aria-expanded={!isCollapsed}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-              </svg>
-            </button>
-          </div>
-          <nav className="space-y-1">
+                <svg
+                  className={`w-5 h-5 transition-transform ${isCollapsed ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+              </button>
+            </div>
+          )}
+          <nav className="space-y-0.5" aria-label="Itens de navegação">
             {items.map((item) => {
               const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
               return (
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
-                    isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  }`}
+                  aria-current={isActive ? 'page' : undefined}
                   title={isCollapsed ? item.label : undefined}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium border-l-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                    isCollapsed ? 'justify-center' : ''
+                  } ${
+                    isActive
+                      ? 'bg-primary/15 text-primary border-primary'
+                      : 'text-gray-600 border-transparent hover:bg-gray-100 hover:text-gray-900'
+                  }`}
                 >
                   {item.icon && (
-                    <span className={`flex-shrink-0 ${isActive ? 'text-primary' : 'text-gray-400'}`}>
+                    <span className={`flex-shrink-0 ${isActive ? 'text-primary' : 'text-gray-400'}`} aria-hidden="true">
                       {item.icon}
                     </span>
                   )}
                   {!isCollapsed && <span className="truncate">{item.label}</span>}
-                  {isActive && !isCollapsed && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
-                  )}
                 </button>
               )
             })}
           </nav>
         </div>
-        {!isCollapsed && (
+        {!isCollapsed && user && (
           <div className="absolute bottom-0 w-64 p-6 border-t-2 border-gray-200">
             <div className="text-sm text-gray-500">
-              <p>Usuário: {user?.nome}</p>
-              <p>Papel: <span className="capitalize">{user?.papel}</span></p>
+              <p>Usuário: {user.nome}</p>
+              <p>Papel: <span className="capitalize">{user.papel}</span></p>
             </div>
           </div>
         )}
@@ -114,28 +122,32 @@ export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen =
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div 
+        <div
           className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-50 animate-fade-in"
           onClick={() => setMobileMenuOpen?.(false)}
+          aria-hidden="true"
         >
-          <div 
+          <div
             ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu de navegação"
             className="bg-white w-64 h-full p-4 overflow-y-auto animate-slide-in"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-800">Menu</h2>
+              <h2 className="text-lg font-bold text-gray-800" aria-hidden="true">{title || 'Menu'}</h2>
               <button
                 onClick={() => setMobileMenuOpen?.(false)}
-                className="p-2 rounded-lg transition-all hover:bg-gray-100"
+                className="p-2 rounded-lg transition-all hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 aria-label="Fechar menu"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <nav className="space-y-2">
+            <nav className="space-y-0.5" aria-label="Itens de navegação">
               {items.map((item) => {
                 const isActive = location.pathname === item.path
                 return (
@@ -145,24 +157,32 @@ export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen =
                       navigate(item.path)
                       setMobileMenuOpen?.(false)
                     }}
-                    className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium border-l-[3px] flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
                       isActive
-                        ? 'bg-primary text-white'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-primary/15 text-primary border-primary'
+                        : 'text-gray-700 border-transparent hover:bg-gray-50'
                     }`}
                     aria-label={`Ir para ${item.label}`}
                   >
+                    {item.icon && (
+                      <span className={`flex-shrink-0 ${isActive ? 'text-primary' : 'text-gray-400'}`} aria-hidden="true">
+                        {item.icon}
+                      </span>
+                    )}
                     {item.label}
                   </button>
                 )
               })}
             </nav>
-            <div className="absolute bottom-0 w-64 p-6 border-t-2 border-gray-200">
-              <div className="text-sm text-gray-500">
-                <p>Usuário: {user?.nome}</p>
-                <p>Papel: <span className="capitalize">{user?.papel}</span></p>
+            {user && (
+              <div className="absolute bottom-0 w-64 p-6 border-t-2 border-gray-200">
+                <div className="text-sm text-gray-500">
+                  <p>Usuário: {user.nome}</p>
+                  <p>Papel: <span className="capitalize">{user.papel}</span></p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
