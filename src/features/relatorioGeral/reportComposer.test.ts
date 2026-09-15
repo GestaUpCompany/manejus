@@ -31,7 +31,7 @@ describe('compositor do relatório geral', () => {
         },
       }],
     })
-    expect(html).toContain('Relatórios Mensais')
+    expect(html).toContain('Infográfico Mensal')
     expect(html).toContain('Sem registros no período')
     expect(html).toContain('Atenciosamente,')
     expect(html).toContain("<div class=\"final-company\">Gesta'Up</div>")

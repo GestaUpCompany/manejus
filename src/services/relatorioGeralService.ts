@@ -68,7 +68,7 @@ export function baixarRelatorioGeral(blob: Blob, fazendaNome: string, dataInicio
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `GestaUp - Relatorios Mensais - ${fazenda} - ${dataInicio} a ${dataFim}.pdf`
+  link.download = `GestaUp - Infografico Mensal - ${fazenda} - ${dataInicio} a ${dataFim}.pdf`
   document.body.appendChild(link)
   link.click()
   link.remove()

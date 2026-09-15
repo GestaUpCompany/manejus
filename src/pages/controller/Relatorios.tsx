@@ -284,7 +284,7 @@ export function Relatorios() {
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div className="max-w-2xl">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-100">Relatório consolidado</p>
-              <h2 className="mt-2 text-2xl font-bold">Relatório Mensal Completo</h2>
+              <h2 className="mt-2 text-2xl font-bold">Infográfico Mensal</h2>
               <p className="mt-2 text-sm text-green-50">Reúna Abastecimento, Consumo, Bebedouros e Mortes em um único PDF, com período comum, ordem personalizada e capa institucional.</p>
             </div>
             <button type="button" onClick={() => setModalRelatorioGeral(true)} className="shrink-0 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-green-800 shadow-sm transition-colors hover:bg-green-50">

@@ -70,7 +70,7 @@ export default async function handler(req, res) {
       },
     })
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename="relatorios-mensais.pdf"')
+    res.setHeader('Content-Disposition', 'attachment; filename="infografico-mensal.pdf"')
     res.setHeader('Cache-Control', 'no-store')
     res.setHeader('X-PDF-Renderer', 'puppeteer-composed')
     return writePdf(res, pdf)
@@ -83,6 +83,6 @@ export default async function handler(req, res) {
     if (detail === 'Usuário sem acesso à fazenda') {
       return res.status(403).json({ error: detail })
     }
-    return res.status(500).json({ error: 'Não foi possível gerar o relatório mensal', detail })
+    return res.status(500).json({ error: 'Não foi possível gerar o infográfico mensal', detail })
   }
 }

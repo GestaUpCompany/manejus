@@ -80,10 +80,10 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
       })
       setEtapa('Baixando arquivo')
       baixarRelatorioGeral(blob, fazendaNome, dataInicio, dataFim)
-      toast.success('Relatório mensal gerado com sucesso.')
+      toast.success('Infográfico mensal gerado com sucesso.')
       onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Não foi possível gerar o relatório mensal.')
+      toast.error(err instanceof Error ? err.message : 'Não foi possível gerar o infográfico mensal.')
     } finally {
       setGerando(false)
       setEtapa('')
@@ -91,7 +91,7 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={() => { if (!gerando) onClose() }} title="Relatório Mensal Completo" size="xl">
+    <Modal isOpen={isOpen} onClose={() => { if (!gerando) onClose() }} title="Infográfico Mensal" size="xl">
       <div className="grid gap-6 lg:grid-cols-[1.05fr_.95fr]">
         <div className="space-y-6">
           <section>
@@ -140,7 +140,7 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
               <div className="absolute inset-0 bg-gradient-to-r from-green-950/90 via-green-800/65 to-blue-950/45" />
               <div className="relative flex h-full flex-col justify-between p-4 text-white sm:p-5">
                 <div className="flex items-center gap-2"><img src="/images/manejus360.png" alt="Manej'Us 360" className="h-7 w-7 rounded-md bg-white p-1 object-contain" /><span className="text-xs font-bold sm:text-sm">Manej'Us <b className="text-amber-300">360</b></span></div>
-                <div><p className="text-[8px] font-bold uppercase tracking-[0.2em] text-green-100 sm:text-[9px]">Gestão integrada da fazenda</p><h4 className="mt-1 text-xl font-bold leading-tight sm:text-2xl">Relatórios Mensais</h4><p className="mt-1 text-xs text-green-50 sm:text-sm">Registros Operacionais</p><span className="mt-3 inline-flex rounded border border-white/30 bg-white/10 px-2 py-1 text-[10px] font-semibold sm:text-xs">{formatarPeriodoCapa(dataInicio, dataFim) || 'Período do relatório'}</span></div>
+                <div><p className="text-[8px] font-bold uppercase tracking-[0.2em] text-green-100 sm:text-[9px]">Gestão integrada da fazenda</p><h4 className="mt-1 text-xl font-bold leading-tight sm:text-2xl">Infográfico Mensal</h4><p className="mt-1 text-xs text-green-50 sm:text-sm">Registros Operacionais</p><span className="mt-3 inline-flex rounded border border-white/30 bg-white/10 px-2 py-1 text-[10px] font-semibold sm:text-xs">{formatarPeriodoCapa(dataInicio, dataFim) || 'Período do relatório'}</span></div>
                 <div className="flex items-center gap-2 border-t border-white/25 pt-3"><div className="flex items-center gap-1.5"><img src="/images/gestaupcompany.png" alt="GestaUp Company" className="h-7 w-10 rounded bg-white p-1 object-contain" />{fazendaLogoUrl && <img src={fazendaLogoUrl} alt={fazendaNome} className="h-7 w-10 rounded bg-white p-1 object-contain" />}<span className="ml-1 text-[9px] font-semibold sm:text-[10px]">{fazendaNome}</span></div></div>
               </div>
             </div>

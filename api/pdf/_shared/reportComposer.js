@@ -50,14 +50,14 @@ function renderCover({ fazendaNome, logoGestao, logoFazenda, logoEmpresa, imagem
     <div class="cover-overlay"></div><div class="cover-shape"></div><div class="cover-shape second"></div>
     <div class="cover-content">
       <div class="cover-brand">${image(logoGestao, 'ManejUs 360')}<div class="cover-brand-name">Manej'Us <b>360</b></div></div>
-      <div class="cover-main"><div class="cover-kicker">Gestão integrada da fazenda</div><h1 class="cover-title">Relatórios Mensais</h1><div class="cover-subtitle">Registros Operacionais</div><div class="cover-period">${escapeHtml(periodoLabel)}</div></div>
+      <div class="cover-main"><div class="cover-kicker">Gestão integrada da fazenda</div><h1 class="cover-title">Infográfico Mensal</h1><div class="cover-subtitle">Registros Operacionais</div><div class="cover-period">${escapeHtml(periodoLabel)}</div></div>
       <div class="cover-footer"><div class="cover-organizations"><div class="cover-logo-box company">${image(logoEmpresa, 'GestaUp Company')}</div>${logoFazenda ? `<div class="cover-logo-box farm">${image(logoFazenda, 'Logo da fazenda')}</div>` : ''}<div class="cover-farm"><span>Fazenda</span>${escapeHtml(fazendaNome)}</div></div><div class="cover-page-number">Página 1 de ${totalPages}</div></div>
     </div>
   </section>`
 }
 
 function renderFinalPage({ logoFazenda, logoEmpresa, page, totalPages }) {
-  return `<section class="page final-page"><div class="final-content"><h1 class="final-signoff">Atenciosamente,</h1><div class="final-company">Gesta'Up</div><div class="final-brand">Manej'Us <b>360</b></div><div class="final-logos">${logoEmpresa ? `<div class="final-logo-box company">${image(logoEmpresa, 'GestaUp Company')}</div>` : ''}${logoFazenda ? `<div class="final-logo-box farm">${image(logoFazenda, 'Logo da fazenda')}</div>` : ''}</div></div><footer class="report-footer"><span>Gesta'Up · Relatórios Mensais</span><span>Página ${page} de ${totalPages}</span></footer></section>`
+  return `<section class="page final-page"><div class="final-content"><h1 class="final-signoff">Atenciosamente,</h1><div class="final-company">Gesta'Up</div><div class="final-brand">Manej'Us <b>360</b></div><div class="final-logos">${logoEmpresa ? `<div class="final-logo-box company">${image(logoEmpresa, 'GestaUp Company')}</div>` : ''}${logoFazenda ? `<div class="final-logo-box farm">${image(logoFazenda, 'Logo da fazenda')}</div>` : ''}</div></div><footer class="report-footer"><span>Gesta'Up · Infográfico Mensal</span><span>Página ${page} de ${totalPages}</span></footer></section>`
 }
 
 function renderEmpty({ title, dados, page, totalPages }) {
@@ -93,5 +93,5 @@ export async function composeReports({ reports, cover }) {
   const styles = rendered.map((report) => report.style).filter(Boolean).join('\n')
   const coverHtml = renderCover({ ...cover, totalPages })
   const finalHtml = renderFinalPage({ ...cover, page: totalPages, totalPages })
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatórios Mensais</title><style>${BASE_CSS}${styles}${COVER_CSS}</style></head><body>${coverHtml}${bodies.join('')}${finalHtml}<script>window.__chartsReady=true</script></body></html>`
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Infográfico Mensal</title><style>${BASE_CSS}${styles}${COVER_CSS}</style></head><body>${coverHtml}${bodies.join('')}${finalHtml}<script>window.__chartsReady=true</script></body></html>`
 }
