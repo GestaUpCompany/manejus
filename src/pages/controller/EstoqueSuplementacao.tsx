@@ -74,7 +74,7 @@ export function EstoqueSuplementacao() {
   const [formulacoes, setFormulacoes] = useState<FormulacaoItem[]>([])
 
   // Filtro: mostrar apenas itens com movimentação
-  const [mostrarApenasComMovimentacao, setMostrarApenasComMovimentacao] = useState(true)
+  const [mostrarApenasComMovimentacao, setMostrarApenasComMovimentacao] = useState(false)
   const [itemsComMovimentacao, setItemsComMovimentacao] = useState<Set<string>>(new Set())
 
   // Edição inline de estoque mínimo
@@ -329,25 +329,35 @@ export function EstoqueSuplementacao() {
     const negativo = saldo < 0
     const temMovimentacao = itemsComMovimentacao.has(item.id)
     const editandoEste = editandoMinimoId === item.id
+    const pctSaude = item.estoque_minimo > 0
+      ? Math.min(100, (saldo / Number(item.estoque_minimo)) * 100)
+      : null
 
     return (
-      <Card key={item.id} className="bg-white p-4 sm:p-5" disableHover>
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <p className="font-semibold text-gray-800">{item.nome}</p>
-            <p className="text-xs text-gray-500">
+      <Card key={item.id} className="bg-white p-4 sm:p-5 h-full" disableHover>
+        <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
+          <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
+            <p className="font-semibold text-gray-800 truncate">{item.nome}</p>
+            <p className="text-xs text-gray-500 truncate">
               {tipo === 'insumo' ? 'Insumo' : 'Produto Final'}
               {tipo === 'formulacao' && (item as FormulacaoItem).e_premix && ' · Premix'}
               {!temMovimentacao && <span className="text-gray-400"> · Sem movimentação</span>}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
             {emAlerta && (
               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Alerta</span>
             )}
             {negativo && (
               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">Negativo</span>
             )}
+            <button
+              onClick={() => iniciarEdicaoMinimo(item.id, Number(item.estoque_minimo))}
+              className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+              title="Editar estoque mínimo"
+            >
+              Editar
+            </button>
             <button
               onClick={() => abrirModalHistorico(tipo, item.id, item.nome)}
               className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-100"
@@ -404,15 +414,31 @@ export function EstoqueSuplementacao() {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => iniciarEdicaoMinimo(item.id, Number(item.estoque_minimo))}
-                className="font-medium text-gray-700 hover:text-blue-600 hover:underline"
-                title="Clique para editar o estoque mínimo"
-              >
+              <span className="font-medium text-gray-700">
                 {Number(item.estoque_minimo).toLocaleString('pt-BR')} kg
-              </button>
+              </span>
             )}
           </div>
+          {/* Barra de saúde do estoque vs estoque mínimo */}
+          {item.estoque_minimo > 0 && pctSaude !== null && (
+            <div className="mt-3">
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    pctSaude < 100 ? 'bg-red-500' : pctSaude <= 150 ? 'bg-yellow-500' : 'bg-green-600'
+                  }`}
+                  style={{ width: `${pctSaude}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {pctSaude < 100
+                  ? `${pctSaude.toFixed(0)}% do estoque mínimo`
+                  : pctSaude === 100
+                    ? 'Estoque no limite mínimo'
+                    : `${pctSaude.toFixed(0)}% acima do mínimo`}
+              </p>
+            </div>
+          )}
         </div>
       </Card>
     )
@@ -440,22 +466,22 @@ export function EstoqueSuplementacao() {
       )}
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="bg-white p-4 sm:p-5" disableHover>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch">
+        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Saldo Insumos</p>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{saldoTotalInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{saldoTotalInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5" disableHover>
+        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Valor Insumos</p>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">R$ {valorTotalInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">R$ {valorTotalInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5" disableHover>
+        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Saldo Produtos Finais</p>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{saldoTotalFormulacoes.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{saldoTotalFormulacoes.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5" disableHover>
+        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Valor Produtos Finais</p>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">R$ {valorTotalFormulacoes.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">R$ {valorTotalFormulacoes.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </Card>
       </div>
 

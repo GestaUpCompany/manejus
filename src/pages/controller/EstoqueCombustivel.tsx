@@ -363,7 +363,7 @@ export function EstoqueCombustivel() {
           <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Estoque de Combustível</h2>
           {fazendaNome && <p className="text-sm text-gray-500 mt-1">{fazendaNome}</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button variant="secondary" onClick={() => abrirModalTanque(null)}>
             Configurar Tanque
           </Button>
@@ -381,22 +381,22 @@ export function EstoqueCombustivel() {
       )}
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="bg-white p-4 sm:p-5" disableHover>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch">
+        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Saldo Total</p>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{saldoTotal.toLocaleString('pt-BR')} L</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{saldoTotal.toLocaleString('pt-BR')} L</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5" disableHover>
+        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Valor em Estoque</p>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">R$ {valorEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">R$ {valorEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5" disableHover>
+        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Consumo do Mês</p>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{kpiMes.consumo_l.toLocaleString('pt-BR')} L</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{kpiMes.consumo_l.toLocaleString('pt-BR')} L</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5" disableHover>
+        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-gray-500 font-medium">Custo do Mês</p>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">R$ {kpiMes.custo_rs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">R$ {kpiMes.custo_rs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </Card>
       </div>
 
@@ -424,7 +424,7 @@ export function EstoqueCombustivel() {
             />
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4">
             {tanquesAtivos.map((tanque) => {
               const pctOcupacao = tanque.capacidade_maxima_l > 0
                 ? Math.min(100, (Number(tanque.saldo_atual_l) / Number(tanque.capacidade_maxima_l)) * 100)
@@ -432,13 +432,13 @@ export function EstoqueCombustivel() {
               const emAlerta = tanque.limite_alerta_l > 0 && Number(tanque.saldo_atual_l) <= Number(tanque.limite_alerta_l)
               const valorTanque = Number(tanque.saldo_atual_l) * Number(tanque.custo_medio_l)
               return (
-                <Card key={tanque.id} className="bg-white p-4 sm:p-5" disableHover>
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <p className="font-semibold text-gray-800">{tanque.nome}</p>
-                      <p className="text-xs text-gray-500">{tanque.tipo_combustivel}</p>
+                <Card key={tanque.id} className="bg-white p-4 sm:p-5 h-full" disableHover>
+                  <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
+                    <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
+                      <p className="font-semibold text-gray-800 truncate">{tanque.nome}</p>
+                      <p className="text-xs text-gray-500 truncate">{tanque.tipo_combustivel}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
                       {emAlerta && (
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
                           Alerta
