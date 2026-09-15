@@ -12,8 +12,21 @@ export const escapeHtml = (value) =>
 
 export const dateFmt = (value) => {
   if (!value) return '—'
-  const parts = String(value).split('-')
-  return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : String(value)
+  if (value instanceof Date) {
+    const day = String(value.getUTCDate()).padStart(2, '0')
+    const month = String(value.getUTCMonth() + 1).padStart(2, '0')
+    const year = value.getUTCFullYear()
+    return `${day}/${month}/${year}`
+  }
+  const str = String(value)
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (match) return `${match[3]}/${match[2]}/${match[1]}`
+  const d = new Date(str)
+  if (Number.isNaN(d.getTime())) return str
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const year = d.getUTCFullYear()
+  return `${day}/${month}/${year}`
 }
 
 export const numFmt = (value, digits = 2) =>
