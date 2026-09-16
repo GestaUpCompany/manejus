@@ -27,9 +27,16 @@ const MAX_LINES = 20000
 const MAX_BODY_BYTES = 8_000_000
 
 // Quantas linhas do detalhamento cabem em uma página A4 landscape com o header
-// e o footer padrão. Linhas quebram para 2+ linhas com frequência (Idade e
-// Diagnósticos), então o limite assume ~11mm por linha, não 30px.
-const DETAIL_ROWS_PER_PAGE = 10
+// e o footer padrão. Linhas quebram para 2-3 linhas com frequência (Idade e
+// Diagnósticos), então o limite assume ~17mm por linha, não 30px.
+const DETAIL_ROWS_PER_PAGE = 7
+
+// Paginação da tabela de diagnósticos: a página 4 tem ~50mm livres abaixo do
+// grid de gráficos (cabe título + cabeçalho + 4 linhas). Páginas de
+// continuação dedicadas comportam 12 linhas cada.
+const DIAG_MAX_ROWS = 12
+const DIAG_FIRST_PAGE_ROWS = 4
+const DIAG_ROWS_PER_PAGE = 12
 
 function isPDFData(value) {
   if (!value || typeof value !== 'object') return false
@@ -108,6 +115,7 @@ const MORTE_CSS = `
 .morte-detail-table th:nth-child(8){width:11%}
 .morte-detail-table th:nth-child(9){width:25%}
 .morte-detail-table td{font-size:13px;padding:8px 6px;line-height:1.25}
+.morte-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .morte-detail-table th{font-size:13px;padding:9px 6px}
 .morte-detail-table th, .morte-detail-table td{border-right:1px solid #d8e0db}
 .morte-detail-table th:last-child, .morte-detail-table td:last-child{border-right:none}
@@ -371,13 +379,22 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
   const causa = resumo.causa_mais_frequente ? `${resumo.causa_mais_frequente} (${resumo.causa_mais_frequente_count ?? 0})` : '—'
   const diagnosticos = resumo.frequencia_diagnosticos ?? []
   const diagnosticoTotal = diagnosticos.reduce((sum, item) => sum + item.valor, 0)
-  const diagnosticosVisiveis = [...diagnosticos].sort((a, b) => b.valor - a.valor).slice(0, 6)
-  const diagnosticoRows = diagnosticosVisiveis
+  const diagnosticosVisiveis = [...diagnosticos].sort((a, b) => b.valor - a.valor).slice(0, DIAG_MAX_ROWS)
+  const diagnosticoLinhas = diagnosticosVisiveis
     .map((item, index) => {
       const pct = diagnosticoTotal ? (item.valor / diagnosticoTotal) * 100 : 0
       return `<tr class="${index % 2 ? '' : 'striped'}"><td>${escapeHtml(diagLabel(item.label))}</td><td class="numeric">${item.valor}</td><td class="numeric">${pct.toFixed(1).replace('.', ',')}%</td><td><div class="diag-bar"><i style="width:${Math.max(2, pct)}%"></i></div></td></tr>`
     })
-    .join('')
+  const diagChunks = []
+  if (diagnosticoLinhas.length) {
+    diagChunks.push(diagnosticoLinhas.slice(0, DIAG_FIRST_PAGE_ROWS))
+    for (let i = DIAG_FIRST_PAGE_ROWS; i < diagnosticoLinhas.length; i += DIAG_ROWS_PER_PAGE) {
+      diagChunks.push(diagnosticoLinhas.slice(i, i + DIAG_ROWS_PER_PAGE))
+    }
+  }
+  const diagPaginasExtras = Math.max(diagChunks.length - 1, 0)
+  const diagHead = `<thead><tr><th>Diagnóstico</th><th>Mortes</th><th>% do total</th><th>Distribuição</th></tr></thead>`
+  const diagTitulo = `Diagnósticos mais frequentes <span>${diagnosticosVisiveis.length} de ${diagnosticos.length} categorias</span>`
 
   const previous = resumo.periodo_anterior ? `${intFmt(resumo.periodo_anterior.total_mortes)} mortes` : '—'
   const previousSub = resumo.periodo_anterior
@@ -422,7 +439,7 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
   for (let i = 0; i < rows.length; i += DETAIL_ROWS_PER_PAGE) {
     detailChunks.push(rows.slice(i, i + DETAIL_ROWS_PER_PAGE))
   }
-  const totalPages = 4 + (temPaginaMapa ? 1 : 0) + detailChunks.length
+  const totalPages = 4 + diagPaginasExtras + (temPaginaMapa ? 1 : 0) + detailChunks.length
 
   const brand = { logoGestao: input.logoGestao, logoFazenda: input.logoFazenda, fazendaNome: input.fazendaNome }
   const period = { dataInicio: input.dataInicio, dataFim: input.dataFim }
@@ -476,9 +493,19 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
       <div>${chartCard({ canvasId: 'chart-pasto', title: 'Mortes por pasto', subtitle: 'Distribuição por pasto', hasData: hasPor(resumo.por_pasto), height: '100%' })}</div>
       <div>${heatmapHtml(resumo.matriz_causa_categoria)}</div>
     </div>
-    ${diagnosticoRows ? `<div class="table-block" style="margin-top:10mm"><h2 class="table-title">Diagnósticos mais frequentes <span>${diagnosticosVisiveis.length} de ${diagnosticos.length} categorias</span></h2><table class="diag-freq"><thead><tr><th>Diagnóstico</th><th>Mortes</th><th>% do total</th><th>Distribuição</th></tr></thead><tbody>${diagnosticoRows}</tbody></table></div>` : ''}
+    ${diagChunks.length ? `<div class="table-block" style="margin-top:5mm"><h2 class="table-title">${diagTitulo}</h2><table class="diag-freq">${diagHead}<tbody>${diagChunks[0].join('')}</tbody></table></div>` : ''}
     ${renderFooter({ ...period, page: 4, totalPages })}
   `)
+
+  const diagPages = diagChunks
+    .slice(1)
+    .map((chunk, i) => pageSection(`
+      ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: `Diagnósticos (${i + 2}/${diagChunks.length})`, sectionLabel: 'Análise cruzada' })}
+      <p class="section-kicker">Diagnósticos mais frequentes · continuação</p>
+      <div class="table-block"><h2 class="table-title">${diagTitulo}</h2><table class="diag-freq">${diagHead}<tbody>${chunk.join('')}</tbody></table></div>
+      ${renderFooter({ ...period, page: 5 + i, totalPages })}
+    `))
+    .join('')
 
   const rankingHtml = rankingPastos.length
     ? `<div class="map-ranking"><span class="rank-label">Concentração por pasto (mortes georreferenciadas):</span>${rankingPastos
@@ -497,14 +524,14 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
       </div>
     </div>
     ${rankingHtml}
-    ${renderFooter({ ...period, page: 5, totalPages })}
+    ${renderFooter({ ...period, page: 5 + diagPaginasExtras, totalPages })}
   `)
     : ''
-  const detailPageOffset = 4 + (temPaginaMapa ? 1 : 0)
+  const detailPageOffset = 4 + diagPaginasExtras + (temPaginaMapa ? 1 : 0)
 
   const detailHeader = `<thead><tr><th>Data</th><th>Lote</th><th>Pasto</th><th>Sexo</th><th>Idade</th><th>Peso</th><th>Categoria</th><th>Causa</th><th>Diagnósticos</th></tr></thead>`
   const renderDetailRow = (line, index) =>
-    `<tr class="${index % 2 ? '' : 'striped'}"><td>${dateFmt(line.data)}</td><td>${escapeHtml(line.lote_nome)}</td><td>${escapeHtml(line.pasto)}</td><td>${escapeHtml(line.sexo)}</td><td>${escapeHtml(line.idade)}</td><td class="numeric">${numFmt(line.peso_vivo, 0)}</td><td>${escapeHtml(titleCase(line.categoria))}</td><td>${escapeHtml(line.causa_morte)}</td><td>${escapeHtml(compactDiagnostics(line.diagnosticos))}</td></tr>`
+    `<tr class="${index % 2 ? '' : 'striped'}"><td>${dateFmt(line.data)}</td><td>${escapeHtml(line.lote_nome)}</td><td>${escapeHtml(line.pasto)}</td><td>${escapeHtml(line.sexo)}</td><td>${escapeHtml(line.idade)}</td><td class="numeric">${numFmt(line.peso_vivo, 0)}</td><td>${escapeHtml(titleCase(line.categoria))}</td><td>${escapeHtml(line.causa_morte)}</td><td><div class="morte-clamp">${escapeHtml(compactDiagnostics(line.diagnosticos))}</div></td></tr>`
 
   const detailPages = detailChunks
     .map((chunk, chunkIndex) => {
@@ -539,7 +566,7 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
     title: 'Relatório de Mortalidade',
     extraCss: MORTE_CSS + maplibre.css,
     extraScripts: maplibre.script ? [maplibre.script] : [],
-    body: `${page1}${page2}${page3}${page4}${mapaPage}${detailPages}`,
+    body: `${page1}${page2}${page3}${page4}${diagPages}${mapaPage}${detailPages}`,
     chartJsScript,
     chartsInit: CHARTS_INIT_JS + MAP_INIT_JS,
     dataJson: {

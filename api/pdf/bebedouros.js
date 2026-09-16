@@ -39,10 +39,10 @@ const MAX_OCORRENCIAS = 5000
 const MAX_BODY_BYTES = 8_000_000
 
 // Linhas de ocorrências por página. Cada <tr> com 6 colunas de texto livre
-// e font-size 11px ocupa ~30px de altura. 15 linhas cabem confortavelmente
-// em A4 landscape com header/footer. Menos que os 18 do abastecimento
-// porque as colunas de texto livre são mais altas.
-const OCCURRENCES_PER_PAGE = 10
+// e font-size 11px pode chegar a ~70px quando as observações quebram em
+// várias linhas; as células de texto livre levam clamp de 3 linhas para
+// limitar a altura da linha.
+const OCCURRENCES_PER_PAGE = 6
 
 // === Dimensões para paginação dinâmica do gráfico de período ===
 // A4 landscape = 297x210mm. Após padding (12+16mm), header (22+5mm) e footer
@@ -109,6 +109,7 @@ const BEBEDOUROS_CSS = `
 .ocorr-table th:last-child,.ocorr-table td:last-child{border-right:none}
 .ocorr-table tbody tr:nth-child(even){background:#fef2f2}
 .ocorr-table td{font-size:11px;padding:5px;line-height:1.3;vertical-align:top;overflow-wrap:anywhere}
+.ocorr-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .ocorr-table th{font-size:11px;padding:6px 5px;text-align:left}
 .no-ocorr-box{background:#F0FDF4;border:1px solid #BBF7D0;border-radius:5px;padding:10px;text-align:center;color:#22C55E;font-size:13px;margin-top:4mm}
 .beb-chart-legend{font-size:11px;color:#6B7280;margin-top:1mm}
@@ -424,7 +425,7 @@ function ocorrenciasTableHtml(chunk) {
   const header = `<thead><tr><th>Data</th><th>Bebedouro</th><th>Itens negativos</th><th>Obs. do item</th><th>Obs. geral</th><th>Responsável</th></tr></thead>`
   const rows = chunk
     .map((o) =>
-      `<tr><td>${dateFmt(o.data)}</td><td>${escapeHtml(o.bebedouro)}</td><td>${escapeHtml(o.itensNegativos)}</td><td>${escapeHtml(o.obsItens || '—')}</td><td>${escapeHtml(o.obsGeral || '—')}</td><td>${escapeHtml(o.responsavel || '—')}</td></tr>`,
+      `<tr><td>${dateFmt(o.data)}</td><td>${escapeHtml(o.bebedouro)}</td><td><div class="ocorr-clamp">${escapeHtml(o.itensNegativos)}</div></td><td><div class="ocorr-clamp">${escapeHtml(o.obsItens || '—')}</div></td><td><div class="ocorr-clamp">${escapeHtml(o.obsGeral || '—')}</div></td><td>${escapeHtml(o.responsavel || '—')}</td></tr>`,
     )
     .join('')
   return `<table class="ocorr-table">${header}<tbody>${rows}</tbody></table>`

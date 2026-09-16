@@ -3,16 +3,16 @@ import { htmlDocument, page as pageSection, renderHeader } from './_shared/templ
 
 const BOLETIM_CSS = `
 .boletim-table{margin-top:3mm;border-radius:6px;overflow:hidden}
-.boletim-table th,.boletim-table td{text-align:right;white-space:nowrap;padding:5px 4px;font-size:10px}
+.boletim-table th,.boletim-table td{text-align:right;white-space:nowrap;padding:4px 4px;font-size:10px}
 .boletim-table th:first-child,.boletim-table td:first-child{text-align:left;width:27%}
 .boletim-table th{font-size:9px;line-height:1.15;vertical-align:middle}
 .boletim-table td{font-size:10px}
 .boletim-table tbody tr:nth-child(even){background:#f7faf8}
 .boletim-table tbody tr:last-child{background:#eef5f0;font-weight:700}
 .boletim-table tbody tr:last-child td{color:#0b6a42;border-top:1.5px solid #bcd3c4}
-.boletim-note{margin-top:3mm;color:#718078;font-size:10px}
+.boletim-note{margin-top:2mm;color:#718078;font-size:9px}
 .boletim-intro{margin:0 0 3mm;color:#52635a;font-size:11px}
-.saldo-final-resumo{margin-top:4mm}
+.saldo-final-resumo{margin-top:2.5mm}
 .saldo-local-card{border:1px solid #dce5df;border-radius:6px;padding:3mm 5mm;background:#fff}
 .saldo-local-header{display:flex;align-items:center;justify-content:space-between;gap:6mm;margin-bottom:2mm}
 .saldo-local-title{font-size:13px;font-weight:700;color:#30463a}
