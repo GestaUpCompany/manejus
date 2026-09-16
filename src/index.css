@@ -2,6 +2,103 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ====== Tema: cores semânticas via CSS variables ====== */
+
+:root {
+  /* Marca */
+  --color-primary: 26 58 42;          /* #1a3a2a */
+  --color-primary-light: 42 88 64;    /* #2a5840 */
+  --color-primary-dark: 15 31 23;     /* #0f1f17 */
+  --color-accent: 250 204 21;         /* #FACC15 */
+
+  /* Surfaces */
+  --color-surface-0: 255 255 255;     /* fundo principal (branco) */
+  --color-surface-1: 249 250 251;     /* cards, sidebar */
+  --color-surface-2: 243 244 246;     /* inputs, hover */
+  --color-surface-3: 229 231 235;     /* bordas fortes */
+
+  /* Texto */
+  --color-content-strong: 17 24 39;   /* títulos */
+  --color-content: 55 65 81;          /* corpo */
+  --color-content-muted: 107 114 128; /* secundário */
+  --color-content-faint: 156 163 175;  /* placeholder */
+
+  /* Bordas */
+  --color-border-base: 229 231 235;   /* gray-200 */
+  --color-border-subtle: 243 244 246; /* gray-100 */
+}
+
+.dark {
+  color-scheme: dark;
+  /* Marca (mantém) */
+  --color-primary: 42 88 64;           /* verde levemente mais claro no dark */
+  --color-primary-light: 64 120 88;
+  --color-primary-dark: 15 31 23;
+  --color-accent: 250 204 21;
+
+  /* Surfaces */
+  --color-surface-0: 15 23 20;        /* fundo principal quase preto verde */
+  --color-surface-1: 23 33 28;        /* cards, sidebar */
+  --color-surface-2: 31 43 36;        /* inputs, hover */
+  --color-surface-3: 42 55 47;        /* bordas fortes */
+
+  /* Texto */
+  --color-content-strong: 237 242 239;
+  --color-content: 180 191 184;
+  --color-content-muted: 122 134 127;
+  --color-content-faint: 87 99 93;
+
+  /* Bordas */
+  --color-border-base: 42 55 47;
+  --color-border-subtle: 31 43 36;
+}
+
+/* Transição suave entre temas */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+/* Cor de texto e fundo padrão do body segue o tema ativo */
+body {
+  background-color: rgb(var(--color-surface-0));
+  color: rgb(var(--color-content));
+}
+
+/* Scrollbar customizado seguindo o tema */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--color-surface-1));
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-surface-3));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-content-faint));
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--color-surface-3)) rgb(var(--color-surface-1));
+}
+
+/* Ícones de calendário em inputs de data */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.4) sepia(1) saturate(5) hue-rotate(100deg);
+  cursor: pointer;
+}
+
+
 @keyframes fadeIn {
   from {
     opacity: 0;

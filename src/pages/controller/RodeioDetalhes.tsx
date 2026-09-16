@@ -97,7 +97,7 @@ export function RodeioDetalhes() {
       title="Detalhes do Registro de Rodeio"
     >
       {() => (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
           <div className="space-y-6">
             {/* Informações Gerais */}
             <DetailSection title="Informações Gerais">
@@ -112,24 +112,24 @@ export function RodeioDetalhes() {
             {/* Contagem de Animais */}
             <DetailSection title="Contagem de Animais">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-border-base">
+                  <thead className="bg-surface-2">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Quantidade</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-content-muted uppercase">Categoria</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-content-muted uppercase">Quantidade</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    <tr><td className="px-4 py-2 text-sm text-gray-900">Vaca</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.vaca || 0}</td></tr>
-                    <tr><td className="px-4 py-2 text-sm text-gray-900">Touro</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.touro || 0}</td></tr>
-                    <tr><td className="px-4 py-2 text-sm text-gray-900">Bezerro</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.bezerro || 0}</td></tr>
-                    <tr><td className="px-4 py-2 text-sm text-gray-900">Boi</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.boi || 0}</td></tr>
-                    <tr><td className="px-4 py-2 text-sm text-gray-900">Garrote</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.garrote || 0}</td></tr>
-                    <tr><td className="px-4 py-2 text-sm text-gray-900">Novilha</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.novilha || 0}</td></tr>
+                  <tbody className="bg-surface-1 divide-y divide-border-base">
+                    <tr><td className="px-4 py-2 text-sm text-content-strong">Vaca</td><td className="px-4 py-2 text-sm text-content-strong text-right">{registro!.vaca || 0}</td></tr>
+                    <tr><td className="px-4 py-2 text-sm text-content-strong">Touro</td><td className="px-4 py-2 text-sm text-content-strong text-right">{registro!.touro || 0}</td></tr>
+                    <tr><td className="px-4 py-2 text-sm text-content-strong">Bezerro</td><td className="px-4 py-2 text-sm text-content-strong text-right">{registro!.bezerro || 0}</td></tr>
+                    <tr><td className="px-4 py-2 text-sm text-content-strong">Boi</td><td className="px-4 py-2 text-sm text-content-strong text-right">{registro!.boi || 0}</td></tr>
+                    <tr><td className="px-4 py-2 text-sm text-content-strong">Garrote</td><td className="px-4 py-2 text-sm text-content-strong text-right">{registro!.garrote || 0}</td></tr>
+                    <tr><td className="px-4 py-2 text-sm text-content-strong">Novilha</td><td className="px-4 py-2 text-sm text-content-strong text-right">{registro!.novilha || 0}</td></tr>
                     {registro!.total_cabecas !== undefined && (
-                      <tr className="bg-gray-50 font-bold">
-                        <td className="px-4 py-2 text-sm text-gray-900">Total Cabeças</td>
-                        <td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.total_cabecas}</td>
+                      <tr className="bg-surface-2 font-bold">
+                        <td className="px-4 py-2 text-sm text-content-strong">Total Cabeças</td>
+                        <td className="px-4 py-2 text-sm text-content-strong text-right">{registro!.total_cabecas}</td>
                       </tr>
                     )}
                   </tbody>

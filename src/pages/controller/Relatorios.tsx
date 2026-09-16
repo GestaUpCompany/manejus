@@ -249,8 +249,8 @@ export function Relatorios() {
     <div className="space-y-6">
       <div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-content-strong">Relatórios</h1>
+          <p className="text-content-muted mt-1">
             Gere relatórios em PDF ou crie links públicos interativos para compartilhar.
           </p>
         </div>
@@ -264,7 +264,7 @@ export function Relatorios() {
               <h2 className="mt-2 text-2xl font-bold">Infográfico Mensal</h2>
               <p className="mt-2 text-sm text-green-50">Reúna Abastecimento, Consumo, Bebedouros e Mortes em um único PDF, com período comum, ordem personalizada e capa institucional.</p>
             </div>
-            <button type="button" onClick={() => setModalRelatorioGeral(true)} className="shrink-0 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-green-800 shadow-sm transition-colors hover:bg-green-50">
+            <button type="button" onClick={() => setModalRelatorioGeral(true)} className="shrink-0 rounded-lg bg-white text-primary-dark hover:bg-surface-2 px-5 py-3 text-sm font-semibold shadow-sm transition-colors dark:bg-surface-1 dark:text-white dark:hover:bg-surface-3">
               Montar relatório
             </button>
           </div>
@@ -278,7 +278,7 @@ export function Relatorios() {
           className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
             showInactive
               ? 'bg-primary text-white border-primary hover:bg-primary/90'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
           }`}
         >
           {showInactive ? (
@@ -297,14 +297,14 @@ export function Relatorios() {
 
       {/* Relatórios disponíveis */}
       <div>
-        <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Relatórios disponíveis</h2>
+        <h2 className="text-sm font-semibold text-content mb-3 uppercase tracking-wide">Relatórios disponíveis</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {relatoriosFiltrados.map((rel) => {
             const linkAtivo = linksAtivos.find((l) => l.tipo === rel.tipo && l.ativo)
             return (
               <div
                 key={rel.tipo}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow flex flex-col"
+                className="bg-surface-1 rounded-xl shadow-sm border border-border-base p-5 hover:shadow-md transition-shadow flex flex-col"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="text-3xl">{rel.icone}</div>
@@ -315,13 +315,13 @@ export function Relatorios() {
                     </span>
                   )}
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1">{rel.titulo}</h3>
-                <p className="text-sm text-gray-600 mb-4 flex-1">{rel.descricao}</p>
+                <h3 className="font-semibold text-content-strong mb-1">{rel.titulo}</h3>
+                <p className="text-sm text-content-muted mb-4 flex-1">{rel.descricao}</p>
                 <div className="flex flex-col gap-2">
                   {rel.rotaPdf && (
                     <button
                       onClick={() => navigate(rel.rotaPdf!)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="w-full rounded-lg border border-surface-3 px-3 py-2 text-sm font-medium text-content hover:bg-surface-2 transition-colors"
                     >
                       Abrir relatório PDF
                     </button>
@@ -353,27 +353,27 @@ export function Relatorios() {
       {/* Links ativos */}
       {linksVisiveis.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+          <h2 className="text-sm font-semibold text-content mb-3 uppercase tracking-wide">
             Links públicos ({linksAtivos.filter((l) => l.ativo).length} ativos de {linksAtivos.length})
           </h2>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-surface-1 rounded-xl shadow-sm border border-border-base overflow-hidden">
             <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-surface-2">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Título</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Tipo</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Criado em</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Ações</th>
+                  <th className="text-left py-3 px-4 font-medium text-content-muted">Título</th>
+                  <th className="text-left py-3 px-4 font-medium text-content-muted">Tipo</th>
+                  <th className="text-left py-3 px-4 font-medium text-content-muted">Criado em</th>
+                  <th className="text-left py-3 px-4 font-medium text-content-muted">Status</th>
+                  <th className="text-right py-3 px-4 font-medium text-content-muted">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {linksVisiveis.map((link) => (
-                  <tr key={link.id} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-900 font-medium">{link.titulo}</td>
-                    <td className="py-3 px-4 text-gray-600 capitalize">{link.tipo}</td>
-                    <td className="py-3 px-4 text-gray-600">
+                  <tr key={link.id} className="border-t border-border-subtle hover:bg-surface-2">
+                    <td className="py-3 px-4 text-content-strong font-medium">{link.titulo}</td>
+                    <td className="py-3 px-4 text-content-muted capitalize">{link.tipo}</td>
+                    <td className="py-3 px-4 text-content-muted">
                       {new Date(link.criado_em).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="py-3 px-4">
@@ -382,7 +382,7 @@ export function Relatorios() {
                           Ativo
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-2 text-content-muted">
                           Inativo
                         </span>
                       )}
@@ -444,22 +444,22 @@ export function Relatorios() {
           onClick={() => setModalAberto(false)}
         >
           <div
-            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            className="bg-surface-1 rounded-xl shadow-xl max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">
+                <h3 className="text-lg font-bold text-content-strong">
                   Gerar link público
                 </h3>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-content-muted mt-1">
                   {relatorioSelecionado.icone} {relatorioSelecionado.titulo}
                 </p>
               </div>
               <button
                 onClick={() => setModalAberto(false)}
                 aria-label="Fechar"
-                className="text-gray-400 hover:text-gray-600"
+                className="text-content-faint hover:text-content-muted"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -470,7 +470,7 @@ export function Relatorios() {
             {!linkGerado ? (
               <>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-content mb-1">
                     Título do relatório
                   </label>
                   <input
@@ -478,7 +478,7 @@ export function Relatorios() {
                     value={tituloLink}
                     onChange={(e) => setTituloLink(e.target.value)}
                     placeholder="Ex: Relatório de abastecimento - Janeiro"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                    className="w-full rounded-lg border border-surface-3 px-3 py-2 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600"
                   />
                 </div>
 
@@ -499,7 +499,7 @@ export function Relatorios() {
             ) : (
               <>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-content mb-1">
                     Link gerado
                   </label>
                   <div className="flex gap-2">
@@ -507,7 +507,7 @@ export function Relatorios() {
                       type="text"
                       value={linkGerado}
                       readOnly
-                      className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50"
+                      className="flex-1 rounded-lg border border-surface-3 px-3 py-2 text-sm bg-surface-2"
                     />
                     <button
                       onClick={copiarLink}
@@ -522,14 +522,14 @@ export function Relatorios() {
                   href={linkGerado}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block w-full text-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors mb-2"
+                  className="block w-full text-center rounded-lg border border-surface-3 px-4 py-2.5 text-sm font-medium text-content hover:bg-surface-2 transition-colors mb-2"
                 >
                   Abrir relatório
                 </a>
 
                 <button
                   onClick={() => setModalAberto(false)}
-                  className="block w-full text-center text-sm text-gray-500 hover:text-gray-700"
+                  className="block w-full text-center text-sm text-content-muted hover:text-content"
                 >
                   Fechar
                 </button>

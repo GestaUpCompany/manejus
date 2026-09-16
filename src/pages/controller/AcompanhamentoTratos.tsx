@@ -44,11 +44,11 @@ interface ResumoFabricaDia {
 }
 
 const CORES_STATUS = {
-  ok: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-  alerta: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
-  critico: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-  sem_execucao: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200', dot: 'bg-gray-400' },
-  sem_horario: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200', dot: 'bg-gray-400' },
+  ok: { bg: 'bg-green-500/10', text: 'text-green-700 dark:text-green-300', border: 'border-green-500/30', dot: 'bg-green-500' },
+  alerta: { bg: 'bg-yellow-500/10', text: 'text-yellow-700 dark:text-yellow-300', border: 'border-yellow-500/30', dot: 'bg-yellow-500' },
+  critico: { bg: 'bg-red-500/10', text: 'text-red-700 dark:text-red-300', border: 'border-red-500/30', dot: 'bg-red-500' },
+  sem_execucao: { bg: 'bg-surface-2', text: 'text-content-muted', border: 'border-border-base', dot: 'bg-content-faint' },
+  sem_horario: { bg: 'bg-surface-2', text: 'text-content-muted', border: 'border-border-base', dot: 'bg-content-faint' },
 }
 
 type StatusDesvioPct = 'ok' | 'alerta' | 'critico' | 'sem_execucao'
@@ -124,11 +124,11 @@ function statusFabricaLabel(status: LinhaFabricaAcompanhamento['status']): strin
 
 function statusFabricaClass(status: LinhaFabricaAcompanhamento['status']): string {
   switch (status) {
-    case 'concluido': return 'bg-green-50 text-green-700 border-green-200'
-    case 'parcial': return 'bg-yellow-50 text-yellow-700 border-yellow-200'
-    case 'produzido_sem_distribuicao': return 'bg-blue-50 text-blue-700 border-blue-200'
-    case 'distribuido_sem_fabricacao': return 'bg-gray-50 text-gray-600 border-gray-200'
-    default: return 'bg-gray-50 text-gray-600 border-gray-200'
+    case 'concluido': return 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/30'
+    case 'parcial': return 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30'
+    case 'produzido_sem_distribuicao': return 'bg-primary/10 text-primary dark:text-primary-light border-primary/30'
+    case 'distribuido_sem_fabricacao': return 'bg-surface-2 text-content-muted border-border-base'
+    default: return 'bg-surface-2 text-content-muted border-border-base'
   }
 }
 
@@ -572,8 +572,8 @@ export function AcompanhamentoTratos() {
     return (
       <div className="p-4 sm:p-6 max-w-6xl mx-auto">
         <Card className="p-8 text-center" disableHover>
-          <p className="font-medium text-red-700">Não foi possível abrir o acompanhamento</p>
-          <p className="mt-2 text-sm text-gray-600">{error}</p>
+          <p className="font-medium text-red-700 dark:text-red-300">Não foi possível abrir o acompanhamento</p>
+          <p className="mt-2 text-sm text-content-muted">{error}</p>
           <Button className="mt-4" onClick={() => loadFazenda()}>Tentar novamente</Button>
         </Card>
       </div>
@@ -585,8 +585,8 @@ export function AcompanhamentoTratos() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Acompanhamento de Tratos</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-content-strong">Acompanhamento de Tratos</h1>
+          <p className="text-sm text-content-muted mt-1">
             Compare o kg planejado por dia com o kg realmente tratado, por lote. Identifique desvios e tendências.
           </p>
         </div>
@@ -596,7 +596,7 @@ export function AcompanhamentoTratos() {
           disabled={loading}
           aria-label="Atualizar acompanhamento de tratos"
           title="Atualizar dados"
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg border-2 border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg border-2 border-border-base bg-surface-1 px-3 py-2 text-sm font-medium text-content transition-colors hover:border-surface-3 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <svg
             className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
@@ -620,7 +620,7 @@ export function AcompanhamentoTratos() {
       {/* Filtros */}
       <Card className="p-4" disableHover>
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-gray-600">Período rápido:</span>
+          <span className="text-xs font-medium text-content-muted">Período rápido:</span>
           {[
             { id: 'hoje', label: 'Hoje' },
             { id: '7', label: 'Últimos 7 dias' },
@@ -631,7 +631,7 @@ export function AcompanhamentoTratos() {
               key={atalho.id}
               type="button"
               onClick={() => definirAtalhoPeriodo(atalho.id as 'hoje' | '7' | '30' | 'mes')}
-              className="rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+              className="rounded-md border border-border-base bg-surface-1 px-2.5 py-1.5 text-xs font-medium text-content-muted hover:border-primary/50 hover:bg-primary/10 hover:text-primary dark:hover:text-primary-light"
             >
               {atalho.label}
             </button>
@@ -640,7 +640,7 @@ export function AcompanhamentoTratos() {
         <div className="flex flex-col xl:flex-row gap-4 xl:items-end">
           <div className="flex gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Data início</label>
+              <label className="block text-xs font-medium text-content-muted mb-1">Data início</label>
               <Input
                 type="date"
                 value={dataInicio}
@@ -649,7 +649,7 @@ export function AcompanhamentoTratos() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Data fim</label>
+              <label className="block text-xs font-medium text-content-muted mb-1">Data fim</label>
               <Input
                 type="date"
                 value={dataFim}
@@ -661,23 +661,23 @@ export function AcompanhamentoTratos() {
 
           {/* Dropdown de lotes */}
           <div ref={loteDropdownRef} className="relative flex-1 max-w-xs">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Lotes</label>
+            <label className="block text-xs font-medium text-content-muted mb-1">Lotes</label>
             <button
               onClick={() => setLoteDropdownOpen(!loteDropdownOpen)}
-              className="w-full min-h-[52px] px-3 py-2 text-sm border-2 border-gray-200 rounded-lg bg-white text-left flex items-center justify-between hover:border-gray-300 transition-colors"
+              className="w-full min-h-[52px] px-3 py-2 text-sm border-2 border-border-base rounded-lg bg-surface-1 text-left flex items-center justify-between hover:border-surface-3 transition-colors"
             >
               <span className="truncate">
                 {lotesSelecionados.length === 0
                   ? 'Todos os lotes'
                   : `${lotesSelecionados.length} selecionado(s)`}
               </span>
-              <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-content-faint shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
             {loteDropdownOpen && (
-              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border-2 border-gray-200 bg-white shadow-lg">
-                <div className="border-b border-gray-100 p-2">
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border-2 border-border-base bg-surface-1 shadow-lg">
+                <div className="border-b border-border-subtle p-2">
                   <Input
                     type="search"
                     value={loteSearchTerm}
@@ -687,10 +687,10 @@ export function AcompanhamentoTratos() {
                     autoFocus
                   />
                   <div className="mt-2 flex justify-between gap-2">
-                    <button type="button" onClick={selecionarTodosLotes} className="text-xs font-medium text-blue-600 hover:text-blue-800">
+                    <button type="button" onClick={selecionarTodosLotes} className="text-xs font-medium text-primary dark:text-primary-light hover:text-primary dark:hover:text-primary-light">
                       Selecionar todos
                     </button>
-                    <button type="button" onClick={limparSelecaoLotes} className="text-xs font-medium text-gray-500 hover:text-gray-700">
+                    <button type="button" onClick={limparSelecaoLotes} className="text-xs font-medium text-content-muted hover:text-content">
                       Limpar seleção
                     </button>
                   </div>
@@ -699,7 +699,7 @@ export function AcompanhamentoTratos() {
                   {lotesVisiveis.map((l) => (
                     <label
                       key={l.id}
-                      className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                      className="flex items-center gap-2 px-3 py-2 hover:bg-surface-2 cursor-pointer text-sm"
                     >
                       <input
                         type="checkbox"
@@ -711,7 +711,7 @@ export function AcompanhamentoTratos() {
                     </label>
                   ))}
                   {lotesVisiveis.length === 0 && (
-                    <p className="px-3 py-2 text-sm text-gray-400">Nenhum lote encontrado</p>
+                    <p className="px-3 py-2 text-sm text-content-faint">Nenhum lote encontrado</p>
                   )}
                 </div>
               </div>
@@ -720,16 +720,16 @@ export function AcompanhamentoTratos() {
 
           {/* Seletor de tipo */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
-            <div className="inline-flex rounded-lg border-2 border-gray-200 overflow-hidden">
+            <label className="block text-xs font-medium text-content-muted mb-1">Tipo</label>
+            <div className="inline-flex rounded-lg border-2 border-border-base overflow-hidden">
               {(['todos', 'engorda', 'sequestro', 'tip'] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setTipoFiltro(t)}
                   className={`px-3 py-2 text-sm font-medium transition-colors ${
                     tipoFiltro === t
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                      ? 'bg-primary text-white'
+                      : 'bg-surface-1 text-content-muted hover:bg-surface-2'
                   }`}
                 >
                   {t === 'todos' ? 'Todos' : t === 'engorda' ? 'Engorda' : t === 'sequestro' ? 'Sequestro' : 'TIP'}
@@ -752,22 +752,22 @@ export function AcompanhamentoTratos() {
           </div>
         </div>
         {filtrosPendentes && dataInicio <= dataFim && (
-          <p className="mt-3 text-sm text-blue-700" role="status">
+          <p className="mt-3 text-sm text-primary dark:text-primary-light" role="status">
             Há alterações de filtro pendentes. Clique em Aplicar filtros para atualizar os dados.
           </p>
         )}
         {dataInicio > dataFim && (
-          <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300" role="alert">
             A data de início deve ser anterior ou igual à data de fim.
           </p>
         )}
       </Card>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600" aria-label="Filtros aplicados">
-        <span className="font-medium text-gray-700">Filtros aplicados:</span>
-        <span className="rounded-full bg-gray-100 px-2.5 py-1">{formatDate(dataInicioAplicada)} a {formatDate(dataFimAplicada)}</span>
-        <span className="rounded-full bg-gray-100 px-2.5 py-1">{lotesAplicadosLabel}</span>
-        <span className="rounded-full bg-gray-100 px-2.5 py-1">Tipo: {tipoFiltro === 'todos' ? 'Todos' : tipoFiltro}</span>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-content-muted" aria-label="Filtros aplicados">
+        <span className="font-medium text-content">Filtros aplicados:</span>
+        <span className="rounded-full bg-surface-2 px-2.5 py-1">{formatDate(dataInicioAplicada)} a {formatDate(dataFimAplicada)}</span>
+        <span className="rounded-full bg-surface-2 px-2.5 py-1">{lotesAplicadosLabel}</span>
+        <span className="rounded-full bg-surface-2 px-2.5 py-1">Tipo: {tipoFiltro === 'todos' ? 'Todos' : tipoFiltro}</span>
       </div>
 
       {loading ? (
@@ -777,8 +777,8 @@ export function AcompanhamentoTratos() {
         </div>
       ) : error ? (
         <Card className="p-8 text-center" disableHover>
-          <p className="font-medium text-red-700">Não foi possível carregar o acompanhamento</p>
-          <p className="mt-2 text-sm text-gray-600">{error}</p>
+          <p className="font-medium text-red-700 dark:text-red-300">Não foi possível carregar o acompanhamento</p>
+          <p className="mt-2 text-sm text-content-muted">{error}</p>
           {dataInicio <= dataFim && (
             <Button className="mt-4" onClick={() => loadData()}>
               Tentar novamente
@@ -787,8 +787,8 @@ export function AcompanhamentoTratos() {
         </Card>
       ) : linhasFiltradas.length === 0 && linhasFabricaFiltradas.length === 0 ? (
         <Card className="p-8 text-center" disableHover>
-          <p className="font-medium text-gray-700">Nenhum dado encontrado para o período selecionado.</p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="font-medium text-content">Nenhum dado encontrado para o período selecionado.</p>
+          <p className="text-sm text-content-muted mt-1">
             Verifique se há programação, fabricação ou distribuição registrada no período.
           </p>
           <Button variant="secondary" className="mt-4" onClick={limparFiltros}>
@@ -800,54 +800,54 @@ export function AcompanhamentoTratos() {
           {/* Cards de métricas globais */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             <Card className="p-4" disableHover>
-              <p className="text-xs text-gray-500 font-medium">Planejado no período</p>
-              <p className="text-xl font-bold text-gray-800 mt-1">{formatKg(metricas.planejadoTotal)} kg</p>
-              <p className="text-xs text-gray-400 mt-1">{formatDate(dataInicioAplicada)} a {formatDate(dataFimAplicada)}</p>
+              <p className="text-xs text-content-muted font-medium">Planejado no período</p>
+              <p className="text-xl font-bold text-content-strong mt-1">{formatKg(metricas.planejadoTotal)} kg</p>
+              <p className="text-xs text-content-faint mt-1">{formatDate(dataInicioAplicada)} a {formatDate(dataFimAplicada)}</p>
             </Card>
             <Card className="p-4" disableHover>
-              <p className="text-xs text-gray-500 font-medium">Média planejada por dia</p>
-              <p className="text-xl font-bold text-gray-800 mt-1">{formatKg(metricas.planejadoMedioDia)} kg</p>
-              <p className="text-xs text-gray-400 mt-1">média em {metricas.diasNoPeriodo} dias</p>
+              <p className="text-xs text-content-muted font-medium">Média planejada por dia</p>
+              <p className="text-xl font-bold text-content-strong mt-1">{formatKg(metricas.planejadoMedioDia)} kg</p>
+              <p className="text-xs text-content-faint mt-1">média em {metricas.diasNoPeriodo} dias</p>
             </Card>
             <Card className="p-4" disableHover>
-              <p className="text-xs text-gray-500 font-medium">Real executado no período</p>
-              <p className="text-xl font-bold text-gray-800 mt-1">{formatKg(metricas.realTotal)} kg</p>
-              <p className="text-xs text-gray-400 mt-1">{formatDate(dataInicioAplicada)} a {formatDate(dataFimAplicada)}</p>
+              <p className="text-xs text-content-muted font-medium">Real executado no período</p>
+              <p className="text-xl font-bold text-content-strong mt-1">{formatKg(metricas.realTotal)} kg</p>
+              <p className="text-xs text-content-faint mt-1">{formatDate(dataInicioAplicada)} a {formatDate(dataFimAplicada)}</p>
             </Card>
             <Card className="p-4" disableHover>
-              <p className="text-xs text-gray-500 font-medium">Desvio acumulado</p>
+              <p className="text-xs text-content-muted font-medium">Desvio acumulado</p>
               <p className={`text-xl font-bold mt-1 ${CORES_STATUS[metricas.statusDesvioPct].text}`}>
                 {metricas.desvioTotal >= 0 ? '+' : ''}{formatKg(metricas.desvioTotal)} kg
               </p>
-              <p className="text-xs text-gray-400 mt-1">{situacaoDesvio(metricas.desvioTotal)}; real menos planejado</p>
+              <p className="text-xs text-content-faint mt-1">{situacaoDesvio(metricas.desvioTotal)}; real menos planejado</p>
             </Card>
             <Card className="p-4" disableHover>
-              <p className="text-xs text-gray-500 font-medium">Desvio no período</p>
+              <p className="text-xs text-content-muted font-medium">Desvio no período</p>
               <p className={`text-xl font-bold mt-1 ${CORES_STATUS[metricas.statusDesvioPct].text}`}>
                 {formatPct(metricas.desvioPctGlobal)}
               </p>
-              <p className="text-xs text-gray-400 mt-1">{situacaoDesvio(metricas.desvioPctGlobal)}; real versus planejado</p>
+              <p className="text-xs text-content-faint mt-1">{situacaoDesvio(metricas.desvioPctGlobal)}; real versus planejado</p>
             </Card>
             <Card className="p-4" disableHover>
-              <p className="text-xs text-gray-500 font-medium">Dias com registro</p>
-              <p className="text-xl font-bold text-gray-800 mt-1">{metricas.diasComRegistro} de {metricas.diasNoPeriodo}</p>
-              <p className="text-xs text-gray-400 mt-1">dias do período</p>
+              <p className="text-xs text-content-muted font-medium">Dias com registro</p>
+              <p className="text-xl font-bold text-content-strong mt-1">{metricas.diasComRegistro} de {metricas.diasNoPeriodo}</p>
+              <p className="text-xs text-content-faint mt-1">dias do período</p>
             </Card>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600" aria-label="Legenda dos desvios">
-            <span className="font-medium text-gray-700">Leitura das cores:</span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-content-muted" aria-label="Legenda dos desvios">
+            <span className="font-medium text-content">Leitura das cores:</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" />Dentro da tolerância, até {TOLERANCIA_OK_PCT}%</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-yellow-500" />Alerta, até {TOLERANCIA_ALERTA_PCT}%</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-500" />Crítico, acima de {TOLERANCIA_ALERTA_PCT}%</span>
-            <span className="text-gray-500">Nos horários, até {TOLERANCIA_OK_MIN} min é normal, de {TOLERANCIA_OK_MIN} a {TOLERANCIA_ALERTA_MIN} é alerta e acima disso é crítico.</span>
+            <span className="text-content-muted">Nos horários, até {TOLERANCIA_OK_MIN} min é normal, de {TOLERANCIA_OK_MIN} a {TOLERANCIA_ALERTA_MIN} é alerta e acima disso é crítico.</span>
           </div>
 
-          <div className="rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-blue-900">
+          <div className="rounded-lg border border-border-base bg-surface-2 px-4 py-3 text-sm text-content">
             <button
               type="button"
               onClick={() => setShowPlanejadoInfo(!showPlanejadoInfo)}
-              className="font-medium text-blue-800 hover:text-blue-950"
+              className="font-medium text-primary dark:text-primary-light hover:text-primary-light"
               aria-expanded={showPlanejadoInfo}
             >
               {showPlanejadoInfo ? 'Ocultar como é calculado' : 'Como é calculado o planejado?'}
@@ -861,49 +861,49 @@ export function AcompanhamentoTratos() {
 
           <section aria-labelledby="alertas-operacionais-titulo">
             <div className="mb-3">
-              <h2 id="alertas-operacionais-titulo" className="text-lg font-semibold text-gray-800">Atenção necessária</h2>
-              <p className="mt-1 text-sm text-gray-500">Situações que podem exigir verificação no período selecionado.</p>
+              <h2 id="alertas-operacionais-titulo" className="text-lg font-semibold text-content-strong">Atenção necessária</h2>
+              <p className="mt-1 text-sm text-content-muted">Situações que podem exigir verificação no período selecionado.</p>
             </div>
             {alertasOperacionais.total === 0 ? (
-              <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+              <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-800 dark:text-green-200">
                 Nenhuma situação prioritária identificada nos filtros atuais.
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                 {alertasOperacionais.lotesCriticos.length > 0 && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-                    <p className="text-sm font-semibold text-red-800">{alertasOperacionais.lotesCriticos.length} lote(s) com desvio crítico</p>
-                    <p className="mt-1 text-sm text-red-700">{nomesLotes(alertasOperacionais.lotesCriticos.map((lote) => lote.lote_id))}</p>
+                  <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+                    <p className="text-sm font-semibold text-red-800 dark:text-red-200">{alertasOperacionais.lotesCriticos.length} lote(s) com desvio crítico</p>
+                    <p className="mt-1 text-sm text-red-700 dark:text-red-300">{nomesLotes(alertasOperacionais.lotesCriticos.map((lote) => lote.lote_id))}</p>
                     <button
                       type="button"
                       onClick={() => abrirLotesComAlerta(alertasOperacionais.lotesCriticos.map((lote) => lote.lote_id))}
-                      className="mt-3 text-sm font-medium text-red-800 underline hover:text-red-950"
+                      className="mt-3 text-sm font-medium text-red-800 dark:text-red-200 underline hover:text-red-950"
                     >
                       Ver lotes
                     </button>
                   </div>
                 )}
                 {alertasOperacionais.lotesSemExecucao.length > 0 && (
-                  <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-                    <p className="text-sm font-semibold text-yellow-800">{alertasOperacionais.lotesSemExecucao.length} lote(s) sem execução</p>
-                    <p className="mt-1 text-sm text-yellow-700">Há planejamento sem registro de trato no período.</p>
+                  <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
+                    <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">{alertasOperacionais.lotesSemExecucao.length} lote(s) sem execução</p>
+                    <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">Há planejamento sem registro de trato no período.</p>
                     <button
                       type="button"
                       onClick={() => abrirLotesComAlerta(alertasOperacionais.lotesSemExecucao.map((lote) => lote.lote_id))}
-                      className="mt-3 text-sm font-medium text-yellow-800 underline hover:text-yellow-950"
+                      className="mt-3 text-sm font-medium text-yellow-800 dark:text-yellow-200 underline hover:text-yellow-950"
                     >
                       Ver lotes
                     </button>
                   </div>
                 )}
                 {alertasOperacionais.tratosForaDoHorario.length > 0 && (
-                  <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-                    <p className="text-sm font-semibold text-orange-800">{alertasOperacionais.tratosForaDoHorario.length} trato(s) fora da tolerância</p>
-                    <p className="mt-1 text-sm text-orange-700">Lotes: {alertasOperacionais.lotesForaDoHorario.slice(0, 3).join(', ')}</p>
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">{alertasOperacionais.tratosForaDoHorario.length} trato(s) fora da tolerância</p>
+                    <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">Lotes: {alertasOperacionais.lotesForaDoHorario.slice(0, 3).join(', ')}</p>
                     <button
                       type="button"
                       onClick={() => navegarParaSecao('pontualidade-dos-tratos')}
-                      className="mt-3 text-sm font-medium text-orange-800 underline hover:text-orange-950"
+                      className="mt-3 text-sm font-medium text-amber-800 dark:text-amber-200 underline hover:text-amber-950"
                     >
                       Ver pontualidade
                     </button>
@@ -913,7 +913,7 @@ export function AcompanhamentoTratos() {
             )}
           </section>
 
-          <nav aria-label="Seções do acompanhamento" className="flex flex-wrap gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2">
+          <nav aria-label="Seções do acompanhamento" className="flex flex-wrap gap-2 rounded-xl border border-border-base bg-surface-2 p-2">
             {[
               { id: 'visao-geral', label: 'Visão geral' },
               { id: 'fabrica', label: 'Fábrica e distribuição' },
@@ -927,8 +927,8 @@ export function AcompanhamentoTratos() {
                 aria-pressed={secaoAtiva === secao.id}
                 className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   secaoAtiva === secao.id
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-white text-gray-600 hover:bg-gray-100'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-surface-1 text-content-muted hover:bg-surface-2'
                 }`}
               >
                 {secao.label}
@@ -941,31 +941,31 @@ export function AcompanhamentoTratos() {
           <Card className="p-4" disableHover>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-gray-800">Fábrica e conciliação</h2>
-                <p className="mt-1 text-sm text-gray-500">
+                <h2 className="text-lg font-semibold text-content-strong">Fábrica e conciliação</h2>
+                <p className="mt-1 text-sm text-content-muted">
                   Compare o que foi produzido na Fábrica com o que foi distribuído por dieta e trato.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 xl:grid-cols-6">
-                <div className="rounded-lg bg-gray-50 px-3 py-2">
-                  <p className="text-xs text-gray-500">Tratos</p>
-                  <p className="font-bold text-gray-800">{resumoFabrica.total}</p>
+                <div className="rounded-lg bg-surface-2 px-3 py-2">
+                  <p className="text-xs text-content-muted">Tratos</p>
+                  <p className="font-bold text-content-strong">{resumoFabrica.total}</p>
                 </div>
-                <div className="rounded-lg bg-green-50 px-3 py-2">
-                  <p className="text-xs text-green-700">Concluídos</p>
-                  <p className="font-bold text-green-700">{resumoFabrica.concluidos}</p>
+                <div className="rounded-lg bg-green-500/10 px-3 py-2">
+                  <p className="text-xs text-green-700 dark:text-green-300">Concluídos</p>
+                  <p className="font-bold text-green-700 dark:text-green-300">{resumoFabrica.concluidos}</p>
                 </div>
-                <div className="rounded-lg bg-yellow-50 px-3 py-2">
-                  <p className="text-xs text-yellow-700">Parciais</p>
-                  <p className="font-bold text-yellow-700">{resumoFabrica.parciais}</p>
+                <div className="rounded-lg bg-yellow-500/10 px-3 py-2">
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300">Parciais</p>
+                  <p className="font-bold text-yellow-700 dark:text-yellow-300">{resumoFabrica.parciais}</p>
                 </div>
-                <div className="rounded-lg bg-gray-50 px-3 py-2">
-                  <p className="text-xs text-gray-600">Pendente fabricação</p>
-                  <p className="font-bold text-gray-700">{formatKg(resumoFabrica.saldoKg)} kg</p>
+                <div className="rounded-lg bg-surface-2 px-3 py-2">
+                  <p className="text-xs text-content-muted">Pendente fabricação</p>
+                  <p className="font-bold text-content">{formatKg(resumoFabrica.saldoKg)} kg</p>
                 </div>
-                <div className="rounded-lg bg-blue-50 px-3 py-2">
-                  <p className="text-xs text-blue-700">Produzido</p>
-                  <p className="font-bold text-blue-700">{formatKg(resumoFabrica.totalProduzido)} kg</p>
+                <div className="rounded-lg bg-primary/10 px-3 py-2">
+                  <p className="text-xs text-primary dark:text-primary-light">Produzido</p>
+                  <p className="font-bold text-primary dark:text-primary-light">{formatKg(resumoFabrica.totalProduzido)} kg</p>
                 </div>
                 <div className="rounded-lg bg-purple-50 px-3 py-2">
                   <p className="text-xs text-purple-700">Distribuído</p>
@@ -974,7 +974,7 @@ export function AcompanhamentoTratos() {
               </div>
             </div>
             {linhasFabricaFiltradas.length === 0 ? (
-              <p className="mt-4 rounded-lg bg-gray-50 p-4 text-sm text-gray-500">
+              <p className="mt-4 rounded-lg bg-surface-2 p-4 text-sm text-content-muted">
                 Nenhuma produção de fábrica encontrada para os filtros selecionados.
               </p>
             ) : (
@@ -983,7 +983,7 @@ export function AcompanhamentoTratos() {
                   type="button"
                   onClick={() => setShowDetalhesFabrica((prev) => !prev)}
                   aria-expanded={showDetalhesFabrica}
-                  className="mt-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg border border-border-base bg-surface-1 px-3 py-2 text-sm font-medium text-content hover:border-surface-3 hover:bg-surface-2"
                 >
                   <svg className={`h-4 w-4 transition-transform ${showDetalhesFabrica ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7-7" />
@@ -992,8 +992,8 @@ export function AcompanhamentoTratos() {
                 </button>
                 {showDetalhesFabrica && (
                   <div className="mt-3 overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                <table className="min-w-full divide-y divide-border-base text-sm">
+                  <thead className="bg-surface-2 text-left text-xs uppercase text-content-muted">
                     <tr>
                       <th className="px-3 py-2">Data</th>
                       <th className="px-3 py-2 text-center">Tratos</th>
@@ -1011,7 +1011,7 @@ export function AcompanhamentoTratos() {
                       return (
                         <Fragment key={dia.data}>
                           <tr
-                            className="cursor-pointer hover:bg-gray-50"
+                            className="cursor-pointer hover:bg-surface-2"
                             onClick={() => setDiasFabricaExpandidos((prev) => {
                               const next = new Set(prev)
                               if (next.has(dia.data)) next.delete(dia.data)
@@ -1019,12 +1019,12 @@ export function AcompanhamentoTratos() {
                               return next
                             })}
                           >
-                            <td className="px-3 py-2 font-medium text-gray-800">{formatDate(dia.data)}</td>
-                            <td className="px-3 py-2 text-center text-gray-600">{dia.linhas.length}</td>
-                            <td className="px-3 py-2 text-right text-gray-700">{formatKg(dia.previsto_kg)} kg</td>
-                            <td className="px-3 py-2 text-right text-gray-700">{formatKg(dia.produzido_kg)} kg</td>
-                            <td className="px-3 py-2 text-right text-gray-700">{formatKg(dia.distribuido_kg)} kg</td>
-                            <td className="px-3 py-2 text-right text-gray-700">{formatKg(dia.saldo_kg)} kg</td>
+                            <td className="px-3 py-2 font-medium text-content-strong">{formatDate(dia.data)}</td>
+                            <td className="px-3 py-2 text-center text-content-muted">{dia.linhas.length}</td>
+                            <td className="px-3 py-2 text-right text-content">{formatKg(dia.previsto_kg)} kg</td>
+                            <td className="px-3 py-2 text-right text-content">{formatKg(dia.produzido_kg)} kg</td>
+                            <td className="px-3 py-2 text-right text-content">{formatKg(dia.distribuido_kg)} kg</td>
+                            <td className="px-3 py-2 text-right text-content">{formatKg(dia.saldo_kg)} kg</td>
                             <td className="px-3 py-2">
                               <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${statusFabricaClass(status)}`}>
                                 {statusFabricaLabel(status)}
@@ -1032,11 +1032,11 @@ export function AcompanhamentoTratos() {
                             </td>
                           </tr>
                           {expandido && (
-                            <tr className="bg-gray-50">
+                            <tr className="bg-surface-2">
                               <td colSpan={7} className="px-4 py-3">
                                 <div className="overflow-x-auto">
                                   <table className="min-w-full text-xs">
-                                    <thead className="text-left text-gray-500">
+                                    <thead className="text-left text-content-muted">
                                       <tr>
                                         <th className="px-2 py-1">Dieta</th>
                                         <th className="px-2 py-1">Trato</th>
@@ -1049,10 +1049,10 @@ export function AcompanhamentoTratos() {
                                     </thead>
                                     <tbody>
                                       {dia.linhas.map((linha) => (
-                                        <tr key={`${linha.data}-${linha.tipo}-${linha.formulacao_id}-${linha.ordem_trato}`} className="border-t border-gray-200">
-                                          <td className="px-2 py-1 font-medium text-gray-700">{linha.formulacao_nome}</td>
-                                          <td className="px-2 py-1 text-gray-600">{linha.ordem_trato}º</td>
-                                          <td className="px-2 py-1 text-gray-600">{linha.vagao_nome || '—'}</td>
+                                        <tr key={`${linha.data}-${linha.tipo}-${linha.formulacao_id}-${linha.ordem_trato}`} className="border-t border-border-base">
+                                          <td className="px-2 py-1 font-medium text-content">{linha.formulacao_nome}</td>
+                                          <td className="px-2 py-1 text-content-muted">{linha.ordem_trato}º</td>
+                                          <td className="px-2 py-1 text-content-muted">{linha.vagao_nome || '—'}</td>
                                           <td className="px-2 py-1 text-right">{formatKg(linha.previsto_kg)} kg</td>
                                           <td className="px-2 py-1 text-right">{formatKg(linha.produzido_kg)} kg</td>
                                           <td className="px-2 py-1 text-right">{formatKg(linha.distribuido_kg)} kg</td>
@@ -1068,13 +1068,13 @@ export function AcompanhamentoTratos() {
                         </Fragment>
                       )
                     })}
-                    <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
-                      <td className="px-3 py-2 text-gray-700">Total</td>
-                      <td className="px-3 py-2 text-center text-gray-800">{linhasFabricaFiltradas.length}</td>
-                      <td className="px-3 py-2 text-right text-gray-800">{formatKg(resumoFabrica.totalPrevisto)} kg</td>
-                      <td className="px-3 py-2 text-right text-gray-800">{formatKg(resumoFabrica.totalProduzido)} kg</td>
-                      <td className="px-3 py-2 text-right text-gray-800">{formatKg(resumoFabrica.totalDistribuido)} kg</td>
-                      <td className="px-3 py-2 text-right text-gray-800">{formatKg(resumoFabrica.saldoKg)} kg</td>
+                    <tr className="border-t-2 border-surface-3 bg-surface-2 font-semibold">
+                      <td className="px-3 py-2 text-content">Total</td>
+                      <td className="px-3 py-2 text-center text-content-strong">{linhasFabricaFiltradas.length}</td>
+                      <td className="px-3 py-2 text-right text-content-strong">{formatKg(resumoFabrica.totalPrevisto)} kg</td>
+                      <td className="px-3 py-2 text-right text-content-strong">{formatKg(resumoFabrica.totalProduzido)} kg</td>
+                      <td className="px-3 py-2 text-right text-content-strong">{formatKg(resumoFabrica.totalDistribuido)} kg</td>
+                      <td className="px-3 py-2 text-right text-content-strong">{formatKg(resumoFabrica.saldoKg)} kg</td>
                       <td className="px-3 py-2"></td>
                     </tr>
                   </tbody>
@@ -1091,8 +1091,8 @@ export function AcompanhamentoTratos() {
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {/* Tendência do desvio ao longo do tempo */}
             <Card className="p-4" disableHover>
-              <h3 className="text-sm font-semibold text-gray-700">Tendência do desvio (%)</h3>
-              <p className="mt-1 text-xs text-gray-500">Percentual de real menos planejado em cada dia.</p>
+              <h3 className="text-sm font-semibold text-content">Tendência do desvio (%)</h3>
+              <p className="mt-1 text-xs text-content-muted">Percentual de real menos planejado em cada dia.</p>
               {dadosGraficoTendencia.length > 0 ? (
                 <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={dadosGraficoTendencia}>
@@ -1121,7 +1121,7 @@ export function AcompanhamentoTratos() {
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-sm text-gray-400 text-center py-12">
+                <p className="text-sm text-content-faint text-center py-12">
                   Sem dados de planejamento para o período.
                 </p>
               )}
@@ -1129,8 +1129,8 @@ export function AcompanhamentoTratos() {
 
             {/* Planejado vs Real por lote */}
             <Card className="p-4" disableHover>
-              <h3 className="text-sm font-semibold text-gray-700">Planejado vs Real no período por lote (kg)</h3>
-              <p className="mt-1 text-xs text-gray-500">Comparação acumulada no intervalo selecionado.</p>
+              <h3 className="text-sm font-semibold text-content">Planejado vs Real no período por lote (kg)</h3>
+              <p className="mt-1 text-xs text-content-muted">Comparação acumulada no intervalo selecionado.</p>
               {dadosGraficoLotes.length > 0 ? (
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={dadosGraficoLotes}>
@@ -1151,7 +1151,7 @@ export function AcompanhamentoTratos() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-sm text-gray-400 text-center py-12">Sem dados para exibir.</p>
+                <p className="text-sm text-content-faint text-center py-12">Sem dados para exibir.</p>
               )}
             </Card>
           </div>
@@ -1160,9 +1160,9 @@ export function AcompanhamentoTratos() {
           {/* Acompanhamento de Horários */}
           {secaoAtiva === 'pontualidade' && resumoHorarioFiltrado && resumoHorarioFiltrado.tratos_com_horario > 0 && (
             <>
-              <div id="pontualidade-dos-tratos" className="border-t border-gray-200 pt-4 scroll-mt-6">
-                <h3 className="text-lg font-semibold text-gray-800">Pontualidade dos Tratos</h3>
-                <p className="text-sm text-gray-500 mt-1">
+              <div id="pontualidade-dos-tratos" className="border-t border-border-base pt-4 scroll-mt-6">
+                <h3 className="text-lg font-semibold text-content-strong">Pontualidade dos Tratos</h3>
+                <p className="text-sm text-content-muted mt-1">
                   Compara o horário real de cada trato com o horário sugerido na programação.
                   Desvio positivo significa atraso, negativo significa adiantamento.
                 </p>
@@ -1171,40 +1171,40 @@ export function AcompanhamentoTratos() {
               {/* Cards de métricas de pontualidade */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
                 <Card className="p-4" disableHover>
-                  <p className="text-xs text-gray-500 font-medium">Tratos no horário</p>
-                  <p className="text-xl font-bold text-green-600 mt-1">{resumoHorarioFiltrado.tratos_no_horario}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">desvio até {TOLERANCIA_OK_MIN} min</p>
+                  <p className="text-xs text-content-muted font-medium">Tratos no horário</p>
+                  <p className="text-xl font-bold text-green-500 mt-1">{resumoHorarioFiltrado.tratos_no_horario}</p>
+                  <p className="text-xs text-content-faint mt-0.5">desvio até {TOLERANCIA_OK_MIN} min</p>
                 </Card>
                 <Card className="p-4" disableHover>
-                  <p className="text-xs text-gray-500 font-medium">Atraso leve</p>
-                  <p className="text-xl font-bold text-yellow-600 mt-1">{resumoHorarioFiltrado.tratos_atraso_leve}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{TOLERANCIA_OK_MIN} a {TOLERANCIA_ALERTA_MIN} min</p>
+                  <p className="text-xs text-content-muted font-medium">Atraso leve</p>
+                  <p className="text-xl font-bold text-yellow-500 mt-1">{resumoHorarioFiltrado.tratos_atraso_leve}</p>
+                  <p className="text-xs text-content-faint mt-0.5">{TOLERANCIA_OK_MIN} a {TOLERANCIA_ALERTA_MIN} min</p>
                 </Card>
                 <Card className="p-4" disableHover>
-                  <p className="text-xs text-gray-500 font-medium">Atraso grave</p>
-                  <p className="text-xl font-bold text-red-600 mt-1">{resumoHorarioFiltrado.tratos_atraso_grave}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">mais de {TOLERANCIA_ALERTA_MIN} min</p>
+                  <p className="text-xs text-content-muted font-medium">Atraso grave</p>
+                  <p className="text-xl font-bold text-red-500 mt-1">{resumoHorarioFiltrado.tratos_atraso_grave}</p>
+                  <p className="text-xs text-content-faint mt-0.5">mais de {TOLERANCIA_ALERTA_MIN} min</p>
                 </Card>
                 <Card className="p-4" disableHover>
-                  <p className="text-xs text-gray-500 font-medium">Desvio médio</p>
+                  <p className="text-xs text-content-muted font-medium">Desvio médio</p>
                   <p className={`text-xl font-bold mt-1 ${
                     resumoHorarioFiltrado.desvio_medio_min != null && Math.abs(resumoHorarioFiltrado.desvio_medio_min) > TOLERANCIA_ALERTA_MIN
-                      ? 'text-red-600'
+                      ? 'text-red-500'
                       : resumoHorarioFiltrado.desvio_medio_min != null && Math.abs(resumoHorarioFiltrado.desvio_medio_min) > TOLERANCIA_OK_MIN
-                      ? 'text-yellow-600'
-                      : 'text-green-600'
+                      ? 'text-yellow-500'
+                      : 'text-green-500'
                   }`}>
                     {formatDesvioMin(resumoHorarioFiltrado.desvio_medio_min)}
                   </p>
                 </Card>
                 <Card className="p-4" disableHover>
-                  <p className="text-xs text-gray-500 font-medium">Pior desvio</p>
+                  <p className="text-xs text-content-muted font-medium">Pior desvio</p>
                   <p className={`text-xl font-bold mt-1 ${
                     resumoHorarioFiltrado.pior_desvio_min != null && Math.abs(resumoHorarioFiltrado.pior_desvio_min) > TOLERANCIA_ALERTA_MIN
-                      ? 'text-red-600'
+                      ? 'text-red-500'
                       : resumoHorarioFiltrado.pior_desvio_min != null && Math.abs(resumoHorarioFiltrado.pior_desvio_min) > TOLERANCIA_OK_MIN
-                      ? 'text-yellow-600'
-                      : 'text-green-600'
+                      ? 'text-yellow-500'
+                      : 'text-green-500'
                   }`}>
                     {formatDesvioMin(resumoHorarioFiltrado.pior_desvio_min)}
                   </p>
@@ -1213,40 +1213,40 @@ export function AcompanhamentoTratos() {
 
               {/* Tabela detalhada de horários */}
               <Card className="p-4" disableHover>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                <h3 className="text-sm font-semibold text-content mb-3">
                   Detalhamento por trato ({linhasHorarioFiltradas.length} registros)
                 </h3>
                 <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                  <table className="min-w-full divide-y divide-gray-200 sticky-header">
-                    <thead className="bg-gray-50 sticky top-0 z-10">
+                  <table className="min-w-full divide-y divide-border-base sticky-header">
+                    <thead className="bg-surface-2 sticky top-0 z-10">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Lote</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Curral</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Trato</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Horário sugerido</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Horário real</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Desvio</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-content-muted uppercase">Data</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-content-muted uppercase">Lote</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-content-muted uppercase">Curral</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-content-muted uppercase">Trato</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-content-muted uppercase">Horário sugerido</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-content-muted uppercase">Horário real</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-content-muted uppercase">Desvio</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-content-muted uppercase">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-100">
+                    <tbody className="bg-surface-1 divide-y divide-gray-100">
                       {linhasHorarioFiltradas.map((l, idx) => {
                         const cor = CORES_STATUS[l.status] || CORES_STATUS.sem_execucao
                         return (
-                          <tr key={`${l.lote_id}-${l.data}-${l.ordem_trato}-${idx}`} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">{formatDate(l.data)}</td>
-                            <td className="px-3 py-2 text-sm font-medium text-gray-800">{l.lote_nome}</td>
-                            <td className="px-3 py-2 text-sm text-gray-600">{l.curral_nome || '—'}</td>
-                            <td className="px-3 py-2 text-sm text-center text-gray-600">#{l.ordem_trato}</td>
-                            <td className="px-3 py-2 text-sm text-center text-gray-700 font-mono">{l.horario_sugerido || '—'}</td>
-                            <td className="px-3 py-2 text-sm text-center text-gray-700 font-mono">{l.horario_real || '—'}</td>
+                          <tr key={`${l.lote_id}-${l.data}-${l.ordem_trato}-${idx}`} className="hover:bg-surface-2">
+                            <td className="px-3 py-2 text-sm text-content whitespace-nowrap">{formatDate(l.data)}</td>
+                            <td className="px-3 py-2 text-sm font-medium text-content-strong">{l.lote_nome}</td>
+                            <td className="px-3 py-2 text-sm text-content-muted">{l.curral_nome || '—'}</td>
+                            <td className="px-3 py-2 text-sm text-center text-content-muted">#{l.ordem_trato}</td>
+                            <td className="px-3 py-2 text-sm text-center text-content font-mono">{l.horario_sugerido || '—'}</td>
+                            <td className="px-3 py-2 text-sm text-center text-content font-mono">{l.horario_real || '—'}</td>
                             <td className={`px-3 py-2 text-sm text-right font-medium ${
                               l.desvio_min != null && Math.abs(l.desvio_min) > TOLERANCIA_ALERTA_MIN
-                                ? 'text-red-600'
+                                ? 'text-red-500'
                                 : l.desvio_min != null && Math.abs(l.desvio_min) > TOLERANCIA_OK_MIN
-                                ? 'text-yellow-600'
-                                : 'text-green-600'
+                                ? 'text-yellow-500'
+                                : 'text-green-500'
                             }`}>
                               {formatDesvioMin(l.desvio_min)}
                             </td>
@@ -1271,7 +1271,7 @@ export function AcompanhamentoTratos() {
           <div id="resumo-por-lote" className="scroll-mt-6">
             <Card className="p-4" disableHover>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">
+              <h3 className="text-sm font-semibold text-content">
                 Resumo por lote ({resumosFiltrados.length} lotes)
               </h3>
               <div className="flex gap-2">
@@ -1279,7 +1279,7 @@ export function AcompanhamentoTratos() {
                   type="button"
                   onClick={() => setLotesExpandidos(new Set(resumosFiltrados.map((r) => r.lote_id)))}
                   disabled={todosLotesExpandidos || resumosFiltrados.length === 0}
-                  className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:cursor-not-allowed disabled:opacity-40"
+                  className="text-xs text-primary dark:text-primary-light hover:text-primary dark:hover:text-primary-light font-medium disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Expandir todos
                 </button>
@@ -1287,7 +1287,7 @@ export function AcompanhamentoTratos() {
                   type="button"
                   onClick={() => setLotesExpandidos(new Set())}
                   disabled={nenhumLoteExpandido}
-                  className="text-xs text-gray-500 hover:text-gray-700 font-medium disabled:cursor-not-allowed disabled:opacity-40"
+                  className="text-xs text-content-muted hover:text-content font-medium disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Recolher todos
                 </button>
@@ -1299,7 +1299,7 @@ export function AcompanhamentoTratos() {
                 const expandido = lotesExpandidos.has(r.lote_id)
                 const tratos = detalhesPorLote[r.lote_id] || []
                 return (
-                  <div key={`mobile-${r.lote_id}`} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <div key={`mobile-${r.lote_id}`} className="rounded-xl border border-border-base bg-surface-1 p-4 shadow-sm">
                     <div
                       role="button"
                       tabIndex={0}
@@ -1316,8 +1316,8 @@ export function AcompanhamentoTratos() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="font-semibold text-gray-800">{r.lote_nome}</p>
-                          <p className="mt-1 text-xs text-gray-500">{r.dias_com_registro} de {r.dias_no_periodo} dias com registro</p>
+                          <p className="font-semibold text-content-strong">{r.lote_nome}</p>
+                          <p className="mt-1 text-xs text-content-muted">{r.dias_com_registro} de {r.dias_no_periodo} dias com registro</p>
                         </div>
                         <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${cor.bg} ${cor.text} ${cor.border}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${cor.dot}`} />
@@ -1325,21 +1325,21 @@ export function AcompanhamentoTratos() {
                         </span>
                       </div>
                       <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                        <div><p className="text-xs text-gray-500">Planejado no período</p><p className="font-medium text-gray-800">{formatKg(r.planejado_total_kg)} kg</p></div>
-                        <div><p className="text-xs text-gray-500">Real</p><p className="font-medium text-gray-800">{formatKg(r.real_total_kg)} kg</p></div>
-                        <div><p className="text-xs text-gray-500">Diferença</p><p className={`font-medium ${cor.text}`}>{r.desvio_total_kg >= 0 ? '+' : ''}{formatKg(r.desvio_total_kg)} kg</p></div>
-                        <div><p className="text-xs text-gray-500">Diferença (%)</p><p className={`font-medium ${cor.text}`}>{formatPct(r.desvio_medio_pct)}</p></div>
+                        <div><p className="text-xs text-content-muted">Planejado no período</p><p className="font-medium text-content-strong">{formatKg(r.planejado_total_kg)} kg</p></div>
+                        <div><p className="text-xs text-content-muted">Real</p><p className="font-medium text-content-strong">{formatKg(r.real_total_kg)} kg</p></div>
+                        <div><p className="text-xs text-content-muted">Diferença</p><p className={`font-medium ${cor.text}`}>{r.desvio_total_kg >= 0 ? '+' : ''}{formatKg(r.desvio_total_kg)} kg</p></div>
+                        <div><p className="text-xs text-content-muted">Diferença (%)</p><p className={`font-medium ${cor.text}`}>{formatPct(r.desvio_medio_pct)}</p></div>
                       </div>
                     </div>
                     {expandido && lotesCarregandoDetalhes.has(r.lote_id) && (
-                      <p className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500">Carregando detalhes dos tratos...</p>
+                      <p className="mt-3 border-t border-border-subtle pt-3 text-xs text-content-muted">Carregando detalhes dos tratos...</p>
                     )}
                     {expandido && !lotesCarregandoDetalhes.has(r.lote_id) && tratos.length > 0 && (
-                      <div id={`mobile-detalhe-lote-${r.lote_id}`} className="mt-3 space-y-2 border-t border-gray-100 pt-3">
+                      <div id={`mobile-detalhe-lote-${r.lote_id}`} className="mt-3 space-y-2 border-t border-border-subtle pt-3">
                         {tratos.map((trato, index) => (
-                          <div key={`${trato.lote_id}-${trato.data}-${index}`} className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
+                          <div key={`${trato.lote_id}-${trato.data}-${index}`} className="rounded-lg bg-surface-2 p-3 text-xs text-content-muted">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium text-gray-700">T{trato.ordem_trato} · {formatDate(trato.data)}</span>
+                              <span className="font-medium text-content">T{trato.ordem_trato} · {formatDate(trato.data)}</span>
                               <span>{trato.kg_real === 0 ? 'Zerado' : Math.abs(trato.desvio_kg) <= 1 ? 'No plano' : trato.desvio_kg > 0 ? 'Acima' : 'Abaixo'}</span>
                             </div>
                             <p className="mt-1">Planejado: {formatKg(trato.kg_planejado)} kg · Real: {formatKg(trato.kg_real)} kg · Desvio: {trato.desvio_kg >= 0 ? '+' : ''}{formatKg(trato.desvio_kg)} kg</p>
@@ -1352,20 +1352,20 @@ export function AcompanhamentoTratos() {
               })}
             </div>
             <div className="hidden overflow-x-auto sm:block">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border-base">
+                <thead className="bg-surface-2">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Lote</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Planejado no período</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Real</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Diferença no período (kg)</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Diferença no período (%)</th>
-                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Dias c/ registro</th>
-                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase"></th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-content-muted uppercase">Lote</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-content-muted uppercase">Planejado no período</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-content-muted uppercase">Real</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-content-muted uppercase">Diferença no período (kg)</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-content-muted uppercase">Diferença no período (%)</th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-content-muted uppercase">Dias c/ registro</th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-content-muted uppercase">Status</th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-content-muted uppercase"></th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
+                <tbody className="bg-surface-1 divide-y divide-gray-100">
                   {resumosFiltrados.map((r) => {
                     const cor = CORES_STATUS[r.status]
                     const expandido = lotesExpandidos.has(r.lote_id)
@@ -1373,7 +1373,7 @@ export function AcompanhamentoTratos() {
                     return (
                       <Fragment key={r.lote_id}>
                         <tr
-                          className="hover:bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                          className="hover:bg-surface-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
                           onClick={() => toggleExpandirLote(r.lote_id)}
                           onKeyDown={(event) => handleToggleLoteKeyDown(event, r.lote_id)}
                           tabIndex={0}
@@ -1381,24 +1381,24 @@ export function AcompanhamentoTratos() {
                           aria-expanded={expandido}
                           aria-controls={`detalhe-lote-${r.lote_id}`}
                         >
-                          <td className="px-3 py-2 text-sm font-medium text-gray-800 flex items-center gap-2">
+                          <td className="px-3 py-2 text-sm font-medium text-content-strong flex items-center gap-2">
                             <svg
-                              className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${expandido ? 'rotate-90' : ''}`}
+                              className={`w-4 h-4 text-content-faint transition-transform shrink-0 ${expandido ? 'rotate-90' : ''}`}
                               fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             >
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
                             {r.lote_nome}
                           </td>
-                          <td className="px-3 py-2 text-sm text-right text-gray-700">{formatKg(r.planejado_total_kg)}</td>
-                          <td className="px-3 py-2 text-sm text-right text-gray-700">{formatKg(r.real_total_kg)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-content">{formatKg(r.planejado_total_kg)}</td>
+                          <td className="px-3 py-2 text-sm text-right text-content">{formatKg(r.real_total_kg)}</td>
                           <td className={`px-3 py-2 text-sm text-right font-medium ${cor.text}`}>
                             {r.desvio_total_kg >= 0 ? '+' : ''}{formatKg(r.desvio_total_kg)}
                           </td>
                           <td className={`px-3 py-2 text-sm text-right font-medium ${cor.text}`}>
                             {formatPct(r.desvio_medio_pct)}
                           </td>
-                          <td className="px-3 py-2 text-sm text-center text-gray-600">
+                          <td className="px-3 py-2 text-sm text-center text-content-muted">
                             {r.dias_com_registro} / {r.dias_no_periodo}
                           </td>
                           <td className="px-3 py-2 text-center">
@@ -1407,17 +1407,17 @@ export function AcompanhamentoTratos() {
                               {statusLabel(r.status)}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-center text-xs text-gray-400">
+                          <td className="px-3 py-2 text-center text-xs text-content-faint">
                             {tratos.length > 0 ? `${tratos.length} trato(s)` : ''}
                           </td>
                         </tr>
                         {expandido && lotesCarregandoDetalhes.has(r.lote_id) && (
-                          <tr id={`detalhe-lote-${r.lote_id}`} className="bg-gray-50">
-                            <td colSpan={8} className="px-4 py-4 text-sm text-gray-500">Carregando detalhes dos tratos...</td>
+                          <tr id={`detalhe-lote-${r.lote_id}`} className="bg-surface-2">
+                            <td colSpan={8} className="px-4 py-4 text-sm text-content-muted">Carregando detalhes dos tratos...</td>
                           </tr>
                         )}
                         {expandido && !lotesCarregandoDetalhes.has(r.lote_id) && tratos.length > 0 && (
-                          <tr id={`detalhe-lote-${r.lote_id}`} className="bg-gray-50">
+                          <tr id={`detalhe-lote-${r.lote_id}`} className="bg-surface-2">
                             <td colSpan={8} className="px-4 py-4">
                               <div className="space-y-2">
                                 {tratos.map((t, idx) => {
@@ -1430,36 +1430,36 @@ export function AcompanhamentoTratos() {
                                     ? 'yellow'
                                     : 'red'
                                   const corClasses = {
-                                    red: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-                                    yellow: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
-                                    green: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+                                    red: { bg: 'bg-red-500/10', text: 'text-red-700 dark:text-red-300', border: 'border-red-500/30', dot: 'bg-red-500' },
+                                    yellow: { bg: 'bg-yellow-500/10', text: 'text-yellow-700 dark:text-yellow-300', border: 'border-yellow-500/30', dot: 'bg-yellow-500' },
+                                    green: { bg: 'bg-green-500/10', text: 'text-green-700 dark:text-green-300', border: 'border-green-500/30', dot: 'bg-green-500' },
                                   }[corTrato]
                                   return (
-                                    <div key={`${t.lote_id}-${t.data}-${idx}`} className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2.5">
+                                    <div key={`${t.lote_id}-${t.data}-${idx}`} className="flex items-center gap-3 rounded-lg border border-border-base bg-surface-1 px-4 py-2.5">
                                       <div className="flex items-center gap-2 w-20 shrink-0">
                                         <span className={`w-2 h-2 rounded-full ${corClasses.dot}`} />
-                                        <span className="text-sm font-medium text-gray-700">T{t.ordem_trato}</span>
+                                        <span className="text-sm font-medium text-content">T{t.ordem_trato}</span>
                                       </div>
-                                      <span className="text-xs text-gray-400 w-16 shrink-0">{t.horario_real || '—'}</span>
-                                      <span className="text-xs text-gray-400 w-24 shrink-0 hidden sm:inline">{formatDate(t.data)}</span>
+                                      <span className="text-xs text-content-faint w-16 shrink-0">{t.horario_real || '—'}</span>
+                                      <span className="text-xs text-content-faint w-24 shrink-0 hidden sm:inline">{formatDate(t.data)}</span>
                                       <div className="flex-1 flex items-center gap-4 text-sm">
                                         <div className="flex items-center gap-1.5">
-                                          <span className="text-gray-400 text-xs">Planejado</span>
-                                          <span className="font-medium text-gray-700">{formatKg(t.kg_planejado)} kg</span>
+                                          <span className="text-content-faint text-xs">Planejado</span>
+                                          <span className="font-medium text-content">{formatKg(t.kg_planejado)} kg</span>
                                         </div>
                                         <div className="flex items-center gap-1.5">
-                                          <span className="text-gray-400 text-xs">Real</span>
-                                          <span className={`font-medium ${t.kg_real === 0 ? 'text-red-600' : 'text-gray-800'}`}>{formatKg(t.kg_real)} kg</span>
+                                          <span className="text-content-faint text-xs">Real</span>
+                                          <span className={`font-medium ${t.kg_real === 0 ? 'text-red-500' : 'text-content-strong'}`}>{formatKg(t.kg_real)} kg</span>
                                         </div>
                                         <div className="flex items-center gap-1.5">
-                                          <span className="text-gray-400 text-xs">Desvio</span>
+                                          <span className="text-content-faint text-xs">Desvio</span>
                                           <span className={`font-medium ${corClasses.text}`}>
                                             {t.desvio_kg >= 0 ? '+' : ''}{formatKg(t.desvio_kg)} kg
                                           </span>
                                         </div>
                                       </div>
                                       {t.leitura_cocho != null && (
-                                        <span className="text-xs text-gray-400 shrink-0 hidden md:inline">Cocho: {t.leitura_cocho}</span>
+                                        <span className="text-xs text-content-faint shrink-0 hidden md:inline">Cocho: {t.leitura_cocho}</span>
                                       )}
                                       <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${corClasses.bg} ${corClasses.text} ${corClasses.border}`}>
                                         {t.kg_real === 0 ? 'Zerado' : desvioAbs <= 1 ? 'No plano' : t.desvio_kg > 0 ? 'Acima' : 'Abaixo'}

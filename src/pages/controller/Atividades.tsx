@@ -79,7 +79,7 @@ function LocalPicker({ localTipo, localId, localNome, pastos, currais, locais, m
       <select
         value={localTipo}
         onChange={(e) => handleTipoChange(e.target.value)}
-        className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-white"
+        className="px-3 py-2.5 border border-border-base rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-surface-1 text-content-strong"
       >
         {Object.entries(LOCAL_TIPO_LABELS).map(([value, label]) => (
           <option key={value} value={value}>{label}</option>
@@ -91,13 +91,13 @@ function LocalPicker({ localTipo, localId, localNome, pastos, currais, locais, m
           value={localNome}
           onChange={(e) => onChange({ local_tipo: 'livre', local_id: '', local: e.target.value })}
           placeholder="Digite o local..."
-          className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px]"
+          className="flex-1 px-3 py-2.5 border border-border-base rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-surface-1 text-content-strong placeholder-content-faint"
         />
       ) : (
         <select
           value={localId}
           onChange={(e) => handleEntidadeChange(e.target.value)}
-          className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-white"
+          className="flex-1 px-3 py-2.5 border border-border-base rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-surface-1 text-content-strong"
         >
           <option value="">-</option>
           {(opcoesPorTipo[localTipo] || []).map((e) => (
@@ -763,7 +763,7 @@ export function Atividades() {
   if (gateLoading) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-800">Atividades</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Atividades</h2>
         <CardSkeleton />
         <CardSkeleton />
         <CardSkeleton />
@@ -774,7 +774,7 @@ export function Atividades() {
   return (
     <div className="space-y-6 max-w-full min-w-0 overflow-x-hidden">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Atividades</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Atividades</h2>
         <div className="flex gap-2">
           {abaMode === 'atividades' && (
             <>
@@ -787,7 +787,7 @@ export function Atividades() {
             </>
           )}
           {abaMode === 'padroes' && (
-            <div className="text-xs text-gray-500 max-w-md text-right">
+            <div className="text-xs text-content-muted max-w-md text-right">
               Para criar uma atividade padrão, abra "Nova Atividade" na aba Atividades e ative a estrela na linha desejada.
             </div>
           )}
@@ -795,11 +795,11 @@ export function Atividades() {
       </div>
 
       {/* Toggle Atividades / Atividades Padrão */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-surface-2 rounded-lg p-1 w-fit">
         <button
           onClick={() => setAbaMode('atividades')}
           className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            abaMode === 'atividades' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            abaMode === 'atividades' ? 'bg-surface-1 text-content-strong shadow-sm' : 'text-content-muted hover:text-content'
           }`}
         >
           Atividades
@@ -807,7 +807,7 @@ export function Atividades() {
         <button
           onClick={() => setAbaMode('padroes')}
           className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            abaMode === 'padroes' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            abaMode === 'padroes' ? 'bg-surface-1 text-content-strong shadow-sm' : 'text-content-muted hover:text-content'
           }`}
         >
           Atividades Padrão
@@ -818,7 +818,7 @@ export function Atividades() {
       {abaMode === 'padroes' && (
         <div className="space-y-4">
           {!controleAcessoHabilitado && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg">
+            <div className="bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 px-4 py-3 rounded-lg">
               <p className="text-sm font-medium">
                 Ative o controle de acesso por funcionário em Cadastros Auxiliares para criar atividades padrão.
               </p>
@@ -828,15 +828,15 @@ export function Atividades() {
           {templatesLoading ? (
             <CardSkeleton />
           ) : templates.length === 0 ? (
-            <Card className="bg-white p-8 border-0 shadow-sm text-center">
-              <p className="text-gray-600 mb-4">Nenhuma atividade padrão cadastrada</p>
+            <Card className="bg-surface-1 p-8 border-0 shadow-sm text-center">
+              <p className="text-content-muted mb-4">Nenhuma atividade padrão cadastrada</p>
               <Button onClick={handleOpenBulkForm} disabled={!controleAcessoHabilitado}>
                 Criar Primeira Atividade Padrão
               </Button>
             </Card>
           ) : (
             <>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-content-muted">
                 {templates.length} atividade(s) padrão cadastrada(s). Ao criar uma atividade, você pode selecionar uma atividade padrão para preencher automaticamente.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -859,13 +859,13 @@ export function Atividades() {
                     : 'Nenhum'
                   metaParts.push(`Resp: ${respLabel}`)
                   return (
-                    <Card key={t.id} className="bg-white p-3 border-0 shadow-sm hover:shadow-md transition-shadow">
+                    <Card key={t.id} className="bg-surface-1 p-3 border-0 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-semibold text-gray-800 truncate text-sm">{t.titulo}</h3>
+                        <h3 className="font-semibold text-content-strong truncate text-sm">{t.titulo}</h3>
                         <div className="flex items-center gap-0.5 flex-shrink-0">
                           <button
                             onClick={() => handleEditarTemplate(t)}
-                            className="text-gray-400 hover:text-primary p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                            className="text-content-faint hover:text-primary dark:hover:text-primary-light p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             title="Editar"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -875,14 +875,14 @@ export function Atividades() {
                               setTemplateToDelete(t.id)
                               setShowTemplateDeleteModal(true)
                             }}
-                            className="text-gray-400 hover:text-red-500 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                            className="text-content-faint hover:text-red-500 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             title="Excluir"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
                         </div>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1 truncate">
+                      <div className="text-xs text-content-muted mt-1 truncate">
                         {metaParts.join(' · ')}
                       </div>
                     </Card>
@@ -898,7 +898,7 @@ export function Atividades() {
       {abaMode === 'atividades' && (
         <>
       {!controleAcessoHabilitado && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg">
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 px-4 py-3 rounded-lg">
           <p className="text-sm font-medium">
             Ative o controle de acesso por funcionário em Cadastros Auxiliares para criar atividades.
           </p>
@@ -915,14 +915,14 @@ export function Atividades() {
         >
           {/* Aviso de draft */}
           {loadDraft() && (
-            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-lg text-xs mb-3">
+            <div className="bg-primary/10 border border-primary/30 text-primary dark:text-primary-light px-3 py-2 rounded-lg text-xs mb-3">
               Você tem atividades preenchidas salvas como rascunho. Elas serão mantidas até você salvar ou limpar.
             </div>
           )}
 
           {/* Erros de validação */}
           {bulkErrors && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 px-3 py-2 rounded-lg text-sm mb-3">
               {bulkErrors}
             </div>
           )}
@@ -943,7 +943,7 @@ export function Atividades() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[1360px]">
               <thead>
-                <tr className="border-b-2 border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
+                <tr className="border-b-2 border-border-base text-xs text-content-muted uppercase tracking-wider">
                   <th className="text-left py-2 px-2 w-8">#</th>
                   <th className="text-left py-2 px-2 w-10">Padrão</th>
                   <th className="text-left py-2 px-2 min-w-[200px]">Atividade *</th>
@@ -960,13 +960,13 @@ export function Atividades() {
               <tbody>
                 {rows.map((row, idx) => {
                   return (
-                    <tr key={row.id} className={`border-b border-gray-100 hover:bg-gray-50/50 align-top h-20 ${row.eh_padrao ? 'bg-amber-50/40' : ''}`}>
-                      <td className="py-2 px-2 text-gray-400 text-xs">{idx + 1}</td>
+                    <tr key={row.id} className={`border-b border-border-subtle hover:bg-surface-2/50 align-top h-20 ${row.eh_padrao ? 'bg-amber-500/10' : ''}`}>
+                      <td className="py-2 px-2 text-content-faint text-xs">{idx + 1}</td>
                       <td className="py-2 px-2 text-center">
                         <button
                           onClick={() => updateRow(row.id, { eh_padrao: !row.eh_padrao })}
                           disabled={!!row.origem_template_id}
-                          className={`p-1.5 rounded-md transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${row.eh_padrao ? 'text-amber-500 bg-amber-100' : 'text-gray-300 hover:text-amber-400 hover:bg-amber-50'} ${row.origem_template_id ? 'opacity-30 cursor-not-allowed' : ''}`}
+                          className={`p-1.5 rounded-md transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${row.eh_padrao ? 'text-amber-500 bg-amber-500/10' : 'text-content-faint hover:text-amber-400 hover:bg-amber-500/10'} ${row.origem_template_id ? 'opacity-30 cursor-not-allowed' : ''}`}
                           title={row.origem_template_id ? 'Esta linha veio de uma atividade padrão existente. Use-a como atividade normal.' : (row.eh_padrao ? 'Atividade padrão (sem data). Clique para voltar a atividade normal' : 'Marcar como atividade padrão (sem data)')}
                         >
                           <svg className="w-4 h-4" fill={row.eh_padrao ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
@@ -980,7 +980,7 @@ export function Atividades() {
                           onChange={(e) => updateRow(row.id, { titulo: e.target.value })}
                           placeholder={row.eh_padrao ? "Vacinação do rebanho..." : "Consertar cerca..."}
                           rows={1}
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] resize-none"
+                          className="w-full px-3 py-2.5 border border-border-base rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] resize-none"
                         />
                       </td>
                       <td className="py-2 px-2">
@@ -989,7 +989,7 @@ export function Atividades() {
                           onChange={(e) => updateRow(row.id, { descricao: e.target.value })}
                           placeholder="Opcional"
                           rows={1}
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] resize-none"
+                          className="w-full px-3 py-2.5 border border-border-base rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] resize-none"
                         />
                       </td>
                       <td className="py-2 px-2">
@@ -1015,7 +1015,7 @@ export function Atividades() {
                               : []
                             updateRow(row.id, { setor_id: setorId, funcionario_ids: membros })
                           }}
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-white"
+                          className="w-full px-3 py-2.5 border border-border-base rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-surface-1 text-content-strong"
                         >
                           <option value="">-</option>
                           {setores.map((s) => (
@@ -1073,7 +1073,7 @@ export function Atividades() {
                       </td>
                       <td className="py-2 px-2">
                         {row.eh_padrao ? (
-                          <div className="flex items-center justify-center h-[44px] text-xs text-gray-400">
+                          <div className="flex items-center justify-center h-[44px] text-xs text-content-faint">
                             —
                           </div>
                         ) : (
@@ -1082,14 +1082,14 @@ export function Atividades() {
                               type="date"
                               value={row.data_inicio}
                               onChange={(e) => updateRow(row.id, { data_inicio: e.target.value })}
-                              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px]"
+                              className="w-full px-3 py-2.5 border border-border-base rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px]"
                             />
                             {row.tipo_data === 'periodo' && (
                               <input
                                 type="date"
                                 value={row.data_fim}
                                 onChange={(e) => updateRow(row.id, { data_fim: e.target.value })}
-                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px]"
+                                className="w-full px-3 py-2.5 border border-border-base rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px]"
                               />
                             )}
                           </div>
@@ -1099,7 +1099,7 @@ export function Atividades() {
                         <select
                           value={row.prioridade}
                           onChange={(e) => updateRow(row.id, { prioridade: Number(e.target.value) })}
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-white"
+                          className="w-full px-3 py-2.5 border border-border-base rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-surface-1 text-content-strong"
                         >
                           {prioridades.map((p) => (
                             <option key={p.nivel} value={p.nivel}>
@@ -1112,7 +1112,7 @@ export function Atividades() {
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => duplicateRow(row.id)}
-                            className="text-gray-400 hover:text-primary p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                            className="text-content-faint hover:text-primary dark:hover:text-primary-light p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             title="Copiar linha"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1121,7 +1121,7 @@ export function Atividades() {
                           </button>
                           <button
                             onClick={() => handleRemoveRow(row.id)}
-                            className="text-gray-400 hover:text-red-500 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                            className="text-content-faint hover:text-red-500 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             title="Remover linha"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -1163,20 +1163,20 @@ export function Atividades() {
             value={filtroDataInicio}
             onChange={(e) => setFiltroDataInicio(e.target.value)}
             placeholder="Data inicial"
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm min-w-[140px]"
+            className="px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-surface-1 text-sm min-w-[140px] text-content-strong"
           />
-          <span className="text-gray-400 text-sm">até</span>
+          <span className="text-content-faint text-sm">até</span>
           <input
             type="date"
             value={filtroDataFim}
             onChange={(e) => setFiltroDataFim(e.target.value)}
             placeholder="Data final"
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm min-w-[140px]"
+            className="px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-surface-1 text-sm min-w-[140px] text-content-strong"
           />
           <select
             value={filtroStatus}
             onChange={(e) => setFiltroStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm min-w-[140px]"
+            className="px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-surface-1 text-sm min-w-[140px] text-content-strong"
           >
             <option value="">Todos os status</option>
             <option value="pendente">Pendente</option>
@@ -1186,7 +1186,7 @@ export function Atividades() {
           <select
             value={filtroPrioridade}
             onChange={(e) => setFiltroPrioridade(e.target.value === '' ? '' : Number(e.target.value))}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm min-w-[160px]"
+            className="px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-surface-1 text-sm min-w-[160px] text-content-strong"
           >
             <option value="">Todas as prioridades</option>
             {prioridades.map((p) => (
@@ -1196,7 +1196,7 @@ export function Atividades() {
           {(filtroDataInicio || filtroDataFim || filtroStatus || filtroPrioridade !== '') && (
             <button
               onClick={() => { setFiltroDataInicio(''); setFiltroDataFim(''); setFiltroStatus(''); setFiltroPrioridade('') }}
-              className="px-3 py-2 rounded-md text-xs font-medium text-red-600 hover:bg-red-50 transition-colors min-h-[40px]"
+              className="px-3 py-2 rounded-md text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors min-h-[40px]"
             >
               Limpar
             </button>
@@ -1204,7 +1204,7 @@ export function Atividades() {
         </div>
         {/* Presets de data rápida */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-gray-400">Filtros rápidos:</span>
+          <span className="text-xs text-content-faint">Filtros rápidos:</span>
           {[
             { key: 'esta_semana' as const, label: 'Esta semana' },
             { key: 'proximas_2' as const, label: 'Próximas 2 semanas' },
@@ -1214,7 +1214,7 @@ export function Atividades() {
             <button
               key={p.key}
               onClick={() => aplicarPreset(p.key)}
-              className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+              className="px-2.5 py-1 rounded-full text-xs font-medium bg-surface-2 text-content-muted hover:bg-surface-3 transition-colors"
             >
               {p.label}
             </button>
@@ -1230,8 +1230,8 @@ export function Atividades() {
           <CardSkeleton />
         </div>
       ) : atividades.length === 0 ? (
-        <Card className="bg-white p-8 border-0 shadow-sm text-center">
-          <p className="text-gray-600 mb-4">Nenhuma atividade encontrada</p>
+        <Card className="bg-surface-1 p-8 border-0 shadow-sm text-center">
+          <p className="text-content-muted mb-4">Nenhuma atividade encontrada</p>
           {controleAcessoHabilitado && (
             <Button onClick={handleOpenBulkForm}>Criar Primeira Atividade</Button>
           )}
@@ -1253,7 +1253,7 @@ export function Atividades() {
           <div className="flex justify-center mt-4">
             <button
               onClick={() => setExpandirLista((v) => !v)}
-              className="px-4 py-2 text-sm text-gray-600 font-medium rounded-md border border-gray-200 hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-sm text-content-muted font-medium rounded-md border border-border-base hover:bg-surface-2 transition-colors"
             >
               {expandirLista
                 ? 'Ver menos'
@@ -1273,30 +1273,30 @@ export function Atividades() {
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Atividade *</label>
+              <label className="block text-sm font-medium text-content mb-1">Atividade *</label>
               <Input
                 type="text"
                 value={editForm.titulo}
                 onChange={(e) => { setEditForm({ ...editForm, titulo: e.target.value }); if (editErrors.titulo) setEditErrors((p) => ({ ...p, titulo: '' })) }}
                 placeholder="Descrição da atividade"
-                className={`focus:border-accent ${editErrors.titulo ? 'border-red-400' : 'border-gray-200'}`}
+                className={`focus:border-accent ${editErrors.titulo ? 'border-red-400' : 'border-border-base'}`}
               />
-              {editErrors.titulo && <p className="text-xs text-red-600 mt-1">{editErrors.titulo}</p>}
+              {editErrors.titulo && <p className="text-xs text-red-500 mt-1">{editErrors.titulo}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+              <label className="block text-sm font-medium text-content mb-1">Descrição</label>
               <textarea
                 value={editForm.descricao}
                 onChange={(e) => setEditForm({ ...editForm, descricao: e.target.value })}
                 rows={3}
                 placeholder="Detalhes adicionais (opcional)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px]"
+                className="w-full px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-surface-1 text-content-strong"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Local</label>
+              <label className="block text-sm font-medium text-content mb-1">Local</label>
               <LocalPicker
                 localTipo={editForm.local_tipo}
                 localId={editForm.local_id}
@@ -1310,7 +1310,7 @@ export function Atividades() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Setor</label>
+              <label className="block text-sm font-medium text-content mb-1">Setor</label>
               <select
                 value={editForm.setor_id}
                 onChange={(e) => {
@@ -1320,7 +1320,7 @@ export function Atividades() {
                     : []
                   setEditForm({ ...editForm, setor_id: setorId, funcionario_ids: membros })
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white"
+                className="w-full px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-surface-1 text-content-strong"
               >
                 <option value="">Selecione</option>
                 {setores.map((s) => (
@@ -1330,7 +1330,7 @@ export function Atividades() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Responsáveis *</label>
+              <label className="block text-sm font-medium text-content mb-1">Responsáveis *</label>
               <MultiSelect
                 options={funcionarioOptionsEdit}
                 value={editForm.funcionario_ids}
@@ -1350,12 +1350,12 @@ export function Atividades() {
                 }}
                 placeholder="Selecione os responsáveis"
               />
-              {editErrors.funcionario_ids && <p className="text-xs text-red-600 mt-1">{editErrors.funcionario_ids}</p>}
+              {editErrors.funcionario_ids && <p className="text-xs text-red-500 mt-1">{editErrors.funcionario_ids}</p>}
             </div>
 
             {/* Selecao dupla de data */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Quando *</label>
+              <label className="block text-sm font-medium text-content mb-2">Quando *</label>
               <div className="flex gap-4 mb-2">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
@@ -1378,25 +1378,25 @@ export function Atividades() {
               </div>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <label className="text-xs text-gray-500 mb-1 block">
+                  <label className="text-xs text-content-muted mb-1 block">
                     {editForm.tipo_data === 'dia' ? 'Data' : 'Data início'}
                   </label>
                   <Input
                     type="date"
                     value={editForm.data_inicio}
                     onChange={(e) => { setEditForm({ ...editForm, data_inicio: e.target.value }); if (editErrors.data_inicio) setEditErrors((p) => ({ ...p, data_inicio: '' })) }}
-                    className={`focus:border-accent ${editErrors.data_inicio ? 'border-red-400' : 'border-gray-200'}`}
+                    className={`focus:border-accent ${editErrors.data_inicio ? 'border-red-400' : 'border-border-base'}`}
                   />
-                  {editErrors.data_inicio && <p className="text-xs text-red-600 mt-1">{editErrors.data_inicio}</p>}
+                  {editErrors.data_inicio && <p className="text-xs text-red-500 mt-1">{editErrors.data_inicio}</p>}
                 </div>
                 {editForm.tipo_data === 'periodo' && (
                   <div className="flex-1">
-                    <label className="text-xs text-gray-500 mb-1 block">Data fim</label>
+                    <label className="text-xs text-content-muted mb-1 block">Data fim</label>
                     <Input
                       type="date"
                       value={editForm.data_fim}
                       onChange={(e) => setEditForm({ ...editForm, data_fim: e.target.value })}
-                      className="border-gray-200 focus:border-accent"
+                      className="border-border-base focus:border-accent"
                     />
                   </div>
                 )}
@@ -1404,7 +1404,7 @@ export function Atividades() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Prioridade</label>
+              <label className="block text-sm font-medium text-content mb-2">Prioridade</label>
               <div className="flex gap-3">
                 {[1, 2, 3].map((nivel) => (
                   <button
@@ -1414,7 +1414,7 @@ export function Atividades() {
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
                       editForm.prioridade === nivel
                         ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 hover:bg-gray-50'
+                        : 'border-border-base hover:bg-surface-2'
                     }`}
                   >
                     <div className={`w-3 h-3 rounded-full ${PRIORIDADE_CORES[nivel]}`} />
@@ -1424,7 +1424,7 @@ export function Atividades() {
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4 border-t border-gray-100">
+            <div className="flex gap-3 pt-4 border-t border-border-subtle">
               <Button onClick={handleSubmitEdit} disabled={editSubmitting} className="flex-1">
                 {editSubmitting ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
@@ -1456,7 +1456,7 @@ export function Atividades() {
           title="Editar Nomes das Prioridades"
         >
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-content-muted">
               Você pode personalizar os nomes das prioridades, mas não pode alterar as cores nem adicionar/remover níveis.
             </p>
             {[1, 2, 3].map((nivel) => (
@@ -1466,11 +1466,11 @@ export function Atividades() {
                   type="text"
                   value={prioridadeNomes[nivel] || ''}
                   onChange={(e) => setPrioridadeNomes({ ...prioridadeNomes, [nivel]: e.target.value })}
-                  className="flex-1 border-gray-200 focus:border-accent"
+                  className="flex-1 border-border-base focus:border-accent"
                 />
               </div>
             ))}
-            <div className="flex gap-3 pt-4 border-t border-gray-100">
+            <div className="flex gap-3 pt-4 border-t border-border-subtle">
               <Button onClick={handleSalvarPrioridades} disabled={salvandoPrioridades} className="flex-1">
                 {salvandoPrioridades ? 'Salvando...' : 'Salvar'}
               </Button>
@@ -1493,19 +1493,19 @@ export function Atividades() {
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Atividade *</label>
+              <label className="block text-sm font-medium text-content mb-1">Atividade *</label>
               <Input
                 type="text"
                 value={editTemplateForm.titulo}
                 onChange={(e) => { setEditTemplateForm({ ...editTemplateForm, titulo: e.target.value }); if (editTemplateErrors.titulo) setEditTemplateErrors((p) => ({ ...p, titulo: '' })) }}
                 placeholder="Ex: Vacinação do rebanho"
-                className={`focus:border-accent ${editTemplateErrors.titulo ? 'border-red-400' : 'border-gray-200'}`}
+                className={`focus:border-accent ${editTemplateErrors.titulo ? 'border-red-400' : 'border-border-base'}`}
                 autoFocus
               />
-              {editTemplateErrors.titulo && <p className="text-xs text-red-600 mt-1">{editTemplateErrors.titulo}</p>}
+              {editTemplateErrors.titulo && <p className="text-xs text-red-500 mt-1">{editTemplateErrors.titulo}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Local</label>
+              <label className="block text-sm font-medium text-content mb-1">Local</label>
               <LocalPicker
                 localTipo={editTemplateForm.local_tipo}
                 localId={editTemplateForm.local_id}
@@ -1518,7 +1518,7 @@ export function Atividades() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Setor</label>
+              <label className="block text-sm font-medium text-content mb-1">Setor</label>
               <select
                 value={editTemplateForm.setor_id}
                 onChange={(e) => {
@@ -1533,7 +1533,7 @@ export function Atividades() {
                   }
                   setEditTemplateForm({ ...editTemplateForm, setor_id: setorId, funcionario_ids: membros })
                 }}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-white"
+                className="w-full px-3 py-2.5 border border-border-base rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-surface-1 text-content-strong"
               >
                 <option value="">-</option>
                 <option value="todos">Todos</option>
@@ -1543,7 +1543,7 @@ export function Atividades() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Responsáveis</label>
+              <label className="block text-sm font-medium text-content mb-1">Responsáveis</label>
               <MultiSelect
                 options={funcionarioOptionsAll}
                 value={editTemplateForm.funcionario_ids}
@@ -1565,7 +1565,7 @@ export function Atividades() {
                 placeholder="Selecionar..."
               />
             </div>
-            <div className="flex gap-3 pt-4 border-t border-gray-100">
+            <div className="flex gap-3 pt-4 border-t border-border-subtle">
               <Button onClick={handleSubmitEditTemplate} disabled={editTemplateSubmitting} className="flex-1">
                 {editTemplateSubmitting ? 'Salvando...' : 'Salvar'}
               </Button>
@@ -1600,7 +1600,7 @@ export function Atividades() {
         >
           {templates.length === 0 ? (
             <div className="text-center py-6">
-              <p className="text-gray-600 mb-4">Nenhuma atividade padrão cadastrada</p>
+              <p className="text-content-muted mb-4">Nenhuma atividade padrão cadastrada</p>
               <Button variant="secondary" onClick={() => setShowTemplatePicker(false)}>
                 Fechar
               </Button>
@@ -1608,18 +1608,18 @@ export function Atividades() {
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-content-muted">
                   Selecione uma ou mais atividades padrão para preencher novas linhas. Você poderá ajustar a data e outros campos depois.
                 </p>
               </div>
-              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+              <div className="flex items-center gap-2 pb-2 border-b border-border-subtle">
                 <button
                   onClick={toggleAllTemplates}
-                  className="text-sm text-primary hover:underline"
+                  className="text-sm text-primary dark:text-primary-light hover:underline"
                 >
                   {selectedTemplateIds.length === templates.length ? 'Desmarcar todas' : 'Selecionar todas'}
                 </button>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-content-faint">
                   {selectedTemplateIds.length} de {templates.length} selecionada(s)
                 </span>
               </div>
@@ -1631,12 +1631,12 @@ export function Atividades() {
                       key={t.id}
                       onClick={() => toggleTemplateSelection(t.id)}
                       className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                        checked ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'
+                        checked ? 'border-primary bg-primary/5' : 'border-border-base hover:border-surface-3'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                          checked ? 'bg-primary border-primary' : 'border-gray-300 bg-white'
+                          checked ? 'bg-primary border-primary' : 'border-surface-3 bg-surface-1'
                         }`}>
                           {checked && (
                             <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1644,13 +1644,13 @@ export function Atividades() {
                             </svg>
                           )}
                         </div>
-                        <span className="font-medium text-gray-800">{t.titulo}</span>
+                        <span className="font-medium text-content-strong">{t.titulo}</span>
                       </div>
                     </button>
                   )
                 })}
               </div>
-              <div className="flex gap-2 pt-3 border-t border-gray-100">
+              <div className="flex gap-2 pt-3 border-t border-border-subtle">
                 <Button
                   onClick={handleUsarTemplatesSelecionados}
                   disabled={selectedTemplateIds.length === 0}

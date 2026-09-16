@@ -385,8 +385,8 @@ export function EstoqueCombustivel() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Estoque de Combustível</h2>
-          {fazendaNome && <p className="text-sm text-gray-500 mt-1">{fazendaNome}</p>}
+          <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Estoque de Combustível</h2>
+          {fazendaNome && <p className="text-sm text-content-muted mt-1">{fazendaNome}</p>}
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button variant="secondary" onClick={() => abrirModalTanque(null)}>
@@ -399,39 +399,39 @@ export function EstoqueCombustivel() {
       </div>
 
       {error && !modalTanque && !modalEntrada && !modalAjuste && (
-        <div className="bg-red-50 border border-red-300 rounded-xl p-4">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="bg-red-500/10 border border-red-300 rounded-xl p-4">
+          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
           <button onClick={() => setError(null)} className="text-xs text-red-500 underline mt-1">Fechar</button>
         </div>
       )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch">
-        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium">Saldo Total</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{saldoTotal.toLocaleString('pt-BR')} L</p>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Saldo Total</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">{saldoTotal.toLocaleString('pt-BR')} L</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium">Valor em Estoque</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">R$ {valorEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Valor em Estoque</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">R$ {valorEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium">Consumo do Mês</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{kpiMes.consumo_l.toLocaleString('pt-BR')} L</p>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Consumo do Mês</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">{kpiMes.consumo_l.toLocaleString('pt-BR')} L</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium">Custo do Mês</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">R$ {kpiMes.custo_rs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Custo do Mês</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">R$ {kpiMes.custo_rs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </Card>
       </div>
 
       {/* Alerta de tanques baixos */}
       {tanquesEmAlerta.length > 0 && (
-        <div className="bg-red-50 border border-red-300 rounded-xl p-4">
-          <p className="text-sm font-semibold text-red-700">
+        <div className="bg-red-500/10 border border-red-300 rounded-xl p-4">
+          <p className="text-sm font-semibold text-red-700 dark:text-red-300">
             {tanquesEmAlerta.length} tanque(s) com estoque baixo:
           </p>
-          <p className="text-xs text-red-600 mt-1">
+          <p className="text-xs text-red-500 mt-1">
             {tanquesEmAlerta.map((t) => t.nome).join(', ')}
           </p>
         </div>
@@ -439,9 +439,9 @@ export function EstoqueCombustivel() {
 
       {/* Tanques */}
       <div>
-        <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3">Tanques</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-content-strong mb-3">Tanques</h3>
         {tanquesAtivos.length === 0 ? (
-          <Card className="bg-white p-6" disableHover>
+          <Card className="bg-surface-1 p-6" disableHover>
             <EmptyState
               title="Nenhum tanque cadastrado"
               description="Configure tanques de combustível para controlar o estoque."
@@ -457,42 +457,42 @@ export function EstoqueCombustivel() {
               const emAlerta = tanque.limite_alerta_l > 0 && Number(tanque.saldo_atual_l) <= Number(tanque.limite_alerta_l)
               const valorTanque = Number(tanque.saldo_atual_l) * Number(tanque.custo_medio_l)
               return (
-                <Card key={tanque.id} className="bg-white p-4 sm:p-5 h-full" disableHover>
+                <Card key={tanque.id} className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
                   <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
                     <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
-                      <p className="font-semibold text-gray-800 truncate">{tanque.nome}</p>
-                      <p className="text-xs text-gray-500 truncate">{tanque.tipo_combustivel}</p>
+                      <p className="font-semibold text-content-strong truncate">{tanque.nome}</p>
+                      <p className="text-xs text-content-muted truncate">{tanque.tipo_combustivel}</p>
                     </div>
                     <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
                       {emAlerta && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 dark:text-red-300">
                           Alerta
                         </span>
                       )}
                       <button
                         onClick={() => abrirModalTanque(tanque)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                        className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary dark:text-primary-light transition-colors hover:bg-primary/10"
                         title="Editar tanque"
                       >
                         Editar
                       </button>
                       <button
                         onClick={() => abrirModalHistorico(tanque)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+                        className="inline-flex items-center gap-1 rounded-lg border border-border-base bg-surface-2 px-2.5 py-1 text-xs font-semibold text-content transition-colors hover:bg-surface-2"
                         title="Ver histórico"
                       >
                         Histórico
                       </button>
                       <button
                         onClick={() => abrirModalAjuste(tanque)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100"
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300 transition-colors hover:bg-amber-500/10"
                         title="Ajustar saldo"
                       >
                         Ajustar
                       </button>
                       <button
                         onClick={() => setModalExcluirTanque(tanque)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100"
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-700 dark:text-red-300 transition-colors hover:bg-red-500/10"
                         title="Excluir tanque"
                       >
                         Excluir
@@ -501,37 +501,37 @@ export function EstoqueCombustivel() {
                   </div>
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Saldo atual</span>
-                      <span className="font-semibold text-gray-900">
+                      <span className="text-content-muted">Saldo atual</span>
+                      <span className="font-semibold text-content-strong">
                         {Number(tanque.saldo_atual_l).toLocaleString('pt-BR')} L
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Custo médio</span>
-                      <span className="text-gray-700">R$ {Number(tanque.custo_medio_l).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/L</span>
+                      <span className="text-content-muted">Custo médio</span>
+                      <span className="text-content">R$ {Number(tanque.custo_medio_l).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/L</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Valor em estoque</span>
-                      <span className="font-semibold text-gray-900">R$ {valorTanque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-content-muted">Valor em estoque</span>
+                      <span className="font-semibold text-content-strong">R$ {valorTanque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Capacidade</span>
-                      <span className="text-gray-700">{Number(tanque.capacidade_maxima_l).toLocaleString('pt-BR')} L</span>
+                      <span className="text-content-muted">Capacidade</span>
+                      <span className="text-content">{Number(tanque.capacidade_maxima_l).toLocaleString('pt-BR')} L</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Alerta abaixo de</span>
-                      <span className="text-gray-700">{Number(tanque.limite_alerta_l).toLocaleString('pt-BR')} L</span>
+                      <span className="text-content-muted">Alerta abaixo de</span>
+                      <span className="text-content">{Number(tanque.limite_alerta_l).toLocaleString('pt-BR')} L</span>
                     </div>
                   </div>
                   {/* Barra de ocupacao */}
                   <div className="mt-3">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-surface-3 rounded-full h-2">
                       <div
-                        className={`h-2 rounded-full transition-all ${emAlerta ? 'bg-red-500' : pctOcupacao > 80 ? 'bg-green-600' : 'bg-blue-500'}`}
+                        className={`h-2 rounded-full transition-all ${emAlerta ? 'bg-red-500' : pctOcupacao > 80 ? 'bg-primary' : 'bg-blue-500'}`}
                         style={{ width: `${pctOcupacao}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{pctOcupacao.toFixed(0)}% de ocupação</p>
+                    <p className="text-xs text-content-muted mt-1">{pctOcupacao.toFixed(0)}% de ocupação</p>
                   </div>
                 </Card>
               )
@@ -578,11 +578,11 @@ export function EstoqueCombustivel() {
             value={tanqueForm.limite_alerta_l}
             onChange={(e) => setTanqueForm({ ...tanqueForm, limite_alerta_l: e.target.value })}
           />
-          <p className="text-xs text-gray-500">Alerta dispara quando o saldo ficar abaixo deste valor.</p>
+          <p className="text-xs text-content-muted">Alerta dispara quando o saldo ficar abaixo deste valor.</p>
           {!tanqueEditando && (
             <>
               <div className="border-t pt-4 mt-2">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Campos opcionais</p>
+                <p className="text-sm font-semibold text-content mb-3">Campos opcionais</p>
                 <Input
                   label="Saldo Inicial (L)"
                   type="number"
@@ -597,13 +597,13 @@ export function EstoqueCombustivel() {
                   value={tanqueForm.preco_inicial_l}
                   onChange={(e) => setTanqueForm({ ...tanqueForm, preco_inicial_l: e.target.value })}
                 />
-                <p className="text-xs text-gray-500">Define o saldo inicial do tanque. Com preço, o custo médio é calculado (WAC); sem preço, o saldo é definido como ajuste e o custo médio fica R$ 0 até a primeira entrada real.</p>
+                <p className="text-xs text-content-muted">Define o saldo inicial do tanque. Com preço, o custo médio é calculado (WAC); sem preço, o saldo é definido como ajuste e o custo médio fica R$ 0 até a primeira entrada real.</p>
               </div>
             </>
           )}
           {error && (
-            <div className="bg-red-50 border border-red-300 rounded-lg p-3">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="bg-red-500/10 border border-red-300 rounded-lg p-3">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
           <div className="flex gap-2 justify-end pt-2">
@@ -653,8 +653,8 @@ export function EstoqueCombustivel() {
             const total = litros * preco
             if (total > 0) {
               return (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-800">
+                <div className="bg-primary/10 border border-primary/30 rounded-lg p-3">
+                  <p className="text-sm text-primary dark:text-primary-light">
                     <span className="font-bold">Valor total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     <span className="block text-xs mt-0.5">{litros.toLocaleString('pt-BR')} L × R$ {preco.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/L</span>
                   </p>
@@ -663,7 +663,7 @@ export function EstoqueCombustivel() {
             }
             return null
           })()}
-          <p className="text-xs text-gray-500">O valor total é calculado automaticamente: preço por litro × quantidade.</p>
+          <p className="text-xs text-content-muted">O valor total é calculado automaticamente: preço por litro × quantidade.</p>
           <Select
             label="Fornecedor"
             options={[{ value: '', label: 'Selecione o fornecedor...' }, ...fornecedores.map((f) => ({ value: f.nome, label: f.nome }))]}
@@ -684,8 +684,8 @@ export function EstoqueCombustivel() {
             onChange={(e) => setEntradaForm({ ...entradaForm, observacao: e.target.value })}
           />
           {error && (
-            <div className="bg-red-50 border border-red-300 rounded-lg p-3">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="bg-red-500/10 border border-red-300 rounded-lg p-3">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
           <div className="flex gap-2 justify-end pt-2">
@@ -718,33 +718,33 @@ export function EstoqueCombustivel() {
             <div className="space-y-4">
               {/* Métricas resumidas */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500">Saldo Atual</p>
-                  <p className="text-lg font-bold text-gray-900">{saldoAtual.toLocaleString('pt-BR')} L</p>
+                <div className="bg-surface-2 rounded-lg p-3">
+                  <p className="text-xs text-content-muted">Saldo Atual</p>
+                  <p className="text-lg font-bold text-content-strong">{saldoAtual.toLocaleString('pt-BR')} L</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500">Custo Médio</p>
-                  <p className="text-lg font-bold text-gray-900">R$ {custoMedio.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}</p>
+                <div className="bg-surface-2 rounded-lg p-3">
+                  <p className="text-xs text-content-muted">Custo Médio</p>
+                  <p className="text-lg font-bold text-content-strong">R$ {custoMedio.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}</p>
                 </div>
-                <div className="bg-green-50 rounded-lg p-3">
-                  <p className="text-xs text-green-600">Total Entradas</p>
-                  <p className="text-lg font-bold text-green-700">{totalEntradasL.toLocaleString('pt-BR')} L</p>
-                  <p className="text-xs text-green-600">R$ {totalEntradasRS.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <div className="bg-green-500/10 rounded-lg p-3">
+                  <p className="text-xs text-green-500">Total Entradas</p>
+                  <p className="text-lg font-bold text-green-700 dark:text-green-300">{totalEntradasL.toLocaleString('pt-BR')} L</p>
+                  <p className="text-xs text-green-500">R$ {totalEntradasRS.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className="bg-red-50 rounded-lg p-3">
-                  <p className="text-xs text-red-600">Total Saídas</p>
-                  <p className="text-lg font-bold text-red-700">{totalSaidasL.toLocaleString('pt-BR')} L</p>
-                  <p className="text-xs text-red-600">R$ {totalSaidasRS.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <div className="bg-red-500/10 rounded-lg p-3">
+                  <p className="text-xs text-red-500">Total Saídas</p>
+                  <p className="text-lg font-bold text-red-700 dark:text-red-300">{totalSaidasL.toLocaleString('pt-BR')} L</p>
+                  <p className="text-xs text-red-500">R$ {totalSaidasRS.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
               </div>
 
               {/* Timeline */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Histórico</h4>
+                <h4 className="text-sm font-semibold text-content mb-2">Histórico</h4>
                 {historicoLoading ? (
-                  <div className="text-center py-8 text-gray-500">Carregando movimentações...</div>
+                  <div className="text-center py-8 text-content-muted">Carregando movimentações...</div>
                 ) : historicoMovs.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">Nenhuma movimentação registrada.</div>
+                  <div className="text-center py-8 text-content-muted">Nenhuma movimentação registrada.</div>
                 ) : (
                   <div className="max-h-96 overflow-y-auto space-y-2">
                     {historicoMovs.map((mov) => {
@@ -754,6 +754,8 @@ export function EstoqueCombustivel() {
                         estoque_inicial: 'Estoque Inicial',
                         painel_entrada: 'Entrada via Site',
                         pwa_entrada: 'Entrada via App',
+                        painel_baixa: 'Baixa via Site',
+                        pwa_baixa: 'Baixa via App',
                         auto_baixa: 'Abastecimento',
                         painel_ajuste: 'Ajuste via Site',
                         manual: 'Manual',
@@ -762,21 +764,21 @@ export function EstoqueCombustivel() {
                         <div
                           key={mov.id}
                           className={`flex items-start gap-3 rounded-lg border p-3 ${
-                            isEntrada ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                            isEntrada ? 'border-green-500/30 bg-green-500/10' : 'border-red-500/30 bg-red-500/10'
                           }`}
                         >
                           <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                            isEntrada ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            isEntrada ? 'bg-green-500/10 text-green-700 dark:text-green-300' : 'bg-red-500/10 text-red-700 dark:text-red-300'
                           }`}>
                             {isEntrada ? '↓' : '↑'}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start">
                               <div>
-                                <p className="text-sm font-semibold text-gray-900">
+                                <p className="text-sm font-semibold text-content-strong">
                                   {isEntrada ? 'Entrada' : 'Saída'} — {Number(mov.quantidade_l).toLocaleString('pt-BR')} L
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-content-muted">
                                   {(() => {
                                     const maquina = mov.registro_abastecimento?.maquina_veiculo
                                     const label = origemLabel[mov.origem] || mov.origem || '-'
@@ -785,16 +787,16 @@ export function EstoqueCombustivel() {
                                 </p>
                               </div>
                               <div className="text-right">
-                                <p className="text-sm font-semibold text-gray-900">
+                                <p className="text-sm font-semibold text-content-strong">
                                   R$ {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-content-muted">
                                   R$ {Number(mov.preco_por_litro).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/L
                                 </p>
                               </div>
                             </div>
                             {(mov.fornecedor || mov.observacao) && (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-content-muted mt-1">
                                 {mov.fornecedor && `Fornecedor: ${mov.fornecedor}`}
                                 {mov.fornecedor && mov.observacao && ' · '}
                                 {mov.observacao}
@@ -841,11 +843,11 @@ export function EstoqueCombustivel() {
         size="md"
       >
         <div className="space-y-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-sm text-amber-800">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
               <span className="font-bold">Saldo atual:</span> {modalAjuste ? Number(modalAjuste.saldo_atual_l).toLocaleString('pt-BR') : '0'} L
             </p>
-            <p className="text-xs text-amber-700 mt-1">
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
               O ajuste define o saldo absoluto do tanque (usado em inventário físico). O custo médio não é alterado.
             </p>
           </div>
@@ -864,8 +866,8 @@ export function EstoqueCombustivel() {
             onChange={(e) => setAjusteForm({ ...ajusteForm, observacao: e.target.value })}
           />
           {error && (
-            <div className="bg-red-50 border border-red-300 rounded-lg p-3">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="bg-red-500/10 border border-red-300 rounded-lg p-3">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
           <div className="flex gap-2 justify-end pt-2">
@@ -882,13 +884,13 @@ export function EstoqueCombustivel() {
         <div>
           <button
             onClick={() => setMostrarLixeira(!mostrarLixeira)}
-            className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+            className="flex items-center gap-2 text-sm font-semibold text-content-muted hover:text-content transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
               fill="currentColor"
-              className={`w-4 h-4 text-gray-400 transition-transform ${mostrarLixeira ? 'rotate-90' : ''}`}
+              className={`w-4 h-4 text-content-faint transition-transform ${mostrarLixeira ? 'rotate-90' : ''}`}
             >
               <path
                 fillRule="evenodd"
@@ -901,18 +903,18 @@ export function EstoqueCombustivel() {
           {mostrarLixeira && (
             <div className="mt-3 space-y-2">
               {tanquesExcluidos.map((tanque) => (
-                <Card key={tanque.id} className="bg-gray-50 p-3 sm:p-4 border border-gray-200" disableHover>
+                <Card key={tanque.id} className="bg-surface-2 p-3 sm:p-4 border border-border-base" disableHover>
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="font-medium text-gray-600">{tanque.nome}</p>
-                      <p className="text-xs text-gray-400">
+                      <p className="font-medium text-content-muted">{tanque.nome}</p>
+                      <p className="text-xs text-content-faint">
                         {tanque.tipo_combustivel} · Saldo final: {Number(tanque.saldo_atual_l).toLocaleString('pt-BR')} L
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => abrirModalHistorico(tanque)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100"
+                        className="inline-flex items-center gap-1 rounded-lg border border-border-base bg-surface-1 px-2.5 py-1 text-xs font-semibold text-content-muted transition-colors hover:bg-surface-2"
                         title="Ver histórico"
                       >
                         Histórico
@@ -920,7 +922,7 @@ export function EstoqueCombustivel() {
                       <button
                         onClick={() => restaurarTanque(tanque)}
                         disabled={submitting}
-                        className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 transition-colors hover:bg-green-100 disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-lg border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-semibold text-green-700 dark:text-green-300 transition-colors hover:bg-green-500/10 disabled:opacity-50"
                         title="Restaurar tanque"
                       >
                         Restaurar

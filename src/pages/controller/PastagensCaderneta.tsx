@@ -118,12 +118,12 @@ export function PastagensCaderneta() {
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Pastagens</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Pastagens</h2>
       </div>
 
-      <Card className="bg-white p-4 sm:p-6" disableHover>
+      <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
           <Button
             onClick={() => exportToXLSX(filteredRegistros, PASTAGENS_EXPORT_CONFIG, fazendaNome)}
             disabled={filteredRegistros.length === 0}
@@ -134,7 +134,7 @@ export function PastagensCaderneta() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
             <Input
               type="text"
               placeholder="Manejador, lote, pasto..."
@@ -144,7 +144,7 @@ export function PastagensCaderneta() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
             <Input
               type="date"
               value={dataInicio}
@@ -153,7 +153,7 @@ export function PastagensCaderneta() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
             <Input
               type="date"
               value={dataFim}
@@ -162,7 +162,7 @@ export function PastagensCaderneta() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
@@ -175,12 +175,12 @@ export function PastagensCaderneta() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro de pastagens encontrado</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro de pastagens encontrado</p>
         </Card>
       ) : filteredRegistros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro encontrado com os filtros aplicados</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro encontrado com os filtros aplicados</p>
         </Card>
       ) : (
         <>
@@ -197,13 +197,13 @@ export function PastagensCaderneta() {
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
-                      <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                      <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
+                      <span className="text-xs sm:text-sm font-semibold text-content-strong">
                         {formatDate(registro.data)}
                       </span>
                     </div>
                     <span
-                      className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary"
+                      className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light"
                       onClick={(e) => {
                         e.stopPropagation()
                         setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')
@@ -214,36 +214,36 @@ export function PastagensCaderneta() {
                   </div>
                   <div className="space-y-2 text-xs sm:text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Usuário:</span>
-                      <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                      <span className="text-content-muted">Usuário:</span>
+                      <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Manejador:</span>
-                      <span className="text-gray-800 font-medium">{registro.manejador || '-'}</span>
+                      <span className="text-content-muted">Manejador:</span>
+                      <span className="text-content-strong font-medium">{registro.manejador || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Lote:</span>
-                      <span className="text-gray-800 font-medium">{registro.lote || '-'}</span>
+                      <span className="text-content-muted">Lote:</span>
+                      <span className="text-content-strong font-medium">{registro.lote || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Pasto Saída:</span>
-                      <span className="text-gray-800 font-medium">{registro.pasto_saida || '-'}</span>
+                      <span className="text-content-muted">Pasto Saída:</span>
+                      <span className="text-content-strong font-medium">{registro.pasto_saida || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Aval. Saída:</span>
-                      <span className="text-gray-800 font-medium">{registro.avaliacao_saida || '-'}</span>
+                      <span className="text-content-muted">Aval. Saída:</span>
+                      <span className="text-content-strong font-medium">{registro.avaliacao_saida || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Pasto Entrada:</span>
-                      <span className="text-gray-800 font-medium">{registro.pasto_entrada || '-'}</span>
+                      <span className="text-content-muted">Pasto Entrada:</span>
+                      <span className="text-content-strong font-medium">{registro.pasto_entrada || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Aval. Entrada:</span>
-                      <span className="text-gray-800 font-medium">{registro.avaliacao_entrada || '-'}</span>
+                      <span className="text-content-muted">Aval. Entrada:</span>
+                      <span className="text-content-strong font-medium">{registro.avaliacao_entrada || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Total Animais:</span>
-                      <span className="text-gray-800 font-medium">{totalAnimais}</span>
+                      <span className="text-content-muted">Total Animais:</span>
+                      <span className="text-content-strong font-medium">{totalAnimais}</span>
                     </div>
                   </div>
                 </Card>
@@ -252,27 +252,27 @@ export function PastagensCaderneta() {
           </div>
 
           {/* Desktop Table View */}
-          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <Card className="bg-surface-1 overflow-x-auto hidden sm:block" disableHover>
+            <table className="min-w-full divide-y divide-border-base">
+              <thead className="bg-surface-2">
                 <tr>
                   <th
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider cursor-pointer hover:bg-surface-2 transition-colors"
                     onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manejador</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto Saída</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aval. Saída</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto Entrada</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aval. Entrada</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Animais</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Manejador</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Lote</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Pasto Saída</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Aval. Saída</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Pasto Entrada</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Aval. Entrada</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Total Animais</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface-1 divide-y divide-border-base">
                 {filteredRegistros.map((registro) => {
                   const totalAnimais = (registro.vaca || 0) + (registro.touro || 0) + (registro.bezerro || 0) + (registro.boi_magro || 0) + (registro.garrote || 0) + (registro.novilha || 0)
 
@@ -280,31 +280,31 @@ export function PastagensCaderneta() {
                     <tr
                       key={registro.id}
                       onClick={() => navigate(`/controller/cadernetas/pastagens/${registro.id}`)}
-                      className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="cursor-pointer hover:bg-surface-2 transition-colors"
                     >
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {formatDate(registro.data)}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.manejador || '-'}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.lote || '-'}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.pasto_saida || '-'}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.avaliacao_saida || '-'}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.pasto_entrada || '-'}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.avaliacao_entrada || '-'}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {totalAnimais}
                       </td>
                     </tr>

@@ -91,53 +91,53 @@ export function RelatorioSaude() {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-          <div className="h-10 w-32 bg-gray-200 rounded animate-pulse" />
+          <div className="h-8 w-48 bg-surface-3 rounded animate-pulse" />
+          <div className="h-10 w-32 bg-surface-3 rounded animate-pulse" />
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">Período:</span>
+          <span className="text-sm text-content-muted">Período:</span>
           <div className="flex gap-2">
-            <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
-            <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
-            <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
-            <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+            <div className="h-8 w-16 bg-surface-3 rounded animate-pulse" />
+            <div className="h-8 w-16 bg-surface-3 rounded animate-pulse" />
+            <div className="h-8 w-16 bg-surface-3 rounded animate-pulse" />
+            <div className="h-8 w-24 bg-surface-3 rounded animate-pulse" />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white p-6 border-0 shadow-sm rounded-xl">
-            <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2" />
-            <div className="h-10 w-20 bg-gray-200 rounded animate-pulse" />
+          <div className="bg-surface-1 p-6 border-0 shadow-sm rounded-xl">
+            <div className="h-4 w-24 bg-surface-3 rounded animate-pulse mb-2" />
+            <div className="h-10 w-20 bg-surface-3 rounded animate-pulse" />
           </div>
-          <div className="bg-white p-6 border-0 shadow-sm rounded-xl">
-            <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2" />
-            <div className="h-10 w-20 bg-gray-200 rounded animate-pulse" />
+          <div className="bg-surface-1 p-6 border-0 shadow-sm rounded-xl">
+            <div className="h-4 w-24 bg-surface-3 rounded animate-pulse mb-2" />
+            <div className="h-10 w-20 bg-surface-3 rounded animate-pulse" />
           </div>
         </div>
-        <div className="bg-white p-6 border-0 shadow-sm rounded-xl">
-          <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-4" />
+        <div className="bg-surface-1 p-6 border-0 shadow-sm rounded-xl">
+          <div className="h-6 w-48 bg-surface-3 rounded animate-pulse mb-4" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="h-64 bg-gray-200 rounded animate-pulse" />
+            <div className="h-64 bg-surface-3 rounded animate-pulse" />
             <div className="space-y-3">
-              <div className="h-12 bg-gray-200 rounded animate-pulse" />
-              <div className="h-12 bg-gray-200 rounded animate-pulse" />
-              <div className="h-12 bg-gray-200 rounded animate-pulse" />
+              <div className="h-12 bg-surface-3 rounded animate-pulse" />
+              <div className="h-12 bg-surface-3 rounded animate-pulse" />
+              <div className="h-12 bg-surface-3 rounded animate-pulse" />
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 border-0 shadow-sm rounded-xl">
-          <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-4" />
+        <div className="bg-surface-1 p-6 border-0 shadow-sm rounded-xl">
+          <div className="h-6 w-48 bg-surface-3 rounded animate-pulse mb-4" />
           <div className="space-y-3">
-            <div className="h-12 bg-gray-200 rounded animate-pulse" />
-            <div className="h-12 bg-gray-200 rounded animate-pulse" />
-            <div className="h-12 bg-gray-200 rounded animate-pulse" />
+            <div className="h-12 bg-surface-3 rounded animate-pulse" />
+            <div className="h-12 bg-surface-3 rounded animate-pulse" />
+            <div className="h-12 bg-surface-3 rounded animate-pulse" />
           </div>
         </div>
-        <div className="bg-white p-6 border-0 shadow-sm rounded-xl">
-          <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-4" />
+        <div className="bg-surface-1 p-6 border-0 shadow-sm rounded-xl">
+          <div className="h-6 w-48 bg-surface-3 rounded animate-pulse mb-4" />
           <div className="space-y-3">
-            <div className="h-12 bg-gray-200 rounded animate-pulse" />
-            <div className="h-12 bg-gray-200 rounded animate-pulse" />
-            <div className="h-12 bg-gray-200 rounded animate-pulse" />
+            <div className="h-12 bg-surface-3 rounded animate-pulse" />
+            <div className="h-12 bg-surface-3 rounded animate-pulse" />
+            <div className="h-12 bg-surface-3 rounded animate-pulse" />
           </div>
         </div>
       </div>
@@ -162,7 +162,7 @@ export function RelatorioSaude() {
   return (
     <div className="space-y-6 page-transition">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Relatório de Saúde</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Relatório de Saúde</h2>
         <Button onClick={() => navigate('/controller/dashboard')} variant="secondary" className="w-full md:w-auto">
           Voltar ao Dashboard
         </Button>
@@ -170,7 +170,7 @@ export function RelatorioSaude() {
 
       {/* Filtro de Período */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <span className="text-sm text-gray-600">Período:</span>
+        <span className="text-sm text-content-muted">Período:</span>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <Button
             variant={periodoFiltro === '7d' ? 'primary' : 'secondary'}
@@ -205,21 +205,21 @@ export function RelatorioSaude() {
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-        <Card className="bg-white p-6 border-0 shadow-sm">
-          <p className="text-sm text-gray-500 mb-2">Total de Mortes</p>
-          <p className="text-4xl font-bold text-red-600">{mortes.length}</p>
-          <p className="text-xs text-gray-400 mt-2">Registros totais</p>
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+          <p className="text-sm text-content-muted mb-2">Total de Mortes</p>
+          <p className="text-4xl font-bold text-red-500">{mortes.length}</p>
+          <p className="text-xs text-content-faint mt-2">Registros totais</p>
         </Card>
-        <Card className="bg-white p-6 border-0 shadow-sm">
-          <p className="text-sm text-gray-500 mb-2">Total de Tratamentos</p>
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+          <p className="text-sm text-content-muted mb-2">Total de Tratamentos</p>
           <p className="text-4xl font-bold text-orange-600">{enfermidades.length}</p>
-          <p className="text-xs text-gray-400 mt-2">Registros totais</p>
+          <p className="text-xs text-content-faint mt-2">Registros totais</p>
         </Card>
       </div>
 
       {/* Causas de Morte Mais Frequentes */}
-      <Card className="bg-white p-6 border-0 shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Causas de Morte Mais Frequentes</h3>
+      <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+        <h3 className="text-xl font-semibold text-content-strong mb-4">Causas de Morte Mais Frequentes</h3>
         {causasMorteFrequentes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ResponsiveContainer width="100%" height={300}>
@@ -243,55 +243,55 @@ export function RelatorioSaude() {
             </ResponsiveContainer>
             <div className="space-y-3">
               {causasMorteFrequentes.map((item, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <div key={index} className="flex justify-between items-center p-3 bg-surface-2 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                    <p className="text-sm text-gray-700">{item.causa}</p>
+                    <p className="text-sm text-content">{item.causa}</p>
                   </div>
-                  <p className="text-lg font-bold text-gray-800">{item.total}</p>
+                  <p className="text-lg font-bold text-content-strong">{item.total}</p>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Nenhum registro de morte encontrado</p>
+          <p className="text-sm text-content-muted">Nenhum registro de morte encontrado</p>
         )}
       </Card>
 
       {/* Últimos Registros de Morte */}
-      <Card className="bg-white p-6 border-0 shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Últimos Registros de Morte</h3>
+      <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+        <h3 className="text-xl font-semibold text-content-strong mb-4">Últimos Registros de Morte</h3>
         <div className="space-y-3">
           {mortes.slice(0, 10).map((morte) => (
-            <div key={morte.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+            <div key={morte.id} className="flex justify-between items-center p-3 bg-surface-2 rounded-lg">
               <div>
-                <p className="font-medium text-gray-800">{morte.causa_morte}</p>
-                <p className="text-sm text-gray-500">Lote: {morte.lote}</p>
+                <p className="font-medium text-content-strong">{morte.causa_morte}</p>
+                <p className="text-sm text-content-muted">Lote: {morte.lote}</p>
               </div>
-              <p className="text-sm text-gray-600">{morte.data}</p>
+              <p className="text-sm text-content-muted">{morte.data}</p>
             </div>
           ))}
           {mortes.length === 0 && (
-            <p className="text-sm text-gray-500">Nenhum registro de morte encontrado</p>
+            <p className="text-sm text-content-muted">Nenhum registro de morte encontrado</p>
           )}
         </div>
       </Card>
 
       {/* Últimos Registros de Enfermaria */}
-      <Card className="bg-white p-6 border-0 shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Últimos Registros de Enfermaria</h3>
+      <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+        <h3 className="text-xl font-semibold text-content-strong mb-4">Últimos Registros de Enfermaria</h3>
         <div className="space-y-3">
           {enfermidades.slice(0, 10).map((enfermidade) => (
-            <div key={enfermidade.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+            <div key={enfermidade.id} className="flex justify-between items-center p-3 bg-surface-2 rounded-lg">
               <div>
-                <p className="font-medium text-gray-800">{enfermidade.tratamento}</p>
-                <p className="text-sm text-gray-500">Lote: {enfermidade.lote}</p>
+                <p className="font-medium text-content-strong">{enfermidade.tratamento}</p>
+                <p className="text-sm text-content-muted">Lote: {enfermidade.lote}</p>
               </div>
-              <p className="text-sm text-gray-600">{enfermidade.data}</p>
+              <p className="text-sm text-content-muted">{enfermidade.data}</p>
             </div>
           ))}
           {enfermidades.length === 0 && (
-            <p className="text-sm text-gray-500">Nenhum registro de enfermaria encontrado</p>
+            <p className="text-sm text-content-muted">Nenhum registro de enfermaria encontrado</p>
           )}
         </div>
       </Card>

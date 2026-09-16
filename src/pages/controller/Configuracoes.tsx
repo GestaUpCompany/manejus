@@ -69,33 +69,33 @@ export function Configuracoes() {
   }
 
   if (isLoading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return <p className="text-content-muted">Carregando...</p>
   }
 
   if (!fazenda) {
-    return <p className="text-gray-600">Nenhuma fazenda vinculada ao usuário.</p>
+    return <p className="text-content-muted">Nenhuma fazenda vinculada ao usuário.</p>
   }
 
   return (
     <div className="max-w-3xl">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Configurações</h2>
-        <p className="text-sm text-gray-500 mt-1">Identidade visual da fazenda</p>
+        <h2 className="text-2xl font-bold text-content-strong">Configurações</h2>
+        <p className="text-sm text-content-muted mt-1">Identidade visual da fazenda</p>
       </div>
 
-      <Card className="bg-white p-6">
+      <Card className="bg-surface-1 p-6">
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800">Logo da Fazenda</h3>
+          <h3 className="text-lg font-semibold text-content-strong">Logo da Fazenda</h3>
 
           {error && (
-            <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="bg-red-500/10 border-2 border-red-500/30 rounded-lg p-3">
+              <p className="text-sm text-red-500">{error}</p>
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3">
-              <p className="text-sm text-green-600">Logo atualizado com sucesso.</p>
+            <div className="bg-green-500/10 border-2 border-green-500/30 rounded-lg p-3">
+              <p className="text-sm text-green-500">Logo atualizado com sucesso.</p>
             </div>
           )}
 
@@ -105,22 +105,22 @@ export function Configuracoes() {
                 src={previewSrc}
                 alt="Logo da fazenda"
                 loading="lazy"
-                className="w-48 h-32 object-contain rounded-lg border-2 border-gray-300 bg-gray-50"
+                className="w-48 h-32 object-contain rounded-lg border-2 border-surface-3 bg-surface-2"
               />
             ) : (
-              <div className="w-48 h-32 bg-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center">
-                <span className="text-gray-400 text-sm">Sem logo</span>
+              <div className="w-48 h-32 bg-surface-3 rounded-lg border-2 border-surface-3 flex items-center justify-center">
+                <span className="text-content-faint text-sm">Sem logo</span>
               </div>
             )}
             <input
               type="file"
               accept="image/*"
               onChange={handleLogoChange}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/80"
+              className="block w-full text-sm text-content-muted file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/80"
             />
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-gray-200">
+          <div className="flex justify-end pt-4 border-t border-border-base">
             <button
               type="button"
               onClick={handleSave}

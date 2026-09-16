@@ -25,7 +25,7 @@ export function DatePresets({ value, onChange, presets = DEFAULT_PRESETS }: Date
           className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
             value === p.value
               ? 'bg-purple-600 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-surface-2 text-content-muted hover:bg-surface-3'
           }`}
         >
           {p.label}

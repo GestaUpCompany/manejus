@@ -16,7 +16,7 @@ export function Button({ variant = 'primary', size = 'md', children, className =
   
   const variantStyles = {
     primary: 'bg-primary text-white focus:ring-primary hover:shadow-md',
-    secondary: 'bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300',
+    secondary: 'bg-surface-2 text-content-strong focus:ring-content-muted hover:shadow-md hover:bg-surface-3',
     danger: 'bg-red-600 text-white focus:ring-red-500 hover:shadow-md hover:bg-red-700',
   }
 

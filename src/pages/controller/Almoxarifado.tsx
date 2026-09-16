@@ -100,12 +100,12 @@ export function Almoxarifado() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Almoxarifado</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Almoxarifado</h2>
       </div>
 
-      <Card className="bg-white p-4 sm:p-6" disableHover>
+      <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
           <Button
             onClick={() => exportToXLSX(filteredRegistros, ALMOXARIFADO_EXPORT_CONFIG, fazendaNome)}
             disabled={filteredRegistros.length === 0}
@@ -116,7 +116,7 @@ export function Almoxarifado() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
             <Input
               type="text"
               placeholder="Quem entregou, quem pegou, setor, observação..."
@@ -126,7 +126,7 @@ export function Almoxarifado() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
             <Input
               type="date"
               value={dataInicio}
@@ -135,7 +135,7 @@ export function Almoxarifado() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
             <Input
               type="date"
               value={dataFim}
@@ -144,7 +144,7 @@ export function Almoxarifado() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
@@ -157,8 +157,8 @@ export function Almoxarifado() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro de almoxarifado encontrado</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro de almoxarifado encontrado</p>
         </Card>
       ) : (
         <>
@@ -167,18 +167,18 @@ export function Almoxarifado() {
             {filteredRegistros.map((registro) => (
               <Card
                 key={registro.id}
-                className="bg-white p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                className="bg-surface-1 p-4 cursor-pointer hover:shadow-lg transition-shadow"
                 onClick={() => navigate(`/controller/cadernetas/almoxarifado/${registro.id}`)}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
-                    <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                    <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-content-strong">
                       {formatDateTime(registro.data)}
                     </span>
                   </div>
                   <span
-                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary"
+                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light"
                     onClick={(e) => {
                       e.stopPropagation()
                       setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')
@@ -189,33 +189,33 @@ export function Almoxarifado() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Usuário:</span>
-                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                    <span className="text-content-muted">Usuário:</span>
+                    <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Quem Entregou:</span>
-                    <span className="text-gray-800 font-medium">{registro.quem_entregou || '-'}</span>
+                    <span className="text-content-muted">Quem Entregou:</span>
+                    <span className="text-content-strong font-medium">{registro.quem_entregou || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Quem Pegou:</span>
-                    <span className="text-gray-800 font-medium">{registro.quem_pegou || '-'}</span>
+                    <span className="text-content-muted">Quem Pegou:</span>
+                    <span className="text-content-strong font-medium">{registro.quem_pegou || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Setor:</span>
-                    <span className="text-gray-800 font-medium">{registro.setor || '-'}</span>
+                    <span className="text-content-muted">Setor:</span>
+                    <span className="text-content-strong font-medium">{registro.setor || '-'}</span>
                   </div>
                   {registro.itens && (
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Itens:</span>
-                      <span className="text-gray-800 font-medium truncate max-w-[150px]">
+                      <span className="text-content-muted">Itens:</span>
+                      <span className="text-content-strong font-medium truncate max-w-[150px]">
                         {Array.isArray(registro.itens) ? `${registro.itens.length} item(s)` : 'Ver detalhes'}
                       </span>
                     </div>
                   )}
                   {registro.observacao && (
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Observação:</span>
-                      <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.observacao}</span>
+                      <span className="text-content-muted">Observação:</span>
+                      <span className="text-content-strong font-medium truncate max-w-[150px]">{registro.observacao}</span>
                     </div>
                   )}
                 </div>
@@ -224,45 +224,45 @@ export function Almoxarifado() {
           </div>
 
           {/* Desktop Table View */}
-          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <Card className="bg-surface-1 overflow-x-auto hidden sm:block" disableHover>
+            <table className="min-w-full divide-y divide-border-base">
+              <thead className="bg-surface-2">
                 <tr>
                   <th
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider cursor-pointer hover:bg-surface-2 transition-colors"
                     onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quem Entregou</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quem Pegou</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setor</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Itens</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Quem Entregou</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Quem Pegou</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Setor</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Itens</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Observação</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface-1 divide-y divide-border-base">
                 {filteredRegistros.map((registro) => (
                   <tr
                     key={registro.id}
                     onClick={() => navigate(`/controller/cadernetas/almoxarifado/${registro.id}`)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="cursor-pointer hover:bg-surface-2 transition-colors"
                   >
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {formatDateTime(registro.data)}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.quem_entregou || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.quem_pegou || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.setor || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.itens ? (
                         Array.isArray(registro.itens) ? (
                           <span className="truncate max-w-[150px] inline-block">
@@ -275,7 +275,7 @@ export function Almoxarifado() {
                         )
                       ) : '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.observacao || '-'}
                     </td>
                   </tr>

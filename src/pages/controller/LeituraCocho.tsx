@@ -114,17 +114,17 @@ export function LeituraCocho() {
   const getNotaStyle = (nota: number) => {
     switch (nota) {
       case -1:
-        return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-500' }
+        return { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-700 dark:text-red-300', badge: 'bg-red-500' }
       case 0:
-        return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', badge: 'bg-yellow-500' }
+        return { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-700 dark:text-yellow-300', badge: 'bg-yellow-500' }
       case 1:
-        return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', badge: 'bg-green-500' }
+        return { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-700 dark:text-green-300', badge: 'bg-green-500' }
       case 2:
-        return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', badge: 'bg-yellow-500' }
+        return { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-700 dark:text-yellow-300', badge: 'bg-yellow-500' }
       case 3:
-        return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-500' }
+        return { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-700 dark:text-red-300', badge: 'bg-red-500' }
       default:
-        return { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', badge: 'bg-gray-500' }
+        return { bg: 'bg-surface-2', border: 'border-border-base', text: 'text-content', badge: 'bg-surface-20' }
     }
   }
 
@@ -146,19 +146,19 @@ export function LeituraCocho() {
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">Leitura de Cocho</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-content-strong">Leitura de Cocho</h1>
+        <p className="text-sm text-content-muted mt-1">
           Configure a porcentagem de ajuste para cada nota de leitura de cocho. As notas são fixas e não podem ser alteradas.
         </p>
       </div>
 
       {/* Card explicativo */}
-      <Card className="p-4 bg-blue-50 border-blue-200">
+      <Card className="p-4 bg-primary/10 border-primary/30">
         <div className="flex gap-3">
           <svg className="w-6 h-6 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <div className="text-sm text-blue-800">
+          <div className="text-sm text-primary dark:text-primary-light">
             <p className="font-medium mb-1">Como funciona</p>
             <p>
               O tratador faz a leitura do cocho no aplicativo e atribui uma nota de -1 a 3. Cada nota representa um ajuste na quantidade de comida do próximo trato.
@@ -173,8 +173,8 @@ export function LeituraCocho() {
 
       {/* Erro */}
       {erro && (
-        <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
-          <p className="text-sm text-red-700 font-medium">Erro ao carregar configurações</p>
+        <div className="p-4 bg-red-500/10 border-2 border-red-500/30 rounded-xl">
+          <p className="text-sm text-red-700 dark:text-red-300 font-medium">Erro ao carregar configurações</p>
           <p className="text-xs text-red-500 mt-1">{erro}</p>
           <p className="text-xs text-red-500 mt-1">fazenda_id: {fazendaId || 'null'}</p>
         </div>
@@ -184,19 +184,19 @@ export function LeituraCocho() {
       {loading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="animate-pulse flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-100">
-              <div className="w-12 h-12 bg-gray-200 rounded-full shrink-0"></div>
+            <div key={i} className="animate-pulse flex items-center gap-4 p-4 bg-surface-1 rounded-xl border border-border-subtle">
+              <div className="w-12 h-12 bg-surface-3 rounded-full shrink-0"></div>
               <div className="flex-1 space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-4 bg-surface-3 rounded w-1/3"></div>
+                <div className="h-3 bg-surface-3 rounded w-1/2"></div>
               </div>
-              <div className="w-24 h-10 bg-gray-200 rounded-lg"></div>
+              <div className="w-24 h-10 bg-surface-3 rounded-lg"></div>
             </div>
           ))}
         </div>
       ) : notas.length === 0 ? (
-        <div className="p-6 bg-gray-50 rounded-xl border-2 border-gray-200 text-center">
-          <p className="text-sm text-gray-500">
+        <div className="p-6 bg-surface-2 rounded-xl border-2 border-border-base text-center">
+          <p className="text-sm text-content-muted">
             {fazendaId
               ? `Nenhuma configuração encontrada para esta fazenda (${fazendaId}).`
               : 'Não foi possível identificar a fazenda do usuário.'}
@@ -213,7 +213,7 @@ export function LeituraCocho() {
             return (
               <div
                 key={nota}
-                className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-white rounded-xl border-2 ${style.border} ${style.bg}`}
+                className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-surface-1 rounded-xl border-2 ${style.border} ${style.bg}`}
               >
                 {/* Badge da nota */}
                 <div className="flex items-center gap-3 shrink-0">
@@ -222,13 +222,13 @@ export function LeituraCocho() {
                   </div>
                   <div className="min-w-0">
                     <p className={`font-semibold ${style.text}`}>Nota {nota}</p>
-                    <p className="text-xs text-gray-500">{DESCRICOES_FIXAS[nota]}</p>
+                    <p className="text-xs text-content-muted">{DESCRICOES_FIXAS[nota]}</p>
                   </div>
                 </div>
 
                 {/* Descricao do efeito */}
                 <div className="flex-1 min-w-0 sm:text-right">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-content-muted">
                     Ajuste no próximo trato:
                   </p>
                   <p className={`text-lg font-bold ${style.text}`}>
@@ -244,10 +244,10 @@ export function LeituraCocho() {
                       step="0.5"
                       value={valorEditado}
                       onChange={e => handlePercentualChange(nota, e.target.value)}
-                      className="w-24 px-3 py-2 border-2 border-gray-200 rounded-lg text-center font-semibold text-gray-700 focus:border-accent focus:outline-none"
+                      className="w-24 px-3 py-2 border-2 border-border-base rounded-lg text-center font-semibold text-content focus:border-accent focus:outline-none"
                       placeholder="0"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">%</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-faint text-sm pointer-events-none">%</span>
                   </div>
                 </div>
               </div>
@@ -266,7 +266,7 @@ export function LeituraCocho() {
           {saving ? 'Salvando...' : 'Salvar configurações'}
         </Button>
         {salvo && (
-          <span className="text-sm text-green-600 flex items-center gap-1">
+          <span className="text-sm text-green-500 flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
@@ -274,7 +274,7 @@ export function LeituraCocho() {
           </span>
         )}
         {haAlteracoes && !salvo && (
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-content-muted">
             Alterações não salvas
           </span>
         )}

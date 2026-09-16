@@ -135,7 +135,7 @@ export function MultiSelect({
   return (
     <div className={compact ? '' : 'mb-4'}>
       {label && (
-        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-xs sm:text-sm font-medium text-content mb-1">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
@@ -145,14 +145,14 @@ export function MultiSelect({
           ref={triggerRef}
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left border-gray-200 focus:border-accent bg-white ${className}`}
+          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left border-border-base focus:border-accent bg-surface-1 text-content-strong ${className}`}
         >
           {selectedOptions.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {selectedOptions.slice(0, 6).map((opt) => (
                 <span
                   key={opt.id}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary dark:text-primary-light rounded text-xs font-medium"
                 >
                   {opt.name}
                   <span
@@ -161,18 +161,18 @@ export function MultiSelect({
                     tabIndex={0}
                     onMouseDown={(e) => { e.stopPropagation(); handleRemove(opt.id, e as any) }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onChange(value.filter((id) => id !== opt.id)) } }}
-                    className="text-blue-500 hover:text-blue-700 focus:outline-none cursor-pointer"
+                    className="text-primary/70 hover:text-primary dark:hover:text-primary-light focus:outline-none cursor-pointer"
                   >
                     ×
                   </span>
                 </span>
               ))}
               {selectedOptions.length > 3 && (
-                <span className="text-xs text-gray-500">+{selectedOptions.length - 3} mais</span>
+                <span className="text-xs text-content-muted">+{selectedOptions.length - 3} mais</span>
               )}
             </div>
           ) : (
-            <span className="text-gray-400">{placeholder}</span>
+            <span className="text-content-faint">{placeholder}</span>
           )}
         </button>
 
@@ -180,11 +180,11 @@ export function MultiSelect({
         {isOpen && createPortal(
           <div
             ref={portalRef}
-            className={`bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-auto ${dropUp ? 'mb-1' : 'mt-1'}`}
+            className={`bg-surface-1 border border-border-base rounded-lg shadow-lg max-h-72 overflow-auto ${dropUp ? 'mb-1' : 'mt-1'}`}
             style={dropdownStyle}
           >
             {/* Search input */}
-            <div className="p-2 border-b border-gray-100 sticky top-0 bg-white">
+            <div className="p-2 border-b border-border-subtle sticky top-0 bg-surface-1">
               <input
                 ref={searchInputRef}
                 type="text"
@@ -199,13 +199,13 @@ export function MultiSelect({
                     setSearchTerm('')
                   }
                 }}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-accent text-sm"
+                className="w-full px-3 py-2 border border-border-base rounded-lg focus:outline-none focus:border-accent text-sm bg-surface-1 text-content-strong"
               />
             </div>
 
             {/* Options */}
             {filteredOptions.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
+              <div className="p-4 text-center text-content-muted text-sm">
                 Nenhum resultado encontrado
               </div>
             ) : (
@@ -215,15 +215,15 @@ export function MultiSelect({
                     key={item.id}
                     type="button"
                     onClick={() => handleToggle(item.id)}
-                    className={`w-full px-3 py-2.5 text-left text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
-                      value.includes(item.id) ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                    className={`w-full px-3 py-2.5 text-left text-sm hover:bg-surface-2 transition-colors border-b border-border-subtle last:border-0 ${
+                      value.includes(item.id) ? 'bg-primary/10 text-primary dark:text-primary-light' : 'text-content'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-4 h-4 rounded border flex items-center justify-center ${
                         value.includes(item.id)
-                          ? 'bg-blue-500 border-blue-500'
-                          : 'border-gray-300 bg-white'
+                          ? 'bg-primary border-primary'
+                          : 'border-surface-3 bg-surface-1'
                       }`}>
                         {value.includes(item.id) && (
                           <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,7 +234,7 @@ export function MultiSelect({
                       <div className="flex-1">
                         <div className="font-medium">{item.name}</div>
                         {item.subtitle && (
-                          <div className="text-xs text-gray-500">{item.subtitle}</div>
+                          <div className="text-xs text-content-muted">{item.subtitle}</div>
                         )}
                       </div>
                     </div>
@@ -253,13 +253,13 @@ export function MultiSelect({
           {selectedOptions.map((opt) => (
             <span
               key={opt.id}
-              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-sm"
+              className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary dark:text-primary-light rounded-md text-sm"
             >
               {opt.name}
               <button
                 type="button"
                 onClick={(e) => handleRemove(opt.id, e)}
-                className="text-blue-500 hover:text-blue-700 focus:outline-none"
+                className="text-primary/70 hover:text-primary dark:hover:text-primary-light focus:outline-none"
               >
                 ×
               </button>

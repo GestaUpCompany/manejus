@@ -174,20 +174,20 @@ export function PlanoNutricionalDraftModal({
       <div className="space-y-6">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-gray-800">Planos</h3>
-            <span className="text-xs text-gray-400">Visualize e gerencie a sequência</span>
+            <h3 className="text-base font-semibold text-content-strong">Planos</h3>
+            <span className="text-xs text-content-faint">Visualize e gerencie a sequência</span>
           </div>
 
           {draftPlanos.length === 0 ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800">
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
                 Nenhum plano na sequência. Adicione ao menos um plano para a categoria.
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-800">Sequência de Planos</h4>
-              <p className="text-xs text-gray-500">Arraste para reordenar.</p>
+              <h4 className="font-medium text-content-strong">Sequência de Planos</h4>
+              <p className="text-xs text-content-muted">Arraste para reordenar.</p>
               <div className="space-y-2">
                 {draftPlanos.map((plano, index) => {
                   const f = formulacoes.find((x) => x.id === plano.formulacao_id)
@@ -200,16 +200,16 @@ export function PlanoNutricionalDraftModal({
                       onDrop={handleDrop(index)}
                       onDragEnd={handleDragEnd}
                       className={`flex items-center justify-between border rounded-lg p-3 transition-colors ${
-                        dragOverIndex === index ? 'border-primary bg-primary/5' : 'border-gray-200'
+                        dragOverIndex === index ? 'border-primary bg-primary/5' : 'border-border-base'
                       }`}
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <span className="text-gray-400 select-none flex-shrink-0" title="Arraste para reordenar">⠿</span>
+                        <span className="text-content-faint select-none flex-shrink-0" title="Arraste para reordenar">⠿</span>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">
+                          <p className="font-medium text-content-strong truncate">
                             {index + 1}. {plano.nome}
                           </p>
-                          <p className="text-sm text-gray-600 truncate">
+                          <p className="text-sm text-content-muted truncate">
                             {f?.nome} • {plano.periodo_dias} dias • {plano.peso_meta_kg.toFixed(2).replace('.', ',')} kg • GMD: {plano.gmd_planejado?.toFixed(3).replace('.', ',') || '—'} • {CONDICOES[plano.condicao_migracao]}
                           </p>
                         </div>
@@ -218,7 +218,7 @@ export function PlanoNutricionalDraftModal({
                         <Button size="sm" variant="secondary" onClick={() => handleEdit(index)}>
                           Editar
                         </Button>
-                        <Button size="sm" variant="secondary" onClick={() => handleDelete(index)} className="text-red-600 hover:text-red-700">
+                        <Button size="sm" variant="secondary" onClick={() => handleDelete(index)} className="text-red-500 hover:text-red-700 dark:hover:text-red-300">
                           Excluir
                         </Button>
                       </div>
@@ -230,19 +230,19 @@ export function PlanoNutricionalDraftModal({
           )}
         </div>
 
-        <div className="border-t-2 border-gray-200 pt-6">
+        <div className="border-t-2 border-border-base pt-6">
           <div className="flex items-center gap-2 mb-4">
-            <h3 className="text-base font-semibold text-gray-800">
+            <h3 className="text-base font-semibold text-content-strong">
               {editingIndex !== null ? 'Editar Plano' : 'Novo Plano'}
             </h3>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-content-faint">
               {editingIndex !== null ? 'Altere os dados e salve' : 'Preencha os dados e adicione à sequência'}
             </span>
           </div>
           <form onSubmit={(e) => { e.preventDefault(); handleAddOrUpdate() }} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Nome do Plano</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Nome do Plano</label>
                 <Input
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
@@ -251,7 +251,7 @@ export function PlanoNutricionalDraftModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Formulação *</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Formulação *</label>
                 <select
                   value={formData.formulacao_id}
                   onChange={(e) => {
@@ -263,7 +263,7 @@ export function PlanoNutricionalDraftModal({
                       nome: f?.nome || formData.nome,
                     })
                   }}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent input-focus text-sm sm:text-base bg-white"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent input-focus text-sm sm:text-base bg-surface-1"
                 >
                   <option value="">Selecione uma formulação...</option>
                   {formulacoesFiltradas.map((f) => (
@@ -275,7 +275,7 @@ export function PlanoNutricionalDraftModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Período (dias) *</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Período (dias) *</label>
                 <Input
                   type="number"
                   value={formData.periodo_dias}
@@ -285,7 +285,7 @@ export function PlanoNutricionalDraftModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Peso Meta (kg/cab) *</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Peso Meta (kg/cab) *</label>
                 <NumericInput
                   value={formData.peso_meta_kg}
                   onChange={(value) => setFormData({ ...formData, peso_meta_kg: value })}
@@ -295,7 +295,7 @@ export function PlanoNutricionalDraftModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">GMD Esperado (kg/cab/dia) *</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">GMD Esperado (kg/cab/dia) *</label>
                 <Input
                   type="text"
                   inputMode="decimal"
@@ -305,17 +305,17 @@ export function PlanoNutricionalDraftModal({
                     setFormData({ ...formData, gmd_planejado: value })
                   }}
                   placeholder="Ex: 0,300"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
                 {selectedFormulacao?.gmd != null && !formData.gmd_planejado && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-content-muted mt-1">
                     GMD da formulação: {selectedFormulacao.gmd.toFixed(3).replace('.', ',')} kg/cab/dia
                   </p>
                 )}
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Condição para Migração</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Condição para Migração</label>
                 <div className="flex flex-wrap gap-3">
                   {(['periodo', 'peso', 'ambos'] as const).map((cond) => (
                     <button
@@ -325,7 +325,7 @@ export function PlanoNutricionalDraftModal({
                       className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
                         formData.condicao_migracao === cond
                           ? 'bg-primary text-white border-primary'
-                          : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary'
+                          : 'bg-surface-1 text-content border-border-base hover:border-primary hover:text-primary dark:hover:text-primary-light'
                       }`}
                     >
                       {CONDICOES[cond]}
@@ -336,7 +336,7 @@ export function PlanoNutricionalDraftModal({
             </div>
 
             {selectedFormulacao && (
-              <div className="text-xs text-gray-600 flex flex-wrap gap-3">
+              <div className="text-xs text-content-muted flex flex-wrap gap-3">
                 <span>GMD da formulação: {selectedFormulacao.gmd?.toFixed(3).replace('.', ',') || '—'} kg/cab/dia</span>
                 <span>
                   Consumo MS: {selectedFormulacao.consumo_ms_percent_pv?.toFixed(2).replace('.', ',') || '—'}% PV

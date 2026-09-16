@@ -66,7 +66,7 @@ export function Dropdown({ trigger, options, align = 'right' }: DropdownProps) {
 
           {/* Dropdown */}
           <div
-            className={`absolute z-50 bg-white rounded-lg shadow-lg border border-gray-200 py-1 mt-2 w-56 right-0 ${
+            className={`absolute z-50 bg-surface-1 rounded-lg shadow-lg border border-border-base py-1 mt-2 w-56 right-0 ${
               align === 'right' ? 'right-0' : 'right-0'
             }`}
           >
@@ -78,15 +78,15 @@ export function Dropdown({ trigger, options, align = 'right' }: DropdownProps) {
                       option.onClick?.()
                       setIsOpen(false)
                     }}
-                    className={`w-full px-4 py-3 sm:py-2 text-left flex items-center gap-3 transition-all hover-scale button-press min-h-[44px] ${
-                      option.danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-100'
+                    className={`w-full px-4 py-3 sm:py-2 text-left flex items-center gap-3 transition-colors min-h-[44px] ${
+                      option.danger ? 'text-red-600 dark:text-red-400 hover:bg-red-500/10' : 'text-content hover:bg-surface-2'
                     }`}
                   >
                     {option.icon}
                     <span className="font-medium text-sm sm:text-base">{option.label}</span>
                   </button>
                 ) : (
-                  <div className="px-4 py-2 border-t border-gray-200 mt-1 pt-2 text-sm">
+                  <div className="px-4 py-2 border-t border-border-base mt-1 pt-2 text-sm">
                     {option.label}
                   </div>
                 )}

@@ -28,7 +28,7 @@ interface RegistroLimpeza {
 
 function renderLimpezaRealizada(val: any): React.ReactNode {
   if (Array.isArray(val)) {
-    return <p className="text-sm font-medium text-gray-700">{val.map((item: string) => item.charAt(0).toUpperCase() + item.slice(1)).join(', ')}</p>
+    return <p className="text-sm font-medium text-content">{val.map((item: string) => item.charAt(0).toUpperCase() + item.slice(1)).join(', ')}</p>
   }
   if (val && typeof val === 'object') {
     const lista = val.limpezaRealizada || val.tarefasRealizadas || []
@@ -36,19 +36,19 @@ function renderLimpezaRealizada(val: any): React.ReactNode {
     return (
       <>
         {Array.isArray(lista) && lista.length > 0 && (
-          <p className="text-sm font-medium text-gray-700">{lista.map((item: string) => item.charAt(0).toUpperCase() + item.slice(1)).join(', ')}</p>
+          <p className="text-sm font-medium text-content">{lista.map((item: string) => item.charAt(0).toUpperCase() + item.slice(1)).join(', ')}</p>
         )}
         {detalhes && typeof detalhes === 'object' && Object.keys(detalhes).length > 0 && (
           <div className="border-t pt-2 mt-2 space-y-1">
             {Object.entries(detalhes).map(([k, v]) => (
-              <p key={k} className="text-sm text-gray-600"><span className="font-medium capitalize">{k.replace(/_/g, ' ')}:</span> {String(v)}</p>
+              <p key={k} className="text-sm text-content-muted"><span className="font-medium capitalize">{k.replace(/_/g, ' ')}:</span> {String(v)}</p>
             ))}
           </div>
         )}
       </>
     )
   }
-  return <p className="text-sm text-gray-700">{String(val)}</p>
+  return <p className="text-sm text-content">{String(val)}</p>
 }
 
 export function RegistrosLimpezaDetalhes() {
@@ -107,7 +107,7 @@ export function RegistrosLimpezaDetalhes() {
       title="Detalhes do Registro de Limpeza"
     >
       {() => (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
           <div className="space-y-6">
             {/* Informações Gerais */}
             <DetailSection title="Informações Gerais">

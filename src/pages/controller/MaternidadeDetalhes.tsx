@@ -89,7 +89,7 @@ export function MaternidadeDetalhes() {
       title="Detalhes do Registro de Maternidade"
     >
       {() => (
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+      <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
         <div className="space-y-6">
           {/* Informações Gerais */}
           <DetailSection title="Informações Gerais">
@@ -111,8 +111,8 @@ export function MaternidadeDetalhes() {
           <DetailSection title="Informações dos Animais">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Mãe */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-800 mb-3">Mãe</h4>
+              <div className="bg-surface-2 p-4 rounded-lg">
+                <h4 className="font-medium text-content-strong mb-3">Mãe</h4>
                 <div className="space-y-2">
                   <DetailField label="Número" value={formatValue(registro!.numero_mae)} />
                   <DetailField label="ID Brinco" value={formatValue(registro!.id_brinco_mae)} />
@@ -123,8 +123,8 @@ export function MaternidadeDetalhes() {
               </div>
 
               {/* Cria */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-800 mb-3">Cria</h4>
+              <div className="bg-surface-2 p-4 rounded-lg">
+                <h4 className="font-medium text-content-strong mb-3">Cria</h4>
                 <div className="space-y-2">
                   <DetailField label="Número" value={formatValue(registro!.numero_cria)} />
                   <DetailField label="ID Provisório" value={formatValue(registro!.id_provisorio_cria)} />
@@ -133,11 +133,11 @@ export function MaternidadeDetalhes() {
                   <DetailField label="Sexo" value={formatValue(registro!.sexo)} />
                   <DetailField label="Peso (kg)" value={formatValue(registro!.peso_cria_kg)} />
                   {registro!.individuo_id_cria && (
-                    <p className="text-sm pt-2 border-t border-gray-200 mt-2">
-                      <span className="font-medium text-gray-700">Indivíduo:</span>{' '}
+                    <p className="text-sm pt-2 border-t border-border-base mt-2">
+                      <span className="font-medium text-content">Indivíduo:</span>{' '}
                       <button
                         onClick={() => navigate(`/controller/individuos/${registro!.individuo_id_cria}`)}
-                        className="text-primary hover:underline font-medium"
+                        className="text-primary dark:text-primary-light hover:underline font-medium"
                       >
                         Ver indivíduo
                       </button>

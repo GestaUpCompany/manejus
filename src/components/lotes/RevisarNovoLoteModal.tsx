@@ -91,7 +91,7 @@ const SECOES_CATEGORIA: {
 }[] = [
   {
     titulo: 'Entrada & Pesagem',
-    classes: { box: 'bg-blue-50 border-blue-100', title: 'text-blue-700' },
+    classes: { box: 'bg-primary/10 border-primary/30', title: 'text-primary dark:text-primary-light' },
     campos: [
       { key: 'data_pesagem', label: 'Data Entrada', type: 'date' },
       { key: 'peso_entrada_kg_cab', label: 'Peso Entrada (kg/cab)', type: 'number' },
@@ -100,7 +100,7 @@ const SECOES_CATEGORIA: {
   },
   {
     titulo: 'Preços & Venda',
-    classes: { box: 'bg-amber-50 border-amber-100', title: 'text-amber-700' },
+    classes: { box: 'bg-amber-500/10 border-amber-500/30', title: 'text-amber-700 dark:text-amber-300' },
     campos: [
       { key: 'preco_entrada_reais_kg', label: 'Preço Entrada (R$/kg)', type: 'number' },
       { key: 'preco_entrada_reais_cab', label: 'Preço Entrada (R$/cab)', type: 'number' },
@@ -117,7 +117,7 @@ const SECOES_CATEGORIA: {
   },
   {
     titulo: 'Custos',
-    classes: { box: 'bg-red-50 border-red-100', title: 'text-red-700' },
+    classes: { box: 'bg-red-500/10 border-red-500/30', title: 'text-red-700 dark:text-red-300' },
     campos: [
       { key: 'custo_frete_reais_cab', label: 'Custo Frete (R$/cab)', type: 'number' },
       { key: 'custo_comissao_reais_cab', label: 'Custo Comissão (R$/cab)', type: 'number' },
@@ -266,42 +266,42 @@ export function RevisarNovoLoteModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Revisar Solicitação de Novo Lote" size="xl">
       <div className="space-y-6">
         {/* Informações da movimentação */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <h3 className="text-sm font-bold text-gray-700 mb-3">Informações da Movimentação</h3>
+        <div className="bg-surface-2 rounded-lg p-4 border border-border-base">
+          <h3 className="text-sm font-bold text-content mb-3">Informações da Movimentação</h3>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <span className="font-semibold text-gray-600">Data:</span>{' '}
+              <span className="font-semibold text-content-muted">Data:</span>{' '}
               {solicitacao.dados_movimentacao?.data || '—'}
             </div>
             <div>
-              <span className="font-semibold text-gray-600">Usuário:</span>{' '}
+              <span className="font-semibold text-content-muted">Usuário:</span>{' '}
               {solicitacao.dados_movimentacao?.usuario || '—'}
             </div>
             <div>
-              <span className="font-semibold text-gray-600">Lote Origem:</span>{' '}
+              <span className="font-semibold text-content-muted">Lote Origem:</span>{' '}
               {solicitacao.lote_origem_nome}
             </div>
             <div>
-              <span className="font-semibold text-gray-600">Motivo:</span>{' '}
+              <span className="font-semibold text-content-muted">Motivo:</span>{' '}
               {solicitacao.dados_movimentacao?.motivo} / {solicitacao.dados_movimentacao?.subtipo}
             </div>
             {solicitacao.dados_movimentacao?.causa_observacao && (
               <div className="col-span-2">
-                <span className="font-semibold text-gray-600">Observação:</span>{' '}
+                <span className="font-semibold text-content-muted">Observação:</span>{' '}
                 {solicitacao.dados_movimentacao.causa_observacao}
               </div>
             )}
             <div className="col-span-2">
-              <span className="font-semibold text-gray-600">Total de Cabeças:</span>{' '}
-              <span className="font-bold text-blue-700">{totalCabecas}</span>
+              <span className="font-semibold text-content-muted">Total de Cabeças:</span>{' '}
+              <span className="font-bold text-primary dark:text-primary-light">{totalCabecas}</span>
             </div>
             <div className="col-span-2">
-              <span className="font-semibold text-gray-600">Categorias Movimentadas:</span>
+              <span className="font-semibold text-content-muted">Categorias Movimentadas:</span>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {categorias.map((cat, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full"
+                    className="inline-flex items-center gap-1 bg-primary/10 text-primary dark:text-primary-light text-xs font-semibold px-2 py-1 rounded-full"
                   >
                     {cat.categoria.charAt(0).toUpperCase() + cat.categoria.slice(1)} ({cat.numero_cabecas} cab.)
                   </span>
@@ -312,20 +312,20 @@ export function RevisarNovoLoteModal({
         </div>
 
         {/* Dados do lote (editáveis) */}
-        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <h3 className="text-sm font-bold text-blue-800 mb-3">Dados do Novo Lote</h3>
+        <div className="bg-primary/10 rounded-lg p-4 border border-primary/30">
+          <h3 className="text-sm font-bold text-primary dark:text-primary-light mb-3">Dados do Novo Lote</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">NOME DO LOTE *</label>
+              <label className="block text-xs font-bold text-content mb-1">NOME DO LOTE *</label>
               <input
                 type="text"
                 value={dadosLote.nome || ''}
                 onChange={(e) => setDadosLote({ ...dadosLote, nome: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                className="w-full px-3 py-2 border border-surface-3 rounded-md text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">SISTEMA DE PRODUÇÃO *</label>
+              <label className="block text-xs font-bold text-content mb-1">SISTEMA DE PRODUÇÃO *</label>
               <select
                 value={dadosLote.sistema_producao || ''}
                 onChange={(e) => {
@@ -337,7 +337,7 @@ export function RevisarNovoLoteModal({
                     curral_id: novoSistema === 'Confinamento' ? dadosLote.curral_id : '',
                   })
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                className="w-full px-3 py-2 border border-surface-3 rounded-md text-sm"
               >
                 <option value="">Selecione</option>
                 {SISTEMA_PRODUCAO_OPTS.map(opt => (
@@ -346,11 +346,11 @@ export function RevisarNovoLoteModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">DESTINO *</label>
+              <label className="block text-xs font-bold text-content mb-1">DESTINO *</label>
               <select
                 value={dadosLote.destino || ''}
                 onChange={(e) => setDadosLote({ ...dadosLote, destino: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                className="w-full px-3 py-2 border border-surface-3 rounded-md text-sm"
               >
                 <option value="">Selecione</option>
                 {DESTINO_OPTS.map(opt => (
@@ -359,14 +359,14 @@ export function RevisarNovoLoteModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
+              <label className="block text-xs font-bold text-content mb-1">
                 {isConfinamento ? 'CURRAL *' : 'PASTO *'}
               </label>
               {isConfinamento ? (
                 <select
                   value={dadosLote.curral_id || ''}
                   onChange={(e) => setDadosLote({ ...dadosLote, curral_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 border border-surface-3 rounded-md text-sm"
                 >
                   <option value="">Selecione</option>
                   {currais.map(c => (
@@ -377,7 +377,7 @@ export function RevisarNovoLoteModal({
                 <select
                   value={dadosLote.pasto_id || ''}
                   onChange={(e) => setDadosLote({ ...dadosLote, pasto_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 border border-surface-3 rounded-md text-sm"
                 >
                   <option value="">Selecione</option>
                   {pastos.map(p => (
@@ -390,14 +390,14 @@ export function RevisarNovoLoteModal({
         </div>
 
         {/* Categorias (editáveis, sem gmd) */}
-        <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-          <h3 className="text-sm font-bold text-green-800 mb-3">
+        <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/30">
+          <h3 className="text-sm font-bold text-green-700 dark:text-green-300 mb-3">
             Categorias ({categorias.length})
           </h3>
           <div className="space-y-4">
             {categorias.map((cat, idx) => (
-              <div key={idx} className="bg-white rounded-lg p-3 border border-gray-200">
-                <h4 className="text-sm font-bold text-gray-800 mb-3">
+              <div key={idx} className="bg-surface-1 rounded-lg p-3 border border-border-base">
+                <h4 className="text-sm font-bold text-content-strong mb-3">
                   Categoria {idx + 1}: {cat.categoria} — {cat.numero_cabecas} cabeças
                 </h4>
                 <div className="space-y-3">
@@ -409,7 +409,7 @@ export function RevisarNovoLoteModal({
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                         {secao.campos.map(({ key, label, type }) => (
                           <div key={String(key)}>
-                            <label className="block text-xs font-medium text-gray-600 mb-0.5">{label}</label>
+                            <label className="block text-xs font-medium text-content-muted mb-0.5">{label}</label>
                             <input
                               type={type}
                               value={(cat[key] as any) ?? ''}
@@ -419,7 +419,7 @@ export function RevisarNovoLoteModal({
                                   : e.target.value
                                 updateCategoria(idx, key, val)
                               }}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                              className="w-full px-2 py-1 border border-surface-3 rounded text-xs"
                             />
                           </div>
                         ))}
@@ -434,15 +434,15 @@ export function RevisarNovoLoteModal({
 
         {/* Erro */}
         {error && (
-          <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-sm text-red-800">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-700 dark:text-red-300">
             {error}
           </div>
         )}
 
         {/* Rejeição com motivo */}
         {showRejectInput && (
-          <div className="bg-red-50 border border-red-300 rounded-lg p-4">
-            <label className="block text-sm font-bold text-red-800 mb-2">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+            <label className="block text-sm font-bold text-red-700 dark:text-red-300 mb-2">
               Motivo da Rejeição (opcional)
             </label>
             <textarea
@@ -450,7 +450,7 @@ export function RevisarNovoLoteModal({
               onChange={(e) => setMotivoRejeicao(e.target.value)}
               rows={3}
               placeholder="Descreva o motivo da rejeição, se desejar..."
-              className="w-full px-3 py-2 border border-red-300 rounded-md text-sm"
+              className="w-full px-3 py-2 border border-red-500/30 rounded-md text-sm"
             />
             <div className="flex gap-2 mt-3">
               <Button
@@ -481,7 +481,7 @@ export function RevisarNovoLoteModal({
               variant="secondary"
               size="md"
               disabled={processing}
-              className="text-red-600 border-red-300 hover:bg-red-50"
+              className="text-red-500 border-red-500/30 hover:bg-red-500/10"
             >
               REJEITAR
             </Button>

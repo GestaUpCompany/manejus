@@ -9,9 +9,9 @@ const PRIORIDADE_CORES: Record<number, string> = {
 }
 
 const STATUS_CORES: Record<string, string> = {
-  pendente: 'bg-gray-100 text-gray-700',
-  em_andamento: 'bg-blue-100 text-blue-700',
-  concluido: 'bg-green-100 text-green-700',
+  pendente: 'bg-surface-2 text-content',
+  em_andamento: 'bg-primary/10 text-primary dark:text-primary-light',
+  concluido: 'bg-green-500/10 text-green-700 dark:text-green-300',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -57,17 +57,17 @@ function AtividadeCardImpl({ atividade, onEdit, onNavigate, onDelete }: Atividad
   if (atividade.local) metaParts.push(`📍 ${atividade.local}`)
 
   return (
-    <Card className={`bg-white p-3 border-0 shadow-sm hover:shadow-md transition-shadow ${atividade.atrasada ? 'bg-red-50' : ''}`}>
+    <Card className={`bg-surface-1 p-3 border-0 shadow-sm hover:shadow-md transition-shadow ${atividade.atrasada ? 'border-l-2 border-red-500' : ''}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2.5 min-w-0 flex-1">
-          <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${PRIORIDADE_CORES[atividade.prioridade] || 'bg-gray-400'}`} />
+          <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${PRIORIDADE_CORES[atividade.prioridade] || 'bg-content-faint'}`} />
           <div className="min-w-0">
-            <h3 className="font-semibold text-gray-800 truncate text-sm">{atividade.titulo}</h3>
+            <h3 className="font-semibold text-content-strong truncate text-sm">{atividade.titulo}</h3>
             {atividade.descricao && (
-              <p className="text-xs text-gray-600 mt-0.5 line-clamp-1">{atividade.descricao}</p>
+              <p className="text-xs text-content-muted mt-0.5 line-clamp-1">{atividade.descricao}</p>
             )}
             {metaParts.length > 0 && (
-              <div className="text-xs text-gray-500 mt-0.5 truncate">{metaParts.join(' · ')}</div>
+              <div className="text-xs text-content-faint mt-0.5 truncate">{metaParts.join(' · ')}</div>
             )}
           </div>
         </div>
@@ -80,7 +80,7 @@ function AtividadeCardImpl({ atividade, onEdit, onNavigate, onDelete }: Atividad
                   af.status_individual === 'concluida' ? 'ring-green-400' :
                   af.status_individual === 'em_andamento' ? 'ring-blue-400' :
                   af.status_individual === 'justificada' ? 'ring-amber-400' :
-                  'ring-gray-300'
+                  'ring-surface-3'
                 return (
                   <div
                     key={af.id}
@@ -92,33 +92,33 @@ function AtividadeCardImpl({ atividade, onEdit, onNavigate, onDelete }: Atividad
                 )
               })}
               {atividade.funcionarios.length > 4 && (
-                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-[9px] font-bold ring-2 ring-gray-200">
+                <div className="w-6 h-6 rounded-full bg-surface-3 flex items-center justify-center text-content-muted text-[9px] font-bold ring-2 ring-surface-3">
                   +{atividade.funcionarios.length - 4}
                 </div>
               )}
             </div>
           )}
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CORES[atividade.status] || 'bg-gray-100'}`}>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CORES[atividade.status] || 'bg-surface-2 text-content'}`}>
             {STATUS_LABELS[atividade.status] || atividade.status}
           </span>
           {/* Botões de ação como ícones compactos */}
           <button
             onClick={() => onEdit(atividade)}
-            className="text-gray-400 hover:text-primary p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            className="text-content-faint hover:text-primary dark:hover:text-primary-light p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
             title="Editar"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
           </button>
           <button
             onClick={() => onNavigate(`/controller/monitoramento-atividades?atividade=${atividade.id}`)}
-            className="text-gray-400 hover:text-primary p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            className="text-content-faint hover:text-primary dark:hover:text-primary-light p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
             title="Monitorar"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
           </button>
           <button
             onClick={() => onDelete(atividade.id)}
-            className="text-gray-400 hover:text-red-500 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            className="text-content-faint hover:text-red-500 p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
             title="Excluir"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>

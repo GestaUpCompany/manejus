@@ -30,7 +30,7 @@ export function KeyboardHelpModal({ isOpen, onClose, shortcuts }: KeyboardHelpMo
         {shortcuts.map((shortcut, index) => (
           <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
             <span className="text-gray-700">{shortcut.description}</span>
-            <kbd className="px-3 py-1 bg-gray-100 border border-gray-300 rounded-md text-sm font-mono">
+            <kbd className="px-3 py-1 bg-surface-2 border border-surface-3 rounded-md text-sm font-mono">
               {formatShortcut(shortcut)}
             </kbd>
           </div>

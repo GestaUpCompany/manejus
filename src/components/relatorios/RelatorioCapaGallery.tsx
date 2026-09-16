@@ -66,10 +66,10 @@ export function RelatorioCapaGallery({ fazendaId, selecionada, onSelect, disable
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h4 className="text-sm font-semibold text-gray-900">Imagem de fundo</h4>
-          <p className="text-xs text-gray-500">Opcional, exclusiva desta fazenda.</p>
+          <h4 className="text-sm font-semibold text-content-strong">Imagem de fundo</h4>
+          <p className="text-xs text-content-muted">Opcional, exclusiva desta fazenda.</p>
         </div>
-        <label className={`rounded-lg border border-green-700 px-3 py-2 text-xs font-semibold text-green-700 ${disabled || uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-green-50'}`}>
+        <label className={`rounded-lg border border-primary px-3 py-2 text-xs font-semibold text-primary ${disabled || uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-primary/10'}`}>
           {uploading ? 'Enviando...' : 'Adicionar imagem'}
           <input ref={inputRef} type="file" name="relatorio-imagem-capa" accept="image/png,image/jpeg,image/webp" disabled={disabled || uploading} onChange={(event) => handleUpload(event.target.files?.[0])} className="sr-only" />
         </label>
@@ -80,9 +80,9 @@ export function RelatorioCapaGallery({ fazendaId, selecionada, onSelect, disable
           Capa institucional
         </button>
         {loading ? (
-          <div className="aspect-[1.414/1] animate-pulse rounded-lg bg-gray-100" />
+          <div className="aspect-[1.414/1] animate-pulse rounded-lg bg-surface-2" />
         ) : imagens.map((imagem) => (
-          <div key={imagem.path} className={`group relative aspect-[1.414/1] overflow-hidden rounded-lg border-2 ${selecionada === imagem.path ? 'border-amber-400 ring-2 ring-amber-200' : 'border-gray-200'}`}>
+          <div key={imagem.path} className={`group relative aspect-[1.414/1] overflow-hidden rounded-lg border-2 ${selecionada === imagem.path ? 'border-amber-400 ring-2 ring-amber-200' : 'border-border-base'}`}>
             <button type="button" disabled={disabled} onClick={() => onSelect(imagem.path, imagem.previewUrl)} className="h-full w-full" title={imagem.nome}>
               <img src={imagem.previewUrl} alt={imagem.nome} className="h-full w-full object-cover" />
             </button>

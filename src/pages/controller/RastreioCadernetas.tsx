@@ -320,8 +320,8 @@ export function RastreioCadernetas() {
   if (!fazendaId && !loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-800">Uso das Cadernetas</h1>
-        <Card className="p-8 text-center text-gray-500">Nenhuma fazenda associada ao seu usuário.</Card>
+        <h1 className="text-2xl font-bold text-content-strong">Uso das Cadernetas</h1>
+        <Card className="p-8 text-center text-content-muted">Nenhuma fazenda associada ao seu usuário.</Card>
       </div>
     )
   }
@@ -329,7 +329,7 @@ export function RastreioCadernetas() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">Uso das Cadernetas</h1>
+        <h1 className="text-2xl font-bold text-content-strong">Uso das Cadernetas</h1>
         <div className="flex gap-2">
           {(Object.keys(PERIODO_LABELS) as PeriodoPreset[]).map((p) => (
             <button
@@ -339,7 +339,7 @@ export function RastreioCadernetas() {
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 periodo === p
                   ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-surface-2 text-content-muted hover:bg-surface-3'
               }`}
             >
               {PERIODO_LABELS[p]}
@@ -351,12 +351,12 @@ export function RastreioCadernetas() {
       {/* Banner de cross-filter ativo */}
       {usuarioSelecionado && !loading && (
         <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-lg px-4 py-2">
-          <span className="text-sm text-primary font-medium">
+          <span className="text-sm text-primary dark:text-primary-light font-medium">
             Filtrando por: <strong>{usuarioSelecionado}</strong>, todas as métricas abaixo refletem apenas este usuário
           </span>
           <button
             onClick={() => setUsuarioSelecionado(null)}
-            className="text-xs text-primary hover:text-primary/80 font-medium"
+            className="text-xs text-primary dark:text-primary-light hover:text-primary/80 font-medium"
           >
             ✕ limpar filtro
           </button>
@@ -365,13 +365,13 @@ export function RastreioCadernetas() {
 
       {/* Banner de filtro por caderneta */}
       {cadernetaSelecionada && !loading && (
-        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-          <span className="text-sm text-blue-700 font-medium">
+        <div className="flex items-center justify-between bg-primary/10 border border-primary/30 rounded-lg px-4 py-2">
+          <span className="text-sm text-primary dark:text-primary-light font-medium">
             Filtrando por caderneta: <strong>{cadernetaLabel(cadernetaSelecionada)}</strong>
           </span>
           <button
             onClick={() => setCadernetaSelecionada(null)}
-            className="text-xs text-blue-700 hover:text-blue-500 font-medium"
+            className="text-xs text-primary dark:text-primary-light hover:text-primary/80 font-medium"
           >
             ✕ limpar filtro
           </button>
@@ -386,34 +386,34 @@ export function RastreioCadernetas() {
         <>
           {/* Cards de resumo */}
           <div>
-            <p className="text-xs text-gray-400 mb-2">
+            <p className="text-xs text-content-faint mb-2">
               {periodo === 'tudo' ? 'Todo o histórico' : `Últimos ${PERIODO_LABELS[periodo]}`}
               {usuarioSelecionado ? ` · filtrado por ${usuarioSelecionado}` : ''}
               {cadernetaSelecionada ? ` · caderneta ${cadernetaLabel(cadernetaSelecionada)}` : ''}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-white p-4 border-0 shadow-sm">
-              <p className="text-sm text-gray-500 mb-1">{periodo === 'tudo' ? 'Usuários com histórico' : 'Usuários ativos no período'}</p>
-              <p className="text-2xl font-bold text-gray-800">{usuarioSelecionado ? 1 : usuarios.length}</p>
+            <Card className="bg-surface-1 p-4 border-0 shadow-sm">
+              <p className="text-sm text-content-muted mb-1">{periodo === 'tudo' ? 'Usuários com histórico' : 'Usuários ativos no período'}</p>
+              <p className="text-2xl font-bold text-content-strong">{usuarioSelecionado ? 1 : usuarios.length}</p>
             </Card>
-            <Card className="bg-white p-4 border-0 shadow-sm">
-              <p className="text-sm text-gray-500 mb-1">Total de registros</p>
-              <p className="text-2xl font-bold text-gray-800">{totalRegistros}</p>
+            <Card className="bg-surface-1 p-4 border-0 shadow-sm">
+              <p className="text-sm text-content-muted mb-1">Total de registros</p>
+              <p className="text-2xl font-bold text-content-strong">{totalRegistros}</p>
               {tendenciaDelta !== null && periodo !== 'tudo' && (
-                <p className={`text-xs mt-1 ${tendenciaDelta >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                <p className={`text-xs mt-1 ${tendenciaDelta >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {tendenciaDelta >= 0 ? '↑' : '↓'} {Math.abs(tendenciaDelta).toFixed(0)}% vs período anterior
                 </p>
               )}
             </Card>
-            <Card className="bg-white p-4 border-0 shadow-sm">
-              <p className="text-sm text-gray-500 mb-1">Cadernetas usadas</p>
-              <p className="text-2xl font-bold text-gray-800">{totalCadernetasUsadas}</p>
-              <p className="text-xs text-gray-400 mt-1">{cadernetasNuncaUsadas.length} parada{cadernetasNuncaUsadas.length !== 1 ? 's' : ''} de 20</p>
+            <Card className="bg-surface-1 p-4 border-0 shadow-sm">
+              <p className="text-sm text-content-muted mb-1">Cadernetas usadas</p>
+              <p className="text-2xl font-bold text-content-strong">{totalCadernetasUsadas}</p>
+              <p className="text-xs text-content-faint mt-1">{cadernetasNuncaUsadas.length} parada{cadernetasNuncaUsadas.length !== 1 ? 's' : ''} de 20</p>
             </Card>
-            <Card className="bg-white p-4 border-0 shadow-sm">
-              <p className="text-sm text-gray-500 mb-1">Usuários parados</p>
-              <p className="text-2xl font-bold text-gray-800">{usuariosParados.length}</p>
-              <p className="text-xs text-gray-400 mt-1">registraram antes, mas não neste período</p>
+            <Card className="bg-surface-1 p-4 border-0 shadow-sm">
+              <p className="text-sm text-content-muted mb-1">Usuários parados</p>
+              <p className="text-2xl font-bold text-content-strong">{usuariosParados.length}</p>
+              <p className="text-xs text-content-faint mt-1">registraram antes, mas não neste período</p>
             </Card>
             </div>
           </div>
@@ -422,11 +422,11 @@ export function RastreioCadernetas() {
           <div className={`grid grid-cols-1 gap-6 ${periodo === 'tudo' ? '' : 'lg:grid-cols-2'}`}>
             {/* Distribuicao por dia da semana */}
             <div>
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
+              <h2 className="text-sm font-bold text-content-muted uppercase tracking-wide mb-3">
                 Distribuição por dia da semana
               </h2>
-              <Card className="bg-white p-4 border-0 shadow-sm">
-                <p className="text-xs text-gray-400 mb-2">Média de registros por ocorrência do dia</p>
+              <Card className="bg-surface-1 p-4 border-0 shadow-sm">
+                <p className="text-xs text-content-faint mb-2">Média de registros por ocorrência do dia</p>
                 <div
                   className="flex justify-between gap-3 h-40 px-2"
                   role="img"
@@ -441,14 +441,14 @@ export function RastreioCadernetas() {
                         className="flex flex-col items-center gap-1.5 flex-1"
                         title={`${DIAS_SEMANA[idx]}: média de ${display} registros`}
                       >
-                        <span className="text-xs font-semibold text-gray-700">{display}</span>
+                        <span className="text-xs font-semibold text-content">{display}</span>
                         <div className="w-full flex-1 flex items-end">
                           <div
                             className="w-full bg-primary rounded-t-md transition-all hover:bg-primary/80"
                             style={{ height: `${altura}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-400">{DIAS_SEMANA[idx]}</span>
+                        <span className="text-xs text-content-faint">{DIAS_SEMANA[idx]}</span>
                       </div>
                     )
                   })}
@@ -459,36 +459,36 @@ export function RastreioCadernetas() {
             {/* Tendência semanal - oculta no modo "tudo" */}
             {periodo !== 'tudo' && (
             <div>
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
+              <h2 className="text-sm font-bold text-content-muted uppercase tracking-wide mb-3">
                 Tendência vs período anterior
               </h2>
               {tendenciaStatus === 'ok' ? (
-                <Card className="bg-white p-4 border-0 shadow-sm h-40 flex items-center">
+                <Card className="bg-surface-1 p-4 border-0 shadow-sm h-40 flex items-center">
                   <div className="grid grid-cols-3 gap-4 w-full">
                     <div>
-                      <p className="text-xs text-gray-400 mb-1">{PERIODO_LABELS[periodo]} anteriores</p>
-                      <p className="text-xl font-bold text-gray-700">{totalPeriodoAnterior} <span className="text-xs font-normal text-gray-400">registros</span></p>
-                      <p className="text-xs text-gray-400">{usuarioSelecionado ? '1 usuário' : `${prevPeriodUsuarios.length} usuário${prevPeriodUsuarios.length !== 1 ? 's' : ''}`}</p>
+                      <p className="text-xs text-content-faint mb-1">{PERIODO_LABELS[periodo]} anteriores</p>
+                      <p className="text-xl font-bold text-content">{totalPeriodoAnterior} <span className="text-xs font-normal text-content-faint">registros</span></p>
+                      <p className="text-xs text-content-faint">{usuarioSelecionado ? '1 usuário' : `${prevPeriodUsuarios.length} usuário${prevPeriodUsuarios.length !== 1 ? 's' : ''}`}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 mb-1">Últimos {PERIODO_LABELS[periodo]}</p>
-                      <p className="text-xl font-bold text-gray-700">{totalRegistros} <span className="text-xs font-normal text-gray-400">registros</span></p>
-                      <p className="text-xs text-gray-400">{usuarioSelecionado ? '1 usuário' : `${usuarios.length} usuário${usuarios.length !== 1 ? 's' : ''}`}</p>
+                      <p className="text-xs text-content-faint mb-1">Últimos {PERIODO_LABELS[periodo]}</p>
+                      <p className="text-xl font-bold text-content">{totalRegistros} <span className="text-xs font-normal text-content-faint">registros</span></p>
+                      <p className="text-xs text-content-faint">{usuarioSelecionado ? '1 usuário' : `${usuarios.length} usuário${usuarios.length !== 1 ? 's' : ''}`}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 mb-1">Variação</p>
-                      <p className={`text-xl font-bold ${tendenciaDelta !== null && tendenciaDelta >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                      <p className="text-xs text-content-faint mb-1">Variação</p>
+                      <p className={`text-xl font-bold ${tendenciaDelta !== null && tendenciaDelta >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                         {tendenciaDelta !== null ? `${tendenciaDelta >= 0 ? '+' : ''}${tendenciaDelta.toFixed(1)}%` : '-'}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-content-faint">
                         {tendenciaDelta !== null && tendenciaDelta >= 0 ? 'crescendo' : 'caindo'}
                       </p>
                     </div>
                   </div>
                 </Card>
               ) : (
-                <Card className="bg-white p-4 border-0 shadow-sm h-40 flex items-center justify-center">
-                  <p className="text-sm text-gray-400 text-center">
+                <Card className="bg-surface-1 p-4 border-0 shadow-sm h-40 flex items-center justify-center">
+                  <p className="text-sm text-content-faint text-center">
                     {allTimeUsuarios.length === 0
                       ? 'Fazenda sem histórico suficiente para comparar'
                       : 'Nenhum registro no período anterior'}
@@ -502,27 +502,27 @@ export function RastreioCadernetas() {
           {/* Lista de usuarios + detalhe */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-1">Usuários</h2>
-              <p className="text-xs text-gray-400 mb-3">lista global, independente de filtros</p>
+              <h2 className="text-sm font-bold text-content-muted uppercase tracking-wide mb-1">Usuários</h2>
+              <p className="text-xs text-content-faint mb-3">lista global, independente de filtros</p>
 
               {/* Card de participação do usuário filtrado no total do período */}
               {usuarioSelecionado && !loading && participacaoUsuarioPct !== null && (
-                <Card className="bg-white p-4 border-0 shadow-sm mb-3">
+                <Card className="bg-surface-1 p-4 border-0 shadow-sm mb-3">
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">Participação no período</p>
-                      <p className="text-sm text-gray-700">
-                        <strong className="text-gray-800">{usuarioSelecionado}</strong> representa
-                        {' '}<strong className="text-primary text-lg">{participacaoUsuarioPct.toFixed(1).replace('.', ',')}%</strong>
+                      <p className="text-sm text-content-muted mb-1">Participação no período</p>
+                      <p className="text-sm text-content">
+                        <strong className="text-content-strong">{usuarioSelecionado}</strong> representa
+                        {' '}<strong className="text-primary dark:text-primary-light text-lg">{participacaoUsuarioPct.toFixed(1).replace('.', ',')}%</strong>
                         {' '}dos registros do período
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-content-faint mt-1">
                         {totalRegistros} de {totalRegistrosPeriodo} registros
                         {usuarios.length > 1 ? ` · ${usuarios.length} usuários ativos no período` : ''}
                       </p>
                     </div>
                     <div className="flex-1 min-w-[120px] max-w-[180px]">
-                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-surface-2 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary rounded-full transition-all"
                           style={{ width: `${Math.min(100, participacaoUsuarioPct)}%` }}
@@ -534,7 +534,7 @@ export function RastreioCadernetas() {
               )}
               <div className="space-y-2">
                 {regularidadeUsuarios.length === 0 ? (
-                  <Card className="p-6 text-center text-gray-400 text-sm">Nenhum registro no período</Card>
+                  <Card className="p-6 text-center text-content-faint text-sm">Nenhum registro no período</Card>
                 ) : (
                   regularidadeUsuarios.map((u) => {
                     const dias = diasDesde(u.ultimo_registro)
@@ -547,18 +547,18 @@ export function RastreioCadernetas() {
                         className={`w-full text-left p-3 rounded-lg border transition-colors ${
                           isSelected
                             ? 'border-primary bg-primary/5'
-                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                            : 'border-border-base hover:border-surface-3 bg-surface-1'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${ativo ? 'bg-green-500' : 'bg-gray-300'}`} aria-hidden="true" />
+                            <span className={`w-2 h-2 rounded-full ${ativo ? 'bg-green-500' : 'bg-surface-3'}`} aria-hidden="true" />
                             <span className="sr-only">{ativo ? 'ativo' : 'inativo'}</span>
-                            <span className="font-semibold text-gray-800 text-sm">{u.nome_usuario}</span>
+                            <span className="font-semibold text-content-strong text-sm">{u.nome_usuario}</span>
                           </div>
-                          <span className="text-xs text-gray-400">{u.total_registros}</span>
+                          <span className="text-xs text-content-faint">{u.total_registros}</span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-400">
+                        <div className="flex items-center gap-3 text-xs text-content-faint">
                           <span>{u.cadernetas_usadas} caderneta{u.cadernetas_usadas !== 1 ? 's' : ''}</span>
                           <span>{u.dias_ativos} dia{u.dias_ativos !== 1 ? 's' : ''}</span>
                           <span>{u.regularidade.toFixed(1)}/dia</span>
@@ -575,53 +575,53 @@ export function RastreioCadernetas() {
             <div className="lg:col-span-2">
               {!usuarioSelecionado ? (
                 <>
-                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
+                  <h2 className="text-sm font-bold text-content-muted uppercase tracking-wide mb-3">
                     Caderneta mais usada no período
                   </h2>
                   {cadernetaMaisUsada && cadernetaMaisUsada.total > 0 ? (
-                    <Card className="bg-white p-4 border-0 shadow-sm mb-4">
+                    <Card className="bg-surface-1 p-4 border-0 shadow-sm mb-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-semibold text-gray-800">{cadernetaLabel(cadernetaMaisUsada.key)}</p>
-                          <p className="text-xs text-gray-400">no período selecionado</p>
+                          <p className="font-semibold text-content-strong">{cadernetaLabel(cadernetaMaisUsada.key)}</p>
+                          <p className="text-xs text-content-faint">no período selecionado</p>
                         </div>
                         <div className="text-right">
-                          <div className="text-3xl font-bold text-primary">{cadernetaMaisUsada.total}</div>
-                          <div className="text-xs text-gray-400">registros</div>
+                          <div className="text-3xl font-bold text-primary dark:text-primary-light">{cadernetaMaisUsada.total}</div>
+                          <div className="text-xs text-content-faint">registros</div>
                         </div>
                       </div>
                     </Card>
                   ) : null}
 
-                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
+                  <h2 className="text-sm font-bold text-content-muted uppercase tracking-wide mb-3">
                     Registros por caderneta
                   </h2>
                   {effectiveCadernetas.length === 0 ? (
-                    <Card className="p-6 text-center text-gray-400 text-sm">Nenhum registro no período</Card>
+                    <Card className="p-6 text-center text-content-faint text-sm">Nenhum registro no período</Card>
                   ) : (
-                    <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
+                    <div className="overflow-x-auto bg-surface-1 rounded-lg shadow-sm">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                        <thead className="bg-surface-2 text-content-muted text-xs uppercase">
                           <tr>
-                            <th className="text-left px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('nome_usuario')}>Usuário{sortIndicator('nome_usuario')}</th>
-                            <th className="text-left px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('caderneta')}>Caderneta{sortIndicator('caderneta')}</th>
-                            <th className="text-right px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('total_registros')}>Total{sortIndicator('total_registros')}</th>
-                            <th className="text-right px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('dias_ativos')}>Dias{sortIndicator('dias_ativos')}</th>
-                            <th className="text-left px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('ultimo_registro')}>Último{sortIndicator('ultimo_registro')}</th>
+                            <th className="text-left px-4 py-3 cursor-pointer hover:text-content" onClick={() => toggleSort('nome_usuario')}>Usuário{sortIndicator('nome_usuario')}</th>
+                            <th className="text-left px-4 py-3 cursor-pointer hover:text-content" onClick={() => toggleSort('caderneta')}>Caderneta{sortIndicator('caderneta')}</th>
+                            <th className="text-right px-4 py-3 cursor-pointer hover:text-content" onClick={() => toggleSort('total_registros')}>Total{sortIndicator('total_registros')}</th>
+                            <th className="text-right px-4 py-3 cursor-pointer hover:text-content" onClick={() => toggleSort('dias_ativos')}>Dias{sortIndicator('dias_ativos')}</th>
+                            <th className="text-left px-4 py-3 cursor-pointer hover:text-content" onClick={() => toggleSort('ultimo_registro')}>Último{sortIndicator('ultimo_registro')}</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-border-subtle">
                           {sortedCadernetas.map((c, i) => (
                             <tr
                               key={`${c.nome_usuario}-${c.caderneta}-${i}`}
-                              className="hover:bg-gray-50 cursor-pointer"
+                              className="hover:bg-surface-2 cursor-pointer"
                               onClick={() => setUsuarioSelecionado(c.nome_usuario)}
                             >
-                              <td className="px-4 py-3 text-gray-800 font-medium">{c.nome_usuario}</td>
-                              <td className="px-4 py-3 text-gray-600">{cadernetaLabel(c.caderneta)}</td>
-                              <td className="px-4 py-3 text-right font-semibold text-gray-800">{c.total_registros}</td>
-                              <td className="px-4 py-3 text-right text-gray-500">{c.dias_ativos}</td>
-                              <td className="px-4 py-3 text-gray-500 text-xs">{formatDataHora(c.ultimo_registro)}</td>
+                              <td className="px-4 py-3 text-content-strong font-medium">{c.nome_usuario}</td>
+                              <td className="px-4 py-3 text-content-muted">{cadernetaLabel(c.caderneta)}</td>
+                              <td className="px-4 py-3 text-right font-semibold text-content-strong">{c.total_registros}</td>
+                              <td className="px-4 py-3 text-right text-content-muted">{c.dias_ativos}</td>
+                              <td className="px-4 py-3 text-content-muted text-xs">{formatDataHora(c.ultimo_registro)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -632,12 +632,12 @@ export function RastreioCadernetas() {
               ) : (
                 <>
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                    <h2 className="text-sm font-bold text-content-muted uppercase tracking-wide">
                       {usuarioSelecionado}
                     </h2>
                     <button
                       onClick={() => setUsuarioSelecionado(null)}
-                      className="text-xs text-gray-400 hover:text-gray-600"
+                      className="text-xs text-content-faint hover:text-content-muted"
                     >
                       ← voltar
                     </button>
@@ -646,19 +646,19 @@ export function RastreioCadernetas() {
                   {/* Breakdown por caderneta */}
                   <div className="space-y-2 mb-6">
                     {cadernetasDoUsuario.map((c) => (
-                      <Card key={c.caderneta} className="bg-white p-3 border-0 shadow-sm">
+                      <Card key={c.caderneta} className="bg-surface-1 p-3 border-0 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-gray-800 text-sm">{cadernetaLabel(c.caderneta)}</p>
-                            <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
+                            <p className="font-medium text-content-strong text-sm">{cadernetaLabel(c.caderneta)}</p>
+                            <div className="flex items-center gap-3 text-xs text-content-faint mt-0.5">
                               <span>{c.total_registros} total</span>
                               <span>{c.dias_ativos} dias</span>
                               <span>{c.dias_ativos > 0 ? (c.total_registros / c.dias_ativos).toFixed(1) : '0'}/dia</span>
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-xl font-bold text-gray-800">{c.total_registros}</div>
-                            <div className="text-xs text-gray-400">{formatData(c.primeiro_registro)} → {formatData(c.ultimo_registro)}</div>
+                            <div className="text-xl font-bold text-content-strong">{c.total_registros}</div>
+                            <div className="text-xs text-content-faint">{formatData(c.primeiro_registro)} → {formatData(c.ultimo_registro)}</div>
                           </div>
                         </div>
                       </Card>
@@ -668,11 +668,11 @@ export function RastreioCadernetas() {
                   {/* Timeline diario */}
                   {detalhePorDia.length > 0 && (
                     <>
-                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
+                      <h3 className="text-sm font-bold text-content-muted uppercase tracking-wide mb-3">
                         Atividade por dia
                       </h3>
-                      <div className="bg-white rounded-lg shadow-sm p-4">
-                        <p className="text-xs text-gray-400 mb-2">registros por dia</p>
+                      <div className="bg-surface-1 rounded-lg shadow-sm p-4">
+                        <p className="text-xs text-content-faint mb-2">registros por dia</p>
                         <div
                           className="flex gap-2 h-40 overflow-x-auto px-2"
                           role="img"
@@ -686,14 +686,14 @@ export function RastreioCadernetas() {
                                 className="flex flex-col items-center gap-1.5 flex-shrink-0 w-8"
                                 title={`${formatData(d.dia)}: ${d.total} registros`}
                               >
-                                <span className="text-xs font-semibold text-gray-700">{d.total}</span>
+                                <span className="text-xs font-semibold text-content">{d.total}</span>
                                 <div className="w-full flex-1 flex items-end">
                                   <div
                                     className="w-full bg-primary rounded-t-md transition-all hover:bg-primary/80"
                                     style={{ height: `${altura}%` }}
                                   />
                                 </div>
-                                <span className="text-[10px] text-gray-400">{d.dia.slice(8)}/{d.dia.slice(5, 7)}</span>
+                                <span className="text-[10px] text-content-faint">{d.dia.slice(8)}/{d.dia.slice(5, 7)}</span>
                               </div>
                             )
                           })}
@@ -710,25 +710,25 @@ export function RastreioCadernetas() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Cobertura por caderneta (ranking das 20) */}
             <div>
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Cobertura por caderneta</h2>
-              <Card className="bg-white p-4 border-0 shadow-sm">
+              <h2 className="text-sm font-bold text-content-muted uppercase tracking-wide mb-3">Cobertura por caderneta</h2>
+              <Card className="bg-surface-1 p-4 border-0 shadow-sm">
                 <div className="space-y-2">
                   {coberturaPorCaderneta.map((c) => (
                     <button
                       key={c.key}
                       onClick={() => setCadernetaSelecionada(cadernetaSelecionada === c.key ? null : c.key)}
                       className={`flex items-center gap-3 w-full text-left p-1 rounded transition-colors ${
-                        cadernetaSelecionada === c.key ? 'bg-primary/5' : 'hover:bg-gray-50'
+                        cadernetaSelecionada === c.key ? 'bg-primary/5' : 'hover:bg-surface-2'
                       }`}
                     >
-                      <div className="w-32 text-xs text-gray-600 truncate flex-shrink-0">{c.label}</div>
-                      <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
+                      <div className="w-32 text-xs text-content-muted truncate flex-shrink-0">{c.label}</div>
+                      <div className="flex-1 bg-surface-2 rounded-full h-5 relative overflow-hidden">
                         <div
-                          className={`h-full rounded-full ${c.total > 0 ? 'bg-primary' : 'bg-gray-200'}`}
+                          className={`h-full rounded-full ${c.total > 0 ? 'bg-primary' : 'bg-surface-3'}`}
                           style={{ width: `${Math.max(2, (c.total / maxCadernetaTotal) * 100)}%` }}
                         />
                       </div>
-                      <div className="w-10 text-xs text-right text-gray-500 flex-shrink-0">{c.total}</div>
+                      <div className="w-10 text-xs text-right text-content-muted flex-shrink-0">{c.total}</div>
                     </button>
                   ))}
                 </div>
@@ -737,18 +737,18 @@ export function RastreioCadernetas() {
 
             {/* Cadernetas nunca usadas */}
             <div>
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
+              <h2 className="text-sm font-bold text-content-muted uppercase tracking-wide mb-3">
                 Cadernetas sem registro no período
               </h2>
               {cadernetasNuncaUsadas.length === 0 ? (
-                <Card className="p-6 text-center text-gray-400 text-sm">Todas as 20 cadernetas tiveram uso no período</Card>
+                <Card className="p-6 text-center text-content-faint text-sm">Todas as 20 cadernetas tiveram uso no período</Card>
               ) : (
-                <Card className="bg-white p-4 border-0 shadow-sm">
+                <Card className="bg-surface-1 p-4 border-0 shadow-sm">
                   <div className="flex flex-wrap gap-2">
                     {cadernetasNuncaUsadas.map((key) => (
                       <span
                         key={key}
-                        className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 text-xs font-medium"
+                        className="px-3 py-1.5 rounded-lg bg-surface-2 text-content-muted text-xs font-medium"
                       >
                         {cadernetaLabel(key)}
                       </span>
@@ -762,13 +762,13 @@ export function RastreioCadernetas() {
           {/* Usuários parados */}
           {usuariosParados.length > 0 && (
             <div>
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
+              <h2 className="text-sm font-bold text-content-muted uppercase tracking-wide mb-3">
                 Usuários parados ({usuariosParados.length})
               </h2>
-              <Card className="bg-white p-4 border-0 shadow-sm">
+              <Card className="bg-surface-1 p-4 border-0 shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="text-gray-400 text-xs uppercase border-b border-gray-100">
+                    <thead className="text-content-faint text-xs uppercase border-b border-border-subtle">
                       <tr>
                         <th className="text-left pb-2">Usuário</th>
                         <th className="text-right pb-2">Histórico</th>
@@ -779,16 +779,16 @@ export function RastreioCadernetas() {
                         <th className="text-right pb-2"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-border-subtle">
                       {usuariosParados.map((u) => {
                         const paradoHa = diasDesde(u.ultimo_registro)
                         return (
-                          <tr key={u.nome_usuario} className="hover:bg-gray-50">
-                            <td className="py-2 text-gray-800 font-medium">{u.nome_usuario}</td>
-                            <td className="py-2 text-right text-gray-600">{u.total_registros}</td>
-                            <td className="py-2 text-right text-gray-500">{u.cadernetas_usadas}</td>
-                            <td className="py-2 text-right text-gray-500">{u.dias_ativos}</td>
-                            <td className="py-2 text-gray-500 text-xs">{formatData(u.ultimo_registro)}</td>
+                          <tr key={u.nome_usuario} className="hover:bg-surface-2">
+                            <td className="py-2 text-content-strong font-medium">{u.nome_usuario}</td>
+                            <td className="py-2 text-right text-content-muted">{u.total_registros}</td>
+                            <td className="py-2 text-right text-content-muted">{u.cadernetas_usadas}</td>
+                            <td className="py-2 text-right text-content-muted">{u.dias_ativos}</td>
+                            <td className="py-2 text-content-muted text-xs">{formatData(u.ultimo_registro)}</td>
                             <td className="py-2 text-right">
                               <span className={`text-xs font-medium ${paradoHa !== null && paradoHa > 14 ? 'text-red-500' : 'text-orange-500'}`}>
                                 {paradoHa !== null ? `${paradoHa} dia${paradoHa !== 1 ? 's' : ''}` : '-'}
@@ -797,7 +797,7 @@ export function RastreioCadernetas() {
                             <td className="py-2 text-right">
                               <button
                                 onClick={() => setUsuarioSelecionado(u.nome_usuario)}
-                                className="text-xs text-primary hover:text-primary/80 font-medium"
+                                className="text-xs text-primary dark:text-primary-light hover:text-primary/80 font-medium"
                               >
                                 ver histórico
                               </button>

@@ -13,7 +13,7 @@ export function Card({ children, className = '', onClick, disableHover = false }
   
   return (
     <div 
-      className={`bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-200 transition-all duration-200 ${hoverClasses} ${onClick ? onClickHover : ''} ${className}`}
+      className={`bg-surface-1 rounded-2xl p-6 shadow-lg border-2 border-border-base transition-all duration-200 ${hoverClasses} ${onClick ? onClickHover : ''} ${className}`}
       onClick={onClick}
     >
       {children}

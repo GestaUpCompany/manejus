@@ -28,21 +28,21 @@ export function Pagination({
   if (totalPages <= 1 && !onPerPageChange) return null
 
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-sm text-gray-600">
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-1 rounded-xl border border-border-base p-4 shadow-sm">
+      <div className="flex items-center gap-2 text-sm text-content-muted">
         <span>
           {startItem}–{endItem} de {totalItems}
         </span>
         {onPerPageChange && (
           <>
-            <span>|</span>
+            <span className="text-content-faint">|</span>
             <div className="flex items-center gap-2">
               <label htmlFor="per-page">Por página:</label>
               <select
                 id="per-page"
                 value={perPage}
                 onChange={(e) => onPerPageChange(Number(e.target.value))}
-                className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="border border-surface-3 rounded-lg px-2 py-1 text-sm bg-surface-2 text-content-strong focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {perPageOptions.map((opt) => (
                   <option key={opt} value={opt}>{opt}</option>
@@ -62,7 +62,7 @@ export function Pagination({
           >
             Anterior
           </Button>
-          <span className="text-sm text-gray-600 px-2">
+          <span className="text-sm text-content-muted px-2">
             Página {page} de {totalPages}
           </span>
           <Button

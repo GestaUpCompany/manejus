@@ -292,7 +292,7 @@ export function MaquinasVeiculos() {
             className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
               showInactive
                 ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
             }`}
           >
             {showInactive ? (
@@ -318,7 +318,7 @@ export function MaquinasVeiculos() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Nome *</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Nome *</label>
                 <Input
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
@@ -326,11 +326,11 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Tipo *</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Tipo *</label>
                 <select
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="">Selecione</option>
@@ -339,11 +339,11 @@ export function MaquinasVeiculos() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Categoria *</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Categoria *</label>
                 <select
                   value={formData.categoria}
                   onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="">Selecione</option>
@@ -353,14 +353,14 @@ export function MaquinasVeiculos() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Modelo</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Modelo</label>
                 <Input
                   value={formData.modelo}
                   onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Ano</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Ano</label>
                 <Input
                   type="number"
                   value={formData.ano}
@@ -368,18 +368,18 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Placa</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Placa</label>
                 <Input
                   value={formData.placa}
                   onChange={(e) => setFormData({ ...formData, placa: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Tipo de Combustível</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Tipo de Combustível</label>
                 <select
                   value={formData.tipo_combustivel}
                   onChange={(e) => setFormData({ ...formData, tipo_combustivel: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Selecione</option>
                   <option value="Diesel S10">Diesel S10</option>
@@ -390,7 +390,7 @@ export function MaquinasVeiculos() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Capacidade (L)</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Capacidade (L)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -399,7 +399,7 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Horímetro (h)</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Horímetro (h)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -408,7 +408,7 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Quilometragem (km)</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Quilometragem (km)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -417,7 +417,7 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Custo por Hora (R$)</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Custo por Hora (R$)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -426,7 +426,7 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Custo por km (R$)</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Custo por km (R$)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -435,18 +435,18 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Operador Padrão</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Operador Padrão</label>
                 <Input
                   value={formData.operador_padrao}
                   onChange={(e) => setFormData({ ...formData, operador_padrao: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Status *</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Status *</label>
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="Ativo">Ativo</option>
@@ -455,7 +455,7 @@ export function MaquinasVeiculos() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Última Manutenção</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Última Manutenção</label>
                 <Input
                   type="date"
                   value={formData.data_ultima_manutencao}
@@ -463,7 +463,7 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Próxima Manutenção</label>
+                <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Próxima Manutenção</label>
                 <Input
                   type="date"
                   value={formData.data_proxima_manutencao}
@@ -472,11 +472,11 @@ export function MaquinasVeiculos() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Observações</label>
+              <label className="block text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Observações</label>
               <textarea
                 value={formData.observacoes}
                 onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={3}
               />
             </div>
@@ -503,10 +503,10 @@ export function MaquinasVeiculos() {
                     <span
                       className={`px-2 py-1 text-xs rounded-full ${
                         mv.status === 'Ativo'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-green-500/10 text-green-800 dark:text-green-200'
                           : mv.status === 'Manutencao'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-200'
+                          : 'bg-red-500/10 text-red-800 dark:text-red-200'
                       }`}
                     >
                       {mv.status}
@@ -514,53 +514,53 @@ export function MaquinasVeiculos() {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Tipo:</span>
-                      <span className="text-gray-800">{mv.tipo}</span>
+                      <span className="text-content-muted">Tipo:</span>
+                      <span className="text-content-strong">{mv.tipo}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Categoria:</span>
-                      <span className="text-gray-800">{mv.categoria}</span>
+                      <span className="text-content-muted">Categoria:</span>
+                      <span className="text-content-strong">{mv.categoria}</span>
                     </div>
                     {mv.modelo && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Modelo:</span>
-                        <span className="text-gray-800">{mv.modelo}</span>
+                        <span className="text-content-muted">Modelo:</span>
+                        <span className="text-content-strong">{mv.modelo}</span>
                       </div>
                     )}
                     {mv.ano && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Ano:</span>
-                        <span className="text-gray-800">{mv.ano}</span>
+                        <span className="text-content-muted">Ano:</span>
+                        <span className="text-content-strong">{mv.ano}</span>
                       </div>
                     )}
                     {mv.placa && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Placa:</span>
-                        <span className="text-gray-800">{mv.placa}</span>
+                        <span className="text-content-muted">Placa:</span>
+                        <span className="text-content-strong">{mv.placa}</span>
                       </div>
                     )}
                     {mv.tipo_combustivel && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Combustível:</span>
-                        <span className="text-gray-800">{mv.tipo_combustivel}</span>
+                        <span className="text-content-muted">Combustível:</span>
+                        <span className="text-content-strong">{mv.tipo_combustivel}</span>
                       </div>
                     )}
                     {mv.horimetro && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Horímetro:</span>
-                        <span className="text-gray-800">{mv.horimetro}h</span>
+                        <span className="text-content-muted">Horímetro:</span>
+                        <span className="text-content-strong">{mv.horimetro}h</span>
                       </div>
                     )}
                     {mv.quilometragem && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Quilometragem:</span>
-                        <span className="text-gray-800">{mv.quilometragem}km</span>
+                        <span className="text-content-muted">Quilometragem:</span>
+                        <span className="text-content-strong">{mv.quilometragem}km</span>
                       </div>
                     )}
                     {mv.data_proxima_manutencao && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Próx. Manutenção:</span>
-                        <span className="text-gray-800">
+                        <span className="text-content-muted">Próx. Manutenção:</span>
+                        <span className="text-content-strong">
                           {new Date(mv.data_proxima_manutencao).toLocaleDateString('pt-BR')}
                         </span>
                       </div>

@@ -15,12 +15,12 @@ export function ConfirmarRemocaoModal({ isOpen, onClose, confirmarRemocao, remov
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Remover do Mapa" size="sm">
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-content-muted">
           Tem certeza que deseja remover a geometria de{' '}
           <strong>{confirmarRemocao?.tipo === 'pasto' ? 'pasto' : 'bebedouro'}</strong>{' '}
           <strong>{confirmarRemocao?.nome}</strong> do mapa?
         </p>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-200">
           O cadastro não será excluído, apenas a delimitação geográfica será removida.
           Você poderá redesenhar ou reimportar a geometria depois.
         </div>
@@ -50,20 +50,20 @@ export function RemocaoLoteModal({ isOpen, onClose, quantidadePastos, removerBeb
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Remover Geometrias em Lote" size="md">
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-content-muted">
           Tem certeza que deseja remover a geometria de{' '}
           <strong>{quantidadePastos} pasto(s)</strong> do mapa?
         </p>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-200">
           Os cadastros não serão excluídos, apenas as delimitações geográficas serão removidas.
           Você poderá redesenhar ou reimportar as geometrias depois.
         </div>
-        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+        <label className="flex items-center gap-2 cursor-pointer text-sm text-content">
           <input
             type="checkbox"
             checked={removerBebedourosLote}
             onChange={(e) => setRemoverBebedourosLote(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="w-4 h-4 rounded border-surface-3 text-primary focus:ring-blue-500"
           />
           Remover também as geometrias dos bebedouros dentro destes pastos
         </label>
@@ -92,7 +92,7 @@ export function NomearEstradaModal({ isOpen, onClose, nomeEstrada, setNomeEstrad
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Nomear Estrada" size="sm">
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-content-muted">
           Digite um nome para esta estrada. Ela será usada para cálculo de rotas dentro da fazenda.
         </p>
         <input
@@ -100,7 +100,7 @@ export function NomearEstradaModal({ isOpen, onClose, nomeEstrada, setNomeEstrad
           value={nomeEstrada}
           onChange={(e) => setNomeEstrada(e.target.value)}
           placeholder="Ex: Estrada principal, Acesso ao curral, etc."
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-3 py-2 border border-surface-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           autoFocus
           onKeyDown={(e) => { if (e.key === 'Enter' && nomeEstrada.trim()) onSalvar() }}
         />
@@ -132,11 +132,11 @@ export function NomearPontoModal({ isOpen, onClose, tipoPontoSelecionado, setTip
     <Modal isOpen={isOpen} onClose={onClose} title="Marcar Ponto de Interesse" size="sm">
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+          <label className="block text-sm font-medium text-content mb-1">Tipo</label>
           <select
             value={tipoPontoSelecionado}
             onChange={(e) => setTipoPontoSelecionado(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-surface-3 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             {TIPOS_PONTO.map((t) => (
               <option key={t.value} value={t.value}>{t.label}</option>
@@ -144,13 +144,13 @@ export function NomearPontoModal({ isOpen, onClose, tipoPontoSelecionado, setTip
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+          <label className="block text-sm font-medium text-content mb-1">Nome</label>
           <input
             type="text"
             value={nomePonto}
             onChange={(e) => setNomePonto(e.target.value)}
             placeholder="Ex: Fábrica de ração 1, Curral de manejo, etc."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-surface-3 rounded-lg focus:ring-2 focus:ring-blue-500"
             autoFocus
             onKeyDown={(e) => { if (e.key === 'Enter' && nomePonto.trim()) onSalvar() }}
           />
@@ -180,7 +180,7 @@ export function NomearFabricaModal({ isOpen, onClose, nomeFabrica, setNomeFabric
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Nomear Fábrica" size="sm">
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-content-muted">
           Digite um nome para esta fábrica. Ela será o ponto de origem das rotas do vagão de suplemento.
         </p>
         <input
@@ -188,7 +188,7 @@ export function NomearFabricaModal({ isOpen, onClose, nomeFabrica, setNomeFabric
           value={nomeFabrica}
           onChange={(e) => setNomeFabrica(e.target.value)}
           placeholder="Ex: Fábrica de ração 1"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-surface-3 rounded-lg focus:ring-2 focus:ring-blue-500"
           autoFocus
           onKeyDown={(e) => { if (e.key === 'Enter' && nomeFabrica.trim()) onSalvar() }}
         />
@@ -219,18 +219,18 @@ export function AssociarCurralModal({ isOpen, onClose, curraisSemGeo, curralSele
     <Modal isOpen={isOpen} onClose={onClose} title="Associar ao Curral" size="sm">
       <div className="space-y-4">
         {curraisSemGeo.length === 0 ? (
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-content-muted">
             Não há currais sem geometria disponíveis. Todos os currais já têm área delimitada ou não há currais cadastrados.
           </p>
         ) : (
           <>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-content-muted">
               Selecione o curral ao qual esta área pertence.
             </p>
             <select
               value={curralSelecionadoAssoc}
               onChange={(e) => setCurralSelecionadoAssoc(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-surface-3 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Selecione um curral...</option>
               {curraisSemGeo.map((c) => (
@@ -262,7 +262,7 @@ export function AssocTipoModal({ isOpen, onClose, onSelecionarPasto, onSeleciona
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Associar Área Importada" size="sm">
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-content-muted">
           Esta área importada é um pasto ou uma fábrica?
         </p>
         <div className="flex gap-2 pt-2">

@@ -208,27 +208,27 @@ export function Frigorificos() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Frigoríficos</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Frigoríficos</h2>
         <div className="flex gap-2 items-start">
           <Input
             type="text"
             placeholder="Buscar frigorífico..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent h-10"
+            className="max-w-xs border-border-base focus:border-accent h-10"
           />
           <Button onClick={() => setShowForm(true)} className="h-10">Novo Frigorífico</Button>
         </div>
       </div>
 
       {showForm && (
-        <Card className="bg-white p-6 border-0 shadow-sm">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+          <h3 className="text-xl font-semibold text-content-strong mb-4">
             {editingFrigorifico ? 'Editar Frigorífico' : 'Novo Frigorífico'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Nome *
               </label>
               <Input
@@ -237,12 +237,12 @@ export function Frigorificos() {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 required
                 placeholder="Nome do frigorífico"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Razão Social
               </label>
               <Input
@@ -250,12 +250,12 @@ export function Frigorificos() {
                 value={formData.razao_social}
                 onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })}
                 placeholder="Razão social jurídica"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 CNPJ
               </label>
               <Input
@@ -263,12 +263,12 @@ export function Frigorificos() {
                 value={formData.cnpj}
                 onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
                 placeholder="00.000.000/0000-00"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Telefone
               </label>
               <Input
@@ -276,12 +276,12 @@ export function Frigorificos() {
                 value={formData.telefone}
                 onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                 placeholder="(00) 00000-0000"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Email
               </label>
               <Input
@@ -289,12 +289,12 @@ export function Frigorificos() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="email@exemplo.com"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Endereço
               </label>
               <Input
@@ -302,12 +302,12 @@ export function Frigorificos() {
                 value={formData.endereco}
                 onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
                 placeholder="Rua, número, complemento"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Cidade
               </label>
               <Input
@@ -315,12 +315,12 @@ export function Frigorificos() {
                 value={formData.cidade}
                 onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
                 placeholder="Nome da cidade"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Estado
               </label>
               <Input
@@ -328,12 +328,12 @@ export function Frigorificos() {
                 value={formData.estado}
                 onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
                 placeholder="UF"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 CEP
               </label>
               <Input
@@ -341,7 +341,7 @@ export function Frigorificos() {
                 value={formData.cep}
                 onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
                 placeholder="00000-000"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
@@ -351,9 +351,9 @@ export function Frigorificos() {
                 id="ativo"
                 checked={formData.ativo}
                 onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-                className="rounded border-gray-300 text-accent focus:ring-accent"
+                className="rounded border-surface-3 text-accent focus:ring-accent"
               />
-              <label htmlFor="ativo" className="text-sm font-medium text-gray-700">
+              <label htmlFor="ativo" className="text-sm font-medium text-content">
                 Ativo
               </label>
             </div>
@@ -371,8 +371,8 @@ export function Frigorificos() {
       )}
 
       {!showForm && frigorificos.length === 0 ? (
-        <Card className="bg-white p-12 border-0 shadow-sm text-center">
-          <p className="text-gray-600 mb-4">Nenhum frigorífico cadastrado</p>
+        <Card className="bg-surface-1 p-12 border-0 shadow-sm text-center">
+          <p className="text-content-muted mb-4">Nenhum frigorífico cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Frigorífico</Button>
         </Card>
       ) : !showForm ? (
@@ -392,25 +392,25 @@ export function Frigorificos() {
               >
                 <div className="space-y-2 mb-4">
                   {frigorifico.telefone && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-content-muted">
                       <span className="font-medium">Telefone:</span> {frigorifico.telefone}
                     </p>
                   )}
 
                   {frigorifico.email && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-content-muted">
                       <span className="font-medium">Email:</span> {frigorifico.email}
                     </p>
                   )}
 
                   {frigorifico.cidade && frigorifico.estado && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-content-muted">
                       <span className="font-medium">Cidade:</span> {frigorifico.cidade}/{frigorifico.estado}
                     </p>
                   )}
 
                   {frigorifico.cnpj && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-content-muted">
                       <span className="font-medium">CNPJ:</span> {frigorifico.cnpj}
                     </p>
                   )}

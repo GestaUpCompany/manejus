@@ -104,7 +104,7 @@ export function AssistenteIA() {
     return (
       <div className="p-6">
         <Card className="p-8 text-center">
-          <p className="text-sm text-gray-500">Carregando...</p>
+          <p className="text-sm text-content-muted">Carregando...</p>
         </Card>
       </div>
     )
@@ -114,13 +114,13 @@ export function AssistenteIA() {
     return (
       <div className="p-6">
         <Card className="p-8 text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mx-auto w-12 h-12 rounded-full bg-surface-2 flex items-center justify-center mb-4">
+            <svg className="w-6 h-6 text-content-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-gray-700 mb-2">Assistente de IA indisponível</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-content mb-2">Assistente de IA indisponível</h2>
+          <p className="text-sm text-content-muted">
             O assistente de IA não está disponível para esta fazenda.
           </p>
         </Card>
@@ -133,18 +133,18 @@ export function AssistenteIA() {
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Assistente de IA</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-content-strong">Assistente de IA</h1>
+        <p className="text-sm text-content-muted mt-1">
           Pergunte qualquer coisa sobre a fazenda. A IA consulta os dados reais do sistema e responde.
         </p>
         <div className="mt-2 flex items-center gap-2 flex-wrap">
           {limiteRestante !== null && (
             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${
               limiteEsgotado
-                ? 'bg-red-50 border-red-200'
+                ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-400/30'
                 : limiteRestante <= 5
-                ? 'bg-amber-50 border-amber-200'
-                : 'bg-green-50 border-green-200'
+                ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-400/30'
+                : 'bg-green-50 dark:bg-primary/10 border-green-200 dark:border-primary/30'
             }`}>
               <span className={`w-2 h-2 rounded-full ${
                 limiteEsgotado
@@ -155,10 +155,10 @@ export function AssistenteIA() {
               }`} />
               <span className={`text-xs font-medium ${
                 limiteEsgotado
-                  ? 'text-red-700'
+                  ? 'text-red-700 dark:text-red-300'
                   : limiteRestante <= 5
-                  ? 'text-amber-700'
-                  : 'text-green-700'
+                  ? 'text-amber-700 dark:text-amber-300'
+                  : 'text-green-700 dark:text-primary-light'
               }`}>
                 {limiteEsgotado
                   ? 'Limite diário esgotado'
@@ -175,13 +175,12 @@ export function AssistenteIA() {
           {mensagens.length === 0 && (
             <div className="h-full flex flex-col items-center justify-center text-center px-4">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" />
-                  <path d="M19 15L19.75 17.25L22 18L19.75 18.75L19 21L18.25 18.75L16 18L18.25 17.25L19 15Z" opacity="0.6" />
+                <svg className="w-8 h-8 text-primary dark:text-primary-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">Faça sua pergunta</h3>
-              <p className="text-sm text-gray-500 mb-6 max-w-md">
+              <h3 className="text-lg font-semibold text-content-strong mb-2">Faça sua pergunta</h3>
+              <p className="text-sm text-content-muted mb-6 max-w-md">
                 Posso analisar planos nutricionais, pastos, clima, estoque, tratamentos, financeiro, maternidade, bebedouros e muito mais.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-2xl">
@@ -190,9 +189,14 @@ export function AssistenteIA() {
                     key={sugestao}
                     onClick={() => handleEnviar(sugestao)}
                     disabled={loading || limiteEsgotado}
-                    className="text-left p-3 rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors text-sm text-gray-600 disabled:opacity-50"
+                    className="group text-left p-3 rounded-lg border border-border-base hover:border-primary hover:bg-primary/5 transition-colors text-sm text-content disabled:opacity-50"
                   >
-                    {sugestao}
+                    <span className="flex items-start gap-2">
+                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-content-faint group-hover:text-primary dark:hover:text-primary-light transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <span>{sugestao}</span>
+                    </span>
                   </button>
                 ))}
               </div>
@@ -210,7 +214,7 @@ export function AssistenteIA() {
                     ? 'bg-primary text-white'
                     : msg.tipo === 'erro'
                     ? 'bg-red-50 border border-red-200 text-red-700'
-                    : 'bg-gray-100 text-gray-800'
+                    : 'bg-surface-2 text-content-strong'
                 }`}
               >
                 <div className="text-sm">
@@ -230,14 +234,14 @@ export function AssistenteIA() {
                   </ReactMarkdown>
                 </div>
                 {msg.funcoes && msg.funcoes.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-gray-200/50">
+                  <div className="mt-2 pt-2 border-t border-border-subtle/50">
                     <p className="text-xs opacity-70 mb-1">Funções consultadas:</p>
                     <div className="flex flex-wrap gap-1">
                       {msg.funcoes.map((f, idx) => (
                         <span
                           key={`${f}-${idx}`}
                           className={`text-xs px-2 py-0.5 rounded ${
-                            msg.tipo === 'usuario' ? 'bg-white/20' : 'bg-gray-200 text-gray-600'
+                            msg.tipo === 'usuario' ? 'bg-white/20' : 'bg-surface-3 text-content-muted'
                           }`}
                         >
                           {f}
@@ -247,7 +251,7 @@ export function AssistenteIA() {
                   </div>
                 )}
                 {msg.tokens && (
-                  <p className={`text-xs mt-1 ${msg.tipo === 'usuario' ? 'text-white/60' : 'text-gray-400'}`}>
+                  <p className={`text-xs mt-1 ${msg.tipo === 'usuario' ? 'text-white/60' : 'text-content-faint'}`}>
                     {msg.tokens.input + msg.tokens.output} tokens{msg.tokens.cached > 0 ? ` · ${msg.tokens.cached} cached` : ''}
                   </p>
                 )}
@@ -257,11 +261,11 @@ export function AssistenteIA() {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-lg p-3 max-w-[80%]">
+              <div className="bg-surface-2 rounded-lg p-3 max-w-[80%]">
                 <div className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-content-faint animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-content-faint animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-content-faint animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             </div>
@@ -271,7 +275,7 @@ export function AssistenteIA() {
         </div>
 
         {/* Área de input */}
-        <div className="border-t border-gray-200 p-3">
+        <div className="border-t border-border-base p-3">
           {limiteEsgotado ? (
             <div className="text-center py-3">
               <p className="text-sm text-red-600 font-medium">
@@ -287,7 +291,7 @@ export function AssistenteIA() {
                 placeholder="Digite sua pergunta sobre a fazenda..."
                 rows={1}
                 disabled={loading}
-                className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-50"
+                className="flex-1 resize-none rounded-lg border border-surface-3 bg-surface-1 text-content-strong placeholder-content-faint px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary disabled:bg-surface-2"
                 style={{ maxHeight: '120px' }}
               />
               <Button
@@ -308,7 +312,7 @@ export function AssistenteIA() {
               </Button>
             </div>
           )}
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-content-faint mt-1">
             Enter envia, Shift+Enter quebra linha. A IA consulta apenas dados desta fazenda.
           </p>
         </div>

@@ -520,8 +520,8 @@ export function Rotinas() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Rotinas</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-content-strong">Rotinas</h1>
+          <p className="text-sm text-content-muted">
             Programe tarefas por usuário e controle quando os checklists aparecem.
           </p>
         </div>
@@ -530,27 +530,27 @@ export function Rotinas() {
       {/* Seção Rotinas */}
       <section>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Programação de rotinas</h2>
+          <h2 className="text-lg font-semibold text-content-strong">Programação de rotinas</h2>
           <Button onClick={() => openRotinaModal()} className="min-h-[44px]">
             + Nova rotina
           </Button>
         </div>
 
-        <Card className="bg-white p-5 mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+        <Card className="bg-surface-1 p-5 mb-6">
+          <h3 className="text-sm font-semibold text-content uppercase tracking-wide mb-3">
             Programação de hoje
           </h3>
           {programacaoHoje.length === 0 ? (
-            <p className="text-sm text-gray-500">Nenhuma programação para hoje.</p>
+            <p className="text-sm text-content-muted">Nenhuma programação para hoje.</p>
           ) : (
             <div className="space-y-3">
               {programacaoHoje.map((p) => (
                 <div key={p.funcionarioId} className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium text-gray-800">{p.funcionarioNome}:</span>
+                  <span className="text-sm font-medium text-content-strong">{p.funcionarioNome}:</span>
                   {p.cadernetas.map((c) => (
                     <span
                       key={c.id}
-                      className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                      className="px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary dark:text-primary-light"
                       title={c.horario ? `Às ${c.horario.substring(0, 5)}` : 'Sem horário definido'}
                     >
                       {c.label}
@@ -563,24 +563,24 @@ export function Rotinas() {
           )}
         </Card>
 
-        <Card className="bg-white p-0 overflow-hidden">
+        <Card className="bg-surface-1 p-0 overflow-hidden">
           {loading ? (
             <div className="p-6 space-y-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />
+                <div key={i} className="h-12 bg-surface-2 rounded animate-pulse" />
               ))}
             </div>
           ) : rotinas.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-gray-600 mb-2">Nenhuma rotina cadastrada.</p>
-              <p className="text-sm text-gray-500">
+              <p className="text-content-muted mb-2">Nenhuma rotina cadastrada.</p>
+              <p className="text-sm text-content-muted">
                 Crie uma rotina para definir quem faz o quê e em quais dias.
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+                <thead className="bg-surface-2 text-content-muted font-medium border-b border-border-base">
                   <tr>
                     <th className="px-4 py-3">Usuário</th>
                     <th className="px-4 py-3">Cadernetas</th>
@@ -591,10 +591,10 @@ export function Rotinas() {
                     <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border-subtle">
                   {rotinas.map((rotina) => (
-                    <tr key={rotina.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-800">
+                    <tr key={rotina.id} className="hover:bg-surface-2">
+                      <td className="px-4 py-3 font-medium text-content-strong">
                         {getFuncionarioNome(rotina.funcionario_id)}
                       </td>
                       <td className="px-4 py-3">
@@ -602,20 +602,20 @@ export function Rotinas() {
                           {rotina.cadernetas.slice(0, 3).map((id: string) => (
                             <span
                               key={id}
-                              className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
+                              className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-surface-2 text-content"
                             >
                               {getCadernetaLabel(id)}
                             </span>
                           ))}
                           {rotina.cadernetas.length > 3 && (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-content-muted">
                               +{rotina.cadernetas.length - 3} mais
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">{formatDiasSemana(rotina.dias_semana)}</td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-content">{formatDiasSemana(rotina.dias_semana)}</td>
+                      <td className="px-4 py-3 text-content">
                         <div className="flex flex-col gap-1">
                           {rotina.cadernetas.map((id: string) => (
                             <span key={id} className="text-xs">
@@ -624,7 +624,7 @@ export function Rotinas() {
                           ))}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-content">
                         {formatDate(rotina.data_inicio)}
                         {rotina.data_fim ? ` a ${formatDate(rotina.data_fim)}` : ''}
                       </td>
@@ -634,19 +634,19 @@ export function Rotinas() {
                             type="button"
                             onClick={() => handleToggleRotina(rotina)}
                             className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${
-                              rotina.ativo ? 'bg-primary' : 'bg-gray-300'
+                              rotina.ativo ? 'bg-primary' : 'bg-surface-3'
                             }`}
                           >
                             <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              className={`inline-block h-4 w-4 transform rounded-full bg-surface-1 transition-transform ${
                                 rotina.ativo ? 'translate-x-5' : 'translate-x-1'
                               }`}
                             />
                           </button>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-content-muted">
                             {rotina.ativo ? 'Ativa' : 'Inativa'}
                             {rotinaEstaAtivaHoje(rotina, hoje) && (
-                              <span className="ml-1 text-green-600 font-medium">· hoje</span>
+                              <span className="ml-1 text-green-500 font-medium">· hoje</span>
                             )}
                           </span>
                         </div>
@@ -662,7 +662,7 @@ export function Rotinas() {
                           </Button>
                           <Button
                             variant="secondary"
-                            className="text-xs px-2 py-1 min-h-[32px] text-red-600 hover:bg-red-50"
+                            className="text-xs px-2 py-1 min-h-[32px] text-red-500 hover:bg-red-500/10"
                             onClick={() => setDeleteRotinaModal({ open: true, id: rotina.id })}
                           >
                             Excluir
@@ -681,24 +681,24 @@ export function Rotinas() {
       {/* Seção Frequência de Checklists */}
       <section>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Frequência de checklists</h2>
+          <h2 className="text-lg font-semibold text-content-strong">Frequência de checklists</h2>
           <Button onClick={() => openRegraModal()} className="min-h-[44px]">
             + Nova regra
           </Button>
         </div>
 
-        <Card className="bg-white p-5 mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+        <Card className="bg-surface-1 p-5 mb-6">
+          <h3 className="text-sm font-semibold text-content uppercase tracking-wide mb-3">
             Cadernetas disponíveis hoje
           </h3>
           {cadernetasAtivasHoje.length === 0 ? (
-            <p className="text-sm text-gray-500">Nenhuma caderneta terá checklist exibido hoje.</p>
+            <p className="text-sm text-content-muted">Nenhuma caderneta terá checklist exibido hoje.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {cadernetasAtivasHoje.map((c) => (
                 <span
                   key={c.id}
-                  className="px-3 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800"
+                  className="px-3 py-1.5 rounded-full text-sm font-medium bg-green-500/10 text-green-800 dark:text-green-200"
                 >
                   {c.label}
                 </span>
@@ -707,18 +707,18 @@ export function Rotinas() {
           )}
         </Card>
 
-        <Card className="bg-white p-0 overflow-hidden">
+        <Card className="bg-surface-1 p-0 overflow-hidden">
           {regras.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-gray-600 mb-2">Nenhuma regra cadastrada.</p>
-              <p className="text-sm text-gray-500">
+              <p className="text-content-muted mb-2">Nenhuma regra cadastrada.</p>
+              <p className="text-sm text-content-muted">
                 Crie uma regra para definir quando as cadernetas ficam disponíveis.
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+                <thead className="bg-surface-2 text-content-muted font-medium border-b border-border-base">
                   <tr>
                     <th className="px-4 py-3">Cadernetas</th>
                     <th className="px-4 py-3">Tipo</th>
@@ -727,12 +727,12 @@ export function Rotinas() {
                     <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border-subtle">
                   {regras.map((regra) => (
-                    <tr key={regra.id} className="hover:bg-gray-50">
+                    <tr key={regra.id} className="hover:bg-surface-2">
                       <td className="px-4 py-3">
                         {regra.cadernetas.length === 0 ? (
-                          <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary dark:text-primary-light">
                             Todas as cadernetas
                           </span>
                         ) : (
@@ -740,13 +740,13 @@ export function Rotinas() {
                             {regra.cadernetas.slice(0, 3).map((id) => (
                               <span
                                 key={id}
-                                className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
+                                className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-surface-2 text-content"
                               >
                                 {getCadernetaLabel(id)}
                               </span>
                             ))}
                             {regra.cadernetas.length > 3 && (
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-content-muted">
                                 +{regra.cadernetas.length - 3} mais
                               </span>
                             )}
@@ -755,16 +755,16 @@ export function Rotinas() {
                       </td>
                       <td className="px-4 py-3">
                         {regra.tipo === 'excecao' ? (
-                          <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-800 dark:text-red-200">
                             Exceção
                           </span>
                         ) : (
-                          <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                          <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-surface-2 text-content">
                             Período
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-content">
                         {formatDate(regra.data_inicio)}
                         {regra.data_fim && regra.data_fim !== regra.data_inicio
                           ? ` a ${formatDate(regra.data_fim)}`
@@ -776,19 +776,19 @@ export function Rotinas() {
                             type="button"
                             onClick={() => handleToggleRegra(regra)}
                             className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${
-                              regra.ativo ? 'bg-primary' : 'bg-gray-300'
+                              regra.ativo ? 'bg-primary' : 'bg-surface-3'
                             }`}
                           >
                             <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              className={`inline-block h-4 w-4 transform rounded-full bg-surface-1 transition-transform ${
                                 regra.ativo ? 'translate-x-5' : 'translate-x-1'
                               }`}
                             />
                           </button>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-content-muted">
                             {regra.ativo ? 'Ativo' : 'Inativo'}
                             {isRegraVigenteHoje(regra) && (
-                              <span className="ml-1 text-green-600 font-medium">· vigente hoje</span>
+                              <span className="ml-1 text-green-500 font-medium">· vigente hoje</span>
                             )}
                           </span>
                         </div>
@@ -804,7 +804,7 @@ export function Rotinas() {
                           </Button>
                           <Button
                             variant="secondary"
-                            className="text-xs px-2 py-1 min-h-[32px] text-red-600 hover:bg-red-50"
+                            className="text-xs px-2 py-1 min-h-[32px] text-red-500 hover:bg-red-500/10"
                             onClick={() => setDeleteRegraModal({ open: true, id: regra.id })}
                           >
                             Excluir
@@ -840,7 +840,7 @@ export function Rotinas() {
             {regraErrors.cadernetas && (
               <p className="text-red-500 text-xs mt-1">{regraErrors.cadernetas}</p>
             )}
-            <label className="flex items-center gap-2 mt-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 mt-2 text-sm text-content">
               <input
                 type="checkbox"
                 checked={regraForm.cadernetas.length === CHECKLIST_CADERNETAS.length}
@@ -850,14 +850,14 @@ export function Rotinas() {
                     cadernetas: e.target.checked ? [...CHECKLIST_CADERNETAS] : [],
                   })
                 }
-                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                className="w-4 h-4 text-primary dark:text-primary-light border-surface-3 rounded focus:ring-primary"
               />
               Todas as cadernetas
             </label>
           </div>
 
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
               Tipo de regra
             </label>
             <select
@@ -865,12 +865,12 @@ export function Rotinas() {
               onChange={(e) =>
                 setRegraForm({ ...regraForm, tipo: e.target.value as ChecklistRegraTipo })
               }
-              className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="w-full min-h-[44px] px-3 py-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               <option value="periodo">Período fixo</option>
               <option value="excecao">Exceção (não exibe checklist)</option>
             </select>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-content-muted mt-1">
               {regraForm.tipo === 'excecao'
                 ? 'Neste período, as cadernetas selecionadas não exibirão checklist.'
                 : 'O checklist será exibido em todos os dias do período.'}
@@ -879,7 +879,7 @@ export function Rotinas() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                 Data de início <span className="text-red-500">*</span>
               </label>
               <Input
@@ -893,7 +893,7 @@ export function Rotinas() {
               )}
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                 Data de fim
               </label>
               <Input
@@ -905,7 +905,7 @@ export function Rotinas() {
               {regraErrors.data_fim && (
                 <p className="text-red-500 text-xs mt-1">{regraErrors.data_fim}</p>
               )}
-              <p className="text-xs text-gray-500 mt-1">Se vazio, vale apenas o dia do início.</p>
+              <p className="text-xs text-content-muted mt-1">Se vazio, vale apenas o dia do início.</p>
             </div>
           </div>
 
@@ -914,16 +914,16 @@ export function Rotinas() {
               type="button"
               onClick={() => setRegraForm({ ...regraForm, ativo: !regraForm.ativo })}
               className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${
-                regraForm.ativo ? 'bg-primary' : 'bg-gray-300'
+                regraForm.ativo ? 'bg-primary' : 'bg-surface-3'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-surface-1 transition-transform ${
                   regraForm.ativo ? 'translate-x-5' : 'translate-x-1'
                 }`}
               />
             </button>
-            <span className="text-sm text-gray-700">{regraForm.ativo ? 'Ativo' : 'Inativo'}</span>
+            <span className="text-sm text-content">{regraForm.ativo ? 'Ativo' : 'Inativo'}</span>
           </div>
 
           {(() => {
@@ -934,7 +934,7 @@ export function Rotinas() {
             if (sobreposicoes.length === 0) return null
             const cadernetasUnicas = Array.from(new Set(sobreposicoes.map((s) => s.cadernetaId)))
             return (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-800 dark:text-amber-200">
                 <p className="font-medium mb-1">Atenção: sobreposição de regras</p>
                 <p>
                   As cadernetas {cadernetasUnicas.map((id) => getCadernetaLabel(id)).join(', ')} já possuem regras ativas neste período. Exceções terão prioridade.
@@ -943,7 +943,7 @@ export function Rotinas() {
             )
           })()}
 
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-border-subtle">
             <Button type="button" variant="secondary" onClick={closeRegraModal} className="min-h-[44px]">
               Cancelar
             </Button>
@@ -963,13 +963,13 @@ export function Rotinas() {
       >
         <form onSubmit={handleRotinaSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
               Funcionário <span className="text-red-500">*</span>
             </label>
             <select
               value={rotinaForm.funcionario_id}
               onChange={(e) => setRotinaForm({ ...rotinaForm, funcionario_id: e.target.value })}
-              className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="w-full min-h-[44px] px-3 py-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               <option value="">Selecione um funcionário</option>
               {funcionarios.map((f) => (
@@ -998,7 +998,7 @@ export function Rotinas() {
           </div>
 
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs sm:text-sm font-medium text-content mb-2">
               Dias da semana <span className="text-red-500">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
@@ -1007,8 +1007,8 @@ export function Rotinas() {
                   key={dia.value}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors ${
                     rotinaForm.dias_semana.includes(dia.value)
-                      ? 'bg-primary/10 border-primary text-primary'
-                      : 'bg-white border-gray-300 text-gray-700'
+                      ? 'bg-primary/10 border-primary text-primary dark:text-primary-light'
+                      : 'bg-surface-1 border-surface-3 text-content'
                   }`}
                 >
                   <input
@@ -1028,13 +1028,13 @@ export function Rotinas() {
 
           {rotinaForm.cadernetas.length > 0 && (
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-content mb-2">
                 Horários por caderneta (opcionais)
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {rotinaForm.cadernetas.map((id: string) => (
                   <div key={id}>
-                    <label className="block text-xs text-gray-600 mb-1">{getCadernetaLabel(id)}</label>
+                    <label className="block text-xs text-content-muted mb-1">{getCadernetaLabel(id)}</label>
                     <Input
                       type="time"
                       value={rotinaForm.horarios[id] || ''}
@@ -1054,7 +1054,7 @@ export function Rotinas() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                 Data de início <span className="text-red-500">*</span>
               </label>
               <Input
@@ -1068,7 +1068,7 @@ export function Rotinas() {
               )}
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                 Data de fim
               </label>
               <Input
@@ -1080,7 +1080,7 @@ export function Rotinas() {
               {rotinaErrors.data_fim && (
                 <p className="text-red-500 text-xs mt-1">{rotinaErrors.data_fim}</p>
               )}
-              <p className="text-xs text-gray-500 mt-1">Se vazio, não tem data limite.</p>
+              <p className="text-xs text-content-muted mt-1">Se vazio, não tem data limite.</p>
             </div>
           </div>
 
@@ -1089,19 +1089,19 @@ export function Rotinas() {
               type="button"
               onClick={() => setRotinaForm({ ...rotinaForm, ativo: !rotinaForm.ativo })}
               className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors ${
-                rotinaForm.ativo ? 'bg-primary' : 'bg-gray-300'
+                rotinaForm.ativo ? 'bg-primary' : 'bg-surface-3'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-surface-1 transition-transform ${
                   rotinaForm.ativo ? 'translate-x-5' : 'translate-x-1'
                 }`}
               />
             </button>
-            <span className="text-sm text-gray-700">{rotinaForm.ativo ? 'Ativa' : 'Inativa'}</span>
+            <span className="text-sm text-content">{rotinaForm.ativo ? 'Ativa' : 'Inativa'}</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-border-subtle">
             <Button type="button" variant="secondary" onClick={closeRotinaModal} className="min-h-[44px]">
               Cancelar
             </Button>
@@ -1141,20 +1141,20 @@ export function Rotinas() {
         size="md"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-content">
             <strong>{cadernetasModal.funcionarioNome}</strong> não tem acesso às cadernetas abaixo. Para salvar a rotina, habilite o acesso:
           </p>
           <div className="flex flex-wrap gap-2">
             {cadernetasModal.cadernetas.map((id: string) => (
               <span
                 key={id}
-                className="inline-flex px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary"
+                className="inline-flex px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary dark:text-primary-light"
               >
                 {getCadernetaLabel(id)}
               </span>
             ))}
           </div>
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-border-subtle">
             <Button
               type="button"
               variant="secondary"

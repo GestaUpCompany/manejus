@@ -334,33 +334,33 @@ export function EstoqueSuplementacao() {
       : null
 
     return (
-      <Card key={item.id} className="bg-white p-4 sm:p-5 h-full" disableHover>
+      <Card key={item.id} className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
         <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
           <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
-            <p className="font-semibold text-gray-800 truncate">{item.nome}</p>
-            <p className="text-xs text-gray-500 truncate">
+            <p className="font-semibold text-content-strong truncate">{item.nome}</p>
+            <p className="text-xs text-content-muted truncate">
               {tipo === 'insumo' ? 'Insumo' : 'Produto Final'}
               {tipo === 'formulacao' && (item as FormulacaoItem).e_premix && ' · Premix'}
-              {!temMovimentacao && <span className="text-gray-400"> · Sem movimentação</span>}
+              {!temMovimentacao && <span className="text-content-faint"> · Sem movimentação</span>}
             </p>
           </div>
           <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
             {emAlerta && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Alerta</span>
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 dark:text-red-300">Alerta</span>
             )}
             {negativo && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">Negativo</span>
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300">Negativo</span>
             )}
             <button
               onClick={() => iniciarEdicaoMinimo(item.id, Number(item.estoque_minimo))}
-              className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+              className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary dark:text-primary-light transition-colors hover:bg-primary/10"
               title="Editar estoque mínimo"
             >
               Editar
             </button>
             <button
               onClick={() => abrirModalHistorico(tipo, item.id, item.nome)}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+              className="inline-flex items-center gap-1 rounded-lg border border-border-base bg-surface-2 px-2.5 py-1 text-xs font-semibold text-content transition-colors hover:bg-surface-2"
               title="Ver histórico"
             >
               Histórico
@@ -369,21 +369,21 @@ export function EstoqueSuplementacao() {
         </div>
         <div className="space-y-1">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Saldo atual</span>
-            <span className={`font-semibold ${negativo ? 'text-red-600' : 'text-gray-900'}`}>
+            <span className="text-content-muted">Saldo atual</span>
+            <span className={`font-semibold ${negativo ? 'text-red-500' : 'text-content-strong'}`}>
               {saldo.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
             </span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Custo médio</span>
-            <span className="text-gray-700">R$ {custo.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg</span>
+            <span className="text-content-muted">Custo médio</span>
+            <span className="text-content">R$ {custo.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Valor em estoque</span>
-            <span className="font-semibold text-gray-900">R$ {valorEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="text-content-muted">Valor em estoque</span>
+            <span className="font-semibold text-content-strong">R$ {valorEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500">Estoque mínimo</span>
+            <span className="text-content-muted">Estoque mínimo</span>
             {editandoEste ? (
               <div className="flex items-center gap-1">
                 <input
@@ -394,7 +394,7 @@ export function EstoqueSuplementacao() {
                     if (e.key === 'Enter') salvarEstoqueMinimo(tipo, item.id)
                     if (e.key === 'Escape') setEditandoMinimoId(null)
                   }}
-                  className="w-20 rounded border border-gray-300 px-1.5 py-0.5 text-right text-sm"
+                  className="w-20 rounded border border-surface-3 px-1.5 py-0.5 text-right text-sm"
                   autoFocus
                   disabled={salvandoMinimo}
                 />
@@ -408,13 +408,13 @@ export function EstoqueSuplementacao() {
                 <button
                   onClick={() => setEditandoMinimoId(null)}
                   disabled={salvandoMinimo}
-                  className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-semibold text-gray-600 hover:bg-gray-300"
+                  className="rounded bg-surface-3 px-1.5 py-0.5 text-xs font-semibold text-content-muted hover:bg-surface-2"
                 >
                   ✕
                 </button>
               </div>
             ) : (
-              <span className="font-medium text-gray-700">
+              <span className="font-medium text-content">
                 {Number(item.estoque_minimo).toLocaleString('pt-BR')} kg
               </span>
             )}
@@ -422,15 +422,15 @@ export function EstoqueSuplementacao() {
           {/* Barra de saúde do estoque vs estoque mínimo */}
           {item.estoque_minimo > 0 && pctSaude !== null && (
             <div className="mt-3">
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-surface-3 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full transition-all ${
-                    pctSaude < 100 ? 'bg-red-500' : pctSaude <= 150 ? 'bg-yellow-500' : 'bg-green-600'
+                    pctSaude < 100 ? 'bg-red-500' : pctSaude <= 150 ? 'bg-yellow-500' : 'bg-primary'
                   }`}
                   style={{ width: `${pctSaude}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-content-muted mt-1">
                 {pctSaude < 100
                   ? `${pctSaude.toFixed(0)}% do estoque mínimo`
                   : pctSaude === 100
@@ -449,8 +449,8 @@ export function EstoqueSuplementacao() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Estoque de Suplementação</h2>
-          {fazendaNome && <p className="text-sm text-gray-500 mt-1">{fazendaNome}</p>}
+          <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Estoque de Suplementação</h2>
+          {fazendaNome && <p className="text-sm text-content-muted mt-1">{fazendaNome}</p>}
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="secondary" onClick={abrirModalAjuste}>Ajuste</Button>
@@ -459,39 +459,39 @@ export function EstoqueSuplementacao() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-300 rounded-xl p-4">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="bg-red-500/10 border border-red-300 rounded-xl p-4">
+          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
           <button onClick={() => setError(null)} className="text-xs text-red-500 underline mt-1">Fechar</button>
         </div>
       )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch">
-        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium">Saldo Insumos</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{saldoTotalInsumos.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Saldo Insumos</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">{saldoTotalInsumos.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium">Valor Insumos</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">R$ {valorTotalInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Valor Insumos</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">R$ {valorTotalInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium">Saldo Produtos Finais</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">{saldoTotalFormulacoes.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Saldo Produtos Finais</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">{saldoTotalFormulacoes.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
         </Card>
-        <Card className="bg-white p-4 sm:p-5 h-full" disableHover>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium">Valor Produtos Finais</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold text-gray-900 mt-1">R$ {valorTotalFormulacoes.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Valor Produtos Finais</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">R$ {valorTotalFormulacoes.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </Card>
       </div>
 
       {/* Alertas */}
       {(insumosEmAlerta.length > 0 || formulacoesEmAlerta.length > 0) && (
-        <div className="bg-red-50 border border-red-300 rounded-xl p-4">
-          <p className="text-sm font-semibold text-red-700">
+        <div className="bg-red-500/10 border border-red-300 rounded-xl p-4">
+          <p className="text-sm font-semibold text-red-700 dark:text-red-300">
             {insumosEmAlerta.length + formulacoesEmAlerta.length} item(s) com estoque baixo:
           </p>
-          <p className="text-xs text-red-600 mt-1">
+          <p className="text-xs text-red-500 mt-1">
             {insumosEmAlerta.map((i) => i.nome).concat(formulacoesEmAlerta.map((f) => f.nome)).join(', ')}
           </p>
         </div>
@@ -499,11 +499,11 @@ export function EstoqueSuplementacao() {
 
       {/* Filtro + Tabs */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div className="flex gap-2 border-b border-gray-200">
+        <div className="flex gap-2 border-b border-border-base">
           <button
             onClick={() => setTab('insumos')}
             className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
-              tab === 'insumos' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+              tab === 'insumos' ? 'border-blue-500 text-primary dark:text-primary-light' : 'border-transparent text-content-muted hover:text-content'
             }`}
           >
             Insumos ({insumosFiltrados.length}{mostrarApenasComMovimentacao && insumosFiltrados.length < insumosAtivos.length ? ` de ${insumosAtivos.length}` : ''})
@@ -511,18 +511,18 @@ export function EstoqueSuplementacao() {
           <button
             onClick={() => setTab('formulacoes')}
             className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
-              tab === 'formulacoes' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+              tab === 'formulacoes' ? 'border-blue-500 text-primary dark:text-primary-light' : 'border-transparent text-content-muted hover:text-content'
             }`}
           >
             Produtos Finais ({formulacoesFiltradas.length}{mostrarApenasComMovimentacao && formulacoesFiltradas.length < formulacoesAtivas.length ? ` de ${formulacoesAtivas.length}` : ''})
           </button>
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none">
           <input
             type="checkbox"
             checked={mostrarApenasComMovimentacao}
             onChange={(e) => setMostrarApenasComMovimentacao(e.target.checked)}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-surface-3 text-primary dark:text-primary-light focus:ring-blue-500"
           />
           Mostrar apenas itens com movimentação
         </label>
@@ -531,7 +531,7 @@ export function EstoqueSuplementacao() {
       {/* Lista de itens */}
       {tab === 'insumos' ? (
         insumosFiltrados.length === 0 ? (
-          <Card className="bg-white p-6" disableHover>
+          <Card className="bg-surface-1 p-6" disableHover>
             <EmptyState
               title={insumosAtivos.length === 0 ? "Nenhum insumo cadastrado" : "Nenhum insumo com movimentação"}
               description={insumosAtivos.length === 0
@@ -549,7 +549,7 @@ export function EstoqueSuplementacao() {
         )
       ) : (
         formulacoesFiltradas.length === 0 ? (
-          <Card className="bg-white p-6" disableHover>
+          <Card className="bg-surface-1 p-6" disableHover>
             <EmptyState
               title={formulacoesAtivas.length === 0 ? "Nenhum produto final cadastrado" : "Nenhum produto final com movimentação"}
               description={formulacoesAtivas.length === 0
@@ -611,8 +611,8 @@ export function EstoqueSuplementacao() {
             const total = qtd * custo
             if (total > 0) {
               return (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-800">
+                <div className="bg-primary/10 border border-primary/30 rounded-lg p-3">
+                  <p className="text-sm text-primary dark:text-primary-light">
                     <span className="font-bold">Valor total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </p>
                 </div>
@@ -665,7 +665,7 @@ export function EstoqueSuplementacao() {
             onChange={(e) => setAjusteForm({ ...ajusteForm, novo_saldo: e.target.value })}
             required
           />
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-content-muted">
             O ajuste define o saldo absoluto. O custo médio não é alterado. Use para correções de inventário.
           </p>
           <Input
@@ -700,26 +700,26 @@ export function EstoqueSuplementacao() {
           return (
             <div className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="bg-green-50 rounded-lg p-3">
-                  <p className="text-xs text-green-600">Total Entradas</p>
-                  <p className="text-lg font-bold text-green-700">{totalEntradas.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
+                <div className="bg-green-500/10 rounded-lg p-3">
+                  <p className="text-xs text-green-500">Total Entradas</p>
+                  <p className="text-lg font-bold text-green-700 dark:text-green-300">{totalEntradas.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
                 </div>
-                <div className="bg-red-50 rounded-lg p-3">
-                  <p className="text-xs text-red-600">Total Saídas</p>
-                  <p className="text-lg font-bold text-red-700">{totalSaidas.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
+                <div className="bg-red-500/10 rounded-lg p-3">
+                  <p className="text-xs text-red-500">Total Saídas</p>
+                  <p className="text-lg font-bold text-red-700 dark:text-red-300">{totalSaidas.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500">Ajustes</p>
-                  <p className="text-lg font-bold text-gray-700">{ajustes.length}</p>
+                <div className="bg-surface-2 rounded-lg p-3">
+                  <p className="text-xs text-content-muted">Ajustes</p>
+                  <p className="text-lg font-bold text-content">{ajustes.length}</p>
                 </div>
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Linha do Tempo</h4>
+                <h4 className="text-sm font-semibold text-content mb-2">Linha do Tempo</h4>
                 {historicoLoading ? (
-                  <div className="text-center py-8 text-gray-500">Carregando movimentações...</div>
+                  <div className="text-center py-8 text-content-muted">Carregando movimentações...</div>
                 ) : historicoMovs.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">Nenhuma movimentação registrada.</div>
+                  <div className="text-center py-8 text-content-muted">Nenhuma movimentação registrada.</div>
                 ) : (
                   <div className="max-h-96 overflow-y-auto space-y-2">
                     {historicoMovs.map((mov) => {
@@ -730,31 +730,31 @@ export function EstoqueSuplementacao() {
                         <div
                           key={mov.id}
                           className={`flex items-start gap-3 rounded-lg border p-3 ${
-                            isAjuste ? 'border-gray-200 bg-gray-50' : isEntrada ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                            isAjuste ? 'border-border-base bg-surface-2' : isEntrada ? 'border-green-500/30 bg-green-500/10' : 'border-red-500/30 bg-red-500/10'
                           }`}
                         >
                           <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                            isAjuste ? 'bg-gray-100 text-gray-700' : isEntrada ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            isAjuste ? 'bg-surface-2 text-content' : isEntrada ? 'bg-green-500/10 text-green-700 dark:text-green-300' : 'bg-red-500/10 text-red-700 dark:text-red-300'
                           }`}>
                             {isAjuste ? '=' : isEntrada ? '↓' : '↑'}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start">
                               <div>
-                                <p className="text-sm font-semibold text-gray-900">
+                                <p className="text-sm font-semibold text-content-strong">
                                   {TIPO_MOV_LABEL[mov.tipo_movimentacao] || mov.tipo_movimentacao} — {Number(mov.quantidade).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-content-muted">
                                   {mov.data ? formatDate(mov.data) : '-'} · {ORIGEM_LABEL[mov.origem || ''] || mov.origem || '-'}
                                 </p>
                               </div>
                               {valor > 0 && (
                                 <div className="text-right">
-                                  <p className="text-sm font-semibold text-gray-900">
+                                  <p className="text-sm font-semibold text-content-strong">
                                     R$ {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </p>
                                   {mov.custo_unitario && (
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-content-muted">
                                       R$ {Number(mov.custo_unitario).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg
                                     </p>
                                   )}
@@ -762,7 +762,7 @@ export function EstoqueSuplementacao() {
                               )}
                             </div>
                             {mov.observacao && (
-                              <p className="text-xs text-gray-500 mt-1">{mov.observacao}</p>
+                              <p className="text-xs text-content-muted mt-1">{mov.observacao}</p>
                             )}
                           </div>
                         </div>

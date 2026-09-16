@@ -104,12 +104,12 @@ export function RegistrosOperacoesMaquinas() {
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Operações de Máquinas</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Operações de Máquinas</h2>
       </div>
 
-      <Card className="bg-white p-4 sm:p-6" disableHover>
+      <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
           <Button
             onClick={() => exportToXLSX(filteredRegistros, OPERACOES_MAQUINAS_EXPORT_CONFIG, fazendaNome)}
             disabled={filteredRegistros.length === 0}
@@ -120,7 +120,7 @@ export function RegistrosOperacoesMaquinas() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
             <Input
               type="text"
               placeholder="Veículo, implemento, tipo operação..."
@@ -130,7 +130,7 @@ export function RegistrosOperacoesMaquinas() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
             <Input
               type="date"
               value={dataInicio}
@@ -139,7 +139,7 @@ export function RegistrosOperacoesMaquinas() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
             <Input
               type="date"
               value={dataFim}
@@ -148,7 +148,7 @@ export function RegistrosOperacoesMaquinas() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
@@ -161,12 +161,12 @@ export function RegistrosOperacoesMaquinas() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro de operações de máquinas encontrado</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro de operações de máquinas encontrado</p>
         </Card>
       ) : filteredRegistros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro encontrado com os filtros aplicados</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro encontrado com os filtros aplicados</p>
         </Card>
       ) : (
         <>
@@ -180,36 +180,36 @@ export function RegistrosOperacoesMaquinas() {
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
-                    <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                    <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-content-strong">
                       {formatDate(registro.data)}
                     </span>
                   </div>
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Usuário:</span>
-                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                    <span className="text-content-muted">Usuário:</span>
+                    <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Veículo/Trator:</span>
-                    <span className="text-gray-800 font-medium">{registro.veiculo_trator || '-'}</span>
+                    <span className="text-content-muted">Veículo/Trator:</span>
+                    <span className="text-content-strong font-medium">{registro.veiculo_trator || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Implemento:</span>
-                    <span className="text-gray-800 font-medium">{registro.implemento_utilizado || '-'}</span>
+                    <span className="text-content-muted">Implemento:</span>
+                    <span className="text-content-strong font-medium">{registro.implemento_utilizado || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Tipo Operação:</span>
-                    <span className="text-gray-800 font-medium">{registro.tipo_operacao || '-'}</span>
+                    <span className="text-content-muted">Tipo Operação:</span>
+                    <span className="text-content-strong font-medium">{registro.tipo_operacao || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Aplicações:</span>
-                    <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.aplicacoes?.map((a) => a.insumo_aplicado).join(', ') || '-'}</span>
+                    <span className="text-content-muted">Aplicações:</span>
+                    <span className="text-content-strong font-medium truncate max-w-[150px]">{registro.aplicacoes?.map((a) => a.insumo_aplicado).join(', ') || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Observação:</span>
-                    <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.observacao ? registro.observacao.substring(0, 50) + (registro.observacao.length > 50 ? '...' : '') : '-'}</span>
+                    <span className="text-content-muted">Observação:</span>
+                    <span className="text-content-strong font-medium truncate max-w-[150px]">{registro.observacao ? registro.observacao.substring(0, 50) + (registro.observacao.length > 50 ? '...' : '') : '-'}</span>
                   </div>
                 </div>
               </Card>
@@ -217,43 +217,43 @@ export function RegistrosOperacoesMaquinas() {
           </div>
 
           {/* Desktop Table View */}
-          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <Card className="bg-surface-1 overflow-x-auto hidden sm:block" disableHover>
+            <table className="min-w-full divide-y divide-border-base">
+              <thead className="bg-surface-2">
                 <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veículo/Trator</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Implemento</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Operação</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aplicações</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Data</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Veículo/Trator</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Implemento</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Tipo Operação</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Aplicações</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Observação</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface-1 divide-y divide-border-base">
                 {filteredRegistros.map((registro) => (
                   <tr
                     key={registro.id}
                     onClick={() => navigate(`/controller/cadernetas/operacoes-maquinas/${registro.id}`)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="cursor-pointer hover:bg-surface-2 transition-colors"
                   >
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {formatDate(registro.data)}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.veiculo_trator}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.implemento_utilizado || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.tipo_operacao}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.aplicacoes?.map((a) => a.insumo_aplicado).join(', ') || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.observacao ? registro.observacao.substring(0, 50) + (registro.observacao.length > 50 ? '...' : '') : '-'}
                     </td>
                   </tr>

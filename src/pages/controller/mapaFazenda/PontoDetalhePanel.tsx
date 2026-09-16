@@ -22,20 +22,20 @@ export function PontoDetalhePanel({ detalhe, modoTelaCheia, onFechar, onRemover 
             <div className="flex items-center gap-2">
               <span className="w-4 h-4 rounded-full border-2 border-white shadow" style={{ backgroundColor: corPonto(detalhe.tipo) }} />
               <div>
-                <h2 className="text-lg font-bold text-gray-900">{detalhe.nome}</h2>
-                <p className="text-xs text-gray-500">{labelPonto(detalhe.tipo)}</p>
+                <h2 className="text-lg font-bold text-content-strong">{detalhe.nome}</h2>
+                <p className="text-xs text-content-muted">{labelPonto(detalhe.tipo)}</p>
               </div>
             </div>
             <button
               onClick={onFechar}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-content-faint hover:text-content-muted"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
-          <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
+          <div className="mt-4 pt-3 border-t border-border-base space-y-2">
             <Button
               variant="danger"
               onClick={() => onRemover(detalhe.id)}

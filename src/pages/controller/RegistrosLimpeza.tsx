@@ -107,12 +107,12 @@ export function RegistrosLimpeza() {
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Limpeza</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Limpeza</h2>
       </div>
 
-      <Card className="bg-white p-4 sm:p-6" disableHover>
+      <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
           <Button
             onClick={() => exportToXLSX(filteredRegistros, LIMPEZA_EXPORT_CONFIG, fazendaNome)}
             disabled={filteredRegistros.length === 0}
@@ -123,7 +123,7 @@ export function RegistrosLimpeza() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
             <Input
               type="text"
               placeholder="Setor, local, equipe, horários, observação..."
@@ -133,7 +133,7 @@ export function RegistrosLimpeza() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
             <Input
               type="date"
               value={dataInicio}
@@ -142,7 +142,7 @@ export function RegistrosLimpeza() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
             <Input
               type="date"
               value={dataFim}
@@ -151,7 +151,7 @@ export function RegistrosLimpeza() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
@@ -164,12 +164,12 @@ export function RegistrosLimpeza() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro de limpeza encontrado</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro de limpeza encontrado</p>
         </Card>
       ) : filteredRegistros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro encontrado com os filtros aplicados</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro encontrado com os filtros aplicados</p>
         </Card>
       ) : (
         <>
@@ -183,13 +183,13 @@ export function RegistrosLimpeza() {
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
-                    <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                    <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-content-strong">
                       {formatDate(registro.data)}
                     </span>
                   </div>
                   <span
-                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary"
+                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light"
                     onClick={(e) => {
                       e.stopPropagation()
                       setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')
@@ -200,32 +200,32 @@ export function RegistrosLimpeza() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Usuário:</span>
-                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                    <span className="text-content-muted">Usuário:</span>
+                    <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Nº Equipe:</span>
-                    <span className="text-gray-800 font-medium">{registro.numero_equipe || '-'}</span>
+                    <span className="text-content-muted">Nº Equipe:</span>
+                    <span className="text-content-strong font-medium">{registro.numero_equipe || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Setor:</span>
-                    <span className="text-gray-800 font-medium">{registro.setor || '-'}</span>
+                    <span className="text-content-muted">Setor:</span>
+                    <span className="text-content-strong font-medium">{registro.setor || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Local:</span>
-                    <span className="text-gray-800 font-medium">{registro.local || '-'}</span>
+                    <span className="text-content-muted">Local:</span>
+                    <span className="text-content-strong font-medium">{registro.local || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Hora Início:</span>
-                    <span className="text-gray-800 font-medium">{registro.hora_inicio || '-'}</span>
+                    <span className="text-content-muted">Hora Início:</span>
+                    <span className="text-content-strong font-medium">{registro.hora_inicio || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Hora Final:</span>
-                    <span className="text-gray-800 font-medium">{registro.hora_final || '-'}</span>
+                    <span className="text-content-muted">Hora Final:</span>
+                    <span className="text-content-strong font-medium">{registro.hora_final || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Observação:</span>
-                    <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.observacao ? registro.observacao.substring(0, 50) + (registro.observacao.length > 50 ? '...' : '') : '-'}</span>
+                    <span className="text-content-muted">Observação:</span>
+                    <span className="text-content-strong font-medium truncate max-w-[150px]">{registro.observacao ? registro.observacao.substring(0, 50) + (registro.observacao.length > 50 ? '...' : '') : '-'}</span>
                   </div>
                 </div>
               </Card>
@@ -233,52 +233,52 @@ export function RegistrosLimpeza() {
           </div>
 
           {/* Desktop Table View */}
-          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <Card className="bg-surface-1 overflow-x-auto hidden sm:block" disableHover>
+            <table className="min-w-full divide-y divide-border-base">
+              <thead className="bg-surface-2">
                 <tr>
                   <th
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider cursor-pointer hover:bg-surface-2 transition-colors"
                     onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Equipe</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setor</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Local</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora Início</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora Final</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Nº Equipe</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Setor</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Local</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Hora Início</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Hora Final</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Observação</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface-1 divide-y divide-border-base">
                 {filteredRegistros.map((registro) => (
                   <tr
                     key={registro.id}
                     onClick={() => navigate(`/controller/cadernetas/limpeza/${registro.id}`)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="cursor-pointer hover:bg-surface-2 transition-colors"
                   >
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {formatDate(registro.data)}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.numero_equipe || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.setor || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.local || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.hora_inicio || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.hora_final || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.observacao ? registro.observacao.substring(0, 50) + (registro.observacao.length > 50 ? '...' : '') : '-'}
                     </td>
                   </tr>

@@ -79,7 +79,7 @@ export function RegistrosClimaDetalhes() {
       title="Detalhes do Registro de Clima"
     >
       {() => (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
           <div className="space-y-6">
             {/* Informações Gerais */}
             <DetailSection title="Informações Gerais">
@@ -95,24 +95,24 @@ export function RegistrosClimaDetalhes() {
             {registro!.medicoes && registro!.medicoes.length > 0 && (
               <DetailSection title="Medições">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-100">
+                  <table className="min-w-full divide-y divide-border-base">
+                    <thead className="bg-surface-2">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Pluviômetro</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Localização</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Medição (mm)</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Pluviômetro</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Localização</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Medição (mm)</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-surface-1 divide-y divide-border-base">
                       {registro!.medicoes.map((medicao: any, index: number) => (
                         <tr key={index}>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-content-strong">
                             {formatValue(medicao.pluviometro_nome)}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-content-strong">
                             {formatValue(medicao.pluviometro_localizacao)}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-content-strong">
                             {medicao.medicao !== undefined ? `${medicao.medicao} mm` : '-'}
                           </td>
                         </tr>

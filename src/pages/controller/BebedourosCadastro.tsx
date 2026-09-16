@@ -401,20 +401,20 @@ export function BebedourosCadastro() {
   }
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return <p className="text-content-muted">Carregando...</p>
   }
 
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Bebedouros</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Bebedouros</h2>
         <div className="flex flex-col sm:flex-row gap-2 items-start w-full md:w-auto">
           <Input
             type="text"
             placeholder="Buscar bebedouro..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10 text-sm"
+            className="w-full sm:max-w-xs border-border-base focus:border-accent h-10 text-sm"
           />
           <button
             type="button"
@@ -422,7 +422,7 @@ export function BebedourosCadastro() {
             className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
               showInactive
                 ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
             }`}
           >
             {showInactive ? (
@@ -462,26 +462,26 @@ export function BebedourosCadastro() {
 
       {/* Import Messages */}
       {importError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
           <p className="font-medium">Erro na importação:</p>
           <pre className="text-sm mt-1 whitespace-pre-wrap">{importError}</pre>
         </div>
       )}
 
       {importSuccess && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+        <div className="bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg">
           <p className="font-medium whitespace-pre-line">{importSuccess}</p>
         </div>
       )}
 
       {showForm && (
-        <Card className="bg-white p-6 border-0 shadow-sm" disableHover>
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm" disableHover>
+          <h3 className="text-xl font-semibold text-content-strong mb-4">
             {editingBebedouro ? 'Editar Bebedouro' : 'Novo Bebedouro'}
           </h3>
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Nome/Número *
               </label>
               <Input
@@ -490,12 +490,12 @@ export function BebedourosCadastro() {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 required
                 placeholder="Nome ou número do bebedouro"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Capacidade (L)
               </label>
               <Input
@@ -503,25 +503,25 @@ export function BebedourosCadastro() {
                 value={formData.capacidade}
                 onChange={(e) => setFormData({ ...formData, capacidade: e.target.value })}
                 placeholder="Capacidade em litros"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
                 step="0.01"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Data da Última Limpeza
               </label>
               <Input
                 type="date"
                 value={formData.data_ultima_limpeza}
                 onChange={(e) => setFormData({ ...formData, data_ultima_limpeza: e.target.value })}
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Meta de Intervalo de Limpeza (dias)
               </label>
               <Input
@@ -529,19 +529,19 @@ export function BebedourosCadastro() {
                 value={formData.meta_intervalo_limpeza}
                 onChange={(e) => setFormData({ ...formData, meta_intervalo_limpeza: e.target.value })}
                 placeholder="Intervalo em dias"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
                 min="1"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Setor
               </label>
               <select
                 value={formData.setor_id}
                 onChange={(e) => setFormData({ ...formData, setor_id: e.target.value })}
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent bg-white text-gray-700"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content"
               >
                 <option value="">Selecione um setor</option>
                 {setores.map((setor) => (
@@ -563,8 +563,8 @@ export function BebedourosCadastro() {
       )}
 
       {!showForm && bebedouros.length === 0 ? (
-        <Card className="bg-white p-12 border-0 shadow-sm text-center" disableHover>
-          <p className="text-gray-600 mb-4">Nenhum bebedouro cadastrado</p>
+        <Card className="bg-surface-1 p-12 border-0 shadow-sm text-center" disableHover>
+          <p className="text-content-muted mb-4">Nenhum bebedouro cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Bebedouro</Button>
         </Card>
       ) : !showForm ? (
@@ -586,7 +586,7 @@ export function BebedourosCadastro() {
                 onClick={() => handleEdit(bebedouro)}
               >
                 {bebedouro.data_ultima_limpeza_historico && (
-                  <p className="text-sm text-gray-500 mb-4">
+                  <p className="text-sm text-content-muted mb-4">
                     Última limpeza: {formatDate(bebedouro.data_ultima_limpeza_historico)}
                   </p>
                 )}

@@ -88,7 +88,7 @@ export function ImpersonationBar() {
       <button
         onClick={handleEndImpersonation}
         disabled={ending}
-        className="text-sm bg-white text-red-600 px-4 py-1.5 rounded-lg font-medium hover:bg-red-50 transition-colors flex-shrink-0 disabled:opacity-50"
+        className="text-sm bg-surface-1 text-red-500 px-4 py-1.5 rounded-lg font-medium hover:bg-red-500/10 transition-colors flex-shrink-0 disabled:opacity-50"
       >
         {ending ? 'Encerrando...' : 'Encerrar e voltar'}
       </button>

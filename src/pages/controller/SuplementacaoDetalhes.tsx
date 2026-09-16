@@ -439,7 +439,7 @@ export function SuplementacaoDetalhes() {
         actions={actions}
       >
         {() => (
-          <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+          <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
             <div className="space-y-6">
               {/* Informações Gerais */}
               <DetailSection title="Informações Gerais">
@@ -460,7 +460,7 @@ export function SuplementacaoDetalhes() {
                     {registro!.formulacao && (
                       <button
                         onClick={handleEditFormulacao}
-                        className="text-xs text-primary hover:underline font-medium"
+                        className="text-xs text-primary dark:text-primary-light hover:underline font-medium"
                       >
                         Visualizar
                       </button>
@@ -473,36 +473,36 @@ export function SuplementacaoDetalhes() {
               {/* Quantidades */}
               <DetailSection title="Quantidades">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-border-base">
+                    <thead className="bg-surface-2">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-content-muted uppercase">Item</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-content-muted uppercase">Valor</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      <tr><td className="px-4 py-2 text-sm text-gray-900">KG Cocho</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.kg_cocho || 0}</td></tr>
+                    <tbody className="bg-surface-1 divide-y divide-border-base">
+                      <tr><td className="px-4 py-2 text-sm text-content-strong">KG Cocho</td><td className="px-4 py-2 text-sm text-content-strong text-right">{registro!.kg_cocho || 0}</td></tr>
                       {kgPorInsumoRegistro && Object.entries(kgPorInsumoRegistro).sort((a, b) => b[1] - a[1]).map(([nome, kg]) => (
-                        <tr key={nome} className="bg-blue-50/50">
-                          <td className="px-4 py-2 text-sm text-gray-700 pl-8">↳ {nome}</td>
-                          <td className="px-4 py-2 text-sm text-gray-700 text-right">{kg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</td>
+                        <tr key={nome} className="bg-primary/5">
+                          <td className="px-4 py-2 text-sm text-content pl-8">↳ {nome}</td>
+                          <td className="px-4 py-2 text-sm text-content text-right">{kg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</td>
                         </tr>
                       ))}
                       {totalKgCochoLote !== null && (
                         <tr className="bg-primary/5">
-                          <td className="px-4 py-2 text-sm font-semibold text-primary">Acumulado Lote (até esta data)</td>
-                          <td className="px-4 py-2 text-sm font-bold text-primary text-right">{totalKgCochoLote.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</td>
+                          <td className="px-4 py-2 text-sm font-semibold text-primary dark:text-primary-light">Acumulado Lote (até esta data)</td>
+                          <td className="px-4 py-2 text-sm font-bold text-primary dark:text-primary-light text-right">{totalKgCochoLote.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</td>
                         </tr>
                       )}
                       {kgPorInsumo && Object.entries(kgPorInsumo).sort((a, b) => b[1] - a[1]).map(([nome, kg]) => (
-                        <tr key={nome} className="bg-gray-50">
-                          <td className="px-4 py-2 text-sm text-gray-700 pl-8">↳ {nome}</td>
-                          <td className="px-4 py-2 text-sm text-gray-700 text-right">{kg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</td>
+                        <tr key={nome} className="bg-surface-2">
+                          <td className="px-4 py-2 text-sm text-content pl-8">↳ {nome}</td>
+                          <td className="px-4 py-2 text-sm text-content text-right">{kg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</td>
                         </tr>
                       ))}
-                      <tr><td className="px-4 py-2 text-sm text-gray-900">KG Depósito</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro!.kg_deposito || 0}</td></tr>
-                      <tr><td className="px-4 py-2 text-sm text-gray-900">Nº Cabeças</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{formatValue(registro!.n_cabecas)}</td></tr>
-                      <tr><td className="px-4 py-2 text-sm text-gray-900">Qtd Bezerros</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{formatValue(registro!.qtd_bezerros)}</td></tr>
+                      <tr><td className="px-4 py-2 text-sm text-content-strong">KG Depósito</td><td className="px-4 py-2 text-sm text-content-strong text-right">{registro!.kg_deposito || 0}</td></tr>
+                      <tr><td className="px-4 py-2 text-sm text-content-strong">Nº Cabeças</td><td className="px-4 py-2 text-sm text-content-strong text-right">{formatValue(registro!.n_cabecas)}</td></tr>
+                      <tr><td className="px-4 py-2 text-sm text-content-strong">Qtd Bezerros</td><td className="px-4 py-2 text-sm text-content-strong text-right">{formatValue(registro!.qtd_bezerros)}</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -525,7 +525,7 @@ export function SuplementacaoDetalhes() {
                   <DetailField label="Consumo %PV" value={registro!.consumo_medio_geral_percent_pv ? Number(registro!.consumo_medio_geral_percent_pv).toFixed(4) : '-'} />
                   <DetailField label="Custo (R$/cab/dia)" value={registro!.custo_medio_reais_cab_dia ? Number(registro!.custo_medio_reais_cab_dia).toFixed(4) : '-'} />
                 </div>
-                <p className="text-xs text-gray-500 mt-2">Métricas recalculadas automaticamente após edição. O último registro da série fica sem consumo até que um novo registro seja adicionado.</p>
+                <p className="text-xs text-content-muted mt-2">Métricas recalculadas automaticamente após edição. O último registro da série fica sem consumo até que um novo registro seja adicionado.</p>
               </DetailSection>
 
               {/* Condições do Cocho */}
@@ -534,25 +534,25 @@ export function SuplementacaoDetalhes() {
                   {registro!.checklist?.limpeza_cocho && (
                     <div className="space-y-1">
                       <DetailField label="Limpeza de cocho foi realizada?" value={boolSimNao(registro!.checklist.limpeza_cocho.valor)} />
-                      {registro!.checklist.limpeza_cocho.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro!.checklist.limpeza_cocho.observacao}</p>}
+                      {registro!.checklist.limpeza_cocho.observacao && <p className="text-sm text-content-muted"><span className="font-medium">Obs.:</span> {registro!.checklist.limpeza_cocho.observacao}</p>}
                     </div>
                   )}
                   {registro!.checklist?.cochos_condicoes && (
                     <div className="space-y-1">
                       <DetailField label="Cochos estão em boas condições?" value={boolSimNao(registro!.checklist.cochos_condicoes.valor)} />
-                      {registro!.checklist.cochos_condicoes.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro!.checklist.cochos_condicoes.observacao}</p>}
+                      {registro!.checklist.cochos_condicoes.observacao && <p className="text-sm text-content-muted"><span className="font-medium">Obs.:</span> {registro!.checklist.cochos_condicoes.observacao}</p>}
                     </div>
                   )}
                   {registro!.checklist?.aterro_acesso_ideal && (
                     <div className="space-y-1">
                       <DetailField label="Aterro / acesso ao cocho está ideal?" value={boolSimNao(registro!.checklist.aterro_acesso_ideal.valor)} />
-                      {registro!.checklist.aterro_acesso_ideal.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro!.checklist.aterro_acesso_ideal.observacao}</p>}
+                      {registro!.checklist.aterro_acesso_ideal.observacao && <p className="text-sm text-content-muted"><span className="font-medium">Obs.:</span> {registro!.checklist.aterro_acesso_ideal.observacao}</p>}
                     </div>
                   )}
                   {registro!.checklist?.deposito_condicoes && (
                     <div className="space-y-1">
                       <DetailField label="Depósito está em boas condições?" value={boolSimNao(registro!.checklist.deposito_condicoes.valor)} />
-                      {registro!.checklist.deposito_condicoes.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro!.checklist.deposito_condicoes.observacao}</p>}
+                      {registro!.checklist.deposito_condicoes.observacao && <p className="text-sm text-content-muted"><span className="font-medium">Obs.:</span> {registro!.checklist.deposito_condicoes.observacao}</p>}
                     </div>
                   )}
                 </div>
@@ -572,13 +572,13 @@ export function SuplementacaoDetalhes() {
         >
           <div className="space-y-4">
             {errorMsg && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
                 {errorMsg}
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                <label className="block text-sm font-medium text-content mb-1">Data</label>
                 <Input
                   type="date"
                   value={editForm.data}
@@ -586,7 +586,7 @@ export function SuplementacaoDetalhes() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tratador</label>
+                <label className="block text-sm font-medium text-content mb-1">Tratador</label>
                 <Input
                   type="text"
                   value={editForm.tratador}
@@ -594,11 +594,11 @@ export function SuplementacaoDetalhes() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
+                <label className="block text-sm font-medium text-content mb-1">Lote</label>
                 <select
                   value={editForm.lote_id}
                   onChange={(e) => setEditForm({ ...editForm, lote_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                  className="w-full px-3 py-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                 >
                   <option value="">Sem lote</option>
                   {lotes.map(l => (
@@ -607,11 +607,11 @@ export function SuplementacaoDetalhes() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Formulação</label>
+                <label className="block text-sm font-medium text-content mb-1">Formulação</label>
                 <select
                   value={editForm.formulacao}
                   onChange={(e) => setEditForm({ ...editForm, formulacao: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                  className="w-full px-3 py-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                 >
                   <option value="">Sem formulação</option>
                   {formulacoes.map(f => (
@@ -620,7 +620,7 @@ export function SuplementacaoDetalhes() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">KG Cocho</label>
+                <label className="block text-sm font-medium text-content mb-1">KG Cocho</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -629,7 +629,7 @@ export function SuplementacaoDetalhes() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">KG Depósito</label>
+                <label className="block text-sm font-medium text-content mb-1">KG Depósito</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -638,12 +638,12 @@ export function SuplementacaoDetalhes() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Leitura de Cocho</label>
+                <label className="block text-sm font-medium text-content mb-1">Leitura de Cocho</label>
                 <div className="relative" ref={leituraDropdownRef}>
                   <button
                     type="button"
                     onClick={() => setLeituraDropdownOpen(!leituraDropdownOpen)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] flex items-center gap-2 bg-white"
+                    className="w-full px-3 py-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] flex items-center gap-2 bg-surface-1"
                   >
                     {editForm.leitura && (
                       <span
@@ -668,7 +668,7 @@ export function SuplementacaoDetalhes() {
                     </span>
                   </button>
                   {leituraDropdownOpen && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-surface-1 border border-surface-3 rounded-lg shadow-lg max-h-60 overflow-auto">
                       {[
                         { value: '', label: '-', color: '' },
                         { value: '-1', label: '-1', color: 'bg-red-500' },
@@ -684,8 +684,8 @@ export function SuplementacaoDetalhes() {
                             setEditForm({ ...editForm, leitura: opt.value })
                             setLeituraDropdownOpen(false)
                           }}
-                          className={`w-full px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 ${
-                            editForm.leitura === opt.value ? 'bg-blue-50 font-medium' : ''
+                          className={`w-full px-3 py-2 text-sm flex items-center gap-2 hover:bg-surface-2 ${
+                            editForm.leitura === opt.value ? 'bg-primary/10 font-medium' : ''
                           }`}
                         >
                           {opt.color ? (
@@ -701,12 +701,12 @@ export function SuplementacaoDetalhes() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Escore Fezes</label>
+                <label className="block text-sm font-medium text-content mb-1">Escore Fezes</label>
                 <div className="relative" ref={escoreDropdownRef}>
                   <button
                     type="button"
                     onClick={() => setEscoreDropdownOpen(!escoreDropdownOpen)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] flex items-center gap-2 bg-white"
+                    className="w-full px-3 py-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] flex items-center gap-2 bg-surface-1"
                   >
                     {editForm.escore_fezes && (
                       <span
@@ -723,7 +723,7 @@ export function SuplementacaoDetalhes() {
                     <span>{editForm.escore_fezes || '-'}</span>
                   </button>
                   {escoreDropdownOpen && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-surface-1 border border-surface-3 rounded-lg shadow-lg max-h-60 overflow-auto">
                       {[
                         { value: '', label: '-', color: '' },
                         { value: '1', label: '1', color: 'bg-red-500' },
@@ -739,8 +739,8 @@ export function SuplementacaoDetalhes() {
                             setEditForm({ ...editForm, escore_fezes: opt.value })
                             setEscoreDropdownOpen(false)
                           }}
-                          className={`w-full px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 ${
-                            editForm.escore_fezes === opt.value ? 'bg-blue-50 font-medium' : ''
+                          className={`w-full px-3 py-2 text-sm flex items-center gap-2 hover:bg-surface-2 ${
+                            editForm.escore_fezes === opt.value ? 'bg-primary/10 font-medium' : ''
                           }`}
                         >
                           {opt.color ? (
@@ -757,7 +757,7 @@ export function SuplementacaoDetalhes() {
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-primary/10 border border-primary/30 text-primary dark:text-primary-light px-4 py-3 rounded-lg text-sm">
               O peso vivo e as métricas de consumo serão recalculados automaticamente após salvar.
             </div>
 

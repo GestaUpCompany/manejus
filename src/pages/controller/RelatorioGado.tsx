@@ -115,42 +115,42 @@ export function RelatorioGado() {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-          <div className="h-10 w-32 bg-gray-200 rounded animate-pulse" />
+          <div className="h-8 w-48 bg-surface-3 rounded animate-pulse" />
+          <div className="h-10 w-32 bg-surface-3 rounded animate-pulse" />
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">Período:</span>
+          <span className="text-sm text-content-muted">Período:</span>
           <div className="flex gap-2">
-            <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
-            <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
-            <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
-            <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+            <div className="h-8 w-16 bg-surface-3 rounded animate-pulse" />
+            <div className="h-8 w-16 bg-surface-3 rounded animate-pulse" />
+            <div className="h-8 w-16 bg-surface-3 rounded animate-pulse" />
+            <div className="h-8 w-24 bg-surface-3 rounded animate-pulse" />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-6 border-0 shadow-sm rounded-xl">
-            <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2" />
-            <div className="h-10 w-20 bg-gray-200 rounded animate-pulse" />
+          <div className="bg-surface-1 p-6 border-0 shadow-sm rounded-xl">
+            <div className="h-4 w-24 bg-surface-3 rounded animate-pulse mb-2" />
+            <div className="h-10 w-20 bg-surface-3 rounded animate-pulse" />
           </div>
-          <div className="bg-white p-6 border-0 shadow-sm rounded-xl">
-            <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2" />
-            <div className="h-10 w-20 bg-gray-200 rounded animate-pulse" />
+          <div className="bg-surface-1 p-6 border-0 shadow-sm rounded-xl">
+            <div className="h-4 w-24 bg-surface-3 rounded animate-pulse mb-2" />
+            <div className="h-10 w-20 bg-surface-3 rounded animate-pulse" />
           </div>
-          <div className="bg-white p-6 border-0 shadow-sm rounded-xl">
-            <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2" />
-            <div className="h-10 w-20 bg-gray-200 rounded animate-pulse" />
+          <div className="bg-surface-1 p-6 border-0 shadow-sm rounded-xl">
+            <div className="h-4 w-24 bg-surface-3 rounded animate-pulse mb-2" />
+            <div className="h-10 w-20 bg-surface-3 rounded animate-pulse" />
           </div>
         </div>
-        <div className="bg-white p-6 border-0 shadow-sm rounded-xl">
-          <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-4" />
-          <div className="h-48 bg-gray-200 rounded animate-pulse" />
+        <div className="bg-surface-1 p-6 border-0 shadow-sm rounded-xl">
+          <div className="h-6 w-48 bg-surface-3 rounded animate-pulse mb-4" />
+          <div className="h-48 bg-surface-3 rounded animate-pulse" />
         </div>
-        <div className="bg-white p-6 border-0 shadow-sm rounded-xl">
-          <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-4" />
+        <div className="bg-surface-1 p-6 border-0 shadow-sm rounded-xl">
+          <div className="h-6 w-48 bg-surface-3 rounded animate-pulse mb-4" />
           <div className="space-y-3">
-            <div className="h-12 bg-gray-200 rounded animate-pulse" />
-            <div className="h-12 bg-gray-200 rounded animate-pulse" />
-            <div className="h-12 bg-gray-200 rounded animate-pulse" />
+            <div className="h-12 bg-surface-3 rounded animate-pulse" />
+            <div className="h-12 bg-surface-3 rounded animate-pulse" />
+            <div className="h-12 bg-surface-3 rounded animate-pulse" />
           </div>
         </div>
       </div>
@@ -172,7 +172,7 @@ export function RelatorioGado() {
   return (
     <div className="space-y-6 page-transition">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Relatório de Gado</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Relatório de Gado</h2>
         <Button onClick={() => navigate('/controller/dashboard')} variant="secondary" className="w-full md:w-auto">
           Voltar ao Dashboard
         </Button>
@@ -180,7 +180,7 @@ export function RelatorioGado() {
 
       {/* Filtro de Período */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <span className="text-sm text-gray-600">Relatório dos últimos:</span>
+        <span className="text-sm text-content-muted">Relatório dos últimos:</span>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <Button
             variant={periodoFiltro === '7d' ? 'primary' : 'secondary'}
@@ -226,35 +226,35 @@ export function RelatorioGado() {
               placeholder="Dias"
               value={customDays}
               onChange={(e) => setCustomDays(e.target.value)}
-              className="w-20 h-10 text-sm border-gray-200 focus:border-accent"
+              className="w-20 h-10 text-sm border-border-base focus:border-accent"
             />
-            <span className="text-sm text-gray-500">dias</span>
+            <span className="text-sm text-content-muted">dias</span>
           </div>
         )}
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
-        <Card className="bg-white p-6 border-0 shadow-sm">
-          <p className="text-sm text-gray-500 mb-2">Total de Animais</p>
-          <p className="text-4xl font-bold text-gray-800">{totalAnimais}</p>
-          <p className="text-xs text-gray-400 mt-2">Cabeças</p>
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+          <p className="text-sm text-content-muted mb-2">Total de Animais</p>
+          <p className="text-4xl font-bold text-content-strong">{totalAnimais}</p>
+          <p className="text-xs text-content-faint mt-2">Cabeças</p>
         </Card>
-        <Card className="bg-white p-6 border-0 shadow-sm">
-          <p className="text-sm text-gray-500 mb-2">Total de Lotes</p>
-          <p className="text-4xl font-bold text-gray-800">{lotes.length}</p>
-          <p className="text-xs text-gray-400 mt-2">Lotes ativos</p>
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+          <p className="text-sm text-content-muted mb-2">Total de Lotes</p>
+          <p className="text-4xl font-bold text-content-strong">{lotes.length}</p>
+          <p className="text-xs text-content-faint mt-2">Lotes ativos</p>
         </Card>
-        <Card className="bg-white p-6 border-0 shadow-sm">
-          <p className="text-sm text-gray-500 mb-2">Peso Médio</p>
-          <p className="text-4xl font-bold text-gray-800">{pesoMedio.toFixed(0)}</p>
-          <p className="text-xs text-gray-400 mt-2">kg por animal</p>
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+          <p className="text-sm text-content-muted mb-2">Peso Médio</p>
+          <p className="text-4xl font-bold text-content-strong">{pesoMedio.toFixed(0)}</p>
+          <p className="text-xs text-content-faint mt-2">kg por animal</p>
         </Card>
       </div>
 
       {/* Gráfico de Distribuição por Lote */}
-      <Card className="bg-white p-6 border-0 shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Distribuição de cabeças por Lote</h3>
+      <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+        <h3 className="text-xl font-semibold text-content-strong mb-4">Distribuição de cabeças por Lote</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={dadosGrafico}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -267,22 +267,22 @@ export function RelatorioGado() {
       </Card>
 
       {/* Detalhes por Lote */}
-      <Card className="bg-white p-6 border-0 shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Detalhes por Lote</h3>
+      <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+        <h3 className="text-xl font-semibold text-content-strong mb-4">Detalhes por Lote</h3>
         <div className="space-y-3">
           {lotes.map((lote) => (
-            <div key={lote.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+            <div key={lote.id} className="flex justify-between items-center p-4 bg-surface-2 rounded-lg">
               <div>
-                <p className="font-medium text-gray-800">{lote.nome}</p>
-                <p className="text-sm text-gray-500">
+                <p className="font-medium text-content-strong">{lote.nome}</p>
+                <p className="text-sm text-content-muted">
                   {lote.categorias && Array.isArray(lote.categorias) 
                     ? lote.categorias.join(', ') 
                     : ''}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold text-gray-800">{lote.cabecas} cabeças</p>
-                <p className="text-sm text-gray-500">
+                <p className="text-lg font-bold text-content-strong">{lote.cabecas} cabeças</p>
+                <p className="text-sm text-content-muted">
                   {lote.pesoMedio > 0 ? `${lote.pesoMedio.toFixed(0)} kg médio` : 'Peso não informado'}
                 </p>
               </div>

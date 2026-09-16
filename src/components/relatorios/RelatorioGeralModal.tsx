@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Modal, useToast } from '../ui'
 import { RelatorioCapaGallery } from './RelatorioCapaGallery'
-import { RELATORIOS_GERAIS, moverRelatorio, type TipoRelatorioGeral } from '../../features/relatorioGeral/catalogo'
+import { RELATORIOS_GERAIS, type TipoRelatorioGeral } from '../../features/relatorioGeral/catalogo'
 import { contarDiasInclusivos, formatarPeriodoCapa, validarPeriodoRelatorio } from '../../features/relatorioGeral/periodo'
 import { carregarRelatoriosGerais } from '../../features/relatorioGeral/loaders'
 import { baixarRelatorioGeral, gerarRelatorioGeral } from '../../services/relatorioGeralService'
@@ -26,6 +26,7 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
   const [imagemCapaPreview, setImagemCapaPreview] = useState('')
   const [gerando, setGerando] = useState(false)
   const [etapa, setEtapa] = useState('')
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
@@ -51,6 +52,26 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
       else proximo.add(id)
       return proximo
     })
+  }
+
+  const handleDragStart = (index: number) => {
+    setDraggingIndex(index)
+  }
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>, index: number) => {
+    event.preventDefault()
+    if (draggingIndex === null || draggingIndex === index) return
+    setOrdem((atual) => {
+      const novaOrdem = [...atual]
+      const [moved] = novaOrdem.splice(draggingIndex, 1)
+      novaOrdem.splice(index, 0, moved)
+      return novaOrdem
+    })
+    setDraggingIndex(index)
+  }
+
+  const handleDragEnd = () => {
+    setDraggingIndex(null)
   }
 
   const selecionarCapa = (path: string | null, previewUrl = '') => {
@@ -95,30 +116,35 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
       <div className="grid gap-6 lg:grid-cols-[1.05fr_.95fr]">
         <div className="space-y-6">
           <section>
-            <h3 className="text-sm font-semibold text-gray-900">Período do relatório</h3>
-            <p className="mb-3 text-xs text-gray-500">Informe até 31 dias consecutivos.</p>
+            <h3 className="text-sm font-semibold text-content-strong">Período do relatório</h3>
+            <p className="mb-3 text-xs text-content-muted">Informe até 31 dias consecutivos.</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="text-xs font-medium text-gray-700">Data inicial<input type="date" name="relatorio-data-inicio" value={dataInicio} disabled={gerando} onChange={(event) => setDataInicio(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-              <label className="text-xs font-medium text-gray-700">Data final<input type="date" name="relatorio-data-fim" value={dataFim} disabled={gerando} onChange={(event) => setDataFim(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+              <label className="text-xs font-medium text-content">Data inicial<input type="date" name="relatorio-data-inicio" value={dataInicio} disabled={gerando} onChange={(event) => setDataInicio(event.target.value)} className="mt-1 w-full rounded-lg border border-surface-3 bg-surface-1 px-3 py-2 text-sm text-content-strong" /></label>
+              <label className="text-xs font-medium text-content">Data final<input type="date" name="relatorio-data-fim" value={dataFim} disabled={gerando} onChange={(event) => setDataFim(event.target.value)} className="mt-1 w-full rounded-lg border border-surface-3 bg-surface-1 px-3 py-2 text-sm text-content-strong" /></label>
             </div>
             {erroPeriodo && <p className="mt-2 text-xs text-red-600">{erroPeriodo}</p>}
-            {dias && !erroPeriodo && <p className="mt-2 text-xs font-medium text-green-700">Período de {dias} {dias === 1 ? 'dia' : 'dias'}.</p>}
+            {dias && !erroPeriodo && <p className="mt-2 text-xs font-medium text-primary">Período de {dias} {dias === 1 ? 'dia' : 'dias'}.</p>}
           </section>
 
           <section>
-            <h3 className="text-sm font-semibold text-gray-900">Conteúdo e ordem</h3>
-            <p className="mb-3 text-xs text-gray-500">Selecione as seções e use os botões para definir a ordem do PDF.</p>
+            <h3 className="text-sm font-semibold text-content-strong">Conteúdo e ordem</h3>
+            <p className="mb-3 text-xs text-content-muted">Selecione as seções e arraste os cards para definir a ordem do PDF.</p>
             <div className="space-y-2">
               {ordem.map((id, index) => {
                 const item = RELATORIOS_GERAIS.find((relatorio) => relatorio.id === id)!
-                return <div key={id} className={`flex items-center gap-3 rounded-lg border p-3 ${selecionados.has(id) ? 'border-green-300 bg-green-50/50' : 'border-gray-200 bg-gray-50'}`}>
-                  <input type="checkbox" checked={selecionados.has(id)} disabled={gerando} onChange={() => toggle(id)} className="h-4 w-4 rounded border-gray-300 text-green-700" />
-                  <span className="w-5 text-center text-xs font-semibold text-gray-400">{index + 1}</span>
-                  <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-gray-900">{item.titulo}</p><p className="truncate text-xs text-gray-500">{item.descricao}</p></div>
-                  <div className="flex gap-1">
-                    <button type="button" disabled={gerando || index === 0} onClick={() => setOrdem((atual) => moverRelatorio(atual, id, -1))} aria-label={`Subir ${item.titulo}`} className="rounded border border-gray-300 p-1.5 text-gray-600 disabled:opacity-30"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg></button>
-                    <button type="button" disabled={gerando || index === ordem.length - 1} onClick={() => setOrdem((atual) => moverRelatorio(atual, id, 1))} aria-label={`Descer ${item.titulo}`} className="rounded border border-gray-300 p-1.5 text-gray-600 disabled:opacity-30"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>
-                  </div>
+                return <div
+                  key={id}
+                  draggable={!gerando}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(event) => handleDragOver(event, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`flex items-center gap-3 rounded-lg border p-3 transition-opacity ${selecionados.has(id) ? 'border-primary/40 bg-primary/10' : 'border-border-base bg-surface-2'} ${draggingIndex === index ? 'opacity-50' : 'opacity-100'} ${gerando ? '' : 'cursor-grab active:cursor-grabbing'}`}>
+                  <input type="checkbox" checked={selecionados.has(id)} disabled={gerando} onChange={() => toggle(id)} className="h-4 w-4 rounded border-surface-3 text-primary" />
+                  <svg className="h-4 w-4 flex-shrink-0 text-content-faint" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="9" cy="7" r="1.5" /><circle cx="15" cy="7" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="17" r="1.5" /><circle cx="15" cy="17" r="1.5" />
+                  </svg>
+                  <span className="w-5 text-center text-xs font-semibold text-content-faint">{index + 1}</span>
+                  <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-content-strong">{item.titulo}</p><p className="truncate text-xs text-content-muted">{item.descricao}</p></div>
                 </div>
               })}
             </div>
@@ -130,10 +156,10 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
           <section>
             <div className="mb-2 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-gray-900">Prévia da capa</h3>
-                <p className="text-xs text-gray-500">Atualiza conforme você escolhe a imagem e o período.</p>
+                <h3 className="text-sm font-semibold text-content-strong">Prévia da capa</h3>
+                <p className="text-xs text-content-muted">Atualiza conforme você escolhe a imagem e o período.</p>
               </div>
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">A4 paisagem</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-content-faint">A4 paisagem</span>
             </div>
             <div className="relative aspect-[1.414/1] overflow-hidden rounded-xl bg-gradient-to-br from-green-900 via-green-700 to-blue-900 shadow-sm">
               {imagemCapaPreview && <img src={imagemCapaPreview} alt="Prévia da imagem de capa" className="absolute inset-0 h-full w-full object-cover" />}
@@ -146,12 +172,12 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
             </div>
           </section>
           <RelatorioCapaGallery fazendaId={fazendaId} selecionada={imagemCapa} onSelect={selecionarCapa} disabled={gerando} />
-          <section className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-            <h3 className="text-sm font-semibold text-gray-900">Resumo</h3>
-            <dl className="mt-3 space-y-2 text-xs"><div><dt className="text-gray-500">Fazenda</dt><dd className="font-medium text-gray-900">{fazendaNome}</dd></div><div><dt className="text-gray-500">Referência da capa</dt><dd className="font-medium text-gray-900">{formatarPeriodoCapa(dataInicio, dataFim) || 'Aguardando período'}</dd></div><div><dt className="text-gray-500">Seções</dt><dd className="font-medium text-gray-900">{resumo || 'Nenhuma selecionada'}</dd></div></dl>
+          <section className="rounded-xl border border-border-base bg-surface-2 p-4">
+            <h3 className="text-sm font-semibold text-content-strong">Resumo</h3>
+            <dl className="mt-3 space-y-2 text-xs"><div><dt className="text-content-muted">Fazenda</dt><dd className="font-medium text-content-strong">{fazendaNome}</dd></div><div><dt className="text-content-muted">Referência da capa</dt><dd className="font-medium text-content-strong">{formatarPeriodoCapa(dataInicio, dataFim) || 'Aguardando período'}</dd></div><div><dt className="text-content-muted">Seções</dt><dd className="font-medium text-content-strong">{resumo || 'Nenhuma selecionada'}</dd></div></dl>
           </section>
-          <button type="button" disabled={!podeGerar} onClick={gerar} className="w-full rounded-lg bg-green-700 px-4 py-3 text-sm font-semibold text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-50">{gerando ? etapa || 'Preparando relatório' : 'Gerar e baixar PDF'}</button>
-          {gerando && <div className="flex items-center justify-center gap-2 text-xs text-gray-600"><span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-green-700" />Aguarde, não feche esta janela.</div>}
+          <button type="button" disabled={!podeGerar} onClick={gerar} className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50">{gerando ? etapa || 'Preparando relatório' : 'Gerar e baixar PDF'}</button>
+          {gerando && <div className="flex items-center justify-center gap-2 text-xs text-content-muted"><span className="h-4 w-4 animate-spin rounded-full border-2 border-surface-3 border-t-primary" />Aguarde, não feche esta janela.</div>}
         </div>
       </div>
     </Modal>

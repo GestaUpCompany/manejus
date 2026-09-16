@@ -676,8 +676,8 @@ export function PlanoNutricionalLoteModal({
       size="xl"
     >
       {loading ? (
-        <div className="py-8 flex flex-col items-center gap-3 text-gray-500">
-          <svg className="animate-spin h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24">
+        <div className="py-8 flex flex-col items-center gap-3 text-content-muted">
+          <svg className="animate-spin h-6 w-6 text-content-faint" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
@@ -686,7 +686,7 @@ export function PlanoNutricionalLoteModal({
       ) : (
         <div className="space-y-4">
           {loteDestino === 'enfermaria' && (
-            <div className="p-3 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900">
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-200">
               <p className="font-semibold mb-1">Lote de Enfermaria — GMD reduzido em 50%</p>
               <p>
                 Os GMDs exibidos abaixo já têm o desconto de 50% aplicado automaticamente.
@@ -695,12 +695,12 @@ export function PlanoNutricionalLoteModal({
             </div>
           )}
           {/* Abas */}
-          <div className="flex gap-1 border-b border-gray-200">
+          <div className="flex gap-1 border-b border-border-base">
             <button
               type="button"
               onClick={() => setActiveTab('planos')}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'planos' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'
+                activeTab === 'planos' ? 'border-primary text-primary' : 'border-transparent text-content-muted hover:text-content'
               }`}
             >
               Planos
@@ -709,7 +709,7 @@ export function PlanoNutricionalLoteModal({
               type="button"
               onClick={() => setActiveTab('categorias')}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'categorias' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'
+                activeTab === 'categorias' ? 'border-primary text-primary' : 'border-transparent text-content-muted hover:text-content'
               }`}
             >
               Categorias
@@ -723,34 +723,34 @@ export function PlanoNutricionalLoteModal({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-semibold text-gray-800">Fila de Planos do Lote</h3>
-                <p className="text-xs text-gray-500">A fila é compartilhada por todas as categorias. Arraste para reordenar.</p>
+                <h3 className="text-base font-semibold text-content-strong">Fila de Planos do Lote</h3>
+                <p className="text-xs text-content-muted">A fila é compartilhada por todas as categorias. Arraste para reordenar.</p>
               </div>
               <Button size="sm" variant="secondary" onClick={handleAddPlano}>+ Adicionar Plano à Fila</Button>
             </div>
 
             {/* Plano vigente - destaque principal */}
             {planoVigente && (
-              <div className="bg-gradient-to-br from-green-50 to-green-100/50 border-2 border-green-300 rounded-xl p-5 space-y-4">
+              <div className="bg-gradient-to-br from-primary/10 to-primary/15 border-2 border-primary/20 rounded-xl p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-green-700 uppercase tracking-wider">Plano Vigente</p>
-                    <h4 className="text-lg font-bold text-green-900 mt-0.5">{planoVigente.nome}</h4>
+                    <p className="text-xs font-bold text-primary uppercase tracking-wider">Plano Vigente</p>
+                    <h4 className="text-lg font-bold text-content-strong mt-0.5">{planoVigente.nome}</h4>
                   </div>
-                  <span className="px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full">Ativo</span>
+                  <span className="px-3 py-1 bg-primary text-white text-xs font-bold rounded-full">Ativo</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm bg-white/60 rounded-lg p-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm bg-surface-1/60 rounded-lg p-3">
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Formulação</p>
-                    <p className="font-semibold text-gray-900">{formulacoes.find((f) => f.id === planoVigente.formulacao_id)?.nome || '—'}</p>
+                    <p className="text-xs text-content-muted mb-0.5">Formulação</p>
+                    <p className="font-semibold text-content-strong">{formulacoes.find((f) => f.id === planoVigente.formulacao_id)?.nome || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Período</p>
-                    <p className="font-semibold text-gray-900">{planoVigente.periodo_dias} dias</p>
+                    <p className="text-xs text-content-muted mb-0.5">Período</p>
+                    <p className="font-semibold text-content-strong">{planoVigente.periodo_dias} dias</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Peso Meta</p>
-                    <p className="font-semibold text-gray-900">{Number(planoVigente.peso_meta_kg).toFixed(2).replace('.', ',')} kg</p>
+                    <p className="text-xs text-content-muted mb-0.5">Peso Meta</p>
+                    <p className="font-semibold text-content-strong">{Number(planoVigente.peso_meta_kg).toFixed(2).replace('.', ',')} kg</p>
                   </div>
                 </div>
                 <div className="flex gap-2 flex-wrap">
@@ -762,8 +762,8 @@ export function PlanoNutricionalLoteModal({
 
             {/* Sem plano vigente */}
             {!planoVigente && planos.length > 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-sm text-yellow-800 mb-2">Nenhum plano vigente. Inicie um plano para o lote.</p>
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                <p className="text-sm text-amber-700 dark:text-amber-200 mb-2">Nenhum plano vigente. Inicie um plano para o lote.</p>
                 <div className="flex flex-wrap gap-2">
                   {planosFila.map((p) => (
                     <div key={p.id} className="flex gap-2">
@@ -779,9 +779,9 @@ export function PlanoNutricionalLoteModal({
             {planosFila.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-gray-700">Sequência de Planos</p>
+                  <p className="text-xs font-medium text-content">Sequência de Planos</p>
                   {planosEncerrados.length > 0 && (
-                    <button type="button" onClick={() => setShowEncerrados(!showEncerrados)} className="text-xs text-gray-500 hover:text-gray-700 underline">
+                    <button type="button" onClick={() => setShowEncerrados(!showEncerrados)} className="text-xs text-content-muted hover:text-content underline">
                       {showEncerrados ? 'Ocultar encerrados' : 'Mostrar encerrados'}
                     </button>
                   )}
@@ -797,20 +797,20 @@ export function PlanoNutricionalLoteModal({
                       onDrop={canDrag ? handleDrop(idx) : undefined}
                       onDragEnd={handleDragEnd}
                       className={`flex items-center gap-2 border rounded-md py-2 px-3 transition-colors ${
-                        dragOverIndex === idx ? 'border-primary bg-primary/5' : draggingIndex === idx ? 'border-gray-300 opacity-50' : 'border-gray-200'
+                        dragOverIndex === idx ? 'border-primary bg-primary/5' : draggingIndex === idx ? 'border-surface-3 opacity-50' : 'border-border-base'
                       } ${canDrag ? 'cursor-move' : ''}`}
                     >
-                      {canDrag && <span className="text-gray-300 select-none flex-shrink-0 text-sm">⠿</span>}
-                      <span className="text-xs font-bold text-gray-400 flex-shrink-0">{idx + 1}</span>
+                      {canDrag && <span className="text-content-faint select-none flex-shrink-0 text-sm">⠿</span>}
+                      <span className="text-xs font-bold text-content-faint flex-shrink-0">{idx + 1}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">{plano.nome}</p>
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className="text-sm font-medium text-content-strong truncate">{plano.nome}</p>
+                        <p className="text-xs text-content-muted truncate">
                           {formulacoes.find((f) => f.id === plano.formulacao_id)?.nome || '—'} • {plano.periodo_dias}d • {Number(plano.peso_meta_kg).toFixed(0)}kg
                         </p>
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
                         <Button size="sm" variant="secondary" onClick={() => handleEdit(plano)}>Editar</Button>
-                        <Button size="sm" variant="secondary" onClick={() => handleDelete(plano)} className="text-red-600 hover:text-red-700">Excluir</Button>
+                        <Button size="sm" variant="secondary" onClick={() => handleDelete(plano)} className="text-red-600 dark:text-red-200 hover:text-red-600 dark:text-red-200">Excluir</Button>
                         {planoVigente && <Button size="sm" onClick={() => handleMigrarPara(plano)}>Migrar</Button>}
                       </div>
                     </div>
@@ -822,12 +822,12 @@ export function PlanoNutricionalLoteModal({
             {/* Planos encerrados */}
             {showEncerrados && planosEncerrados.length > 0 && (
               <div className="space-y-1">
-                <p className="text-xs font-medium text-gray-500">Planos Encerrados</p>
+                <p className="text-xs font-medium text-content-muted">Planos Encerrados</p>
                 {planosEncerrados.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between border border-gray-200 rounded-lg p-2 bg-gray-50">
+                  <div key={p.id} className="flex items-center justify-between border border-border-base rounded-lg p-2 bg-surface-2">
                     <div>
-                      <p className="text-sm text-gray-700">{p.nome} <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 text-xs rounded">Encerrado</span></p>
-                      <p className="text-xs text-gray-500">{p.periodo_dias} dias • Meta: {Number(p.peso_meta_kg).toFixed(2).replace('.', ',')} kg{p.data_fim && ` • ${new Date(p.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}`}</p>
+                      <p className="text-sm text-content">{p.nome} <span className="px-1.5 py-0.5 bg-surface-3 text-content-muted text-xs rounded">Encerrado</span></p>
+                      <p className="text-xs text-content-muted">{p.periodo_dias} dias • Meta: {Number(p.peso_meta_kg).toFixed(2).replace('.', ',')} kg{p.data_fim && ` • ${new Date(p.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}`}</p>
                     </div>
                     {!planoVigente && <Button size="sm" variant="secondary" onClick={() => handleIniciarPlano(p)}>Reativar</Button>}
                   </div>
@@ -837,30 +837,30 @@ export function PlanoNutricionalLoteModal({
 
             {/* Histórico de planos (vigentes e encerrados) */}
             {historicoPlanos.length > 0 && (
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="border border-border-base rounded-lg overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setShowHistorico(!showHistorico)}
-                  className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2 bg-surface-2 hover:bg-surface-2 transition-colors"
                 >
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-content">
                     Histórico de Planos ({historicoPlanos.length})
                   </span>
-                  <span className="text-xs text-gray-500">{showHistorico ? '▲ Recolher' : '▼ Expandir'}</span>
+                  <span className="text-xs text-content-muted">{showHistorico ? '▲ Recolher' : '▼ Expandir'}</span>
                 </button>
                 {showHistorico && (
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-border-base">
                     {historicoPlanos.map((hp) => (
-                      <div key={hp.id} className="px-3 py-2.5 bg-white">
+                      <div key={hp.id} className="px-3 py-2.5 bg-surface-1">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold text-gray-800 truncate">{hp.nome}</p>
-                          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full flex-shrink-0">
+                          <p className="text-sm font-semibold text-content-strong truncate">{hp.nome}</p>
+                          <span className="px-2 py-0.5 bg-surface-2 text-content-muted text-xs rounded-full flex-shrink-0">
                             {hp.duracao_dias} dias
                           </span>
                         </div>
-                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
+                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-content-muted">
                           <span>
-                            Formulação: <span className="font-medium text-gray-700">{hp.formulacao_nome || '—'}</span>
+                            Formulação: <span className="font-medium text-content">{hp.formulacao_nome || '—'}</span>
                           </span>
                           {hp.data_inicio && hp.data_fim && (
                             <span>
@@ -872,12 +872,12 @@ export function PlanoNutricionalLoteModal({
                         </div>
                         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
                           {hp.ganho_medio_kg != null && (
-                            <span className="text-green-700">
+                            <span className="text-primary">
                               Ganho: <span className="font-semibold">{hp.ganho_medio_kg.toFixed(2).replace('.', ',')} kg/cab</span>
                             </span>
                           )}
                           {hp.gmd_realizado_medio != null && hp.gmd_realizado_medio > 0 && (
-                            <span className="text-blue-700">
+                            <span className="text-content-strong">
                               GMD realizado: <span className="font-semibold">{hp.gmd_realizado_medio.toFixed(3).replace('.', ',')} kg/dia</span>
                             </span>
                           )}
@@ -893,18 +893,18 @@ export function PlanoNutricionalLoteModal({
             {planos.length === 0 && (
               <div className="space-y-3">
                 {formulacaoLoteId && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-xs text-blue-700 mb-0.5">Formulação salva no lote</p>
-                    <p className="text-sm font-semibold text-blue-900">
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                    <p className="text-xs text-content-strong mb-0.5">Formulação salva no lote</p>
+                    <p className="text-sm font-semibold text-content-strong">
                       {formulacoes.find((f) => f.id === formulacaoLoteId)?.nome || 'Formulação não encontrada'}
                     </p>
-                    <p className="text-xs text-blue-600 mt-1">
+                    <p className="text-xs text-content-strong mt-1">
                       Os GMDs por categoria já estão definidos, mas o peso só evolui após criar e iniciar um plano.
                     </p>
                   </div>
                 )}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                  <p className="text-sm text-gray-600">Nenhum plano cadastrado para este lote.</p>
+                <div className="bg-surface-2 border border-border-base rounded-lg p-4 text-center">
+                  <p className="text-sm text-content-muted">Nenhum plano cadastrado para este lote.</p>
                   <Button size="sm" className="mt-2" onClick={handleAddPlano}>+ Criar Primeiro Plano</Button>
                 </div>
               </div>
@@ -916,8 +916,8 @@ export function PlanoNutricionalLoteModal({
           )}
           {activeTab === 'categorias' && (
           <div className="space-y-3">
-            <h3 className="text-base font-semibold text-gray-800">Categorias do Lote</h3>
-            <p className="text-xs text-gray-500">Personalize período e peso meta por categoria. O GMD vem da formulação vigente.</p>
+            <h3 className="text-base font-semibold text-content-strong">Categorias do Lote</h3>
+            <p className="text-xs text-content-muted">Personalize período e peso meta por categoria. O GMD vem da formulação vigente.</p>
 
             {categorias.filter((c) => !isBezerroAope(c.categoria)).map((cat) => {
               const pers = getPersForCat(cat.id)
@@ -936,9 +936,9 @@ export function PlanoNutricionalLoteModal({
 
             {/* Bezerros ao pé: informativo */}
             {categorias.filter((c) => isBezerroAope(c.categoria)).map((cat) => (
-              <div key={cat.id} className="bg-amber-50 border border-amber-300 rounded-lg p-3">
-                <p className="text-sm font-medium text-amber-900 capitalize">{cat.categoria}</p>
-                <p className="text-xs text-amber-700 mt-0.5">
+              <div key={cat.id} className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-200 capitalize">{cat.categoria}</p>
+                <p className="text-xs text-amber-700 dark:text-amber-200 mt-0.5">
                   Bezerros/bezerras ao pé usam GMD próprio. Não há plano nutricional.
                   {cat.gmd && ` • GMD: ${Number(cat.gmd).toFixed(3).replace('.', ',')} kg/cab/dia`}
                 </p>
@@ -951,56 +951,54 @@ export function PlanoNutricionalLoteModal({
 
           {/* ========== FORMULÁRIO CRIAR/EDITAR PLANO (só na aba Planos) ========== */}
           {activeTab === 'planos' && isFormOpen ? (
-            <div ref={formRef} className="border-t-2 border-gray-200 pt-4">
+            <div ref={formRef} className="border-t-2 border-border-base pt-4">
               {/* Indicador visual de que o form abriu */}
-              <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg animate-fade-in">
-                <svg className="w-4 h-4 text-blue-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg animate-fade-in">
+                <svg className="w-4 h-4 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                <p className="text-sm font-medium text-blue-800">
+                <p className="text-sm font-medium text-content-strong">
                   {editingPlano ? `Editando: ${editingPlano.nome}` : 'Preencha os dados do novo plano'}
                 </p>
               </div>
               <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-base font-semibold text-gray-800">{editingPlano ? 'Editar Plano' : 'Novo Plano'}</h3>
-                {editingPlano?.ativo && <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded">Vigente</span>}
+                <h3 className="text-base font-semibold text-content-strong">{editingPlano ? 'Editar Plano' : 'Novo Plano'}</h3>
+                {editingPlano?.ativo && <span className="px-2 py-0.5 bg-primary/15 text-content-strong text-xs font-medium rounded">Vigente</span>}
               </div>
               {editingPlano?.ativo && (
-                <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                <div className="mb-3 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs text-amber-700 dark:text-amber-200">
                   Editando plano vigente. Apenas duração e peso meta podem ser alterados.
                 </div>
               )}
               <form onSubmit={handleSubmit} className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Nome do Plano *</label>
+                    <label className="block text-xs font-medium text-content mb-1">Nome do Plano *</label>
                     <Input type="text" value={formData.nome} onChange={(e) => { if (!editingPlano?.ativo) setFormData({ ...formData, nome: e.target.value }) }} placeholder="Ex: Engorda Inicial" required disabled={!!editingPlano?.ativo}
-                      className={`text-sm ${editingPlano?.ativo ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} />
+                      className={`text-sm ${editingPlano?.ativo ? 'bg-surface-2 text-content-muted cursor-not-allowed' : ''}`} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Formulação *</label>
+                    <label className="block text-xs font-medium text-content mb-1">Formulação *</label>
                     <select value={formData.formulacao_id} onChange={(e) => { if (!editingPlano?.ativo) handleFormulacaoChange(e.target.value) }} required disabled={!!editingPlano?.ativo}
-                      className={`w-full px-3 py-2 border rounded-lg text-sm ${editingPlano?.ativo ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}>
+                      className={`w-full min-h-[44px] px-3 py-3 border-2 rounded-lg text-sm leading-5 ${editingPlano?.ativo ? 'bg-surface-2 text-content-muted cursor-not-allowed' : 'bg-surface-2 text-content-strong border-surface-3 focus:border-primary'}`}>
                       <option value="">Selecione...</option>
                       {formulacoes.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
                     </select>
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-gray-700">Duração *</label>
-                      <div className="flex gap-1">
-                        <button type="button" onClick={() => setFormData({ ...formData, tipo_entrada_periodo: 'periodo' })} className={`px-3 py-1.5 rounded border text-xs min-h-[44px] ${formData.tipo_entrada_periodo === 'periodo' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-200'}`}>Dias</button>
-                        <button type="button" onClick={() => setFormData({ ...formData, tipo_entrada_periodo: 'data_final' })} className={`px-3 py-1.5 rounded border text-xs min-h-[44px] ${formData.tipo_entrada_periodo === 'data_final' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-200'}`}>Data final</button>
-                      </div>
+                    <label className="block text-xs font-medium text-content mb-1">Duração *</label>
+                    <div className="flex items-center gap-2">
+                      {formData.tipo_entrada_periodo === 'periodo' ? (
+                        <NumericInput value={formData.periodo_dias} onChange={(v) => setFormData({ ...formData, periodo_dias: v })} decimalPlaces={0} placeholder="Ex: 90" className="flex-1" />
+                      ) : (
+                        <Input type="date" value={formData.data_final} onChange={(e) => setFormData({ ...formData, data_final: e.target.value })} className="flex-1 text-sm" />
+                      )}
+                      <button type="button" onClick={() => setFormData({ ...formData, tipo_entrada_periodo: 'periodo' })} className={`px-3 py-1.5 rounded-lg border text-xs min-h-[44px] ${formData.tipo_entrada_periodo === 'periodo' ? 'bg-primary text-white border-primary' : 'bg-surface-2 text-content border-border-base'}`}>Dias</button>
+                      <button type="button" onClick={() => setFormData({ ...formData, tipo_entrada_periodo: 'data_final' })} className={`px-3 py-1.5 rounded-lg border text-xs min-h-[44px] ${formData.tipo_entrada_periodo === 'data_final' ? 'bg-primary text-white border-primary' : 'bg-surface-2 text-content border-border-base'}`}>Data final</button>
                     </div>
-                    {formData.tipo_entrada_periodo === 'periodo' ? (
-                      <NumericInput value={formData.periodo_dias} onChange={(v) => setFormData({ ...formData, periodo_dias: v })} decimalPlaces={0} placeholder="Ex: 90" />
-                    ) : (
-                      <Input type="date" value={formData.data_final} onChange={(e) => setFormData({ ...formData, data_final: e.target.value })} className="text-sm" />
-                    )}
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Peso Meta (kg) *</label>
+                    <label className="block text-xs font-medium text-content mb-1">Peso Meta (kg) *</label>
                     <Input type="text" inputMode="decimal" value={formData.peso_meta_kg} onChange={(e) => setFormData({ ...formData, peso_meta_kg: e.target.value })} placeholder="Ex: 500,00" className="text-sm" />
                   </div>
                 </div>
@@ -1010,16 +1008,16 @@ export function PlanoNutricionalLoteModal({
                   if (gmds.length === 0) return null
                   const gmdMedio = gmds.reduce((s, g) => s + g.gmd, 0) / gmds.length
                   return (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
+                    <div className="bg-surface-2 border border-border-base rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-gray-700">GMDs por categoria (formulação selecionada)</p>
-                        <p className="text-xs text-gray-500">Média: {gmdMedio.toFixed(3).replace('.', ',')} kg/cab/dia</p>
+                        <p className="text-xs font-semibold text-content">GMDs por categoria (formulação selecionada)</p>
+                        <p className="text-xs text-content-muted">Média: {gmdMedio.toFixed(3).replace('.', ',')} kg/cab/dia</p>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {gmds.map((g) => (
-                          <span key={`${g.formulacao_id}-${g.categoria}`} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-gray-200 rounded text-xs">
-                            <span className="capitalize text-gray-700">{g.categoria}</span>
-                            <span className="font-medium text-gray-900">{Number(g.gmd).toFixed(3).replace('.', ',')}</span>
+                          <span key={`${g.formulacao_id}-${g.categoria}`} className="inline-flex items-center gap-1 px-2 py-0.5 bg-surface-1 border border-border-base rounded text-xs">
+                            <span className="capitalize text-content">{g.categoria}</span>
+                            <span className="font-medium text-content-strong">{Number(g.gmd).toFixed(3).replace('.', ',')}</span>
                           </span>
                         ))}
                       </div>
@@ -1035,7 +1033,7 @@ export function PlanoNutricionalLoteModal({
           ) : null}
 
           {message && (
-            <div className={`p-3 rounded-lg text-sm ${message.includes('Erro') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{message}</div>
+            <div className={`p-3 rounded-lg text-sm ${message.includes('Erro') ? 'bg-red-500/10 text-red-600 dark:text-red-200' : 'bg-primary/10 text-primary'}`}>{message}</div>
           )}
         </div>
       )}
@@ -1055,10 +1053,10 @@ export function PlanoNutricionalLoteModal({
         title="Iniciar Plano Retroativo"
       >
         {retroativoModal.loading ? (
-          <p className="text-sm text-gray-500">Carregando dados das categorias...</p>
+          <p className="text-sm text-content-muted">Carregando dados das categorias...</p>
         ) : retroativoModal.plano ? (
           <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-sm text-content-strong">
               <p className="font-semibold mb-1">O que será feito:</p>
               <ul className="list-disc list-inside space-y-1 text-xs">
                 <li>O plano <strong>"{retroativoModal.plano.nome}"</strong> será iniciado retroativamente.</li>
@@ -1070,11 +1068,11 @@ export function PlanoNutricionalLoteModal({
 
             {retroativoModal.preview.length > 0 && (
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Projeção por categoria:</p>
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <p className="text-sm font-medium text-content mb-2">Projeção por categoria:</p>
+                <div className="overflow-x-auto border border-border-base rounded-lg">
                   <table className="w-full text-xs">
-                    <thead className="bg-gray-50">
-                      <tr className="text-left text-gray-500">
+                    <thead className="bg-surface-2">
+                      <tr className="text-left text-content-muted">
                         <th className="py-2 px-2 font-medium">Categoria</th>
                         <th className="py-2 px-2 font-medium">Data Pesagem</th>
                         <th className="py-2 px-2 font-medium">Peso Entrada</th>
@@ -1085,20 +1083,20 @@ export function PlanoNutricionalLoteModal({
                     </thead>
                     <tbody>
                       {retroativoModal.preview.map((p, idx) => (
-                        <tr key={idx} className="border-t border-gray-100">
-                          <td className="py-2 px-2 font-medium text-gray-800 capitalize">{p.categoria}</td>
-                          <td className="py-2 px-2 text-gray-600">
-                            {p.semDataPesagem ? <span className="text-red-600">sem data</span> : new Date(p.dataPesagem! + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        <tr key={idx} className="border-t border-border-subtle">
+                          <td className="py-2 px-2 font-medium text-content-strong capitalize">{p.categoria}</td>
+                          <td className="py-2 px-2 text-content-muted">
+                            {p.semDataPesagem ? <span className="text-red-600 dark:text-red-200">sem data</span> : new Date(p.dataPesagem! + 'T00:00:00').toLocaleDateString('pt-BR')}
                           </td>
-                          <td className="py-2 px-2 text-gray-600">
-                            {p.semPesoEntrada ? <span className="text-red-600">sem peso</span> : `${p.pesoEntrada?.toFixed(2).replace('.', ',')} kg`}
+                          <td className="py-2 px-2 text-content-muted">
+                            {p.semPesoEntrada ? <span className="text-red-600 dark:text-red-200">sem peso</span> : `${p.pesoEntrada?.toFixed(2).replace('.', ',')} kg`}
                           </td>
-                          <td className="py-2 px-2 text-gray-600">
-                            {p.gmd != null ? `${p.gmd.toFixed(3).replace('.', ',')} kg/dia` : <span className="text-amber-600">sem GMD</span>}
+                          <td className="py-2 px-2 text-content-muted">
+                            {p.gmd != null ? `${p.gmd.toFixed(3).replace('.', ',')} kg/dia` : <span className="text-amber-700 dark:text-amber-200">sem GMD</span>}
                           </td>
-                          <td className="py-2 px-2 text-gray-600">{p.dias}</td>
-                          <td className="py-2 px-2 font-semibold text-gray-900">
-                            {p.pesoProjetado != null ? `${p.pesoProjetado.toFixed(2).replace('.', ',')} kg` : <span className="text-amber-600">não projeta</span>}
+                          <td className="py-2 px-2 text-content-muted">{p.dias}</td>
+                          <td className="py-2 px-2 font-semibold text-content-strong">
+                            {p.pesoProjetado != null ? `${p.pesoProjetado.toFixed(2).replace('.', ',')} kg` : <span className="text-amber-700 dark:text-amber-200">não projeta</span>}
                           </td>
                         </tr>
                       ))}
@@ -1106,12 +1104,12 @@ export function PlanoNutricionalLoteModal({
                   </table>
                 </div>
                 {retroativoModal.preview.some(p => p.semDataPesagem || p.semPesoEntrada) && (
-                  <p className="text-xs text-red-600 mt-2">
+                  <p className="text-xs text-red-600 dark:text-red-200 mt-2">
                     Categorias marcadas em vermelho não têm data de pesagem ou peso de entrada. Elas manterão o peso atual e evoluirão a partir de hoje, sem retroatividade. Cadastre esses dados no formulário do lote para que a evolução funcione com a retroatividade.
                   </p>
                 )}
                 {retroativoModal.preview.some(p => p.gmd == null) && (
-                  <p className="text-xs text-amber-600 mt-1">
+                  <p className="text-xs text-amber-700 dark:text-amber-200 mt-1">
                     Categorias sem GMD na formulação não terão peso projetado. O peso atual será mantido e a evolução será interrompida até que a formulação contemple a categoria.
                   </p>
                 )}
@@ -1119,7 +1117,7 @@ export function PlanoNutricionalLoteModal({
             )}
 
             {retroativoModal.erro && (
-              <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-sm text-red-700">
+              <div className="bg-red-500/10 border border-red-300 rounded-lg p-3 text-sm text-red-600 dark:text-red-200">
                 {retroativoModal.erro}
               </div>
             )}
@@ -1135,7 +1133,7 @@ export function PlanoNutricionalLoteModal({
               <Button
                 onClick={confirmarInicioRetroativo}
                 disabled={retroativoModal.submitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-primary hover:bg-blue-700 text-white"
               >
                 {retroativoModal.submitting ? 'Iniciando...' : 'Confirmar Início Retroativo'}
               </Button>
@@ -1212,11 +1210,11 @@ function CategoriaPersonalizacaoCard({
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg p-3">
+    <div className="border border-border-base rounded-lg p-3">
       <div className="flex items-center justify-between mb-2">
         <div>
-          <p className="font-medium text-gray-900 capitalize">{categoria.categoria}</p>
-          <p className="text-xs text-gray-500">
+          <p className="font-medium text-content-strong capitalize">{categoria.categoria}</p>
+          <p className="text-xs text-content-muted">
             {categoria.gmd && `GMD: ${Number(categoria.gmd).toFixed(3).replace('.', ',')} kg/cab/dia`}
             {categoria.peso_vivo_atual_kg_cab != null && ` • Peso atual: ${Number(categoria.peso_vivo_atual_kg_cab).toFixed(2).replace('.', ',')} kg`}
           </p>
@@ -1224,15 +1222,15 @@ function CategoriaPersonalizacaoCard({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Período (dias)</label>
+          <label className="block text-xs font-medium text-content mb-1">Período (dias)</label>
           <Input type="number" value={periodo} onChange={(e) => setPeriodo(e.target.value)} placeholder="Ex: 90" className="text-sm" disabled={!planoVigenteId} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Peso Meta (kg)</label>
+          <label className="block text-xs font-medium text-content mb-1">Peso Meta (kg)</label>
           <Input type="text" inputMode="decimal" value={pesoMeta} onChange={(e) => setPesoMeta(e.target.value)} placeholder="Ex: 500,00" className="text-sm" disabled={!planoVigenteId} />
         </div>
       </div>
-      <p className="text-xs text-gray-500 mt-1">
+      <p className="text-xs text-content-muted mt-1">
         {personalizacao
           ? 'Personalização ativa. Se o período desta categoria terminar antes das outras, ela para de evoluir peso e aguarda o fim das demais.'
           : 'Valores do plano vigente. Edite para personalizar esta categoria. Se o período terminar antes das outras, ela para de evoluir peso e aguarda o fim das demais.'}

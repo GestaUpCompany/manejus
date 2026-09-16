@@ -184,27 +184,27 @@ export function Racas() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Raças</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Raças</h2>
         <div className="flex gap-2 items-start">
           <Input
             type="text"
             placeholder="Buscar raça..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent h-10"
+            className="max-w-xs border-border-base focus:border-accent h-10"
           />
           <Button onClick={() => setShowForm(true)} className="h-10">Nova Raça</Button>
         </div>
       </div>
 
       {showForm && (
-        <Card className="bg-white p-6 border-0 shadow-sm">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+          <h3 className="text-xl font-semibold text-content-strong mb-4">
             {editingRaca ? 'Editar Raça' : 'Nova Raça'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Nome *
               </label>
               <Input
@@ -213,7 +213,7 @@ export function Racas() {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 required
                 placeholder="Nome da raça"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
@@ -230,8 +230,8 @@ export function Racas() {
       )}
 
       {!showForm && racas.length === 0 ? (
-        <Card className="bg-white p-12 border-0 shadow-sm text-center">
-          <p className="text-gray-600 mb-4">Nenhuma raça cadastrada</p>
+        <Card className="bg-surface-1 p-12 border-0 shadow-sm text-center">
+          <p className="text-content-muted mb-4">Nenhuma raça cadastrada</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeira Raça</Button>
         </Card>
       ) : !showForm ? (

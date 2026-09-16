@@ -59,7 +59,7 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50/70 to-emerald-100 flex flex-col items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-green-50/60 dark:from-surface-0 dark:via-surface-1 dark:to-primary/15 flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg space-y-10">
         {/* Logo Centralizado */}
         <div className="flex flex-col items-center animate-fade-in">
@@ -69,42 +69,42 @@ export function Login() {
             loading="eager"
             className="w-32 h-32 mb-6 rounded-lg"
           />
-          <h1 className="text-4xl font-extrabold text-primary mb-3 tracking-wider leading-tight text-center">
+          <h1 className="text-4xl font-extrabold text-primary dark:text-content-strong mb-3 tracking-wider leading-tight text-center">
             Manej'Us 
             <span className="text-yellow-500"> 360</span>
           </h1>
-          <p className="text-gray-600 text-lg mb-1">Sistema de Gestão Pecuária</p>
-          <p className="text-gray-500">Faça login para acessar sua fazenda</p>
+          <p className="text-slate-600 dark:text-content text-lg mb-1">Sistema de Gestão Pecuária</p>
+          <p className="text-slate-500 dark:text-content-muted">Faça login para acessar sua fazenda</p>
         </div>
 
         {/* Formulário */}
-        <Card className="bg-white shadow-xl border border-gray-100 animate-scale-in" disableHover>
+        <Card className="bg-white dark:bg-surface-1 shadow-xl border border-slate-200 dark:border-border-base animate-scale-in" disableHover>
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-6 flex items-start gap-3 animate-fade-in">
+            <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg p-4 mb-6 flex items-start gap-3 animate-fade-in">
               <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div>
-                <p className="text-sm font-medium text-red-800">Erro de autenticação</p>
-                <p className="text-sm text-red-600 mt-1">{error}</p>
+                <p className="text-sm font-medium text-red-800 dark:text-red-200">Erro de autenticação</p>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
               </div>
             </div>
           )}
 
           {showSuccess && (
-            <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4 mb-6 flex items-center gap-3 animate-fade-in">
+            <div className="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 rounded-lg p-4 mb-6 flex items-center gap-3 animate-fade-in">
               <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <p className="text-sm font-medium text-green-800">Login realizado com sucesso!</p>
+              <p className="text-sm font-medium text-green-800 dark:text-green-200">Login realizado com sucesso!</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="relative">
-              <label htmlFor="login-email" className="block text-sm font-semibold text-primary mb-2">Email</label>
+              <label htmlFor="login-email" className="block text-sm font-semibold text-primary dark:text-content mb-2">Email</label>
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary dark:text-content" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                 </svg>
                 <input
@@ -114,8 +114,8 @@ export function Login() {
                   onChange={handleEmailChange}
                   placeholder="seu@email.com"
                   required
-                  className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus focus:border-primary ${
-                    emailValid ? 'border-green-500' : email.length > 0 ? 'border-red-500' : 'border-gray-300'
+                  className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus focus:border-primary bg-slate-50 dark:bg-surface-2 text-slate-900 dark:text-content-strong placeholder-slate-400 dark:placeholder-content-faint ${
+                    emailValid ? 'border-green-500' : email.length > 0 ? 'border-red-500' : 'border-slate-300 dark:border-surface-3'
                   }`}
                 />
                 {email.length > 0 && (
@@ -137,9 +137,9 @@ export function Login() {
               )}
             </div>
             <div className="relative">
-              <label htmlFor="login-password" className="block text-sm font-semibold text-primary mb-2">Senha</label>
+              <label htmlFor="login-password" className="block text-sm font-semibold text-primary dark:text-content mb-2">Senha</label>
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary dark:text-content" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 <input
@@ -149,15 +149,15 @@ export function Login() {
                   onChange={handlePasswordChange}
                   placeholder="••••••••"
                   required
-                  className={`w-full pl-10 pr-12 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus focus:border-primary ${
-                    passwordValid ? 'border-green-500' : password.length > 0 ? 'border-red-500' : 'border-gray-300'
+                  className={`w-full pl-10 pr-12 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus focus:border-primary bg-slate-50 dark:bg-surface-2 text-slate-900 dark:text-content-strong placeholder-slate-400 dark:placeholder-content-faint ${
+                    passwordValid ? 'border-green-500' : password.length > 0 ? 'border-red-500' : 'border-slate-300 dark:border-surface-3'
                   }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Esconder senha' : 'Mostrar senha'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:text-primary/80 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-primary dark:text-content hover:text-primary/80 dark:hover:text-primary-light transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,7 +202,7 @@ export function Login() {
 
         {/* Footer */}
         <div className="text-center space-y-2">
-          <p className="text-sm text-primary">© 2026 Gesta'Up - Todos os direitos reservados</p>
+          <p className="text-sm text-slate-500 dark:text-content-muted">© 2026 Gesta'Up - Todos os direitos reservados</p>
         </div>
       </div>
     </div>

@@ -56,17 +56,17 @@ export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen =
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r-2 border-gray-200 min-h-screen transition-all duration-300 hidden md:block`}
+        className={`${isCollapsed ? 'w-20' : 'w-64'} bg-surface-1 border-r-2 border-border-base min-h-screen transition-all duration-300 hidden md:block`}
         role="navigation"
         aria-label={title || 'Navegação principal'}
       >
         <div className="p-4">
           {onToggle && (
             <div className="flex items-center justify-between mb-6">
-              {!isCollapsed && <h2 className="text-lg font-bold text-gray-800" aria-hidden="true">{title || 'Menu'}</h2>}
+              {!isCollapsed && <h2 className="text-lg font-bold text-content-strong" aria-hidden="true">{title || 'Menu'}</h2>}
               <button
                 onClick={onToggle}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="p-2 rounded-lg hover:bg-surface-2 transition-colors text-content-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 aria-label={isCollapsed ? 'Expandir menu' : 'Colapsar menu'}
                 aria-expanded={!isCollapsed}
               >
@@ -96,11 +96,11 @@ export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen =
                   } ${
                     isActive
                       ? 'bg-primary/15 text-primary border-primary'
-                      : 'text-gray-600 border-transparent hover:bg-gray-100 hover:text-gray-900'
+                      : 'text-content-muted border-transparent hover:bg-surface-2 hover:text-content-strong'
                   }`}
                 >
                   {item.icon && (
-                    <span className={`flex-shrink-0 ${isActive ? 'text-primary' : 'text-gray-400'}`} aria-hidden="true">
+                    <span className={`flex-shrink-0 ${isActive ? 'text-primary' : 'text-content-faint'}`} aria-hidden="true">
                       {item.icon}
                     </span>
                   )}
@@ -111,8 +111,8 @@ export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen =
           </nav>
         </div>
         {!isCollapsed && user && (
-          <div className="absolute bottom-0 w-64 p-6 border-t-2 border-gray-200">
-            <div className="text-sm text-gray-500">
+          <div className="absolute bottom-0 w-64 p-6 border-t-2 border-border-base">
+            <div className="text-sm text-content-muted">
               <p>Usuário: {user.nome}</p>
               <p>Papel: <span className="capitalize">{user.papel}</span></p>
             </div>
@@ -132,14 +132,14 @@ export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen =
             role="dialog"
             aria-modal="true"
             aria-label="Menu de navegação"
-            className="bg-white w-64 h-full p-4 overflow-y-auto animate-slide-in"
+            className="bg-surface-1 w-64 h-full p-4 overflow-y-auto animate-slide-in"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-800" aria-hidden="true">{title || 'Menu'}</h2>
+              <h2 className="text-lg font-bold text-content-strong" aria-hidden="true">{title || 'Menu'}</h2>
               <button
                 onClick={() => setMobileMenuOpen?.(false)}
-                className="p-2 rounded-lg transition-all hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="p-2 rounded-lg transition-all hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 aria-label="Fechar menu"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -161,12 +161,12 @@ export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen =
                     className={`w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium border-l-[3px] flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
                       isActive
                         ? 'bg-primary/15 text-primary border-primary'
-                        : 'text-gray-700 border-transparent hover:bg-gray-50'
+                        : 'text-content border-transparent hover:bg-surface-2'
                     }`}
                     aria-label={`Ir para ${item.label}`}
                   >
                     {item.icon && (
-                      <span className={`flex-shrink-0 ${isActive ? 'text-primary' : 'text-gray-400'}`} aria-hidden="true">
+                      <span className={`flex-shrink-0 ${isActive ? 'text-primary' : 'text-content-faint'}`} aria-hidden="true">
                         {item.icon}
                       </span>
                     )}
@@ -176,8 +176,8 @@ export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen =
               })}
             </nav>
             {user && (
-              <div className="absolute bottom-0 w-64 p-6 border-t-2 border-gray-200">
-                <div className="text-sm text-gray-500">
+              <div className="absolute bottom-0 w-64 p-6 border-t-2 border-border-base">
+                <div className="text-sm text-content-muted">
                   <p>Usuário: {user.nome}</p>
                   <p>Papel: <span className="capitalize">{user.papel}</span></p>
                 </div>

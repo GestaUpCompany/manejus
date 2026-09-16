@@ -43,13 +43,13 @@ export function MorteDetalhePanel({ detalhe, modoTelaCheia, onFechar }: Props) {
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Registro de Morte</h2>
-                <p className="text-xs text-gray-500">{formatarData(detalhe.data)}</p>
+                <h2 className="text-lg font-bold text-content-strong">Registro de Morte</h2>
+                <p className="text-xs text-content-muted">{formatarData(detalhe.data)}</p>
               </div>
             </div>
             <button
               onClick={onFechar}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-content-faint hover:text-content-muted"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -62,7 +62,7 @@ export function MorteDetalhePanel({ detalhe, modoTelaCheia, onFechar }: Props) {
               <img
                 src={detalhe.fotoUrl}
                 alt="Foto do animal"
-                className="w-full rounded-lg border border-gray-200"
+                className="w-full rounded-lg border border-border-base"
               />
             </div>
           )}
@@ -70,62 +70,62 @@ export function MorteDetalhePanel({ detalhe, modoTelaCheia, onFechar }: Props) {
           <div className="space-y-2 text-sm">
             {detalhe.causaMorte && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Causa:</span>
-                <span className="font-semibold text-gray-900">{detalhe.causaMorte}</span>
+                <span className="text-content-muted">Causa:</span>
+                <span className="font-semibold text-content-strong">{detalhe.causaMorte}</span>
               </div>
             )}
             {detalhe.brinco && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Brinco:</span>
-                <span className="font-semibold text-gray-900">{detalhe.brinco}</span>
+                <span className="text-content-muted">Brinco:</span>
+                <span className="font-semibold text-content-strong">{detalhe.brinco}</span>
               </div>
             )}
             {detalhe.chip && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Chip:</span>
-                <span className="font-semibold text-gray-900">{detalhe.chip}</span>
+                <span className="text-content-muted">Chip:</span>
+                <span className="font-semibold text-content-strong">{detalhe.chip}</span>
               </div>
             )}
             {detalhe.categoria && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Categoria:</span>
-                <span className="font-semibold text-gray-900">{detalhe.categoria}</span>
+                <span className="text-content-muted">Categoria:</span>
+                <span className="font-semibold text-content-strong">{detalhe.categoria}</span>
               </div>
             )}
             {detalhe.sexo && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Sexo:</span>
-                <span className="font-semibold text-gray-900">{detalhe.sexo}</span>
+                <span className="text-content-muted">Sexo:</span>
+                <span className="font-semibold text-content-strong">{detalhe.sexo}</span>
               </div>
             )}
             {detalhe.raca && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Raça:</span>
-                <span className="font-semibold text-gray-900">{detalhe.raca}</span>
+                <span className="text-content-muted">Raça:</span>
+                <span className="font-semibold text-content-strong">{detalhe.raca}</span>
               </div>
             )}
             {detalhe.idade && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Idade:</span>
-                <span className="font-semibold text-gray-900">{detalhe.idade}</span>
+                <span className="text-content-muted">Idade:</span>
+                <span className="font-semibold text-content-strong">{detalhe.idade}</span>
               </div>
             )}
             {detalhe.pesoVivo != null && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Peso vivo:</span>
-                <span className="font-semibold text-gray-900">{detalhe.pesoVivo} kg</span>
+                <span className="text-content-muted">Peso vivo:</span>
+                <span className="font-semibold text-content-strong">{detalhe.pesoVivo} kg</span>
               </div>
             )}
             {detalhe.pasto && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Pasto:</span>
-                <span className="font-semibold text-gray-900">{detalhe.pasto}</span>
+                <span className="text-content-muted">Pasto:</span>
+                <span className="font-semibold text-content-strong">{detalhe.pasto}</span>
               </div>
             )}
             {detalhe.lote && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Lote:</span>
-                <span className="font-semibold text-gray-900">{detalhe.lote}</span>
+                <span className="text-content-muted">Lote:</span>
+                <span className="font-semibold text-content-strong">{detalhe.lote}</span>
               </div>
             )}
           </div>

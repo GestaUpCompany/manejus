@@ -179,14 +179,14 @@ export function Funcionarios() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-2xl font-bold text-gray-800">Funcionários</h2>
+          <h2 className="text-2xl font-bold text-content-strong">Funcionários</h2>
           <div className="flex gap-2 items-start">
             <Input
               type="text"
               placeholder="Buscar funcionário..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-xs border-gray-200 focus:border-accent h-10"
+              className="max-w-xs border-border-base focus:border-accent h-10"
             />
             <button
               type="button"
@@ -194,7 +194,7 @@ export function Funcionarios() {
               className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
                 showInactive
                   ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
               }`}
             >
               {showInactive ? (
@@ -214,13 +214,13 @@ export function Funcionarios() {
         </div>
 
         {showForm && (
-          <Card className="bg-white p-6 border-0 shadow-sm">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">
+          <Card className="bg-surface-1 p-6 border-0 shadow-sm">
+            <h3 className="text-xl font-semibold text-content-strong mb-4">
               {editingFuncionario ? 'Editar Funcionário' : 'Novo Funcionário'}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-content mb-1">
                   Nome *
                 </label>
                 <Input
@@ -229,12 +229,12 @@ export function Funcionarios() {
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                   required
                   placeholder="Nome completo"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-content mb-1">
                   CPF
                 </label>
                 <Input
@@ -242,12 +242,12 @@ export function Funcionarios() {
                   value={formData.cpf}
                   onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
                   placeholder="000.000.000-00"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-content mb-1">
                   Telefone
                 </label>
                 <Input
@@ -255,12 +255,12 @@ export function Funcionarios() {
                   value={formData.telefone}
                   onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                   placeholder="(00) 00000-0000"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-content mb-1">
                   Cargo
                 </label>
                 <Input
@@ -268,7 +268,7 @@ export function Funcionarios() {
                   value={formData.cargo}
                   onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
                   placeholder="Ex: Peão, Tratorista, Administrador"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
 
@@ -308,13 +308,13 @@ export function Funcionarios() {
               >
                 <div className="space-y-2 mb-4">
                   {funcionario.cpf && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-content-muted">
                       <span className="font-medium">CPF:</span> {funcionario.cpf}
                     </p>
                   )}
 
                   {funcionario.telefone && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-content-muted">
                       <span className="font-medium">Telefone:</span> {funcionario.telefone}
                     </p>
                   )}

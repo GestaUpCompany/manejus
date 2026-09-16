@@ -122,12 +122,12 @@ export function CommandPalette({ isOpen, onClose, items, onSelect }: CommandPale
         role="dialog"
         aria-modal="true"
         aria-label="Busca de navegação"
-        className="relative w-full max-w-lg bg-white rounded-xl shadow-2xl border border-gray-200 animate-in fade-in zoom-in duration-150 overflow-hidden"
+        className="relative w-full max-w-lg bg-surface-1 rounded-xl shadow-2xl border border-border-base animate-in fade-in zoom-in duration-150 overflow-hidden"
         onKeyDown={handleKeyDown}
       >
         {/* Input */}
-        <div className="flex items-center gap-3 px-4 border-b border-gray-100">
-          <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <div className="flex items-center gap-3 px-4 border-b border-border-subtle">
+          <svg className="w-5 h-5 text-content-faint flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -136,12 +136,12 @@ export function CommandPalette({ isOpen, onClose, items, onSelect }: CommandPale
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar página... (ex.: curral, lotes, relatórios)"
-            className="w-full py-4 text-sm text-gray-800 placeholder-gray-400 bg-transparent outline-none"
+            className="w-full py-4 text-sm text-content-strong placeholder-content-faint bg-transparent outline-none"
             aria-label="Buscar página"
             autoComplete="off"
             spellCheck={false}
           />
-          <kbd className="px-2 py-1 text-xs text-gray-400 bg-gray-100 border border-gray-200 rounded font-mono flex-shrink-0">
+          <kbd className="px-2 py-1 text-xs text-content-faint bg-surface-2 border border-border-base rounded font-mono flex-shrink-0">
             ESC
           </kbd>
         </div>
@@ -149,7 +149,7 @@ export function CommandPalette({ isOpen, onClose, items, onSelect }: CommandPale
         {/* Resultados */}
         <div ref={listRef} role="listbox" aria-label="Páginas disponíveis" className="max-h-[50vh] overflow-y-auto p-2">
           {filtered.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400" role="status">
+            <div className="px-4 py-8 text-center text-sm text-content-faint" role="status">
               Nenhuma página encontrada para "{query}"
             </div>
           ) : (
@@ -166,18 +166,18 @@ export function CommandPalette({ isOpen, onClose, items, onSelect }: CommandPale
                   }}
                   onMouseEnter={() => setActiveIndex(index)}
                   className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-                    isActive ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-gray-50'
+                    isActive ? 'bg-primary/10 text-primary' : 'text-content hover:bg-surface-2'
                   }`}
                 >
                   {item.icon && (
-                    <span className={`flex-shrink-0 ${isActive ? 'text-primary' : 'text-gray-400'}`} aria-hidden="true">
+                    <span className={`flex-shrink-0 ${isActive ? 'text-primary' : 'text-content-faint'}`} aria-hidden="true">
                       {item.icon}
                     </span>
                   )}
                   <div className="flex-1 min-w-0">
                     <span className="block text-sm font-medium truncate">{item.label}</span>
                     {item.section && (
-                      <span className="block text-xs text-gray-400 truncate">{item.section}</span>
+                      <span className="block text-xs text-content-faint truncate">{item.section}</span>
                     )}
                   </div>
                   {isActive && (
@@ -192,14 +192,14 @@ export function CommandPalette({ isOpen, onClose, items, onSelect }: CommandPale
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
+        <div className="px-4 py-2 border-t border-border-subtle flex items-center justify-between text-xs text-content-faint">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded font-mono">↑↓</kbd>
+              <kbd className="px-1.5 py-0.5 bg-surface-2 border border-border-base rounded font-mono">↑↓</kbd>
               navegar
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded font-mono">↵</kbd>
+              <kbd className="px-1.5 py-0.5 bg-surface-2 border border-border-base rounded font-mono">↵</kbd>
               abrir
             </span>
           </div>

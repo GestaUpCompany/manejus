@@ -29,14 +29,14 @@ function LoteFiltersComponent({
   return (
     <>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Lotes</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Lotes</h2>
         <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <Input
             type="text"
             placeholder="Buscar por lote, pasto ou curral..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="flex-1 border-gray-200 focus:border-accent h-10"
+            className="flex-1 border-border-base focus:border-accent h-10"
           />
           <div className="flex gap-2 sm:gap-2">
             <Button onClick={onNewLote} className="h-10 flex-1 sm:flex-none">Novo Lote</Button>
@@ -54,7 +54,7 @@ function LoteFiltersComponent({
           className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap min-h-[44px] ${
             showInactive
               ? 'bg-primary text-white border-primary hover:bg-primary/90'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
           }`}
         >
           {showInactive ? (
@@ -74,19 +74,19 @@ function LoteFiltersComponent({
       <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={() => onFiltroChange('todos')}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border min-h-[44px] ${filtroLocal === 'todos' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border min-h-[44px] ${filtroLocal === 'todos' ? 'bg-primary text-white border-primary' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
         >
           Todos <span className="opacity-60 ml-1">{counts.todos}</span>
         </button>
         <button
           onClick={() => onFiltroChange('pasto')}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border min-h-[44px] ${filtroLocal === 'pasto' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border min-h-[44px] ${filtroLocal === 'pasto' ? 'bg-primary text-white border-primary' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
         >
           Pasto <span className="opacity-60 ml-1">{counts.pasto}</span>
         </button>
         <button
           onClick={() => onFiltroChange('confinamento')}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border min-h-[44px] ${filtroLocal === 'confinamento' ? 'bg-amber-700 text-white border-amber-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border min-h-[44px] ${filtroLocal === 'confinamento' ? 'bg-amber-700 dark:bg-amber-600 text-white border-amber-700 dark:border-amber-600' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
         >
           Confinamento <span className="opacity-60 ml-1">{counts.confinamento}</span>
         </button>

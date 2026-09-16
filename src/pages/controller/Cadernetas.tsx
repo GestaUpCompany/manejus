@@ -133,7 +133,7 @@ export function Cadernetas() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="text-2xl font-bold text-gray-800">Cadernetas</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Cadernetas</h2>
         <Button
           variant="primary"
           onClick={handleExportAll}
@@ -147,7 +147,7 @@ export function Cadernetas() {
         {cadernetas.map((caderneta) => (
           <Card
             key={caderneta.path}
-            className="bg-white p-6 cursor-pointer  border-0 transition-all"
+            className="bg-surface-1 p-6 cursor-pointer  border-0 transition-all"
             onClick={() => navigate(caderneta.path)}
           >
             <div className="flex flex-col items-center">
@@ -157,8 +157,8 @@ export function Cadernetas() {
                 loading="lazy"
                 className="w-24 h-24 mb-4 rounded-[32px]"
               />
-              <h3 className="text-xl font-semibold text-gray-800 mb-2 text-center">{caderneta.title}</h3>
-              <p className="text-sm text-gray-500 text-center">{caderneta.description}</p>
+              <h3 className="text-xl font-semibold text-content-strong mb-2 text-center">{caderneta.title}</h3>
+              <p className="text-sm text-content-muted text-center">{caderneta.description}</p>
             </div>
           </Card>
         ))}

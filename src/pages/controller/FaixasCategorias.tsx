@@ -177,8 +177,8 @@ function Campo({ label, valor }: { label: string; valor: unknown }) {
   const v = valor === null || valor === undefined || valor === '' ? '—' : String(valor)
   return (
     <div className="flex gap-1">
-      <span className="text-gray-500">{label}:</span>
-      <span className="font-medium text-gray-800">{v}</span>
+      <span className="text-content-muted">{label}:</span>
+      <span className="font-medium text-content-strong">{v}</span>
     </div>
   )
 }
@@ -712,13 +712,13 @@ export function FaixasCategorias() {
     <div className="space-y-6 page-transition">
       {/* Toast pós-recategorização */}
       {sucessoRecategorizacao && (
-        <div className="fixed top-4 right-4 z-50 max-w-sm bg-white border border-green-300 shadow-lg rounded-lg p-4 animate-fade-in">
+        <div className="fixed top-4 right-4 z-50 max-w-sm bg-surface-1 border border-green-500/30 shadow-lg rounded-lg p-4 animate-fade-in">
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center mt-0.5">
-              <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/10 flex items-center justify-center mt-0.5">
+              <svg className="w-3 h-3 text-green-600 dark:text-green-300" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-800">{sucessoRecategorizacao}</p>
+              <p className="text-sm font-semibold text-content-strong">{sucessoRecategorizacao}</p>
             </div>
             <button
               onClick={() => setSucessoRecategorizacao(null)}
@@ -731,50 +731,50 @@ export function FaixasCategorias() {
 
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-800">Faixas de Categorias</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <h2 className="text-2xl font-bold text-content-strong">Faixas de Categorias</h2>
+        <p className="text-sm text-content-muted mt-1">
           Defina as faixas de peso por categoria e acompanhe a cronologia evolutiva do rebanho.
         </p>
       </div>
 
       {/* Seção 1: Edição de faixas */}
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
+      <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
-          <h3 className="text-lg font-semibold text-gray-800">Faixas de Peso por Categoria</h3>
+          <h3 className="text-lg font-semibold text-content-strong">Faixas de Peso por Categoria</h3>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSexoFiltro('M')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sexoFiltro === 'M' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sexoFiltro === 'M' ? 'bg-blue-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
             >
               Machos
             </button>
             <button
               onClick={() => setSexoFiltro('F')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sexoFiltro === 'F' ? 'bg-pink-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sexoFiltro === 'F' ? 'bg-pink-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
             >
               Fêmeas
             </button>
             {sexoFiltro === 'M' && (
               <>
-                <span className="w-px bg-gray-200 mx-1" />
+                <span className="w-px bg-surface-3 mx-1" />
                 <button
                   onClick={() => setDestinoFiltro('corte')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'corte' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'corte' ? 'bg-green-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
                 >
                   Abate
                 </button>
                 <button
                   onClick={() => setDestinoFiltro('reprodução')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'reprodução' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'reprodução' ? 'bg-purple-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
                 >
                   Reprodução
                 </button>
               </>
             )}
-            <span className="w-px bg-gray-200 mx-1" />
+            <span className="w-px bg-surface-3 mx-1" />
             <button
               onClick={() => setDestinoFiltro('enfermaria')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'enfermaria' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'enfermaria' ? 'bg-amber-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
             >
               Enfermaria
             </button>
@@ -784,12 +784,12 @@ export function FaixasCategorias() {
         {loadingFaixas ? (
           <CardSkeleton />
         ) : faixasDoSexo.length === 0 ? (
-          <p className="text-gray-500 text-sm py-6 text-center">Nenhuma faixa cadastrada para {SEXO_LABEL[sexoFiltro]}.</p>
+          <p className="text-content-muted text-sm py-6 text-center">Nenhuma faixa cadastrada para {SEXO_LABEL[sexoFiltro]}.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-left text-gray-500">
+                <tr className="border-b border-border-base text-left text-content-muted">
                   <th className="py-2 pr-3 font-medium">Ordem</th>
                   <th className="py-2 pr-3 font-medium">Categoria</th>
                   <th className="py-2 pr-3 font-medium">Peso Mín (kg)</th>
@@ -799,13 +799,13 @@ export function FaixasCategorias() {
               </thead>
               <tbody>
                 {faixasDoSexo.map((faixa, idx) => (
-                  <tr key={faixa.id} className="border-b border-gray-100">
+                  <tr key={faixa.id} className="border-b border-border-subtle">
                     <td className="py-2 pr-3">
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-xs font-semibold">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-2 text-content-muted text-xs font-semibold">
                         {idx + 1}
                       </span>
                     </td>
-                    <td className="py-2 pr-3 font-medium text-gray-800">
+                    <td className="py-2 pr-3 font-medium text-content-strong">
                       <span className="inline-flex items-center gap-2">
                         {faixa.cor && <span className="w-3 h-3 rounded-full" style={{ backgroundColor: faixa.cor }} />}
                         {faixa.nome}
@@ -816,7 +816,7 @@ export function FaixasCategorias() {
                         type="number"
                         value={faixa.peso_min}
                         onChange={(e) => handleFaixaChange(faixa.id, 'peso_min', e.target.value)}
-                        className="w-24 px-2 py-1 text-sm border-gray-200"
+                        className="w-24 px-2 py-1 text-sm border-border-base"
                       />
                     </td>
                     <td className="py-2 pr-3">
@@ -824,7 +824,7 @@ export function FaixasCategorias() {
                         type="number"
                         value={faixa.peso_max}
                         onChange={(e) => handleFaixaChange(faixa.id, 'peso_max', e.target.value)}
-                        className="w-24 px-2 py-1 text-sm border-gray-200"
+                        className="w-24 px-2 py-1 text-sm border-border-base"
                       />
                     </td>
                     <td className="py-2 pr-3">
@@ -832,7 +832,7 @@ export function FaixasCategorias() {
                         type="color"
                         value={faixa.cor || '#cccccc'}
                         onChange={(e) => handleFaixaChange(faixa.id, 'cor', e.target.value)}
-                        className="w-10 h-8 rounded border border-gray-200 cursor-pointer"
+                        className="w-10 h-8 rounded border border-border-base cursor-pointer"
                       />
                     </td>
                   </tr>
@@ -849,20 +849,20 @@ export function FaixasCategorias() {
             {savingAll ? 'Salvando...' : 'Salvar todas as faixas'}
           </Button>
         </div>
-        <p className="text-xs text-gray-400 mt-3">
+        <p className="text-xs text-content-faint mt-3">
           As faixas são valores iniciais editáveis por fazenda. Mudanças aqui não retroagem lotes já cadastrados.
         </p>
       </Card>
 
       {/* Seção 2: Cronologia dos lotes */}
-      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
+      <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
-          <h3 className="text-lg font-semibold text-gray-800">Cronologia dos Lotes</h3>
+          <h3 className="text-lg font-semibold text-content-strong">Cronologia dos Lotes</h3>
           {lotesDisponiveis.length > 0 && (
             <select
               value={loteEfetivoId || ''}
               onChange={(e) => setLoteSelecionadoId(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+              className="px-3 py-2 border border-border-base rounded-lg text-sm bg-surface-1 focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {lotesDisponiveis.map(l => (
                 <option key={l.id} value={l.id}>{l.nome} ({l.destino === 'corte' ? 'Abate' : l.destino === 'reprodução' ? 'Reprodução' : l.destino === 'enfermaria' ? 'Enfermaria' : 'Sem destino'})</option>
@@ -874,9 +874,9 @@ export function FaixasCategorias() {
         {loadingCronologia ? (
           <CardSkeleton />
         ) : lotesDisponiveis.length === 0 ? (
-          <p className="text-gray-500 text-sm py-6 text-center">Nenhum lote com recategorização pendente. Todos os pesos estão dentro das faixas de suas categorias.</p>
+          <p className="text-content-muted text-sm py-6 text-center">Nenhum lote com recategorização pendente. Todos os pesos estão dentro das faixas de suas categorias.</p>
         ) : categoriasDoLoteSelecionado.length === 0 ? (
-          <p className="text-gray-500 text-sm py-6 text-center">Nenhuma categoria cadastrada para este lote.</p>
+          <p className="text-content-muted text-sm py-6 text-center">Nenhuma categoria cadastrada para este lote.</p>
         ) : (
           <div className="space-y-3">
             {/* Linha do tempo visual */}
@@ -887,12 +887,12 @@ export function FaixasCategorias() {
                 return (
                   <div
                     key={cat.id}
-                    className={`relative flex-shrink-0 px-3 pt-5 pb-2 rounded-lg text-xs font-medium border-2 ${ativa ? 'text-white' : 'bg-gray-50 text-gray-500 border-gray-200'}`}
+                    className={`relative flex-shrink-0 px-3 pt-5 pb-2 rounded-lg text-xs font-medium border-2 ${ativa ? 'text-white' : 'bg-surface-2 text-content-muted border-border-base'}`}
                     style={ativa ? { backgroundColor: faixaCor || '#3b82f6', borderColor: faixaCor || '#3b82f6' } : {}}
                     title={ativa ? 'Categoria ativa' : `Encerrada em ${cat.data_fim ? new Date(cat.data_fim).toLocaleDateString('pt-BR') : '?'}`}
                   >
                     <span
-                      className={`absolute -top-2 -left-2 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${ativa ? 'bg-white text-gray-800 border border-gray-300' : 'bg-gray-200 text-gray-600'}`}
+                      className={`absolute -top-2 -left-2 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${ativa ? 'bg-surface-1 text-content-strong border border-surface-3' : 'bg-surface-3 text-content-muted'}`}
                       aria-label={`Etapa ${idx + 1}`}
                     >
                       {idx + 1}
@@ -909,11 +909,11 @@ export function FaixasCategorias() {
 
             {/* Detalhe da categoria ativa + botão recategorizar */}
             {categoriaAtiva && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-surface-2 border border-border-base rounded-lg p-4">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-blue-900">Categoria ativa: {capitalizeCategoria(categoriaAtiva.categoria)}</p>
-                    <p className="text-xs text-blue-700 mt-1">
+                    <p className="text-sm font-semibold text-content-strong">Categoria ativa: {capitalizeCategoria(categoriaAtiva.categoria)}</p>
+                    <p className="text-xs text-content mt-1">
                       Peso atual: {categoriaAtiva.peso_vivo_atual_kg_cab != null ? `${categoriaAtiva.peso_vivo_atual_kg_cab} kg` : 'não informado'}
                       {categoriaAtiva.quant_atual != null && ` • ${categoriaAtiva.quant_atual} cabeças`}
                       {categoriaAtiva.sexo && ` • Sexo: ${categoriaAtiva.sexo}`}
@@ -922,7 +922,7 @@ export function FaixasCategorias() {
                   </div>
                   <Button
                     onClick={() => abrirRecategorizacao(categoriaAtiva)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                    className="bg-primary hover:bg-primary/80 text-white text-sm"
                   >
                     Recategorizar
                   </Button>
@@ -934,7 +934,7 @@ export function FaixasCategorias() {
             {transicoes.length > 0 && (
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold text-gray-700">Histórico de transições</h4>
+                  <h4 className="text-sm font-semibold text-content">Histórico de transições</h4>
                   <Button
                     variant="secondary"
                     onClick={exportarTransicoes}
@@ -950,26 +950,26 @@ export function FaixasCategorias() {
                     const lc = snap?.lote_categoria_origem
                     const pn = snap?.plano_nutricional_origem
                     return (
-                      <div key={t.id} className="bg-gray-50 rounded border border-gray-200">
+                      <div key={t.id} className="bg-surface-2 rounded border border-border-base">
                         <button
                           type="button"
                           onClick={() => setTransicaoExpandidaId(expandida ? null : t.id)}
-                          className="w-full flex items-center text-xs text-gray-600 p-2 hover:bg-gray-100 transition-colors"
+                          className="w-full flex items-center text-xs text-content-muted p-2 hover:bg-surface-2 transition-colors"
                         >
-                          <span className="text-gray-400 mr-2">{expandida ? '▼' : '▶'}</span>
+                          <span className="text-content-faint mr-2">{expandida ? '▼' : '▶'}</span>
                           <span className="font-medium">{new Date(t.data_transicao).toLocaleDateString('pt-BR')}</span>
                           <span className="mx-2">→</span>
                           <span>{capitalizeCategoria(t.categoria_origem)}</span>
                           <span className="mx-2">→</span>
                           <span className="font-medium">{capitalizeCategoria(t.categoria_destino)}</span>
                           {t.peso_na_transicao_kg != null && (
-                            <span className="ml-2 text-gray-400">({t.peso_na_transicao_kg} kg)</span>
+                            <span className="ml-2 text-content-faint">({t.peso_na_transicao_kg} kg)</span>
                           )}
-                          <span className="ml-auto text-gray-400">{t.motivo}</span>
+                          <span className="ml-auto text-content-faint">{t.motivo}</span>
                         </button>
                         {expandida && lc && (
-                          <div className="px-3 pb-3 pt-1 border-t border-gray-200 bg-white rounded-b">
-                            <p className="text-xs font-semibold text-gray-700 mt-2 mb-1">Categoria no momento da transição</p>
+                          <div className="px-3 pb-3 pt-1 border-t border-border-base bg-surface-1 rounded-b">
+                            <p className="text-xs font-semibold text-content mt-2 mb-1">Categoria no momento da transição</p>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-xs">
                               <Campo label="Sexo" valor={lc.sexo} />
                               <Campo label="Raça" valor={lc.raca} />
@@ -992,7 +992,7 @@ export function FaixasCategorias() {
                               <Campo label="Transferência entrada" valor={lc.transf_entrada} />
                               <Campo label="Transferência saída" valor={lc.transf_saida} />
                             </div>
-                            <p className="text-xs font-semibold text-gray-700 mt-3 mb-1">Plano nutricional ativo</p>
+                            <p className="text-xs font-semibold text-content mt-3 mb-1">Plano nutricional ativo</p>
                             {pn ? (
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-xs">
                                 <Campo label="Nome do plano" valor={pn.nome} />
@@ -1004,9 +1004,9 @@ export function FaixasCategorias() {
                                 <Campo label="Data fim" valor={pn.data_fim ? new Date(pn.data_fim).toLocaleDateString('pt-BR') : null} />
                               </div>
                             ) : (
-                              <p className="text-xs text-gray-400 italic">Sem plano nutricional ativo no momento da transição.</p>
+                              <p className="text-xs text-content-faint italic">Sem plano nutricional ativo no momento da transição.</p>
                             )}
-                            <p className="text-xs font-semibold text-gray-700 mt-3 mb-1">Decisão de formulação</p>
+                            <p className="text-xs font-semibold text-content mt-3 mb-1">Decisão de formulação</p>
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                               <Campo label="Manteve formulação" valor={snap?.manter_formulacao === true ? 'Sim' : snap?.manter_formulacao === false ? 'Não' : null} />
                               <Campo label="Nova formulação" valor={snap?.nova_formulacao_id ? (formulacoesMap[snap.nova_formulacao_id]?.nome ?? snap.nova_formulacao_id) : null} />
@@ -1031,21 +1031,21 @@ export function FaixasCategorias() {
       >
         {recategorizando && (
           <div className="space-y-4">
-            <div className="bg-gray-50 rounded-lg p-3 text-sm">
-              <p><span className="text-gray-500">Categoria atual:</span> <span className="font-medium">{capitalizeCategoria(recategorizando.categoria)}</span></p>
-              <p><span className="text-gray-500">Peso atual:</span> <span className="font-medium">{recategorizando.peso_vivo_atual_kg_cab ?? 'não informado'} kg</span></p>
-              <p><span className="text-gray-500">Cabeças:</span> <span className="font-medium">{recategorizando.quant_atual ?? 'não informado'}</span></p>
+            <div className="bg-surface-2 rounded-lg p-3 text-sm">
+              <p><span className="text-content-muted">Categoria atual:</span> <span className="font-medium">{capitalizeCategoria(recategorizando.categoria)}</span></p>
+              <p><span className="text-content-muted">Peso atual:</span> <span className="font-medium">{recategorizando.peso_vivo_atual_kg_cab ?? 'não informado'} kg</span></p>
+              <p><span className="text-content-muted">Cabeças:</span> <span className="font-medium">{recategorizando.quant_atual ?? 'não informado'}</span></p>
               {recategorizando.lote_destino && (
-                <p><span className="text-gray-500">Destino:</span> <span className="font-medium">{recategorizando.lote_destino === 'corte' ? 'Abate' : recategorizando.lote_destino === 'reprodução' ? 'Reprodução' : recategorizando.lote_destino === 'enfermaria' ? 'Enfermaria' : recategorizando.lote_destino}</span></p>
+                <p><span className="text-content-muted">Destino:</span> <span className="font-medium">{recategorizando.lote_destino === 'corte' ? 'Abate' : recategorizando.lote_destino === 'reprodução' ? 'Reprodução' : recategorizando.lote_destino === 'enfermaria' ? 'Enfermaria' : recategorizando.lote_destino}</span></p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nova categoria *</label>
+              <label className="block text-sm font-medium text-content mb-1">Nova categoria *</label>
               <select
                 value={novaCategoria}
                 onChange={(e) => setNovaCategoria(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 border border-border-base rounded-lg text-sm bg-surface-1 focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">Selecione a nova categoria...</option>
                 {faixas
@@ -1065,13 +1065,13 @@ export function FaixasCategorias() {
             </div>
 
             {pesoForaDaFaixa && (
-              <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-xs text-amber-900">
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-900 dark:text-amber-200">
                 Aviso: o peso atual ({pesoAtual} kg) está fora da faixa de {faixaDestino.nome} ({faixaDestino.peso_min}-{faixaDestino.peso_max} kg). Você pode prosseguir, mas revise se a recategorização é apropriada.
               </div>
             )}
 
             {formulacaoLoteId && novaCategoria && !categoriasFormulacaoLote.includes(novaCategoria.toLowerCase()) && manterFormulacao && (
-              <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-xs text-red-900">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-xs text-red-900 dark:text-red-200">
                 <p className="font-semibold">A formulação vigente no lote não contempla essa nova categoria.</p>
                 <p className="mt-1">
                   Não há GMD para essa categoria na formulação vigente do lote. A evolução de peso será interrompida para esta categoria.
@@ -1081,7 +1081,7 @@ export function FaixasCategorias() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Formulação nutricional</label>
+              <label className="block text-sm font-medium text-content mb-2">Formulação nutricional</label>
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -1103,7 +1103,7 @@ export function FaixasCategorias() {
                 )}
               </div>
               {totalCategoriasAtivasLote > 1 && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-content-muted mt-1">
                   Este lote tem {totalCategoriasAtivasLote} categorias ativas. A formulação não pode ser trocada para não afetar as outras categorias. Edite a formulação vigente para contemplar a nova categoria, se necessário.
                 </p>
               )}
@@ -1111,17 +1111,17 @@ export function FaixasCategorias() {
 
             {!manterFormulacao && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Selecionar nova formulação *</label>
+                <label className="block text-sm font-medium text-content mb-1">Selecionar nova formulação *</label>
                 {loadingFormulacoes ? (
-                  <p className="text-xs text-gray-500">Carregando formulações...</p>
+                  <p className="text-xs text-content-muted">Carregando formulações...</p>
                 ) : formulacoesDisponiveis.length === 0 ? (
-                  <p className="text-xs text-gray-500">Nenhuma formulação ativa encontrada.</p>
+                  <p className="text-xs text-content-muted">Nenhuma formulação ativa encontrada.</p>
                 ) : (
                   <>
                     <select
                       value={formulacaoSelecionada}
                       onChange={(e) => setFormulacaoSelecionada(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-3 py-2 border border-border-base rounded-lg text-sm bg-surface-1 focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="">Selecione...</option>
                       {formulacoesDisponiveis.map((f, idx) => {
@@ -1137,7 +1137,7 @@ export function FaixasCategorias() {
                         )
                       })}
                     </select>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-content-faint mt-1">
                       Formulações da categoria "{novaCategoria}" aparecem primeiro; as outras abaixo do separador.
                     </p>
                   </>
@@ -1146,7 +1146,7 @@ export function FaixasCategorias() {
             )}
 
             {erroRecategorizacao && (
-              <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-sm text-red-700">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-700 dark:text-red-200">
                 {erroRecategorizacao}
               </div>
             )}
@@ -1158,7 +1158,7 @@ export function FaixasCategorias() {
               <Button
                 onClick={() => setConfirmRecategorizacao(true)}
                 disabled={submitting || !novaCategoria}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-primary hover:bg-primary/80 text-white"
               >
                 Recategorizar
               </Button>

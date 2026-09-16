@@ -248,29 +248,9 @@ export function Lotes() {
     'tropa': 'border-indigo-500',
   }
 
-  const categoriaBgColors: Record<string, string> = {
-    'vaca': 'bg-blue-50',
-    'touro': 'bg-red-50',
-    'tourinho': 'bg-violet-50',
-    'boi gordo': 'bg-green-50',
-    'boi magro': 'bg-yellow-50',
-    'garrote': 'bg-purple-50',
-    'bezerro': 'bg-orange-50',
-    'bezerro ao pé': 'bg-amber-50',
-    'bezerra': 'bg-pink-50',
-    'bezerra ao pé': 'bg-rose-50',
-    'novilha': 'bg-teal-50',
-    'tropa': 'bg-indigo-50',
-  }
-
   const getCategoriaColor = (categoria: string): string => {
     const normalized = categoria.toLowerCase()
     return categoriaColors[normalized] || 'border-accent'
-  }
-
-  const getCategoriaBgColor = (categoria: string): string => {
-    const normalized = categoria.toLowerCase()
-    return categoriaBgColors[normalized] || 'bg-gray-50'
   }
 
   useEffect(() => {
@@ -2356,15 +2336,15 @@ export function Lotes() {
       )}
 
       {showForm && (
-        <Card className="bg-white p-6 border-0 shadow-sm">
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-xl font-semibold text-gray-800">
+            <h3 className="text-xl font-semibold text-content-strong">
               {editingLote ? 'Editar Lote' : 'Novo Lote'}
             </h3>
             <button
               type="button"
               onClick={handleCancel}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              className="text-content-faint hover:text-content-muted transition-colors p-1"
               aria-label="Fechar formulário"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -2375,10 +2355,10 @@ export function Lotes() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Identificação Básica */}
             <div className="border-t pt-4">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">Identificação Básica</h4>
+              <h4 className="text-lg font-semibold text-content-strong mb-4">Identificação Básica</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Nome <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -2392,26 +2372,26 @@ export function Lotes() {
                         ? 'border-red-400 focus:border-red-500'
                         : nomeCheck.status === 'available'
                         ? 'border-green-400 focus:border-green-500'
-                        : 'border-gray-200 focus:border-accent'
+                        : 'border-border-base focus:border-accent'
                     }`}
                   />
                   {nomeCheck.status === 'checking' && (
-                    <p className="text-xs text-gray-400 mt-1">Verificando…</p>
+                    <p className="text-xs text-content-faint mt-1">Verificando…</p>
                   )}
                   {nomeCheck.status === 'available' && formData.nome?.trim().length >= 2 && (
-                    <p className="text-xs text-green-600 mt-1">Nome disponível</p>
+                    <p className="text-xs text-green-500 dark:text-green-300 mt-1">Nome disponível</p>
                   )}
                   {nomeCheck.status === 'duplicated' && (
-                    <p className="text-xs text-red-600 mt-1">
+                    <p className="text-xs text-red-500 mt-1">
                       Já existe o lote “{nomeCheck.duplicataNome}” com esse nome (ignora maiúsculas e acentos)
                     </p>
                   )}
                   {errors.nome && (
-                    <p className="text-xs text-red-600 mt-1">{errors.nome}</p>
+                    <p className="text-xs text-red-500 mt-1">{errors.nome}</p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     {formData.sistema_producao === 'Confinamento' ? 'Curral' : 'Pasto'} <span className="text-red-500">*</span>
                   </label>
                   {formData.sistema_producao === 'Confinamento' ? (
@@ -2419,7 +2399,7 @@ export function Lotes() {
                       value={formData.curral_id}
                       onChange={(e) => { setFormData({ ...formData, curral_id: e.target.value, pasto_id: '' }); if (errors.curral_id) setErrors((p) => ({ ...p, curral_id: '' })) }}
                       required
-                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${errors.curral_id ? 'border-red-400' : 'border-gray-200'}`}
+                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${errors.curral_id ? 'border-red-400' : 'border-border-base'} bg-surface-1 text-content-strong placeholder-content-faint`}
                     >
                       <option value="">Selecione</option>
                       {currais.map((curral) => (
@@ -2431,7 +2411,7 @@ export function Lotes() {
                       value={formData.pasto_id}
                       onChange={(e) => { setFormData({ ...formData, pasto_id: e.target.value, curral_id: '' }); if (errors.pasto_id) setErrors((p) => ({ ...p, pasto_id: '' })) }}
                       required
-                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${errors.pasto_id ? 'border-red-400' : 'border-gray-200'}`}
+                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${errors.pasto_id ? 'border-red-400' : 'border-border-base'} bg-surface-1 text-content-strong placeholder-content-faint`}
                     >
                       <option value="">Selecione</option>
                       {pastos.map((pasto) => (
@@ -2439,18 +2419,18 @@ export function Lotes() {
                       ))}
                     </select>
                   )}
-                  {errors.curral_id && <p className="text-xs text-red-600 mt-1">{errors.curral_id}</p>}
-                  {errors.pasto_id && <p className="text-xs text-red-600 mt-1">{errors.pasto_id}</p>}
+                  {errors.curral_id && <p className="text-xs text-red-500 mt-1">{errors.curral_id}</p>}
+                  {errors.pasto_id && <p className="text-xs text-red-500 mt-1">{errors.pasto_id}</p>}
                 </div>
-                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <div className="col-span-1 sm:col-span-1 lg:col-span-1 xl:col-span-1">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Sistema de Produção <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.sistema_producao}
                     onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value, pasto_id: '', curral_id: '' })}
                     required
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint"
                   >
                     <option value="">Selecione</option>
                     <option value="Cria">Cria</option>
@@ -2462,8 +2442,8 @@ export function Lotes() {
                     <option value="TIP">TIP</option>
                   </select>
                 </div>
-                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <div className="col-span-1 sm:col-span-1 lg:col-span-1 xl:col-span-1">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Destino <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -2484,7 +2464,7 @@ export function Lotes() {
                       })
                     }}
                     required
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint"
                   >
                     <option value="">Selecione</option>
                     <option value="corte">Abate</option>
@@ -2492,11 +2472,11 @@ export function Lotes() {
                     <option value="enfermaria">Enfermaria</option>
                   </select>
                   {formData.destino === 'enfermaria' && !avisoEnfermariaFechado && (
-                    <div className="mt-2 p-3 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900 relative pr-8">
+                    <div className="mt-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-900 dark:text-amber-200 relative pr-8">
                       <button
                         type="button"
                         onClick={() => setAvisoEnfermariaFechado(true)}
-                        className="absolute top-2 right-2 text-amber-700 hover:text-amber-900 transition-colors"
+                        className="absolute top-2 right-2 text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:text-amber-200 transition-colors"
                         aria-label="Fechar aviso"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2512,8 +2492,8 @@ export function Lotes() {
                     </div>
                   )}
                 </div>
-                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <div className="col-span-1 sm:col-span-1 lg:col-span-1 xl:col-span-1">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Meta de Intervalo de Rodeio (dias)
                   </label>
                   <NumericInput
@@ -2527,10 +2507,10 @@ export function Lotes() {
               </div>
 
               {/* Formulação do Lote */}
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-between gap-3">
+              <div className="mt-4 p-3 bg-surface-2 rounded-lg border border-border-base flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-xs text-blue-700">Formulação do lote</p>
-                  <p className="text-sm font-semibold text-blue-900 truncate">
+                  <p className="text-xs text-primary dark:text-primary-light">Formulação do lote</p>
+                  <p className="text-sm font-semibold text-content-strong truncate">
                     {formData.formulacao_lote_id
                       ? nutritionalOptions.find((o) => o.id === formData.formulacao_lote_id)?.name || 'Formulação não encontrada'
                       : 'Nenhuma'}
@@ -2540,7 +2520,7 @@ export function Lotes() {
                   <button
                     type="button"
                     onClick={() => setIsPlanoLoteModalOpen(true)}
-                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap min-h-[44px]"
+                    className="px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/80 transition-colors whitespace-nowrap min-h-[44px]"
                   >
                     Gerenciar Planos →
                   </button>
@@ -2548,11 +2528,11 @@ export function Lotes() {
               </div>
 
               <div className="mt-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Categorias <span className="text-red-500">*</span>
                 </label>
                 {errors.categorias && (
-                  <p className="text-xs text-red-600 mb-2">{errors.categorias}</p>
+                  <p className="text-xs text-red-500 mb-2">{errors.categorias}</p>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                   {categoriasOpcoes.map((categoria) => {
@@ -2565,7 +2545,7 @@ export function Lotes() {
                         className={`px-4 py-2.5 rounded-lg border-2 text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
                           isSelected
                             ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary'
+                            : 'bg-surface-1 text-content border-border-base hover:border-primary hover:text-primary dark:hover:text-primary-light'
                         }`}
                       >
                         {isSelected && (
@@ -2584,30 +2564,30 @@ export function Lotes() {
               {formData.categorias.length > 0 && (
                 <div className="border-t pt-4 mt-4">
                   {errors.peso_meta && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-sm text-red-700">{errors.peso_meta}</p>
+                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                      <p className="text-sm text-red-700 dark:text-red-300">{errors.peso_meta}</p>
                     </div>
                   )}
                   {errors.peso_atual && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-sm text-red-700">{errors.peso_atual}</p>
+                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                      <p className="text-sm text-red-700 dark:text-red-300">{errors.peso_atual}</p>
                     </div>
                   )}
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Dados por Categoria</h4>
+                  <h4 className="text-lg font-semibold text-content-strong mb-4">Dados por Categoria</h4>
                   {formData.categorias.map((cat, catIndex) => (
-                    <div key={catIndex} className="mb-10 p-6 bg-white rounded-xl border-2 border-gray-300 shadow-md">
+                    <div key={catIndex} className="mb-10 p-6 bg-surface-1 rounded-xl border-2 border-surface-3 shadow-md">
                       <div className="flex items-center justify-between mb-4">
-                        <h5 className={`text-xl font-bold text-gray-800 capitalize border-l-4 pl-4 py-2 bg-gray-50 rounded-r ${getCategoriaColor(cat.categoria)}`}>
+                        <h5 className={`text-xl font-bold text-content-strong capitalize border-l-4 pl-4 py-2 bg-surface-2 rounded-r ${getCategoriaColor(cat.categoria)}`}>
                           Categoria: {cat.categoria}
                         </h5>
                         <button
                           type="button"
                           onClick={() => handleCategoryCollapse(cat.categoria)}
-                          className="flex items-center justify-center w-11 h-11 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                          className="flex items-center justify-center w-11 h-11 rounded-full bg-surface-2 hover:bg-surface-3 transition-colors"
                           aria-label={expandedCategories.has(cat.categoria) ? 'Colapsar' : 'Expandir'}
                         >
                           <svg 
-                            className={`w-4 h-4 text-gray-600 transition-transform ${expandedCategories.has(cat.categoria) ? 'rotate-180' : ''}`} 
+                            className={`w-4 h-4 text-content-muted transition-transform ${expandedCategories.has(cat.categoria) ? 'rotate-180' : ''}`} 
                             fill="none" 
                             stroke="currentColor" 
                             viewBox="0 0 24 24"
@@ -2622,12 +2602,12 @@ export function Lotes() {
                         <>
                           {/* Identificação */}
                           <div className="mb-5">
-                        <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
+                        <h6 className={`text-sm font-bold text-content-strong mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)}`}>
                           Identificação
                         </h6>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Raça <span className="text-red-500">*</span>
                             </label>
                             <select
@@ -2638,7 +2618,7 @@ export function Lotes() {
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
                               required
-                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint"
                             >
                               <option value="">Selecione</option>
                               {racas.map((raca) => (
@@ -2647,7 +2627,7 @@ export function Lotes() {
                             </select>
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Sexo <span className="text-red-500">*</span>
                             </label>
                             <select
@@ -2658,7 +2638,7 @@ export function Lotes() {
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
                               required
-                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint"
                             >
                               <option value="">Selecione</option>
                               <option value="macho">Macho</option>
@@ -2666,7 +2646,7 @@ export function Lotes() {
                             </select>
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Idade (meses) <span className="text-red-500">*</span>
                             </label>
                             <Input
@@ -2679,20 +2659,20 @@ export function Lotes() {
                               }}
                               required
                               placeholder="Ex: 24"
-                              className="border-gray-200 focus:border-accent"
+                              className="border-border-base focus:border-accent"
                             />
                           </div>
                         </div>
                       </div>
 
                       {/* Quantidade e Datas */}
-                      <div className="mb-5 border-t border-gray-200 pt-4">
-                        <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
+                      <div className="mb-5 border-t border-border-base pt-4">
+                        <h6 className={`text-sm font-bold text-content-strong mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)}`}>
                           Quantidade e Datas
                         </h6>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div className="col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Quant. Inicial (cab){!cat.id && <span className="text-red-500">*</span>}
                             </label>
                             <Input
@@ -2709,12 +2689,12 @@ export function Lotes() {
                               }}
                               placeholder="0"
                               disabled={!!cat.id}
-                              className={`border-gray-200 focus:border-accent ${cat.id ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                              className={`border-border-base focus:border-accent ${cat.id ? 'bg-surface-2 cursor-not-allowed' : ''}`}
                               title={cat.id ? 'Quant. inicial é definida na criação e não pode ser alterada' : ''}
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Quant. Atual (cab)
                             </label>
                             <Input
@@ -2722,12 +2702,12 @@ export function Lotes() {
                               value={cat.quant_atual?.toString() || ''}
                               readOnly
                               placeholder="0"
-                              className="border-gray-200 bg-gray-50 cursor-not-allowed"
+                              className="border-border-base bg-surface-2 cursor-not-allowed"
                               title="Quant. atual é calculada automaticamente pelas movimentações"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Data Entrada <span className="text-red-500">*</span>
                             </label>
                             <Input
@@ -2739,13 +2719,13 @@ export function Lotes() {
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
                               required
-                              className="border-gray-200 focus:border-accent"
+                              className="border-border-base focus:border-accent"
                             />
                           </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Peso Entrada (kg/cab) <span className="text-red-500">*</span>
                             </label>
                             <NumericInput
@@ -2758,11 +2738,11 @@ export function Lotes() {
                               required
                               placeholder="0,00"
                               decimalPlaces={2}
-                              className="border-gray-200 focus:border-accent"
+                              className="border-border-base focus:border-accent"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               RC Inicial (%)
                             </label>
                             <Input
@@ -2775,11 +2755,11 @@ export function Lotes() {
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
                               placeholder="Ex: 50"
-                              className="border-gray-200 focus:border-accent"
+                              className="border-border-base focus:border-accent"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Peso Entrada (@/cab)
                             </label>
                             <Input
@@ -2788,13 +2768,13 @@ export function Lotes() {
                               value={cat.peso_entrada_arrobas?.toFixed(2) || ''}
                               disabled
                               placeholder="0"
-                              className="border-gray-200 focus:border-accent opacity-60"
+                              className="border-border-base focus:border-accent opacity-60"
                             />
                           </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                           <div className="col-span-1 sm:col-span-2 lg:col-span-4 xl:col-span-5">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Plano Nutricional <span className="text-red-500">*</span>
                             </label>
 
@@ -2821,16 +2801,16 @@ export function Lotes() {
                                 const gmdMudou = cat.id && cat.gmd !== '' &&
                                   normalizeGmd(cat.gmd) !== normalizeGmd(gmdOriginal)
                                 return (
-                                  <div className="rounded-lg p-3 bg-amber-50 border border-amber-300">
+                                  <div className="rounded-lg p-3 bg-amber-500/10 border border-amber-500/30">
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                       <div className="text-sm">
-                                        <p className="font-medium text-amber-900">GMD de {cat.categoria}</p>
-                                        <p className="text-amber-700 text-xs mt-1">
+                                        <p className="font-medium text-amber-900 dark:text-amber-200">GMD de {cat.categoria}</p>
+                                        <p className="text-amber-700 dark:text-amber-300 text-xs mt-1">
                                           Bezerros/bezerras ao pé usam GMD próprio (padrão: 0,600 / 0,500). Não há plano nutricional para esta categoria.
                                         </p>
                                       </div>
                                       <div className="flex items-center gap-2">
-                                        <label className="text-xs font-medium text-amber-900">GMD (kg/dia)</label>
+                                        <label className="text-xs font-medium text-amber-900 dark:text-amber-200">GMD (kg/dia)</label>
                                         <Input
                                           type="text"
                                           inputMode="decimal"
@@ -2842,7 +2822,7 @@ export function Lotes() {
                                             setFormData({ ...formData, categorias: updatedCategorias })
                                           }}
                                           placeholder="0,600"
-                                          className="w-24 text-right border-amber-200 focus:border-amber-500 py-1"
+                                          className="w-24 text-right border-amber-500/30 focus:border-amber-500 py-1"
                                         />
                                         {gmdMudou && (
                                           <Button
@@ -2880,28 +2860,28 @@ export function Lotes() {
 
                               const semGmd = hasVigente && (!gmdValor || gmdValor === 0)
                               return (
-                                <div className={`rounded-lg p-3 ${semGmd ? 'bg-amber-50 border border-amber-300' : hasPlano ? (hasVigente ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200') : 'bg-yellow-50 border border-yellow-200'}`}>
+                                <div className={`rounded-lg p-3 ${semGmd ? 'bg-amber-500/10 border border-amber-500/30' : hasPlano ? (hasVigente ? 'bg-green-500/10 border border-green-500/30' : 'bg-surface-2 border border-border-base') : 'bg-yellow-500/10 border border-yellow-500/30'}`}>
                                   {/* Formulação vigente do lote em destaque */}
                                   {formData.formulacao_lote_id && (() => {
                                     const formLote = nutritionalOptions.find(o => o.id === formData.formulacao_lote_id)
                                     if (!formLote) return null
                                     return (
-                                      <div className="mb-2 pb-2 border-b border-blue-200">
-                                        <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Formulação Vigente do Lote</p>
-                                        <p className="text-sm font-medium text-blue-800">{formLote.name}</p>
+                                      <div className="mb-2 pb-2 border-b border-border-base">
+                                        <p className="text-xs font-semibold text-content-strong uppercase tracking-wide">Formulação Vigente do Lote</p>
+                                        <p className="text-sm font-medium text-content">{formLote.name}</p>
                                       </div>
                                     )
                                   })()}
                                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                     {hasPlano ? (
                                       <div className="text-sm">
-                                        <p className="font-medium text-gray-900">{titulo}</p>
+                                        <p className="font-medium text-content-strong">{titulo}</p>
                                         {semGmd ? (
-                                          <p className="text-amber-700 text-xs mt-0.5">
+                                          <p className="text-amber-700 dark:text-amber-300 text-xs mt-0.5">
                                             Plano ativo, mas a formulação não contempla "{cat.categoria}". Esta categoria não evolui peso.
                                           </p>
                                         ) : (
-                                          <p className="text-gray-600">
+                                          <p className="text-content-muted">
                                             {hasVigente && planoVigenteData ? ` • Início: ${new Date(planoVigenteData + 'T00:00:00').toLocaleDateString('pt-BR')}` : null}
                                             {hasVigente && cat.peso_vivo_meta_kg_cab ? ` • Meta: ${Number(cat.peso_vivo_meta_kg_cab).toFixed(2).replace('.', ',')} kg/cab` : null}
                                             {hasVigente && gmdValor ? ` • GMD: ${Number(gmdValor).toFixed(3).replace('.', ',')} kg/cab/dia` : null}
@@ -2912,7 +2892,7 @@ export function Lotes() {
                                         )}
                                       </div>
                                     ) : (
-                                      <p className="text-sm text-yellow-800">Crie o plano nutricional para esta categoria</p>
+                                      <p className="text-sm text-yellow-800 dark:text-yellow-200">Crie o plano nutricional para esta categoria</p>
                                     )}
                                     <div className="flex flex-col gap-1 items-end">
                                       {semGmd && formData.formulacao_lote_id && (
@@ -2935,17 +2915,17 @@ export function Lotes() {
                       </div>
 
                       {/* Peso e Performance */}
-                      <div className="mb-5 border-t border-gray-200 pt-4">
-                        <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
+                      <div className="mb-5 border-t border-border-base pt-4">
+                        <h6 className={`text-sm font-bold text-content-strong mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)}`}>
                           Peso e Performance
                         </h6>
                         
                         {/* Atual */}
                         <div className="mb-4">
-                          <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Atual</span>
+                          <span className="text-sm font-bold text-content mb-2 block border-b border-surface-3 pb-1">Atual</span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Peso Vivo Atual (kg/cab)
                               </label>
                               <NumericInput
@@ -2964,28 +2944,28 @@ export function Lotes() {
                                   cat.peso_vivo_atual_kg_cab != null &&
                                   originalPesos[cat.categoria.toLowerCase()] != null &&
                                   cat.peso_vivo_atual_kg_cab < (originalPesos[cat.categoria.toLowerCase()] ?? 0)
-                                    ? 'border-red-500 focus:border-red-500 bg-red-50'
-                                    : 'border-gray-200 focus:border-accent'
+                                    ? 'border-red-500 focus:border-red-500 bg-red-500/10'
+                                    : 'border-border-base focus:border-accent'
                                 }
                               />
                               {cat.planos_cadastrados?.some(p => p.ativo) &&
                                 cat.peso_vivo_atual_kg_cab != null &&
                                 originalPesos[cat.categoria.toLowerCase()] != null &&
                                 cat.peso_vivo_atual_kg_cab < (originalPesos[cat.categoria.toLowerCase()] ?? 0) && (
-                                <p className="text-xs text-red-600 mt-1">O peso atual não pode ser menor que o peso original.</p>
+                                <p className="text-xs text-red-500 mt-1">O peso atual não pode ser menor que o peso original.</p>
                               )}
                               {cat.id && cat.peso_vivo_atual_kg_cab != null && (
                                 <button
                                   type="button"
                                   onClick={() => setCorrigirPesoCat(cat)}
-                                  className="text-xs text-green-600 hover:text-green-700 mt-1 underline font-medium"
+                                  className="text-xs text-green-500 dark:text-green-300 hover:text-green-700 dark:text-green-300 mt-1 underline font-medium"
                                 >
                                   Corrigir peso
                                 </button>
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 RC Atual (%)
                               </label>
                               <NumericInput
@@ -2996,11 +2976,11 @@ export function Lotes() {
                                   setFormData({ ...formData, categorias: updatedCategorias })
                                 }}
                                 decimalPlaces={2}
-                                className="border-gray-200 focus:border-accent"
+                                className="border-border-base focus:border-accent"
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Peso Vivo Atual (@/cab)
                               </label>
                               <Input
@@ -3008,11 +2988,11 @@ export function Lotes() {
                                 value={cat.peso_vivo_atual_arroba_cab ? cat.peso_vivo_atual_arroba_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                                 disabled
                                 placeholder="0"
-                                className="border-gray-200 focus:border-accent opacity-60"
+                                className="border-border-base focus:border-accent opacity-60"
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Produção Atual (@/cab)
                               </label>
                               <Input
@@ -3020,11 +3000,11 @@ export function Lotes() {
                                 value={cat.producao_atual_arroba_cab ? cat.producao_atual_arroba_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                                 disabled
                                 placeholder="0"
-                                className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                                className="bg-surface-2 border-border-base focus:border-accent opacity-60"
                               />
                             </div>
                             <div className="col-span-1">
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Período (dias)
                               </label>
                               <Input
@@ -3032,7 +3012,7 @@ export function Lotes() {
                                 value={cat.periodo?.toString() || ''}
                                 disabled
                                 placeholder="0"
-                                className="border-gray-200 focus:border-accent opacity-60"
+                                className="border-border-base focus:border-accent opacity-60"
                               />
                             </div>
                           </div>
@@ -3040,10 +3020,10 @@ export function Lotes() {
 
                         {/* Meta */}
                         <div className="mb-4">
-                          <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Meta</span>
+                          <span className="text-sm font-bold text-content mb-2 block border-b border-surface-3 pb-1">Meta</span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Peso Vivo Meta (kg/cab)
                               </label>
                               <NumericInput
@@ -3051,11 +3031,11 @@ export function Lotes() {
                                 disabled
                                 placeholder="0,00"
                                 decimalPlaces={2}
-                                className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                                className="bg-surface-2 border-border-base focus:border-accent opacity-60"
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 RC Final (%)
                               </label>
                               <NumericInput
@@ -3067,11 +3047,11 @@ export function Lotes() {
                                 }}
                                 placeholder="0,00"
                                 decimalPlaces={2}
-                                className="border-gray-200 focus:border-accent"
+                                className="border-border-base focus:border-accent"
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Peso Venda Meta (@/cab)
                               </label>
                               <Input
@@ -3080,11 +3060,11 @@ export function Lotes() {
                                 value={cat.peso_venda_meta_arroba?.toFixed(2) || ''}
                                 readOnly
                                 placeholder="Calculado automaticamente"
-                                className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                                className="bg-surface-2 border-border-base focus:border-accent opacity-60"
                               />
                             </div>
                             <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Produção Projetada (@/cab)
                               </label>
                               <Input
@@ -3092,11 +3072,11 @@ export function Lotes() {
                                 value={cat.producao_projetada_arroba_cab ? cat.producao_projetada_arroba_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                                 disabled
                                 placeholder="0"
-                                className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                                className="bg-surface-2 border-border-base focus:border-accent opacity-60"
                               />
                             </div>
                             <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Venda Total Projetada (@/Lote/Categoria)
                               </label>
                               <Input
@@ -3104,24 +3084,24 @@ export function Lotes() {
                                 value={cat.venda_total_arroba_lote_categoria ? cat.venda_total_arroba_lote_categoria.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) : ''}
                                 disabled
                                 placeholder="0"
-                                className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                                className="bg-surface-2 border-border-base focus:border-accent opacity-60"
                               />
                             </div>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Data Meta Projetada
                               </label>
                               <Input
                                 type="date"
                                 value={cat.data_meta_projetada || ''}
                                 disabled
-                                className="border-gray-200 focus:border-accent opacity-60"
+                                className="border-border-base focus:border-accent opacity-60"
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Dias Restantes Meta
                               </label>
                               <Input
@@ -3129,7 +3109,7 @@ export function Lotes() {
                                 value={cat.dias_restantes_meta?.toString() || ''}
                                 disabled
                                 placeholder="0"
-                                className="border-gray-200 focus:border-accent opacity-60"
+                                className="border-border-base focus:border-accent opacity-60"
                               />
                             </div>
                           </div>
@@ -3137,13 +3117,13 @@ export function Lotes() {
                       </div>
 
                       {/* Financeiro */}
-                      <div className="mb-5 border-t border-gray-200 pt-4">
-                        <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
+                      <div className="mb-5 border-t border-border-base pt-4">
+                        <h6 className={`text-sm font-bold text-content-strong mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)}`}>
                           Financeiro
                         </h6>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Preço Entrada (R$/kg)
                             </label>
                             <NumericInput
@@ -3155,11 +3135,11 @@ export function Lotes() {
                               }}
                               decimalPlaces={2}
                               prefix="R$"
-                              className="border-gray-200 focus:border-accent"
+                              className="border-border-base focus:border-accent"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Preço Entrada (R$/@)
                             </label>
                             <Input
@@ -3167,11 +3147,11 @@ export function Lotes() {
                               value={cat.preco_entrada_reais_arroba ? `R$ ${cat.preco_entrada_reais_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                               disabled
                               placeholder="R$ 0,00"
-                              className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                              className="bg-surface-2 border-border-base focus:border-accent opacity-60"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Ágio (%)
                             </label>
                             <Input
@@ -3179,11 +3159,11 @@ export function Lotes() {
                               value={cat.agio_percent != null ? `${cat.agio_percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : ''}
                               disabled
                               placeholder="0,00%"
-                              className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                              className="bg-surface-2 border-border-base focus:border-accent opacity-60"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Preço Entrada (R$/cab)
                             </label>
                             <Input
@@ -3192,11 +3172,11 @@ export function Lotes() {
                               value={cat.preco_entrada_reais_cab ? `R$ ${cat.preco_entrada_reais_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                               disabled
                               placeholder="R$ 0,00"
-                              className="border-gray-200 focus:border-accent opacity-60"
+                              className="border-border-base focus:border-accent opacity-60"
                             />
                           </div>
                           <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Custo Operacional (R$/cab/dia)
                             </label>
                             <NumericInput
@@ -3208,14 +3188,14 @@ export function Lotes() {
                               }}
                               decimalPlaces={2}
                               prefix="R$"
-                              className="border-gray-200 focus:border-accent"
+                              className="border-border-base focus:border-accent"
                             />
                           </div>
                         </div>
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Custo Frete (R$/cab)
                             </label>
                             <NumericInput
@@ -3228,11 +3208,11 @@ export function Lotes() {
                               placeholder="0,00"
                               decimalPlaces={2}
                               prefix="R$"
-                              className="border-gray-200 focus:border-accent"
+                              className="border-border-base focus:border-accent"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Custo Comissão (R$/cab)
                             </label>
                             <NumericInput
@@ -3245,11 +3225,11 @@ export function Lotes() {
                               placeholder="0,00"
                               decimalPlaces={2}
                               prefix="R$"
-                              className="border-gray-200 focus:border-accent"
+                              className="border-border-base focus:border-accent"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Custo Sanidade (R$/cab)
                             </label>
                             <NumericInput
@@ -3262,11 +3242,11 @@ export function Lotes() {
                               placeholder="0,00"
                               decimalPlaces={2}
                               prefix="R$"
-                              className="border-gray-200 focus:border-accent"
+                              className="border-border-base focus:border-accent"
                             />
                           </div>
                           <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Custo Identificação/Rastreabilidade (R$/cab)
                             </label>
                             <NumericInput
@@ -3279,14 +3259,14 @@ export function Lotes() {
                               placeholder="0,00"
                               decimalPlaces={2}
                               prefix="R$"
-                              className="border-gray-200 focus:border-accent"
+                              className="border-border-base focus:border-accent"
                             />
                           </div>
                         </div>
                         
                         <div className="mt-2 flex flex-col sm:flex-row gap-2">
                           <div className="flex-1 min-w-0">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Custo Total Entrada (R$/cab)
                             </label>
                             <Input
@@ -3294,11 +3274,11 @@ export function Lotes() {
                               value={cat.custo_total_entrada_reais_cab != null ? `R$ ${cat.custo_total_entrada_reais_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                               disabled
                               placeholder="R$ 0,00"
-                              className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                              className="bg-surface-2 border-border-base focus:border-accent opacity-60"
                             />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Custo Total Entrada (R$/Lote)
                             </label>
                             <Input
@@ -3306,17 +3286,17 @@ export function Lotes() {
                               value={cat.custo_total_entrada_reais_lote != null ? `R$ ${cat.custo_total_entrada_reais_lote.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                               disabled
                               placeholder="R$ 0,00"
-                              className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                              className="bg-surface-2 border-border-base focus:border-accent opacity-60"
                             />
                           </div>
                         </div>
                         
                         {/* Calculated Prices */}
-                        <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                          <h6 className="text-sm font-semibold text-blue-800 mb-3">Preços Sugeridos de Venda</h6>
+                        <div className="mt-4 p-4 bg-surface-2 rounded-lg border-l-4 border-primary">
+                          <h6 className="text-sm font-semibold text-content-strong mb-3">Preços Sugeridos de Venda</h6>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
-                              <label className="block text-xs font-medium text-blue-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
+                              <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Preço Custo (R$/@)
                               </label>
                               <Input
@@ -3324,11 +3304,11 @@ export function Lotes() {
                                 value={cat.preco_custo_reais_arroba ? `R$ ${cat.preco_custo_reais_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
-                                className="bg-gray-100 border-blue-200 focus:border-blue-500 opacity-80"
+                                className="bg-surface-2 border-primary/30 focus:border-blue-500 opacity-80"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-blue-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
+                              <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Preço Custo (R$/cab)
                               </label>
                               <Input
@@ -3336,11 +3316,11 @@ export function Lotes() {
                                 value={cat.preco_custo_cab ? `R$ ${cat.preco_custo_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
-                                className="bg-gray-100 border-blue-200 focus:border-blue-500 opacity-80"
+                                className="bg-surface-2 border-primary/30 focus:border-blue-500 opacity-80"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-green-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
+                              <label className="block text-xs font-medium text-green-700 dark:text-green-300 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Preço Venda Projetado (R$/@)
                               </label>
                               <NumericInput
@@ -3353,11 +3333,11 @@ export function Lotes() {
                                 placeholder="R$ 0,00"
                                 decimalPlaces={2}
                                 prefix="R$"
-                                className="bg-white border-green-300 focus:border-green-500 opacity-90 font-semibold text-green-700"
+                                className="bg-surface-1 border-green-300 focus:border-green-500 opacity-90 font-semibold text-green-700 dark:text-green-300"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-green-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
+                              <label className="block text-xs font-medium text-green-700 dark:text-green-300 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Preço Venda Sugerido (R$/cab)
                               </label>
                               <Input
@@ -3365,11 +3345,11 @@ export function Lotes() {
                                 value={cat.preco_venda_sugerido_cab ? `R$ ${cat.preco_venda_sugerido_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
-                                className="bg-gray-100 border-green-300 focus:border-green-500 opacity-90 font-semibold text-green-700"
+                                className="bg-surface-2 border-green-300 focus:border-green-500 opacity-90 font-semibold text-green-700 dark:text-green-300"
                               />
                             </div>
                             <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                              <label className="block text-xs font-medium text-green-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
+                              <label className="block text-xs font-medium text-green-700 dark:text-green-300 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Faturamento Projetado (R$/Lote/Categoria)
                               </label>
                               <Input
@@ -3377,14 +3357,14 @@ export function Lotes() {
                                 value={cat.faturamento_projetado_reais_lote_categoria ? `R$ ${cat.faturamento_projetado_reais_lote_categoria.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
-                                className="bg-gray-100 border-green-300 focus:border-green-500 opacity-90 font-semibold text-green-700"
+                                className="bg-surface-2 border-green-300 focus:border-green-500 opacity-90 font-semibold text-green-700 dark:text-green-300"
                               />
                             </div>
                           </div>
                         </div>
                         
                         <div className="mt-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                          <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                             Margem de Lucro (%)
                           </label>
                           <NumericInput
@@ -3395,7 +3375,7 @@ export function Lotes() {
                               setFormData({ ...formData, categorias: updatedCategorias })
                             }}
                             decimalPlaces={2}
-                            className="border-gray-200 focus:border-accent"
+                            className="border-border-base focus:border-accent"
                           />
                         </div>
                       </div>
@@ -3408,7 +3388,7 @@ export function Lotes() {
 
               {/* Histórico de Movimentação - Timeline View */}
               {showForm && (movimentacaoData.length > 0 || maternidadeData.length > 0 || morteData.length > 0) && (
-                <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="border-t border-border-base pt-4 mt-4">
                   <button
                     type="button"
                     onClick={() => setExpandedCategories(prev => {
@@ -3423,14 +3403,14 @@ export function Lotes() {
                     className="flex items-center gap-2 w-full text-left"
                   >
                     <svg
-                      className={`w-4 h-4 text-gray-600 transition-transform ${expandedCategories.has('historico-movimentacao') ? 'rotate-180' : ''}`}
+                      className={`w-4 h-4 text-content-muted transition-transform ${expandedCategories.has('historico-movimentacao') ? 'rotate-180' : ''}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
-                    <h6 className="text-sm font-bold text-gray-800 border-l-3 border-red-500 pl-3 py-1 bg-red-50 rounded-r">
+                    <h6 className="text-sm font-bold text-content-strong border-l-3 border-red-500 pl-3 py-1 bg-red-500/10 rounded-r">
                       Histórico de Movimentação ({movimentacaoData.length + maternidadeData.length + morteData.length} eventos)
                     </h6>
                   </button>
@@ -3438,7 +3418,7 @@ export function Lotes() {
                   {expandedCategories.has('historico-movimentacao') && (
                   <div className="relative mt-4">
                     {/* Timeline line */}
-                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-surface-3"></div>
                     
                     {/* Combined timeline events */}
                     <div className="space-y-4">
@@ -3480,23 +3460,23 @@ export function Lotes() {
                           return (
                             <div key={`${event.type}-${event.id}`} className="relative pl-10">
                               {/* Timeline dot */}
-                              <div className={`absolute left-2.5 top-1.5 w-3 h-3 rounded-full ${colorClass.split(' ')[0]} border-2 ${colorClass.split(' ')[1]} bg-white`}></div>
+                              <div className={`absolute left-2.5 top-1.5 w-3 h-3 rounded-full ${colorClass.split(' ')[0]} border-2 ${colorClass.split(' ')[1]} bg-surface-1`}></div>
 
                               {/* Event card */}
-                              <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+                              <div className="bg-surface-1 rounded-lg border border-border-base p-3 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="flex justify-between items-start">
                                   <div className="flex items-center gap-2">
                                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${colorClass.split(' ')[0].replace('bg-', 'bg-opacity-10')} ${colorClass.split(' ')[1].replace('border-', 'text-')}`}>
                                       {label}
                                     </span>
                                     {category && (
-                                      <span className="text-xs text-gray-500 capitalize">{category}</span>
+                                      <span className="text-xs text-content-muted capitalize">{category}</span>
                                     )}
                                   </div>
-                                  <span className="text-xs text-gray-400">{new Date(event.type === 'movimentacao' ? event.data_movimentacao : event.data).toLocaleDateString('pt-BR')}</span>
+                                  <span className="text-xs text-content-faint">{new Date(event.type === 'movimentacao' ? event.data_movimentacao : event.data).toLocaleDateString('pt-BR')}</span>
                                 </div>
 
-                                <div className="text-xs text-gray-600 mt-2">
+                                <div className="text-xs text-content-muted mt-2">
                                   {event.type === 'movimentacao' && (
                                     <>
                                       {event.quantidade && `${event.quantidade} cabeça${event.quantidade > 1 ? 's' : ''}`}
@@ -3531,10 +3511,10 @@ export function Lotes() {
 
             {/* Informações Administrativas */}
             <div className="border-t pt-4">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">Informações Administrativas</h4>
+              <h4 className="text-lg font-semibold text-content-strong mb-4">Informações Administrativas</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Produtor Rural
                   </label>
                   <Input
@@ -3542,11 +3522,11 @@ export function Lotes() {
                     value={formData.produtor_rural}
                     onChange={(e) => setFormData({ ...formData, produtor_rural: e.target.value })}
                     placeholder="Nome do produtor"
-                    className="border-gray-200 focus:border-accent"
+                    className="border-border-base focus:border-accent"
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Propriedade de Origem
                   </label>
                   <Input
@@ -3554,11 +3534,11 @@ export function Lotes() {
                     value={formData.propriedade_origem}
                     onChange={(e) => setFormData({ ...formData, propriedade_origem: e.target.value })}
                     placeholder="Nome da propriedade"
-                    className="border-gray-200 focus:border-accent"
+                    className="border-border-base focus:border-accent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     N° Contrato
                   </label>
                   <Input
@@ -3566,18 +3546,18 @@ export function Lotes() {
                     value={formData.numero_contrato}
                     onChange={(e) => setFormData({ ...formData, numero_contrato: e.target.value })}
                     placeholder="Ex: 12345"
-                    className="border-gray-200 focus:border-accent"
+                    className="border-border-base focus:border-accent"
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Mês de Competência
                   </label>
                   <Input
                     type="month"
                     value={formData.mes_competencia}
                     onChange={(e) => setFormData({ ...formData, mes_competencia: e.target.value })}
-                    className="border-gray-200 focus:border-accent"
+                    className="border-border-base focus:border-accent"
                   />
                 </div>
               </div>
@@ -3585,21 +3565,21 @@ export function Lotes() {
 
             {/* SISBOV e Logística */}
             <div className="border-t pt-4">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">SISBOV e Logística</h4>
+              <h4 className="text-lg font-semibold text-content-strong mb-4">SISBOV e Logística</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Data Liberação SISBOV
                   </label>
                   <Input
                     type="date"
                     value={formData.data_liberacao_sisbov}
                     onChange={(e) => setFormData({ ...formData, data_liberacao_sisbov: e.target.value })}
-                    className="border-gray-200 focus:border-accent"
+                    className="border-border-base focus:border-accent"
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Período Liberação SISBOV
                   </label>
                   <Input
@@ -3608,18 +3588,18 @@ export function Lotes() {
                     onChange={(e) => setFormData({ ...formData, periodo_liberacao_sisbov: e.target.value })}
                     placeholder="0"
                     disabled
-                    className="border-gray-200 focus:border-accent opacity-60"
+                    className="border-border-base focus:border-accent opacity-60"
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Data Embarque Prevista
                   </label>
                   <Input
                     type="date"
                     value={formData.data_embarque_prevista}
                     onChange={(e) => setFormData({ ...formData, data_embarque_prevista: e.target.value })}
-                    className="border-gray-200 focus:border-accent"
+                    className="border-border-base focus:border-accent"
                   />
                 </div>
               </div>
@@ -3638,14 +3618,14 @@ export function Lotes() {
                   onClick={() => setFormData({ ...formData, ativo: !formData.ativo })}
                   className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                     formData.ativo
-                      ? 'bg-green-100 text-green-800 border-2 border-green-300 hover:bg-green-200'
-                      : 'bg-red-100 text-red-800 border-2 border-red-300 hover:bg-red-200'
+                      ? 'bg-green-500/20 text-green-800 dark:text-green-200 border-2 border-green-500/50 hover:bg-green-500/30'
+                      : 'bg-red-500/20 text-red-800 dark:text-red-200 border-2 border-red-500/50 hover:bg-red-500/30'
                   }`}
                 >
                   {formData.ativo ? '✓ Ativo' : '✗ Inativo'}
                 </button>
                 {formData.ativo !== originalAtivo && (
-                  <span className="text-xs text-yellow-700 bg-yellow-50 px-2 py-1 rounded border border-yellow-200">
+                  <span className="text-xs text-yellow-700 dark:text-yellow-200 bg-yellow-500/10 dark:bg-yellow-500/20 px-2 py-1 rounded border border-yellow-500/30 dark:border-yellow-500/50">
                     ⚠️ Salve para aplicar
                   </span>
                 )}
@@ -3657,15 +3637,15 @@ export function Lotes() {
 
       {/* Card de Solicitações de Novo Lote Pendentes */}
       {!showForm && solicitacoesNovoLote.length > 0 && (
-        <div className="mb-6 bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
+        <div className="mb-6 bg-amber-500/10 border-2 border-amber-300 rounded-xl p-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🕐</span>
               <div>
-                <h3 className="text-base font-bold text-amber-900">
+                <h3 className="text-base font-bold text-amber-900 dark:text-amber-200">
                   {solicitacoesNovoLote.length} Solicitação{ solicitacoesNovoLote.length > 1 ? 'ões' : '' } de Novo Lote Pendente{ solicitacoesNovoLote.length > 1 ? 's' : '' }
                 </h3>
-                <p className="text-sm text-amber-700">
+                <p className="text-sm text-amber-700 dark:text-amber-300">
                   Peão{ solicitacoesNovoLote.length > 1 ? 's' : '' } solicitou{ solicitacoesNovoLote.length > 1 ? 'aram' : '' } a criação de novo{ solicitacoesNovoLote.length > 1 ? 's' : '' } lote{ solicitacoesNovoLote.length > 1 ? 's' : '' } aguardando sua revisão.
                 </p>
               </div>
@@ -3690,7 +3670,7 @@ export function Lotes() {
       )}
 
       {!showForm && lotes.length === 0 ? (
-        <Card className="bg-white border-0 shadow-sm">
+        <Card className="bg-surface-1 border-0 shadow-sm">
           <EmptyState
             title="Nenhum lote cadastrado"
             action={<Button onClick={() => {
@@ -3719,7 +3699,7 @@ export function Lotes() {
             />
           ))}
           {lotesFiltrados.length === 0 && (
-            <div className="col-span-full text-center text-gray-400 py-8">Nenhum lote encontrado.</div>
+            <div className="col-span-full text-center text-content-faint py-8">Nenhum lote encontrado.</div>
           )}
         </div>
         </div>

@@ -756,7 +756,7 @@ export function IndividuoNovo() {
         <Button variant="secondary" size="sm" onClick={() => navigate('/controller/individuos')}>
           ← Voltar
         </Button>
-        <h2 className="text-2xl font-bold text-gray-800">
+        <h2 className="text-2xl font-bold text-content-strong">
           {isEditMode ? 'Editar Indivíduo' : 'Novo Indivíduo'}
         </h2>
       </div>
@@ -764,29 +764,29 @@ export function IndividuoNovo() {
       {/* Score de completude */}
       <Card className="p-4 border-0 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">Completude do cadastro</span>
-          <span className="text-sm font-bold text-gray-900">{score}%</span>
+          <span className="text-sm font-medium text-content">Completude do cadastro</span>
+          <span className="text-sm font-bold text-content-strong">{score}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
+        <div className="w-full bg-surface-3 rounded-full h-2.5">
           <div className={`${getScoreColor()} h-2.5 rounded-full transition-all`} style={{ width: `${score}%` }} />
         </div>
       </Card>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Seção Principal - Identificação e Peso */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Identificação e Dados Principais</h3>
-            <p className="text-sm text-gray-600 mt-1">Informações essenciais do animal</p>
+        <div className="bg-surface-1 rounded-xl border border-border-base shadow-sm overflow-hidden">
+          <div className="bg-surface-2 px-6 py-4 border-b border-border-base">
+            <h3 className="text-lg font-semibold text-content-strong">Identificação e Dados Principais</h3>
+            <p className="text-sm text-content-muted mt-1">Informações essenciais do animal</p>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Identificação */}
               <div className="space-y-4">
-                <h4 className="text-sm font-medium text-gray-700 uppercase tracking-wider">Identificação</h4>
+                <h4 className="text-sm font-medium text-content uppercase tracking-wider">Identificação</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                    <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                       Brinco <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -794,19 +794,19 @@ export function IndividuoNovo() {
                       value={form.id_brinco}
                       onChange={(e) => handleChange('id_brinco', e.target.value)}
                       onBlur={() => handleIdentificationBlur('id_brinco')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="Ex: BR12345"
                     />
                     {errors.id_brinco && <p className="text-red-500 text-xs mt-1">{errors.id_brinco}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Chip</label>
+                    <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Chip</label>
                     <input
                       type="text"
                       value={form.id_chip}
                       onChange={(e) => handleChange('id_chip', e.target.value)}
                       onBlur={() => handleIdentificationBlur('id_chip')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="Ex: 985200000123456"
                     />
                     {errors.id_chip && <p className="text-red-500 text-xs mt-1">{errors.id_chip}</p>}
@@ -816,16 +816,16 @@ export function IndividuoNovo() {
               
               {/* Características */}
               <div className="space-y-4">
-                <h4 className="text-sm font-medium text-gray-700 uppercase tracking-wider">Características</h4>
+                <h4 className="text-sm font-medium text-content uppercase tracking-wider">Características</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                    <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                       Sexo <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={form.sexo}
                       onChange={(e) => handleChange('sexo', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     >
                       <option value="">Selecione</option>
                       <option value="Macho">Macho</option>
@@ -834,13 +834,13 @@ export function IndividuoNovo() {
                     {errors.sexo && <p className="text-red-500 text-xs mt-1">{errors.sexo}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                    <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                       Raça <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={form.raca}
                       onChange={(e) => handleChange('raca', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     >
                       <option value="">Selecione</option>
                       {racas.map(raca => (
@@ -854,16 +854,16 @@ export function IndividuoNovo() {
               
               {/* Classificação */}
               <div className="space-y-4">
-                <h4 className="text-sm font-medium text-gray-700 uppercase tracking-wider">Classificação</h4>
+                <h4 className="text-sm font-medium text-content uppercase tracking-wider">Classificação</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                    <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                       Categoria <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={form.categoria}
                       onChange={(e) => handleChange('categoria', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     >
                       <option value="">Selecione</option>
                       {categoriaOptions.map((categoria: string) => (
@@ -873,11 +873,11 @@ export function IndividuoNovo() {
                     {errors.categoria && <p className="text-red-500 text-xs mt-1">{errors.categoria}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Status</label>
+                    <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Status</label>
                     <select
                       value={form.status}
                       onChange={(e) => handleChange('status', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     >
                       <option value="Vivo">Vivo</option>
                       <option value="Morto">Morto</option>
@@ -889,15 +889,15 @@ export function IndividuoNovo() {
               
               {/* Peso - Destaque */}
               <div className="space-y-4">
-                <h4 className="text-sm font-medium text-gray-700 uppercase tracking-wider">Peso</h4>
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-                  <label className="block text-sm font-semibold text-blue-900 mb-2">Peso Atual (kg)</label>
+                <h4 className="text-sm font-medium text-content uppercase tracking-wider">Peso</h4>
+                <div className="bg-surface-2 rounded-xl p-4 border border-border-base">
+                  <label className="block text-sm font-semibold text-content-strong mb-2">Peso Atual (kg)</label>
                   <NumericInput
                     value={form.peso_atual_kg}
                     onChange={(value) => handleNumericChange('peso_atual_kg', value)}
                     error={errors.peso_atual_kg}
                     placeholder="0.0"
-                    className="border-blue-300 bg-white/70 backdrop-blur-sm"
+                    className="border-surface-3 bg-surface-1/80 backdrop-blur-sm"
                   />
                   {errors.peso_atual_kg && <p className="text-red-500 text-xs mt-1">{errors.peso_atual_kg}</p>}
                 </div>
@@ -907,23 +907,23 @@ export function IndividuoNovo() {
             {/* Identificadores Adicionais */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Manejo</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Manejo</label>
                 <input
                   type="text"
                   value={form.id_manejo}
                   onChange={(e) => handleChange('id_manejo', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Ex: M001"
                 />
                 {errors.id_manejo && <p className="text-red-500 text-xs mt-1">{errors.id_manejo}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Provisório (cria)</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Provisório (cria)</label>
                 <input
                   type="text"
                   value={form.id_provisorio_cria}
                   onChange={(e) => handleChange('id_provisorio_cria', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Ex: CRIA001"
                 />
                 {errors.id_provisorio_cria && <p className="text-red-500 text-xs mt-1">{errors.id_provisorio_cria}</p>}
@@ -933,27 +933,27 @@ export function IndividuoNovo() {
         </div>
 
         {/* Card Nascimento e Origem */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Dados de Nascimento e Origem</h3>
-            <p className="text-sm text-gray-600 mt-1">Informações de nascimento e procedência</p>
+        <div className="bg-surface-1 rounded-xl border border-border-base shadow-sm overflow-hidden">
+          <div className="bg-surface-2 px-6 py-4 border-b border-border-base">
+            <h3 className="text-lg font-semibold text-content-strong">Dados de Nascimento e Origem</h3>
+            <p className="text-sm text-content-muted mt-1">Informações de nascimento e procedência</p>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Data de nascimento <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={form.data_nascimento}
                   onChange={(e) => handleChange('data_nascimento', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                 />
                 {errors.data_nascimento && <p className="text-red-500 text-xs mt-1">{errors.data_nascimento}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Peso ao nascer (kg)</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Peso ao nascer (kg)</label>
                 <NumericInput
                   value={form.peso_nascimento_kg}
                   onChange={(value) => handleNumericChange('peso_nascimento_kg', value)}
@@ -962,11 +962,11 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Origem</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Origem</label>
                 <select
                   value={form.origem}
                   onChange={(e) => handleChange('origem', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                 >
                   <option value="">Selecione...</option>
                   {origens.map((origem: string) => (
@@ -979,25 +979,25 @@ export function IndividuoNovo() {
         </div>
 
         {/* Card Entrada na Fazenda */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Entrada na Fazenda (Dados Financeiros)</h3>
-            <p className="text-sm text-gray-600 mt-1">Informações de compra e entrada</p>
+        <div className="bg-surface-1 rounded-xl border border-border-base shadow-sm overflow-hidden">
+          <div className="bg-surface-2 px-6 py-4 border-b border-border-base">
+            <h3 className="text-lg font-semibold text-content-strong">Entrada na Fazenda (Dados Financeiros)</h3>
+            <p className="text-sm text-content-muted mt-1">Informações de compra e entrada</p>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data de entrada</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Data de entrada</label>
                 <input
                   type="date"
                   value={form.data_entrada_fazenda}
                   onChange={(e) => handleChange('data_entrada_fazenda', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                 />
                 {errors.data_entrada_fazenda && <p className="text-red-500 text-xs mt-1">{errors.data_entrada_fazenda}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">PV entrada (kg)</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">PV entrada (kg)</label>
                 <NumericInput
                   value={form.pv_entrada_kg}
                   onChange={(value) => handleNumericChange('pv_entrada_kg', value)}
@@ -1005,7 +1005,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Preço entrada (R$/kg)</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Preço entrada (R$/kg)</label>
                 <NumericInput
                   value={form.preco_entrada_reais_kg}
                   onChange={(value) => handleNumericChange('preco_entrada_reais_kg', value)}
@@ -1013,7 +1013,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Preço entrada (R$/@)</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Preço entrada (R$/@)</label>
                 <NumericInput
                   value={form.preco_entrada_reais_arroba}
                   onChange={(value) => handleNumericChange('preco_entrada_reais_arroba', value)}
@@ -1021,7 +1021,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Preço entrada (R$/cabeça)</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Preço entrada (R$/cabeça)</label>
                 <NumericInput
                   value={form.preco_entrada_reais_cabeca}
                   onChange={(value) => handleNumericChange('preco_entrada_reais_cabeca', value)}
@@ -1029,7 +1029,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Preço arroba boi gordo</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Preço arroba boi gordo</label>
                 <NumericInput
                   value={form.preco_arroba_boi_gordo}
                   onChange={(value) => handleNumericChange('preco_arroba_boi_gordo', value)}
@@ -1037,7 +1037,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Ágio/Deságio</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Ágio/Deságio</label>
                 <NumericInput
                   value={form.agio_desagio}
                   onChange={(value) => handleNumericChange('agio_desagio', value)}
@@ -1045,11 +1045,11 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Fornecedor</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Fornecedor</label>
                 <select
                   value={form.fornecedor}
                   onChange={(e) => handleChange('fornecedor', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                 >
                   <option value="">Selecione...</option>
                   {fornecedores.map((f) => (
@@ -1058,22 +1058,22 @@ export function IndividuoNovo() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Propriedade de origem</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Propriedade de origem</label>
                 <input
                   type="text"
                   value={form.propriedade_origem}
                   onChange={(e) => handleChange('propriedade_origem', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                   placeholder="Propriedade de origem"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Propriedade atual</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Propriedade atual</label>
                 <input
                   type="text"
                   value={form.propriedade_atual}
                   onChange={(e) => handleChange('propriedade_atual', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                   placeholder="Propriedade atual"
                 />
               </div>
@@ -1082,19 +1082,19 @@ export function IndividuoNovo() {
         </div>
 
         {/* Card Localização e Filiação */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-50 to-violet-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Localização e Filiação</h3>
-            <p className="text-sm text-gray-600 mt-1">Localização no sistema e linhagem</p>
+        <div className="bg-surface-1 rounded-xl border border-border-base shadow-sm overflow-hidden">
+          <div className="bg-surface-2 px-6 py-4 border-b border-border-base">
+            <h3 className="text-lg font-semibold text-content-strong">Localização e Filiação</h3>
+            <p className="text-sm text-content-muted mt-1">Localização no sistema e linhagem</p>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Lote atual</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Lote atual</label>
                 <select
                   value={form.lote_atual}
                   onChange={(e) => handleChange('lote_atual', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                 >
                   <option value="">Selecione...</option>
                   {lotes.map((l) => (
@@ -1103,19 +1103,19 @@ export function IndividuoNovo() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Pasto atual</label>
-                <div className="text-sm text-gray-900 min-h-[42px] flex items-center px-3 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Pasto atual</label>
+                <div className="text-sm text-content-strong min-h-[42px] flex items-center px-3 py-2 border border-surface-3 rounded-lg bg-surface-2">
                   {pastoDoLote || (
-                    <span className="text-gray-400 italic">Selecione um lote para exibir o pasto</span>
+                    <span className="text-content-faint italic">Selecione um lote para exibir o pasto</span>
                   )}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Setor atual</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Setor atual</label>
                 <select
                   value={form.setor_atual}
                   onChange={(e) => handleChange('setor_atual', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                 >
                   <option value="">Selecione...</option>
                   {setores.map((s) => (
@@ -1124,11 +1124,11 @@ export function IndividuoNovo() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Pai</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Pai</label>
                 <select
                   value={form.pai}
                   onChange={(e) => handleChange('pai', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                 >
                   <option value="">Selecione...</option>
                   {individuosMacho.map((i) => (
@@ -1137,11 +1137,11 @@ export function IndividuoNovo() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Mãe</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Mãe</label>
                 <select
                   value={form.mae}
                   onChange={(e) => handleChange('mae', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                 >
                   <option value="">Selecione...</option>
                   {individuosFemea.map((i) => (
@@ -1154,34 +1154,34 @@ export function IndividuoNovo() {
         </div>
 
         {/* Card Nutrição */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-green-50 to-lime-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Nutrição (Herdado do Lote)</h3>
-            <p className="text-sm text-gray-600 mt-1">Dados nutricionais definidos pela categoria do lote</p>
+        <div className="bg-surface-1 rounded-xl border border-border-base shadow-sm overflow-hidden">
+          <div className="bg-surface-2 px-6 py-4 border-b border-border-base">
+            <h3 className="text-lg font-semibold text-content-strong">Nutrição (Herdado do Lote)</h3>
+            <p className="text-sm text-content-muted mt-1">Dados nutricionais definidos pela categoria do lote</p>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Estratégia nutricional</label>
-                <p className="text-sm text-gray-900 min-h-[24px] flex items-center">
+              <div className="bg-surface-2 rounded-lg p-4 border border-border-base">
+                <label className="block text-sm font-semibold text-content mb-2">Estratégia nutricional</label>
+                <p className="text-sm text-content-strong min-h-[24px] flex items-center">
                   {form.estrategia_nutricional_nome || (
-                    <span className="text-gray-400 italic">Definida pela categoria do lote</span>
+                    <span className="text-content-faint italic">Definida pela categoria do lote</span>
                   )}
                 </p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">GMD (kg/cab/dia)</label>
-                <p className="text-sm text-gray-900 min-h-[24px] flex items-center">
+              <div className="bg-surface-2 rounded-lg p-4 border border-border-base">
+                <label className="block text-sm font-semibold text-content mb-2">GMD (kg/cab/dia)</label>
+                <p className="text-sm text-content-strong min-h-[24px] flex items-center">
                   {form.gmd_kg_cab_dia || (
-                    <span className="text-gray-400 italic">Definido pela categoria do lote</span>
+                    <span className="text-content-faint italic">Definido pela categoria do lote</span>
                   )}
                 </p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Peso meta (kg)</label>
-                <p className="text-sm text-gray-900 min-h-[24px] flex items-center">
+              <div className="bg-surface-2 rounded-lg p-4 border border-border-base">
+                <label className="block text-sm font-semibold text-content mb-2">Peso meta (kg)</label>
+                <p className="text-sm text-content-strong min-h-[24px] flex items-center">
                   {form.peso_meta_kg ? `${form.peso_meta_kg} kg` : (
-                    <span className="text-gray-400 italic">Definido pela categoria do lote</span>
+                    <span className="text-content-faint italic">Definido pela categoria do lote</span>
                   )}
                 </p>
               </div>
@@ -1190,25 +1190,25 @@ export function IndividuoNovo() {
         </div>
 
         {/* Card Desmama */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-pink-50 to-rose-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Desmama</h3>
-            <p className="text-sm text-gray-600 mt-1">Registro de dados da desmama</p>
+        <div className="bg-surface-1 rounded-xl border border-border-base shadow-sm overflow-hidden">
+          <div className="bg-surface-2 px-6 py-4 border-b border-border-base">
+            <h3 className="text-lg font-semibold text-content-strong">Desmama</h3>
+            <p className="text-sm text-content-muted mt-1">Registro de dados da desmama</p>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data da desmama</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Data da desmama</label>
                 <input
                   type="date"
                   value={form.data_desmama}
                   onChange={(e) => handleChange('data_desmama', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all"
                 />
                 {errors.data_desmama && <p className="text-red-500 text-xs mt-1">{errors.data_desmama}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Peso na desmama (kg)</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Peso na desmama (kg)</label>
                 <NumericInput
                   value={form.peso_desmama_kg}
                   onChange={(value) => handleNumericChange('peso_desmama_kg', value)}
@@ -1220,30 +1220,30 @@ export function IndividuoNovo() {
         </div>
 
         {/* Card Sisbov e Rastreabilidade */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-cyan-50 to-sky-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Sisbov e Rastreabilidade</h3>
-            <p className="text-sm text-gray-600 mt-1">Dados de rastreabilidade e SISBOV</p>
+        <div className="bg-surface-1 rounded-xl border border-border-base shadow-sm overflow-hidden">
+          <div className="bg-surface-2 px-6 py-4 border-b border-border-base">
+            <h3 className="text-lg font-semibold text-content-strong">Sisbov e Rastreabilidade</h3>
+            <p className="text-sm text-content-muted mt-1">Dados de rastreabilidade e SISBOV</p>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data de inserção na rastreabilidade</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Data de inserção na rastreabilidade</label>
                 <input
                   type="date"
                   value={form.data_insercao_rastreabilidade}
                   onChange={(e) => handleChange('data_insercao_rastreabilidade', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
                 />
                 {errors.data_insercao_rastreabilidade && <p className="text-red-500 text-xs mt-1">{errors.data_insercao_rastreabilidade}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data de liberação SISBOV</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Data de liberação SISBOV</label>
                 <input
                   type="date"
                   value={form.data_liberacao_sisbov}
                   onChange={(e) => handleChange('data_liberacao_sisbov', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
                 />
                 {errors.data_liberacao_sisbov && <p className="text-red-500 text-xs mt-1">{errors.data_liberacao_sisbov}</p>}
               </div>
@@ -1268,27 +1268,27 @@ export function IndividuoNovo() {
         size="md"
       >
         <div className="space-y-4">
-          <p className="text-gray-700">
+          <p className="text-content">
             Você está alterando o lote deste indivíduo para:
           </p>
 
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-            <p className="text-sm text-gray-600">
-              <strong className="text-gray-900">Novo lote:</strong> {pendingLoteChange?.loteNome}
+          <div className="bg-surface-2 border border-border-base rounded-lg p-4">
+            <p className="text-sm text-content-muted">
+              <strong className="text-content-strong">Novo lote:</strong> {pendingLoteChange?.loteNome}
             </p>
             {pendingLoteChange?.pastoNome && (
-              <p className="text-sm text-gray-600 mt-1">
-                <strong className="text-gray-900">Pasto:</strong> {pendingLoteChange.pastoNome}
+              <p className="text-sm text-content-muted mt-1">
+                <strong className="text-content-strong">Pasto:</strong> {pendingLoteChange.pastoNome}
               </p>
             )}
             {form.categoria && (
-              <p className="text-sm text-gray-600 mt-1">
-                <strong className="text-gray-900">Categoria:</strong> {form.categoria}
+              <p className="text-sm text-content-muted mt-1">
+                <strong className="text-content-strong">Categoria:</strong> {form.categoria}
               </p>
             )}
           </div>
 
-          <div className="text-sm text-gray-600 space-y-1">
+          <div className="text-sm text-content-muted space-y-1">
             <p>Ao salvar, o sistema irá:</p>
             <ul className="list-disc list-inside pl-2 space-y-1">
               <li>Registrar a saída do lote atual</li>
@@ -1316,12 +1316,12 @@ export function IndividuoNovo() {
         size="sm"
       >
         <div className="flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
-            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
+            <svg className="w-6 h-6 text-green-600 dark:text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <p className="text-gray-700 mb-6">{successModal.message}</p>
+          <p className="text-content mb-6">{successModal.message}</p>
           <Button onClick={successModal.onClose} className="w-full sm:w-auto">
             OK
           </Button>

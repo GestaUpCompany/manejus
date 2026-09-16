@@ -629,14 +629,14 @@ export function Pastos() {
       {/* Header */}
       {!showForm && (
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Pastos</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Pastos</h2>
           <div className="flex flex-col sm:flex-row gap-2 items-start w-full md:w-auto">
             <Input
               type="text"
               placeholder="Buscar pasto..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10 text-sm"
+              className="w-full sm:max-w-xs border-border-base focus:border-accent h-10 text-sm"
             />
             <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               <Button onClick={() => setShowForm(true)} className="h-10 text-sm flex-1 sm:flex-none">Novo Pasto</Button>
@@ -671,7 +671,7 @@ export function Pastos() {
             className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
               showOnlyOcupados
                 ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
             }`}
           >
             {showOnlyOcupados ? (
@@ -692,7 +692,7 @@ export function Pastos() {
             className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
               showInactive
                 ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
             }`}
           >
             {showInactive ? (
@@ -712,23 +712,23 @@ export function Pastos() {
 
       {/* Import Messages */}
       {importError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg">
+        <div className="bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 px-3 sm:px-4 py-2 sm:py-3 rounded-lg">
           <p className="font-medium text-sm sm:text-base">Erro na importação:</p>
           <pre className="text-xs sm:text-sm mt-1 whitespace-pre-wrap">{importError}</pre>
         </div>
       )}
 
       {importSuccess && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg">
+        <div className="bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-300 px-3 sm:px-4 py-2 sm:py-3 rounded-lg">
           <p className="font-medium text-sm sm:text-base whitespace-pre-line">{importSuccess}</p>
         </div>
       )}
 
       {showForm && (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-800">
+              <h3 className="text-lg sm:text-xl font-semibold text-content-strong">
                 {editingPasto ? 'Editar Pasto' : 'Novo Pasto'}
               </h3>
               {editingPasto && !editingPasto.ativo && editingPasto.modulo_id && editingPasto.modulo_ativo === false && (
@@ -751,7 +751,7 @@ export function Pastos() {
             <button
               type="button"
               onClick={handleCancel}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              className="text-content-faint hover:text-content-muted transition-colors p-1"
               aria-label="Fechar formulário"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -762,7 +762,7 @@ export function Pastos() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
               <div className="sm:col-span-2 lg:col-span-1">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Nome <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -771,17 +771,17 @@ export function Pastos() {
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                   required
                   placeholder="Nome do pasto"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Setor
                 </label>
                 <select
                   value={formData.setor}
                   onChange={(e) => setFormData({ ...formData, setor: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all text-sm"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-border-base focus:border-accent bg-surface-1 text-content transition-all text-sm"
                 >
                   <option value="">Selecione...</option>
                   {setores.map((setor) => (
@@ -792,13 +792,13 @@ export function Pastos() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Sistema de Produção
                 </label>
                 <select
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all text-sm"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-border-base focus:border-accent bg-surface-1 text-content transition-all text-sm"
                 >
                   <option value="">Selecione...</option>
                   <option value="Cria">Cria</option>
@@ -812,7 +812,7 @@ export function Pastos() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Metragem Cocho (m)
                 </label>
                 <Input
@@ -821,17 +821,17 @@ export function Pastos() {
                   value={formData.metragem_cocho_m}
                   onChange={(e) => setFormData({ ...formData, metragem_cocho_m: e.target.value })}
                   placeholder="0"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Nível Degradação
                 </label>
                 <select
                   value={formData.nivel_degradacao}
                   onChange={(e) => setFormData({ ...formData, nivel_degradacao: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all text-sm"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-border-base focus:border-accent bg-surface-1 text-content transition-all text-sm"
                 >
                   <option value="">Selecione...</option>
                   <option value="1">1</option>
@@ -845,7 +845,7 @@ export function Pastos() {
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Área Total (ha)
                 </label>
                 <Input
@@ -861,11 +861,11 @@ export function Pastos() {
                     }
                   }}
                   placeholder="Ex: 100"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Área Útil (%)
                 </label>
                 <Input
@@ -881,11 +881,11 @@ export function Pastos() {
                     }
                   }}
                   placeholder="Ex: 80"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Área Útil (ha)
                 </label>
                 <Input
@@ -894,24 +894,24 @@ export function Pastos() {
                   value={formData.area_util_ha}
                   readOnly
                   placeholder="Calculado automaticamente"
-                  className="border-gray-200 focus:border-accent text-sm bg-gray-50"
+                  className="border-border-base focus:border-accent text-sm bg-surface-2"
                 />
               </div>
               {editingPasto && editingPasto.modulo_nome && (
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Módulo
                   </label>
                   <Input
                     type="text"
                     value={editingPasto.modulo_nome}
                     disabled
-                    className="bg-gray-50 border-gray-200 text-sm"
+                    className="bg-surface-2 border-border-base text-sm"
                   />
                 </div>
               )}
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Meta de Ocupação (dias)
                 </label>
                 <Input
@@ -921,13 +921,13 @@ export function Pastos() {
                   value={formData.meta_intervalo_ocupacao_dias}
                   onChange={(e) => setFormData({ ...formData, meta_intervalo_ocupacao_dias: e.target.value })}
                   placeholder="Ex: 7"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                 Espécie <span className="text-red-500">*</span>
               </label>
               <Input
@@ -936,7 +936,7 @@ export function Pastos() {
                 onChange={(e) => setFormData({ ...formData, especie: e.target.value })}
                 required
                 placeholder="Ex: Marandu"
-                className="border-gray-200 focus:border-accent text-sm"
+                className="border-border-base focus:border-accent text-sm"
               />
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {[
@@ -950,8 +950,8 @@ export function Pastos() {
                     onClick={() => setFormData({ ...formData, especie: sug })}
                     className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-colors ${
                       formData.especie === sug
-                        ? 'bg-green-700 text-white border-green-700'
-                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-surface-2 text-content-muted border-border-base hover:bg-surface-2'
                     }`}
                   >
                     {sug}
@@ -962,7 +962,7 @@ export function Pastos() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-end">
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Altura Entrada (cm) <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -972,12 +972,12 @@ export function Pastos() {
                   onChange={(e) => setFormData({ ...formData, altura_entrada_cm: e.target.value })}
                   required
                   placeholder="Ex: 15.0"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Altura Saída (cm) <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -987,19 +987,19 @@ export function Pastos() {
                   onChange={(e) => setFormData({ ...formData, altura_saida_cm: e.target.value })}
                   required
                   placeholder="Ex: 5.0"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                 Fonte de Água Principal
               </label>
               <select
                 value={formData.fonte_agua_principal}
                 onChange={(e) => setFormData({ ...formData, fonte_agua_principal: e.target.value })}
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all text-sm"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-border-base focus:border-accent bg-surface-1 text-content transition-all text-sm"
               >
                 <option value="">Selecione...</option>
                 <option value="Bebedouro">Bebedouro</option>
@@ -1019,20 +1019,20 @@ export function Pastos() {
               onChange={setSelectedBebedouros}
               placeholder="Selecione bebedouros..."
               label="Bebedouros"
-              className="border-gray-200 focus:border-accent"
+              className="border-border-base focus:border-accent"
               />
 
             <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-700">Possui depósito?</label>
+              <label className="text-sm font-medium text-content">Possui depósito?</label>
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, possui_deposito: !formData.possui_deposito })}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  formData.possui_deposito ? 'bg-primary' : 'bg-gray-300'
+                  formData.possui_deposito ? 'bg-primary' : 'bg-surface-3'
                 }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  className={`inline-block h-4 w-4 transform rounded-full bg-surface-1 transition-transform ${
                     formData.possui_deposito ? 'translate-x-6' : 'translate-x-1'
                   }`}
                 />
@@ -1040,7 +1040,7 @@ export function Pastos() {
 
               {formData.possui_deposito && (
                 <div className="w-1/4 pl-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-content mb-1">
                     Kg no depósito <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -1050,78 +1050,78 @@ export function Pastos() {
                     onChange={(e) => setFormData({ ...formData, kg_deposito: e.target.value })}
                     required
                     placeholder="Ex: 1000"
-                    className="border-gray-200 focus:border-accent"
+                    className="border-border-base focus:border-accent"
                   />
                 </div>
               )}
             </div>
 
             {editingPasto && (
-              <div className="border-t-2 border-gray-100 pt-4 mt-2">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="border-t-2 border-border-subtle pt-4 mt-2">
+                <h3 className="text-sm font-semibold text-content mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   Ocupação Atual
                 </h3>
                 {ocupacaoPorPasto[editingPasto.id] ? (
-                  <div className={`rounded-xl p-4 space-y-2 ${ocupacaoPorPasto[editingPasto.id].meta_excedida ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
+                  <div className={`rounded-xl p-4 space-y-2 ${ocupacaoPorPasto[editingPasto.id].meta_excedida ? 'bg-red-500/10 border border-red-500/30' : 'bg-green-500/10 border border-green-500/30'}`}>
                     {ocupacaoPorPasto[editingPasto.id].meta_excedida && (
-                      <p className="text-xs font-bold text-red-700 flex items-center gap-1">
+                      <p className="text-xs font-bold text-red-700 dark:text-red-300 flex items-center gap-1">
                         ⚠️ Meta de ocupação excedida em {ocupacaoPorPasto[editingPasto.id].dias_acima_meta} dia(s)
                       </p>
                     )}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       <div>
-                        <p className="text-xs text-gray-500">Lote</p>
-                        <p className="text-sm font-medium text-gray-800">{ocupacaoPorPasto[editingPasto.id].lote_nome}</p>
+                        <p className="text-xs text-content-muted">Lote</p>
+                        <p className="text-sm font-medium text-content-strong">{ocupacaoPorPasto[editingPasto.id].lote_nome}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500">Tempo de ocupação</p>
-                        <p className="text-sm font-medium text-gray-800">{ocupacaoPorPasto[editingPasto.id].periodo_ocupacao_dias} dias</p>
+                        <p className="text-xs text-content-muted">Tempo de ocupação</p>
+                        <p className="text-sm font-medium text-content-strong">{ocupacaoPorPasto[editingPasto.id].periodo_ocupacao_dias} dias</p>
                       </div>
                       {ocupacaoPorPasto[editingPasto.id].taxa_lotacao_ua_ha != null && (
                         <div>
-                          <p className="text-xs text-gray-500">Taxa de lotação</p>
-                          <p className="text-sm font-semibold text-blue-700">{Number(ocupacaoPorPasto[editingPasto.id].taxa_lotacao_ua_ha).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} UA/ha</p>
+                          <p className="text-xs text-content-muted">Taxa de lotação</p>
+                          <p className="text-sm font-semibold text-primary dark:text-primary-light">{Number(ocupacaoPorPasto[editingPasto.id].taxa_lotacao_ua_ha).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} UA/ha</p>
                         </div>
                       )}
                       {ocupacaoPorPasto[editingPasto.id].meta_intervalo_ocupacao_dias && (
                         <div>
-                          <p className="text-xs text-gray-500">Meta</p>
-                          <p className={`text-sm font-medium ${ocupacaoPorPasto[editingPasto.id].meta_excedida ? 'text-red-700' : 'text-green-700'}`}>
+                          <p className="text-xs text-content-muted">Meta</p>
+                          <p className={`text-sm font-medium ${ocupacaoPorPasto[editingPasto.id].meta_excedida ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>
                             {ocupacaoPorPasto[editingPasto.id].meta_intervalo_ocupacao_dias} dias
                           </p>
                         </div>
                       )}
                       {ocupacaoPorPasto[editingPasto.id].cabecas_entrada && (
                         <div>
-                          <p className="text-xs text-gray-500">Cabeças na entrada</p>
-                          <p className="text-sm font-medium text-gray-800">{ocupacaoPorPasto[editingPasto.id].cabecas_entrada}</p>
+                          <p className="text-xs text-content-muted">Cabeças na entrada</p>
+                          <p className="text-sm font-medium text-content-strong">{ocupacaoPorPasto[editingPasto.id].cabecas_entrada}</p>
                         </div>
                       )}
                       {ocupacaoPorPasto[editingPasto.id].peso_vivo_medio_entrada_kg && (
                         <div>
-                          <p className="text-xs text-gray-500">Peso médio entrada</p>
-                          <p className="text-sm font-medium text-gray-800">{Number(ocupacaoPorPasto[editingPasto.id].peso_vivo_medio_entrada_kg).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg</p>
+                          <p className="text-xs text-content-muted">Peso médio entrada</p>
+                          <p className="text-sm font-medium text-content-strong">{Number(ocupacaoPorPasto[editingPasto.id].peso_vivo_medio_entrada_kg).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg</p>
                         </div>
                       )}
                       {ocupacaoPorPasto[editingPasto.id].data_hora_entrada && (
                         <div>
-                          <p className="text-xs text-gray-500">Data de entrada</p>
-                          <p className="text-sm font-medium text-gray-800">{new Date(ocupacaoPorPasto[editingPasto.id].data_hora_entrada).toLocaleDateString('pt-BR')}</p>
+                          <p className="text-xs text-content-muted">Data de entrada</p>
+                          <p className="text-sm font-medium text-content-strong">{new Date(ocupacaoPorPasto[editingPasto.id].data_hora_entrada).toLocaleDateString('pt-BR')}</p>
                         </div>
                       )}
                     </div>
                     {ocupacaoPorPasto[editingPasto.id].desvio_percentual_atual != null && (
-                      <p className={`text-xs mt-1 ${ocupacaoPorPasto[editingPasto.id].meta_excedida ? 'text-red-600' : 'text-green-600'}`}>
+                      <p className={`text-xs mt-1 ${ocupacaoPorPasto[editingPasto.id].meta_excedida ? 'text-red-500' : 'text-green-500'}`}>
                         Desvio atual: {ocupacaoPorPasto[editingPasto.id].desvio_percentual_atual > 0 ? '+' : ''}{Number(ocupacaoPorPasto[editingPasto.id].desvio_percentual_atual).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
                       </p>
                     )}
                   </div>
                 ) : (
-                  <div className="rounded-xl p-4 bg-gray-50 border border-gray-200">
-                    <p className="text-sm text-gray-500">Nenhum lote ocupando este pasto no momento.</p>
+                  <div className="rounded-xl p-4 bg-surface-2 border border-border-base">
+                    <p className="text-sm text-content-muted">Nenhum lote ocupando este pasto no momento.</p>
                   </div>
                 )}
               </div>
@@ -1159,20 +1159,20 @@ export function Pastos() {
               >
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <div>
-                    <h3 className="font-semibold text-gray-800 text-base sm:text-lg">{pasto.nome}</h3>
+                    <h3 className="font-semibold text-content-strong text-base sm:text-lg">{pasto.nome}</h3>
                     {pasto.area_util_ha && (
-                      <p className="text-xs sm:text-sm text-gray-500">Área Útil: {pasto.area_util_ha} ha</p>
+                      <p className="text-xs sm:text-sm text-content-muted">Área Útil: {pasto.area_util_ha} ha</p>
                     )}
                   </div>
                   <div className="flex gap-2 items-center flex-wrap">
                     {ocupacaoPorPasto[pasto.id]?.meta_excedida && (
-                      <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 flex items-center gap-1">
+                      <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-700 dark:text-red-300 flex items-center gap-1">
                         ⚠️ Meta excedida
                       </span>
                     )}
                     <span
                       className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium self-start md:self-auto ${
-                        pasto.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        pasto.ativo ? 'bg-green-500/10 text-green-800 dark:text-green-200' : 'bg-red-500/10 text-red-800 dark:text-red-200'
                       }`}
                     >
                       {pasto.ativo ? 'Ativo' : 'Inativo'}
@@ -1181,34 +1181,34 @@ export function Pastos() {
                 </div>
                 <div className="space-y-2 mb-4 flex-grow">
                   {pasto.setor && (
-                    <p className="text-sm text-gray-500"><span className="font-medium">Setor:</span> {pasto.setor}</p>
+                    <p className="text-sm text-content-muted"><span className="font-medium">Setor:</span> {pasto.setor}</p>
                   )}
                   {pasto.tipo && (
-                    <p className="text-sm text-gray-500"><span className="font-medium">Sistema de Produção:</span> {pasto.tipo}</p>
+                    <p className="text-sm text-content-muted"><span className="font-medium">Sistema de Produção:</span> {pasto.tipo}</p>
                   )}
                   {pasto.area_total_ha && (
-                    <p className="text-sm text-gray-500"><span className="font-medium">Área Total:</span> {pasto.area_total_ha} ha</p>
+                    <p className="text-sm text-content-muted"><span className="font-medium">Área Total:</span> {pasto.area_total_ha} ha</p>
                   )}
                   {pasto.area_util_porcentagem && (
-                    <p className="text-sm text-gray-500"><span className="font-medium">Área Útil:</span> {pasto.area_util_porcentagem}%</p>
+                    <p className="text-sm text-content-muted"><span className="font-medium">Área Útil:</span> {pasto.area_util_porcentagem}%</p>
                   )}
                   {pasto.area_util_ha && (
-                    <p className="text-sm text-gray-500"><span className="font-medium">Área Útil (ha):</span> {pasto.area_util_ha} ha</p>
+                    <p className="text-sm text-content-muted"><span className="font-medium">Área Útil (ha):</span> {pasto.area_util_ha} ha</p>
                   )}
                   {pasto.especie && (
-                    <p className="text-sm text-gray-500"><span className="font-medium">Espécie:</span> {pasto.especie}</p>
+                    <p className="text-sm text-content-muted"><span className="font-medium">Espécie:</span> {pasto.especie}</p>
                   )}
                   {pasto.modulo_nome && (
-                    <p className="text-sm text-gray-500"><span className="font-medium">Módulo:</span> {pasto.modulo_nome}</p>
+                    <p className="text-sm text-content-muted"><span className="font-medium">Módulo:</span> {pasto.modulo_nome}</p>
                   )}
                   {pasto.metragem_cocho_m && (
-                    <p className="text-sm text-gray-500"><span className="font-medium">Metragem Cocho:</span> {pasto.metragem_cocho_m} m</p>
+                    <p className="text-sm text-content-muted"><span className="font-medium">Metragem Cocho:</span> {pasto.metragem_cocho_m} m</p>
                   )}
                   {pasto.nivel_degradacao && (
-                    <p className="text-sm text-gray-500"><span className="font-medium">Nível Degradação:</span> {pasto.nivel_degradacao}</p>
+                    <p className="text-sm text-content-muted"><span className="font-medium">Nível Degradação:</span> {pasto.nivel_degradacao}</p>
                   )}
                   {(pasto.altura_entrada_cm || pasto.altura_saida_cm) && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-content-muted">
                       <span className="font-medium">Alturas:</span>{' '}
                       {pasto.altura_entrada_cm && `Entrada: ${pasto.altura_entrada_cm} cm`}
                       {pasto.altura_entrada_cm && pasto.altura_saida_cm && ' | '}
@@ -1216,11 +1216,11 @@ export function Pastos() {
                     </p>
                   )}
                   {ocupacaoPorPasto[pasto.id] && (
-                    <div className="mt-2 pt-2 border-t border-gray-100">
-                      <p className="text-sm text-gray-500"><span className="font-medium">Lote:</span> {ocupacaoPorPasto[pasto.id].lote_nome}</p>
-                      <p className="text-sm text-gray-500"><span className="font-medium">Tempo de ocupação:</span> {ocupacaoPorPasto[pasto.id].periodo_ocupacao_dias} dias</p>
+                    <div className="mt-2 pt-2 border-t border-border-subtle">
+                      <p className="text-sm text-content-muted"><span className="font-medium">Lote:</span> {ocupacaoPorPasto[pasto.id].lote_nome}</p>
+                      <p className="text-sm text-content-muted"><span className="font-medium">Tempo de ocupação:</span> {ocupacaoPorPasto[pasto.id].periodo_ocupacao_dias} dias</p>
                       {ocupacaoPorPasto[pasto.id].meta_intervalo_ocupacao_dias && (
-                        <p className={`text-sm ${ocupacaoPorPasto[pasto.id].meta_excedida ? 'text-red-600' : 'text-gray-500'}`}>
+                        <p className={`text-sm ${ocupacaoPorPasto[pasto.id].meta_excedida ? 'text-red-500' : 'text-content-muted'}`}>
                           <span className="font-medium">Meta:</span> {ocupacaoPorPasto[pasto.id].meta_intervalo_ocupacao_dias} dias
                           {ocupacaoPorPasto[pasto.id].meta_excedida && (
                             <span className="ml-2">(⚠️ Excedida em {ocupacaoPorPasto[pasto.id].dias_acima_meta} dias)</span>
@@ -1232,7 +1232,7 @@ export function Pastos() {
                 </div>
                 <div className="flex gap-2 mt-auto pt-3">
                   <button
-                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 flex-1"
+                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-surface-3 text-content-strong focus:ring-gray-500 hover:shadow-md hover:bg-surface-3 flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleEdit(pasto)
@@ -1241,7 +1241,7 @@ export function Pastos() {
                     Editar
                   </button>
                   <button
-                    className={`rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 text-red-600 hover:text-red-700`}
+                    className={`rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-surface-3 text-content-strong focus:ring-gray-500 hover:shadow-md hover:bg-surface-3 text-red-500 hover:text-red-700`}
                     onClick={(e) => {
                       e.stopPropagation()
                       handleToggleActive(pasto)
@@ -1250,7 +1250,7 @@ export function Pastos() {
                     {pasto.ativo ? 'Desativar' : 'Ativar'}
                   </button>
                   <button
-                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 text-red-600 hover:text-red-700"
+                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-surface-3 text-content-strong focus:ring-gray-500 hover:shadow-md hover:bg-surface-3 text-red-500 hover:text-red-700"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteClick(pasto.id)
@@ -1268,17 +1268,17 @@ export function Pastos() {
               <button
                 onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
                 disabled={paginaSegura === 1}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 border border-surface-3 rounded-lg text-xs font-medium text-content-muted hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Anterior
               </button>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-content-muted">
                 Página {paginaSegura} de {totalPaginas}
               </span>
               <button
                 onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
                 disabled={paginaSegura === totalPaginas}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 border border-surface-3 rounded-lg text-xs font-medium text-content-muted hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Próxima
               </button>

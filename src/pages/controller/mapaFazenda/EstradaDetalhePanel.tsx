@@ -27,12 +27,12 @@ export function EstradaDetalhePanel({ detalhe, estradas, modoTelaCheia, onFechar
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">{detalhe.nome}</h2>
-              <p className="text-xs text-gray-500">Estrada interna</p>
+              <h2 className="text-lg font-bold text-content-strong">{detalhe.nome}</h2>
+              <p className="text-xs text-content-muted">Estrada interna</p>
             </div>
             <button
               onClick={onFechar}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-content-faint hover:text-content-muted"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -41,11 +41,11 @@ export function EstradaDetalhePanel({ detalhe, estradas, modoTelaCheia, onFechar
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Comprimento:</span>
+              <span className="text-content-muted">Comprimento:</span>
               <span className="font-medium">{comprimento}</span>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
+          <div className="mt-4 pt-3 border-t border-border-base space-y-2">
             <Button
               variant="secondary"
               onClick={() => onEditarGeometria(detalhe.id, detalhe.nome)}

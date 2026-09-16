@@ -1299,7 +1299,7 @@ export function CadastrosAuxiliares() {
     <div className="space-y-6 max-w-full min-w-0 overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Cadastros Auxiliares</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Cadastros Auxiliares</h2>
       </div>
 
       {/* Compact Category + Tab Bar */}
@@ -1312,7 +1312,7 @@ export function CadastrosAuxiliares() {
         const categoryOrder = ['Genética', 'Infraestrutura', 'Máquinas & Equipamentos', 'Saúde & Reprodução', 'Operacional']
         const activeCategory = tabs.find((t) => t.key === activeTab)?.category || categoryOrder[0]
         return (
-          <div className="border-b border-gray-200 pb-1 space-y-2">
+          <div className="border-b border-border-base pb-1 space-y-2">
             {/* Category pills */}
             <div className="flex flex-wrap gap-1">
               {categoryOrder.map((cat) => {
@@ -1328,7 +1328,7 @@ export function CadastrosAuxiliares() {
                     className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-full transition-colors min-h-[32px] ${
                       isActive
                         ? 'bg-primary text-white'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        : 'bg-surface-2 text-content-muted hover:bg-surface-3'
                     }`}
                   >
                     {cat}
@@ -1345,7 +1345,7 @@ export function CadastrosAuxiliares() {
                   className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2 text-sm font-medium rounded-lg transition-colors min-h-[40px] ${
                     activeTab === tab.key
                       ? 'bg-primary text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-surface-2 text-content-muted hover:bg-surface-3'
                   }`}
                 >
                   {tab.icon}
@@ -1360,11 +1360,11 @@ export function CadastrosAuxiliares() {
       {/* Active Tab Content */}
       <div className="space-y-4 max-w-full">
         {activeTab === 'funcionarios' && (
-          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="bg-surface-1 rounded-xl border border-border-base p-4 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-gray-800">Controle de acesso por funcionário</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-medium text-content-strong">Controle de acesso por funcionário</p>
+                <p className="text-xs text-content-muted">
                   {controleAcessoHabilitado
                     ? 'Ativado: app exige login do funcionário e mostra apenas cadernetas permitidas.'
                     : 'Desativado: app funciona sem login (qualquer pessoa vê todas as cadernetas).'}
@@ -1375,11 +1375,11 @@ export function CadastrosAuxiliares() {
                 disabled={controleAcessoLoading}
                 onClick={handleToggleControleAcesso}
                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors disabled:opacity-50 ${
-                  controleAcessoHabilitado ? 'bg-primary' : 'bg-gray-300'
+                  controleAcessoHabilitado ? 'bg-primary' : 'bg-surface-3'
                 }`}
               >
                 <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                  className={`inline-block h-5 w-5 transform rounded-full bg-surface-1 transition-transform ${
                     controleAcessoHabilitado ? 'translate-x-6' : 'translate-x-1'
                   }`}
                 />
@@ -1389,7 +1389,7 @@ export function CadastrosAuxiliares() {
         )}
 
         {activeTab === 'funcionarios' && controleAcessoHabilitado && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-surface-1 rounded-xl border border-border-base shadow-sm">
             <button
               type="button"
               onClick={() => setExpedienteExpandido(!expedienteExpandido)}
@@ -1397,8 +1397,8 @@ export function CadastrosAuxiliares() {
             >
               <div className="flex items-center gap-3">
                 <div className="text-left">
-                  <p className="text-sm font-medium text-gray-800">Horário de expediente</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-medium text-content-strong">Horário de expediente</p>
+                  <p className="text-xs text-content-muted">
                     {expedienteHabilitado
                       ? 'Ativado: fora do expediente o app bloqueia acesso.'
                       : 'Desativado: o app funciona 24h.'}
@@ -1410,12 +1410,12 @@ export function CadastrosAuxiliares() {
                   role="switch"
                   aria-checked={expedienteHabilitado}
                   onClick={(e) => { e.stopPropagation(); if (!expedienteLoading) handleToggleExpediente() }}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors cursor-pointer ${expedienteLoading ? 'opacity-50' : ''} ${expedienteHabilitado ? 'bg-primary' : 'bg-gray-300'}`}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors cursor-pointer ${expedienteLoading ? 'opacity-50' : ''} ${expedienteHabilitado ? 'bg-primary' : 'bg-surface-3'}`}
                 >
-                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${expedienteHabilitado ? 'translate-x-6' : 'translate-x-1'}`} />
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-surface-1 transition-transform ${expedienteHabilitado ? 'translate-x-6' : 'translate-x-1'}`} />
                 </div>
                 <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform ${expedienteExpandido ? 'rotate-180' : ''}`}
+                  className={`w-5 h-5 text-content-faint transition-transform ${expedienteExpandido ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1426,16 +1426,16 @@ export function CadastrosAuxiliares() {
             </button>
 
             {expedienteExpandido && expedienteHabilitado && (
-              <div className="space-y-4 border-t border-gray-100 p-4 pt-4">
-                <p className="text-xs text-gray-500 italic">
+              <div className="space-y-4 border-t border-border-subtle p-4 pt-4">
+                <p className="text-xs text-content-muted italic">
                   Resumo: {resumoExpediente(expedienteDias)}
                 </p>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fuso horário</label>
+                  <label className="block text-sm font-medium text-content mb-1">Fuso horário</label>
                   <select
                     value={expedienteTimezone}
                     onChange={(e) => setExpedienteTimezone(e.target.value)}
-                    className="w-full sm:max-w-xs border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-accent min-h-[44px]"
+                    className="w-full sm:max-w-xs border border-border-base rounded-lg px-3 py-2 text-sm focus:border-accent min-h-[44px]"
                   >
                     {TIMEZONES_BR.map((tz) => (
                       <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -1444,7 +1444,7 @@ export function CadastrosAuxiliares() {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-700">Dias da semana</p>
+                  <p className="text-sm font-medium text-content">Dias da semana</p>
                   {DIAS_SEMANA.map((nome, dia) => (
                     <div key={dia} className="flex items-center gap-3 py-1">
                       <label className="flex items-center gap-2 w-28 shrink-0">
@@ -1452,9 +1452,9 @@ export function CadastrosAuxiliares() {
                           type="checkbox"
                           checked={expedienteDias[dia]?.ativo ?? false}
                           onChange={(e) => handleExpedienteDiaChange(dia, 'ativo', e.target.checked)}
-                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                          className="w-4 h-4 text-primary dark:text-primary-light border-surface-3 rounded focus:ring-primary"
                         />
-                        <span className="text-sm text-gray-700">{nome}</span>
+                        <span className="text-sm text-content">{nome}</span>
                       </label>
                       {(expedienteDias[dia]?.ativo) && (
                         <div className="flex items-center gap-2 flex-1">
@@ -1462,19 +1462,19 @@ export function CadastrosAuxiliares() {
                             type="time"
                             value={expedienteDias[dia]?.inicio || '06:00'}
                             onChange={(e) => handleExpedienteDiaChange(dia, 'inicio', e.target.value)}
-                            className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:border-accent"
+                            className="border border-border-base rounded-lg px-2 py-1 text-sm bg-surface-1 text-content-strong focus:border-accent"
                           />
-                          <span className="text-xs text-gray-400">até</span>
+                          <span className="text-xs text-content-faint">até</span>
                           <input
                             type="time"
                             value={expedienteDias[dia]?.fim || '18:00'}
                             onChange={(e) => handleExpedienteDiaChange(dia, 'fim', e.target.value)}
-                            className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:border-accent"
+                            className="border border-border-base rounded-lg px-2 py-1 text-sm bg-surface-1 text-content-strong focus:border-accent"
                           />
                         </div>
                       )}
                       {!(expedienteDias[dia]?.ativo) && (
-                        <span className="text-xs text-gray-400">Sem expediente</span>
+                        <span className="text-xs text-content-faint">Sem expediente</span>
                       )}
                     </div>
                   ))}
@@ -1498,28 +1498,28 @@ export function CadastrosAuxiliares() {
 
         {/* Search + Add (oculto nas abas com UI própria: equipes e setores) */}
         {activeTab !== 'equipes' && activeTab !== 'setores' && (
-        <div className="sticky top-0 z-10 bg-gray-50 py-2 -mx-1 px-1 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+        <div className="sticky top-0 z-10 bg-surface-2 py-2 -mx-1 px-1 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
             <Input
               type="text"
               placeholder={currentTab.searchPlaceholder}
               value={state.searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10"
+              className="w-full sm:max-w-xs border-border-base focus:border-accent h-10"
             />
             {activeTab === 'funcionarios' && (
-              <label className="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
+              <label className="flex items-center gap-2 text-sm text-content whitespace-nowrap">
                 <input
                   type="checkbox"
                   checked={mostrarApenasComAcesso}
                   onChange={(e) => setMostrarApenasComAcesso(e.target.checked)}
-                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                  className="w-4 h-4 text-primary dark:text-primary-light border-surface-3 rounded focus:ring-primary"
                 />
                 Com acesso ao app
               </label>
             )}
             {activeTab === 'funcionarios' && filteredItems.length > 0 && (
-              <span className="text-xs text-gray-500 whitespace-nowrap">
+              <span className="text-xs text-content-muted whitespace-nowrap">
                 {filteredItems.length} {filteredItems.length === 1 ? 'funcionário' : 'funcionários'}
               </span>
             )}
@@ -1557,14 +1557,14 @@ export function CadastrosAuxiliares() {
 
         {/* Import Messages */}
         {importError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
             <p className="font-medium">Erro na importação:</p>
             <pre className="text-sm mt-1 whitespace-pre-wrap">{importError}</pre>
           </div>
         )}
 
         {importSuccess && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+          <div className="bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg">
             <p className="font-medium whitespace-pre-line">{importSuccess}</p>
           </div>
         )}
@@ -1580,7 +1580,7 @@ export function CadastrosAuxiliares() {
                   placeholder="Buscar setor..."
                   value={state.searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10"
+                  className="w-full sm:max-w-xs border-border-base focus:border-accent h-10"
                 />
                 <Button
                   onClick={() => setSetorEmEdicao({ id: null, nome: '', funcionario_ids: [] })}
@@ -1593,8 +1593,8 @@ export function CadastrosAuxiliares() {
 
             {/* Formulário inline de criar/editar setor */}
             {setorEmEdicao && (
-              <Card className="bg-white p-4 border-0 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">
+              <Card className="bg-surface-1 p-4 border-0 shadow-sm">
+                <h3 className="text-lg font-semibold text-content-strong mb-3">
                   {setorEmEdicao.id ? 'Editar Setor' : 'Novo Setor'}
                 </h3>
                 <div className="space-y-4">
@@ -1605,7 +1605,7 @@ export function CadastrosAuxiliares() {
                       onChange={(e) => setSetorEmEdicao({ ...setorEmEdicao, nome: e.target.value })}
                       placeholder="Nome do setor"
                       autoFocus
-                      className="border-gray-200 focus:border-accent"
+                      className="border-border-base focus:border-accent"
                     />
                     <Button onClick={handleSalvarSetor} disabled={salvandoSetor || !setorEmEdicao.nome.trim()} className="flex-shrink-0">
                       {salvandoSetor ? 'Salvando...' : 'Salvar'}
@@ -1615,7 +1615,7 @@ export function CadastrosAuxiliares() {
                     </Button>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-content mb-1">
                       Membros do setor
                     </label>
                     <MultiSelect
@@ -1627,7 +1627,7 @@ export function CadastrosAuxiliares() {
                       placeholder="Selecione os funcionários deste setor"
                     />
                     {setorEmEdicao.funcionario_ids.length > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-content-muted mt-1">
                         {setorEmEdicao.funcionario_ids.length} funcionário(s) selecionado(s)
                       </p>
                     )}
@@ -1638,8 +1638,8 @@ export function CadastrosAuxiliares() {
 
             {/* Lista de setores com seus funcionários */}
             {setores.length === 0 && !setorEmEdicao ? (
-              <Card className="bg-white p-8 border-0 shadow-sm text-center">
-                <p className="text-gray-600 mb-4">Nenhum setor cadastrado</p>
+              <Card className="bg-surface-1 p-8 border-0 shadow-sm text-center">
+                <p className="text-content-muted mb-4">Nenhum setor cadastrado</p>
                 <Button onClick={() => setSetorEmEdicao({ id: null, nome: '', funcionario_ids: [] })}>
                   Criar Primeiro Setor
                 </Button>
@@ -1649,14 +1649,14 @@ export function CadastrosAuxiliares() {
                 {setoresOrdenados.map((setor) => {
                   const membros = funcionariosComSetor.filter((f) => f.setor_ids.includes(setor.id) && f.ativo)
                   return (
-                    <Card key={setor.id} className="bg-white p-4 border-0 shadow-sm">
+                    <Card key={setor.id} className="bg-surface-1 p-4 border-0 shadow-sm">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 text-primary dark:text-primary-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5" />
                           </svg>
-                          <h3 className="font-semibold text-gray-800">{setor.nome}</h3>
-                          <span className="text-xs text-gray-500">({membros.length} {membros.length === 1 ? 'membro' : 'membros'})</span>
+                          <h3 className="font-semibold text-content-strong">{setor.nome}</h3>
+                          <span className="text-xs text-content-muted">({membros.length} {membros.length === 1 ? 'membro' : 'membros'})</span>
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -1667,13 +1667,13 @@ export function CadastrosAuxiliares() {
                                 .filter((f) => f.setor_ids.includes(setor.id) && f.ativo)
                                 .map((f) => f.id),
                             })}
-                            className="text-xs text-primary hover:underline"
+                            className="text-xs text-primary dark:text-primary-light hover:underline"
                           >
                             Editar
                           </button>
                           <button
                             onClick={() => handleExcluirSetor(setor.id)}
-                            className="text-xs text-red-600 hover:underline"
+                            className="text-xs text-red-500 hover:underline"
                           >
                             Excluir
                           </button>
@@ -1683,13 +1683,13 @@ export function CadastrosAuxiliares() {
                       {membros.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {membros.map((m) => (
-                            <span key={m.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700">
+                            <span key={m.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-surface-2 text-content">
                               {m.nome}
-                              {m.cargo && <span className="text-gray-400">· {m.cargo}</span>}
+                              {m.cargo && <span className="text-content-faint">· {m.cargo}</span>}
                               <button
                                 onClick={() => handleRemoverDoSetor(m.id, setor.id)}
                                 disabled={atribuindoFunc === m.id}
-                                className="text-gray-400 hover:text-red-500 ml-0.5"
+                                className="text-content-faint hover:text-red-500 ml-0.5"
                                 title="Remover do setor"
                               >
                                 ×
@@ -1698,7 +1698,7 @@ export function CadastrosAuxiliares() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-400 italic">Nenhum membro neste setor</p>
+                        <p className="text-xs text-content-faint italic">Nenhum membro neste setor</p>
                       )}
                     </Card>
                   )
@@ -1709,21 +1709,21 @@ export function CadastrosAuxiliares() {
                   const semSetor = funcionariosComSetor.filter((f) => f.setor_ids.length === 0 && f.ativo)
                   if (semSetor.length === 0) return null
                   return (
-                    <Card className="bg-white p-4 border-0 shadow-sm">
-                      <h3 className="font-semibold text-gray-800 mb-1">Funcionários sem setor</h3>
-                      <p className="text-xs text-gray-500 mb-3">Atribua cada funcionário a um setor</p>
+                    <Card className="bg-surface-1 p-4 border-0 shadow-sm">
+                      <h3 className="font-semibold text-content-strong mb-1">Funcionários sem setor</h3>
+                      <p className="text-xs text-content-muted mb-3">Atribua cada funcionário a um setor</p>
                       <div className="space-y-2">
                         {semSetor.map((f) => (
-                          <div key={f.id} className="flex items-center justify-between gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                          <div key={f.id} className="flex items-center justify-between gap-2 py-1.5 border-b border-border-subtle last:border-0">
                             <div className="min-w-0">
-                              <span className="text-sm font-medium text-gray-800">{f.nome}</span>
-                              {f.cargo && <span className="text-xs text-gray-400 ml-2">{f.cargo}</span>}
+                              <span className="text-sm font-medium text-content-strong">{f.nome}</span>
+                              {f.cargo && <span className="text-xs text-content-faint ml-2">{f.cargo}</span>}
                             </div>
                             <select
                               value=""
                               onChange={(e) => e.target.value && handleAtribuirSetor(f.id, e.target.value)}
                               disabled={atribuindoFunc === f.id}
-                              className="px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-accent bg-white min-h-[36px]"
+                              className="px-2 py-1 border border-surface-3 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-accent bg-surface-1 min-h-[36px]"
                             >
                               <option value="">Atribuir...</option>
                               {setores.map((s) => (
@@ -1743,22 +1743,22 @@ export function CadastrosAuxiliares() {
 
         {/* Form (não mostra para a aba setores, que tem UI própria) */}
         {state.showForm && activeTab !== 'setores' && (
-          <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">
+          <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm">
+            <h3 className="text-lg sm:text-xl font-semibold text-content-strong mb-4">
               {state.editingItem ? `Editar ${currentTab.singular || currentTab.label}` : `${novoArtigo(currentTab)} ${currentTab.singular || currentTab.label}`}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {currentTab.fields.filter((field) => !field.showIf || field.showIf(state.formData)).map((field) => (
                   <div key={field.name}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                    <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                       {field.label} {field.required && <span className="text-red-500">*</span>}
                     </label>
                     {field.name === 'setor_id' ? (
                       <select
                         value={state.formData[field.name] || ''}
                         onChange={(e) => setFormField(field.name, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white"
+                        className="w-full px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-surface-1"
                       >
                         <option value="">{field.placeholder || 'Selecione'}</option>
                         {setores.map((setor) => (
@@ -1770,7 +1770,7 @@ export function CadastrosAuxiliares() {
                         value={state.formData[field.name] || ''}
                         onChange={(e) => setFormField(field.name, e.target.value)}
                         required={field.required}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white"
+                        className="w-full px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-surface-1"
                       >
                         <option value="">Selecione</option>
                         {field.options.map((opt) => (
@@ -1789,7 +1789,7 @@ export function CadastrosAuxiliares() {
                         required={field.required}
                         placeholder={field.placeholder}
                         autoComplete="off"
-                        className="border-gray-200 focus:border-accent min-h-[44px]"
+                        className="border-border-base focus:border-accent min-h-[44px]"
                       />
                     ) : (
                       <Input
@@ -1799,29 +1799,29 @@ export function CadastrosAuxiliares() {
                         required={field.required}
                         placeholder={field.placeholder}
                         autoComplete="off"
-                        className="border-gray-200 focus:border-accent min-h-[44px]"
+                        className="border-border-base focus:border-accent min-h-[44px]"
                       />
                     )}
                   </div>
                 ))}
 
                 {activeTab === 'funcionarios' && (
-                  <div className="md:col-span-2 space-y-4 border-t border-gray-100 pt-4 mt-2">
+                  <div className="md:col-span-2 space-y-4 border-t border-border-subtle pt-4 mt-2">
                     <div className="flex items-center gap-3 py-2">
                       <button
                         type="button"
                         onClick={() => setFuncionarioRbac({ ...funcionarioRbac, acessa_app: !funcionarioRbac.acessa_app })}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          funcionarioRbac.acessa_app ? 'bg-primary' : 'bg-gray-300'
+                          funcionarioRbac.acessa_app ? 'bg-primary' : 'bg-surface-3'
                         }`}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          className={`inline-block h-4 w-4 transform rounded-full bg-surface-1 transition-transform ${
                             funcionarioRbac.acessa_app ? 'translate-x-6' : 'translate-x-1'
                           }`}
                         />
                       </button>
-                      <label className="text-sm font-medium text-gray-700">
+                      <label className="text-sm font-medium text-content">
                         Acessa o app das cadernetas
                       </label>
                     </div>
@@ -1829,7 +1829,7 @@ export function CadastrosAuxiliares() {
                     {funcionarioRbac.acessa_app && (
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                          <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                             PIN {state.editingItem?.pin_hash ? '(deixe em branco para manter)' : '*'}
                           </label>
                           <Input
@@ -1845,14 +1845,14 @@ export function CadastrosAuxiliares() {
                             }}
                             placeholder="4 dígitos"
                             autoComplete="new-password"
-                            className={`focus:border-accent min-h-[44px] ${funcionarioErrors.pin ? 'border-red-400' : 'border-gray-200'}`}
+                            className={`focus:border-accent min-h-[44px] ${funcionarioErrors.pin ? 'border-red-400' : 'border-border-base'}`}
                           />
-                          {funcionarioErrors.pin && <p className="text-xs text-red-600 mt-1">{funcionarioErrors.pin}</p>}
+                          {funcionarioErrors.pin && <p className="text-xs text-red-500 mt-1">{funcionarioErrors.pin}</p>}
                         </div>
 
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <label className="block text-sm font-medium text-gray-700">
+                            <label className="block text-sm font-medium text-content">
                               Cadernetas permitidas *
                             </label>
                             <button
@@ -1866,7 +1866,7 @@ export function CadastrosAuxiliares() {
                                       : CADERNETAS.map((c) => c.id),
                                 })
                               }
-                              className="text-xs text-primary hover:underline"
+                              className="text-xs text-primary dark:text-primary-light hover:underline"
                             >
                               {funcionarioRbac.cadernetas_permitidas.length === CADERNETAS.length
                                 ? 'Limpar seleção'
@@ -1874,13 +1874,13 @@ export function CadastrosAuxiliares() {
                             </button>
                           </div>
                           {funcionarioErrors.cadernetas && (
-                            <p className="text-xs text-red-600 mb-2">{funcionarioErrors.cadernetas}</p>
+                            <p className="text-xs text-red-500 mb-2">{funcionarioErrors.cadernetas}</p>
                           )}
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {CADERNETAS.map((caderneta) => (
                               <label
                                 key={caderneta.id}
-                                className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
+                                className="flex items-center gap-2 p-2 border border-border-base rounded-lg cursor-pointer hover:bg-surface-2"
                               >
                                 <input
                                   type="checkbox"
@@ -1900,16 +1900,16 @@ export function CadastrosAuxiliares() {
                                       })
                                     }
                                   }}
-                                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                  className="w-4 h-4 text-primary dark:text-primary-light border-surface-3 rounded focus:ring-primary"
                                 />
-                                <span className="text-xs text-gray-700">{caderneta.label}</span>
+                                <span className="text-xs text-content">{caderneta.label}</span>
                               </label>
                             ))}
                           </div>
                         </div>
 
                         {expedienteHabilitado && (
-                          <div className="space-y-3 border-t border-gray-100 pt-3">
+                          <div className="space-y-3 border-t border-border-subtle pt-3">
                             <div className="flex items-center gap-3">
                               <button
                                 type="button"
@@ -1920,19 +1920,19 @@ export function CadastrosAuxiliares() {
                                   })
                                 }
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                  funcionarioRbac.expediente_override ? 'bg-primary' : 'bg-gray-300'
+                                  funcionarioRbac.expediente_override ? 'bg-primary' : 'bg-surface-3'
                                 }`}
                               >
                                 <span
-                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-surface-1 transition-transform ${
                                     funcionarioRbac.expediente_override ? 'translate-x-6' : 'translate-x-1'
                                   }`}
                                 />
                               </button>
-                              <label className="text-sm font-medium text-gray-700">
+                              <label className="text-sm font-medium text-content">
                                 Horário personalizado
                               </label>
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-content-faint">
                                 {funcionarioRbac.expediente_override ? 'Usa horário próprio' : 'Usa horário da fazenda'}
                               </span>
                             </div>
@@ -1941,7 +1941,7 @@ export function CadastrosAuxiliares() {
                               const override = funcionarioRbac.expediente_override
                               return (
                               <div className="space-y-2 pl-2">
-                                <p className="text-xs text-gray-500 italic">
+                                <p className="text-xs text-content-muted italic">
                                   Resumo: {resumoExpediente(override)}
                                 </p>
                                 {DIAS_SEMANA.map((nome, dia) => (
@@ -1959,9 +1959,9 @@ export function CadastrosAuxiliares() {
                                             },
                                           })
                                         }
-                                        className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        className="w-4 h-4 text-primary dark:text-primary-light border-surface-3 rounded focus:ring-primary"
                                       />
-                                      <span className="text-xs text-gray-700">{nome}</span>
+                                      <span className="text-xs text-content">{nome}</span>
                                     </label>
                                     {(override[dia]?.ativo) && (
                                       <div className="flex items-center gap-2 flex-1">
@@ -1977,9 +1977,9 @@ export function CadastrosAuxiliares() {
                                               },
                                             })
                                           }
-                                          className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:border-accent"
+                                          className="border border-border-base rounded-lg px-2 py-1 text-xs bg-surface-1 text-content-strong focus:border-accent"
                                         />
-                                        <span className="text-xs text-gray-400">até</span>
+                                        <span className="text-xs text-content-faint">até</span>
                                         <input
                                           type="time"
                                           value={override[dia]?.fim || '18:00'}
@@ -1992,7 +1992,7 @@ export function CadastrosAuxiliares() {
                                               },
                                             })
                                           }
-                                          className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:border-accent"
+                                          className="border border-border-base rounded-lg px-2 py-1 text-xs bg-surface-1 text-content-strong focus:border-accent"
                                         />
                                       </div>
                                     )}
@@ -2028,8 +2028,8 @@ export function CadastrosAuxiliares() {
             <CardSkeleton />
           </div>
         ) : activeTab !== 'equipes' && activeTab !== 'setores' && !state.showForm && filteredItems.length === 0 ? (
-          <Card className="bg-white p-8 sm:p-12 border-0 shadow-sm text-center">
-            <p className="text-gray-600 mb-4 text-sm sm:text-base">{currentTab.gender === 'f' ? 'Nenhuma' : 'Nenhum'} {(currentTab.singular || currentTab.label).toLowerCase()} cadastrado</p>
+          <Card className="bg-surface-1 p-8 sm:p-12 border-0 shadow-sm text-center">
+            <p className="text-content-muted mb-4 text-sm sm:text-base">{currentTab.gender === 'f' ? 'Nenhuma' : 'Nenhum'} {(currentTab.singular || currentTab.label).toLowerCase()} cadastrado</p>
             <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
               Criar Primeir{currentTab.gender === 'f' ? 'a' : 'o'} {currentTab.singular || currentTab.label}
             </Button>
@@ -2062,14 +2062,14 @@ export function CadastrosAuxiliares() {
                 {activeTab === 'funcionarios' && item.acessa_app && (
                   <div className="mb-3 space-y-2">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary dark:text-primary-light">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                         Acessa o app
                       </span>
                       {item.expediente_override && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800" title="Horário personalizado">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-200" title="Horário personalizado">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
@@ -2083,7 +2083,7 @@ export function CadastrosAuxiliares() {
                       const todas = total >= conhecidas || total >= conhecidas * 0.9
                       if (todas) {
                         return (
-                          <p className="text-xs text-gray-500 font-medium">
+                          <p className="text-xs text-content-muted font-medium">
                             Cadernetas: todas ({total})
                           </p>
                         )
@@ -2092,14 +2092,14 @@ export function CadastrosAuxiliares() {
                       return (
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-xs text-gray-500 font-medium">
+                            <p className="text-xs text-content-muted font-medium">
                               Cadernetas ({total}):
                             </p>
                             {muitas && (
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); setCadernetasExpandidas(prev => ({ ...prev, [item.id]: !prev[item.id] })) }}
-                                className="text-xs text-primary hover:underline"
+                                className="text-xs text-primary dark:text-primary-light hover:underline"
                               >
                                 {cadernetasExpandidas[item.id] ? 'ocultar' : 'ver lista'}
                               </button>
@@ -2110,7 +2110,7 @@ export function CadastrosAuxiliares() {
                               {item.cadernetas_permitidas.map((id: string) => {
                                 const label = CADERNETAS.find((c) => c.id === id)?.label || id
                                 return (
-                                  <span key={id} className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
+                                  <span key={id} className="px-2 py-0.5 rounded-full text-xs bg-surface-2 text-content">
                                     {label}
                                   </span>
                                 )
@@ -2124,14 +2124,14 @@ export function CadastrosAuxiliares() {
                 )}
                 {activeTab === 'funcionarios' && !item.acessa_app && (
                   <div className="mb-3">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-surface-2 text-content-muted">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                       </svg>
                       Sem acesso ao app
                     </span>
                     {item.cargo && (
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs text-content-muted mt-2">
                         <span className="font-medium">Cargo:</span> {item.cargo}
                       </p>
                     )}
@@ -2153,7 +2153,7 @@ export function CadastrosAuxiliares() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="flex-1 min-w-[70px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 text-gray-700 hover:bg-gray-300"
+                      className="flex-1 min-w-[70px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 text-content hover:bg-surface-3"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleToggleActive(item)
@@ -2182,7 +2182,7 @@ export function CadastrosAuxiliares() {
 
           {totalPaginas > 1 && (
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-content-muted">
                 {activeTab === 'funcionarios'
                   ? `Mostrando ${(paginaSegura - 1) * ITENS_POR_PAGINA + 1}-${Math.min(paginaSegura * ITENS_POR_PAGINA, filteredItems.length)} de ${filteredItems.length}`
                   : `Mostrando ${(paginaSegura - 1) * ITENS_POR_PAGINA + 1}-${Math.min(paginaSegura * ITENS_POR_PAGINA, filteredItems.length)} de ${filteredItems.length}`}
@@ -2191,17 +2191,17 @@ export function CadastrosAuxiliares() {
                 <button
                   onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
                   disabled={paginaSegura === 1}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 border border-surface-3 rounded-lg text-xs font-medium text-content-muted hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Anterior
                 </button>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-content-muted">
                   Página {paginaSegura} de {totalPaginas}
                 </span>
                 <button
                   onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
                   disabled={paginaSegura === totalPaginas}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 border border-surface-3 rounded-lg text-xs font-medium text-content-muted hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Próxima
                 </button>
@@ -2232,11 +2232,11 @@ export function CadastrosAuxiliares() {
         size="sm"
       >
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-            <span className="text-2xl text-blue-600">ℹ️</span>
+          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-surface-2 border border-border-base flex items-center justify-center">
+            <span className="text-2xl text-primary dark:text-primary-light">ℹ️</span>
           </div>
           <div className="flex-1">
-            <p className="text-gray-700">
+            <p className="text-content">
               Cadastre pelo menos um funcionário com acesso ao app antes de ativar o controle de acesso.
             </p>
           </div>

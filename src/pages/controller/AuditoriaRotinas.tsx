@@ -202,11 +202,11 @@ export function AuditoriaRotinas() {
 
   const statusBadge = (status: StatusExecucao) => {
     const map: Record<StatusExecucao, { label: string; className: string }> = {
-      no_horario: { label: 'No horário', className: 'bg-green-100 text-green-800' },
-      atrasado: { label: 'Atrasado', className: 'bg-red-100 text-red-800' },
-      antecipado: { label: 'Antecipado', className: 'bg-yellow-100 text-yellow-800' },
-      nao_executado: { label: 'Não executado', className: 'bg-gray-100 text-gray-700' },
-      dispensado: { label: 'Dispensado', className: 'bg-blue-100 text-blue-800' },
+      no_horario: { label: 'No horário', className: 'bg-green-500/10 text-green-800 dark:text-green-200' },
+      atrasado: { label: 'Atrasado', className: 'bg-red-500/10 text-red-800 dark:text-red-200' },
+      antecipado: { label: 'Antecipado', className: 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-200' },
+      nao_executado: { label: 'Não executado', className: 'bg-surface-2 text-content' },
+      dispensado: { label: 'Dispensado', className: 'bg-primary/10 text-primary dark:text-primary-light' },
     }
     const config = map[status] || map.nao_executado
     return (
@@ -245,16 +245,16 @@ export function AuditoriaRotinas() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Auditoria de Rotinas</h1>
-          <p className="text-sm text-gray-600 mt-1">Acompanhe a execução das rotinas pelos funcionários.</p>
+          <h1 className="text-2xl font-bold text-content-strong">Auditoria de Rotinas</h1>
+          <p className="text-sm text-content-muted mt-1">Acompanhe a execução das rotinas pelos funcionários.</p>
         </div>
         <Button onClick={() => setDispensarModal((prev) => ({ ...prev, open: true }))}>+ Dispensar dia</Button>
       </div>
 
-      <Card className="bg-white p-5">
+      <Card className="bg-surface-1 p-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Funcionário</label>
+            <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Funcionário</label>
             <Select
               options={funcionarioOptions}
               value={filtros.funcionarioId}
@@ -262,7 +262,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data início</label>
+            <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data início</label>
             <Input
               type="date"
               value={filtros.dataInicio}
@@ -271,7 +271,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data fim</label>
+            <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data fim</label>
             <Input
               type="date"
               value={filtros.dataFim}
@@ -280,7 +280,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Caderneta</label>
+            <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Caderneta</label>
             <Select
               options={CADERNETA_OPTIONS}
               value={filtros.cadernetaId}
@@ -288,7 +288,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Status</label>
+            <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Status</label>
             <Select
               options={STATUS_OPTIONS}
               value={filtros.status}
@@ -299,44 +299,44 @@ export function AuditoriaRotinas() {
       </Card>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="bg-white p-4">
-          <p className="text-xs text-gray-500 uppercase">Programadas</p>
-          <p className="text-2xl font-bold text-gray-800">{resumoGeral.programadas}</p>
+        <Card className="bg-surface-1 p-4">
+          <p className="text-xs text-content-muted uppercase">Programadas</p>
+          <p className="text-2xl font-bold text-content-strong">{resumoGeral.programadas}</p>
         </Card>
-        <Card className="bg-white p-4">
-          <p className="text-xs text-gray-500 uppercase">No horário</p>
-          <p className="text-2xl font-bold text-green-700">{resumoGeral.no_horario}</p>
+        <Card className="bg-surface-1 p-4">
+          <p className="text-xs text-content-muted uppercase">No horário</p>
+          <p className="text-2xl font-bold text-green-700 dark:text-green-300">{resumoGeral.no_horario}</p>
         </Card>
-        <Card className="bg-white p-4">
-          <p className="text-xs text-gray-500 uppercase">Atrasadas</p>
-          <p className="text-2xl font-bold text-red-700">{resumoGeral.atrasadas}</p>
+        <Card className="bg-surface-1 p-4">
+          <p className="text-xs text-content-muted uppercase">Atrasadas</p>
+          <p className="text-2xl font-bold text-red-700 dark:text-red-300">{resumoGeral.atrasadas}</p>
         </Card>
-        <Card className="bg-white p-4">
-          <p className="text-xs text-gray-500 uppercase">Antecipadas</p>
-          <p className="text-2xl font-bold text-yellow-700">{resumoGeral.antecipadas}</p>
+        <Card className="bg-surface-1 p-4">
+          <p className="text-xs text-content-muted uppercase">Antecipadas</p>
+          <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{resumoGeral.antecipadas}</p>
         </Card>
-        <Card className="bg-white p-4">
-          <p className="text-xs text-gray-500 uppercase">Não executadas</p>
-          <p className="text-2xl font-bold text-gray-600">{resumoGeral.nao_executadas}</p>
+        <Card className="bg-surface-1 p-4">
+          <p className="text-xs text-content-muted uppercase">Não executadas</p>
+          <p className="text-2xl font-bold text-content-muted">{resumoGeral.nao_executadas}</p>
         </Card>
-        <Card className="bg-white p-4">
-          <p className="text-xs text-gray-500 uppercase">Dispensadas</p>
-          <p className="text-2xl font-bold text-blue-700">{resumoGeral.dispensadas}</p>
+        <Card className="bg-surface-1 p-4">
+          <p className="text-xs text-content-muted uppercase">Dispensadas</p>
+          <p className="text-2xl font-bold text-primary dark:text-primary-light">{resumoGeral.dispensadas}</p>
         </Card>
       </div>
 
-      <Card className="bg-white p-0 overflow-hidden">
+      <Card className="bg-surface-1 p-0 overflow-hidden">
         {loading ? (
           <div className="p-5 space-y-4">
             <TableSkeleton rows={5} />
           </div>
         ) : execucoes.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">Nenhuma execução encontrada para os filtros.</div>
+          <div className="p-8 text-center text-content-muted">Nenhuma execução encontrada para os filtros.</div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+                <thead className="bg-surface-2 text-content-muted font-medium border-b border-border-base">
                   <tr>
                     <th className="px-4 py-3">Funcionário</th>
                     <th className="px-4 py-3">Caderneta</th>
@@ -349,23 +349,23 @@ export function AuditoriaRotinas() {
                     <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border-subtle">
                   {execucoes.map((exec) => (
-                    <tr key={exec.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-800">{exec.funcionario_nome}</td>
-                      <td className="px-4 py-3 text-gray-700">
+                    <tr key={exec.id} className="hover:bg-surface-2">
+                      <td className="px-4 py-3 font-medium text-content-strong">{exec.funcionario_nome}</td>
+                      <td className="px-4 py-3 text-content">
                         {CADERNETAS.find((c) => c.id === exec.caderneta_id)?.label || exec.caderneta_id}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">{formatDate(exec.data)}</td>
-                      <td className="px-4 py-3 text-gray-700">{formatTime(exec.horario_programado)}</td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-content">{formatDate(exec.data)}</td>
+                      <td className="px-4 py-3 text-content">{formatTime(exec.horario_programado)}</td>
+                      <td className="px-4 py-3 text-content">
                         {formatDateTime(exec.primeiro_acesso, exec.primeiro_acesso_local)}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-content">
                         {formatDateTime(exec.primeiro_registro, exec.primeiro_registro_local)}
                       </td>
                       <td className="px-4 py-3">{statusBadge(exec.status)}</td>
-                      <td className="px-4 py-3 text-gray-700 max-w-xs truncate" title={exec.observacao || ''}>
+                      <td className="px-4 py-3 text-content max-w-xs truncate" title={exec.observacao || ''}>
                         {exec.observacao || '-'}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -398,8 +398,8 @@ export function AuditoriaRotinas() {
                 </tbody>
               </table>
             </div>
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-gray-100">
-              <p className="text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-border-subtle">
+              <p className="text-sm text-content-muted">
                 Página {page} de {totalPages || 1} — {total} registros
               </p>
               <div className="flex gap-2">
@@ -433,7 +433,7 @@ export function AuditoriaRotinas() {
         size="md"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-content">
             Informe o motivo da justificativa para{' '}
             <strong>{CADERNETAS.find((c) => c.id === justificarModal.execucao?.caderneta_id)?.label}</strong> em{' '}
             {justificarModal.execucao?.data && formatDate(justificarModal.execucao.data)}.
@@ -441,10 +441,10 @@ export function AuditoriaRotinas() {
           <textarea
             value={justificarModal.motivo}
             onChange={(e) => setJustificarModal((prev) => ({ ...prev, motivo: e.target.value }))}
-            className="w-full min-h-[120px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-full min-h-[120px] px-3 py-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             placeholder="Motivo da justificativa"
           />
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-border-subtle">
             <Button
               variant="secondary"
               onClick={() => setJustificarModal({ open: false, execucao: null, motivo: '', salvando: false })}
@@ -474,21 +474,21 @@ export function AuditoriaRotinas() {
               <CardSkeleton />
             </div>
           ) : historicoModal.historico.length === 0 ? (
-            <p className="text-sm text-gray-500">Nenhuma alteração manual registrada.</p>
+            <p className="text-sm text-content-muted">Nenhuma alteração manual registrada.</p>
           ) : (
             historicoModal.historico.map((h) => (
-              <div key={h.id} className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-800">
+              <div key={h.id} className="p-3 bg-surface-2 rounded-lg">
+                <p className="text-sm font-medium text-content-strong">
                   {h.acao === 'justificativa' ? 'Justificativa' : 'Dispensa'}
                 </p>
-                <p className="text-sm text-gray-700 mt-1">{h.motivo}</p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-sm text-content mt-1">{h.motivo}</p>
+                <p className="text-xs text-content-muted mt-1">
                   {new Date(h.created_at).toLocaleString('pt-BR')}
                 </p>
               </div>
             ))
           )}
-          <div className="flex justify-end pt-4 border-t border-gray-100">
+          <div className="flex justify-end pt-4 border-t border-border-subtle">
             <Button
               variant="secondary"
               onClick={() => setHistoricoModal({ open: false, execucao: null, historico: [], loading: false })}
@@ -517,7 +517,7 @@ export function AuditoriaRotinas() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Funcionário</label>
+            <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Funcionário</label>
             <Select
               options={funcionarioOptions}
               value={dispensarModal.funcionarioId}
@@ -525,7 +525,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Caderneta</label>
+            <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Caderneta</label>
             <Select
               options={CADERNETA_OPTIONS}
               value={dispensarModal.cadernetaId}
@@ -533,7 +533,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data</label>
+            <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data</label>
             <Input
               type="date"
               value={dispensarModal.data}
@@ -542,15 +542,15 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Motivo</label>
+            <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Motivo</label>
             <textarea
               value={dispensarModal.motivo}
               onChange={(e) => setDispensarModal((prev) => ({ ...prev, motivo: e.target.value }))}
-              className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="w-full min-h-[100px] px-3 py-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               placeholder="Motivo da dispensa"
             />
           </div>
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-border-subtle">
             <Button
               variant="secondary"
               onClick={() =>

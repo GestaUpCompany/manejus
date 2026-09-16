@@ -114,12 +114,12 @@ export function Maternidade() {
   return (
     <div className="w-full min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Maternidade</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Maternidade</h2>
       </div>
 
-      <Card className="bg-white p-4 sm:p-6 mb-4" disableHover>
+      <Card className="bg-surface-1 p-4 sm:p-6 mb-4" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
           <Button
             onClick={() => exportToXLSX(filteredRegistros, MATERNIDADE_EXPORT_CONFIG, fazendaNome)}
             disabled={filteredRegistros.length === 0}
@@ -130,7 +130,7 @@ export function Maternidade() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
             <Input
               type="text"
               placeholder="ID brinco, ID chip, lote, pasto, ID provisório..."
@@ -140,7 +140,7 @@ export function Maternidade() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
             <Input
               type="date"
               value={dataInicio}
@@ -149,7 +149,7 @@ export function Maternidade() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
             <Input
               type="date"
               value={dataFim}
@@ -158,7 +158,7 @@ export function Maternidade() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
@@ -171,12 +171,12 @@ export function Maternidade() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro de maternidade encontrado</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro de maternidade encontrado</p>
         </Card>
       ) : filteredRegistros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro encontrado com os filtros aplicados</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro encontrado com os filtros aplicados</p>
         </Card>
       ) : (
         <>
@@ -190,13 +190,13 @@ export function Maternidade() {
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
-                    <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                    <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-content-strong">
                       {formatDate(registro.data)}
                     </span>
                   </div>
                   <span
-                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary"
+                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light"
                     onClick={(e) => {
                       e.stopPropagation()
                       setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')
@@ -207,53 +207,53 @@ export function Maternidade() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Usuário:</span>
-                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                    <span className="text-content-muted">Usuário:</span>
+                    <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">ID Brinco:</span>
-                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.id_brinco_mae || '-'}</span>
+                    <span className="text-content-muted">ID Brinco:</span>
+                    <span className="text-content-strong font-medium truncate max-w-[120px]">{registro.id_brinco_mae || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">ID Chip:</span>
-                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.id_chip_mae || '-'}</span>
+                    <span className="text-content-muted">ID Chip:</span>
+                    <span className="text-content-strong font-medium truncate max-w-[120px]">{registro.id_chip_mae || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Categoria Mãe:</span>
-                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.categoria_mae || '-'}</span>
+                    <span className="text-content-muted">Categoria Mãe:</span>
+                    <span className="text-content-strong font-medium truncate max-w-[120px]">{registro.categoria_mae || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">ID Provisório:</span>
-                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.id_provisorio_cria || '-'}</span>
+                    <span className="text-content-muted">ID Provisório:</span>
+                    <span className="text-content-strong font-medium truncate max-w-[120px]">{registro.id_provisorio_cria || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Sexo:</span>
-                    <span className="text-gray-800 font-medium">{registro.sexo || '-'}</span>
+                    <span className="text-content-muted">Sexo:</span>
+                    <span className="text-content-strong font-medium">{registro.sexo || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Peso (kg):</span>
-                    <span className="text-gray-800 font-medium">{registro.peso_cria_kg || '-'}</span>
+                    <span className="text-content-muted">Peso (kg):</span>
+                    <span className="text-content-strong font-medium">{registro.peso_cria_kg || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Tipo Parto:</span>
-                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.tipo_parto || '-'}</span>
+                    <span className="text-content-muted">Tipo Parto:</span>
+                    <span className="text-content-strong font-medium truncate max-w-[120px]">{registro.tipo_parto || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Lote:</span>
-                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.lote || '-'}</span>
+                    <span className="text-content-muted">Lote:</span>
+                    <span className="text-content-strong font-medium truncate max-w-[120px]">{registro.lote || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Pasto:</span>
-                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.pasto || '-'}</span>
+                    <span className="text-content-muted">Pasto:</span>
+                    <span className="text-content-strong font-medium truncate max-w-[120px]">{registro.pasto || '-'}</span>
                   </div>
                   {registro.individuo_id_cria && (
-                    <div className="pt-2 border-t border-gray-100">
+                    <div className="pt-2 border-t border-border-subtle">
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           navigate(`/controller/individuos/${registro.individuo_id_cria}`)
                         }}
-                        className="text-sm text-primary hover:underline font-medium"
+                        className="text-sm text-primary dark:text-primary-light hover:underline font-medium"
                       >
                         Ver indivíduo criado
                       </button>
@@ -265,75 +265,75 @@ export function Maternidade() {
           </div>
 
           {/* Desktop Table View */}
-          <Card className="bg-white overflow-x-auto hidden sm:block max-w-full min-w-0" disableHover>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <Card className="bg-surface-1 overflow-x-auto hidden sm:block max-w-full min-w-0" disableHover>
+            <table className="min-w-full divide-y divide-border-base">
+              <thead className="bg-surface-2">
                 <tr>
                   <th
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider cursor-pointer hover:bg-surface-2 transition-colors"
                     onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Brinco</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Chip</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria Mãe</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Provisório</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sexo</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso (kg)</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Parto</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Indivíduo</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">ID Brinco</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">ID Chip</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Categoria Mãe</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">ID Provisório</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Sexo</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Peso (kg)</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Tipo Parto</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Lote</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Pasto</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Indivíduo</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface-1 divide-y divide-border-base">
                 {filteredRegistros.map((registro) => (
                   <tr
                     key={registro.id}
                     onClick={() => navigate(`/controller/cadernetas/maternidade/${registro.id}`)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="cursor-pointer hover:bg-surface-2 transition-colors"
                   >
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {formatDate(registro.data)}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.id_brinco_mae || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.id_chip_mae || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.categoria_mae || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.id_provisorio_cria || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.sexo || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.peso_cria_kg || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.tipo_parto || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.lote || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.pasto || '-'}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.individuo_id_cria ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
                             navigate(`/controller/individuos/${registro.individuo_id_cria}`)
                           }}
-                          className="text-primary hover:underline font-medium"
+                          className="text-primary dark:text-primary-light hover:underline font-medium"
                         >
                           Ver indivíduo
                         </button>

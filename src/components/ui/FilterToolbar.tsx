@@ -31,10 +31,10 @@ export function FilterToolbar({
   const gridCols = `grid-cols-1 sm:grid-cols-2 ${columns === 4 ? 'md:grid-cols-4' : columns === 3 ? 'md:grid-cols-3' : ''}`
 
   return (
-    <Card className={`bg-white p-4 sm:p-6 ${className}`} disableHover>
+    <Card className={`bg-surface-1 p-4 sm:p-6 ${className}`} disableHover>
       {(title || onExport || onClear) && (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          {title && <h3 className="text-base sm:text-lg font-semibold text-gray-800">{title}</h3>}
+          {title && <h3 className="text-base sm:text-lg font-semibold text-content-strong">{title}</h3>}
           <div className="flex gap-2 w-full sm:w-auto">
             {onClear && (
               <Button
@@ -81,7 +81,7 @@ export function FilterField({
   return (
     <div className={className}>
       {label && (
-        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+        <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
           {label}
         </label>
       )}

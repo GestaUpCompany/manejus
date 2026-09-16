@@ -31,7 +31,7 @@ function renderItens(itens: any): React.ReactNode {
     return (
       <div className="space-y-4">
         {itens.map((item: any, index: number) => (
-          <div key={index} className="border-b border-gray-200 pb-3 last:border-0 last:pb-0">
+          <div key={index} className="border-b border-border-base pb-3 last:border-0 last:pb-0">
             {typeof item === 'string' ? (
               <p className="text-sm">{item}</p>
             ) : typeof item === 'object' && item !== null ? (
@@ -40,8 +40,8 @@ function renderItens(itens: any): React.ReactNode {
                   if (key === 'necessitaDevolucao' && item.prazoDevolucao) return null
                   return (
                     <div key={key} className="flex flex-col">
-                      <span className="font-medium text-gray-700 capitalize">{formatItemKey(key)}:</span>
-                      <span className="text-gray-900">{String(value)}</span>
+                      <span className="font-medium text-content capitalize">{formatItemKey(key)}:</span>
+                      <span className="text-content-strong">{String(value)}</span>
                     </div>
                   )
                 })}
@@ -61,8 +61,8 @@ function renderItens(itens: any): React.ReactNode {
           if (key === 'necessitaDevolucao' && itens.prazoDevolucao) return null
           return (
             <div key={key} className="flex flex-col">
-              <span className="font-medium text-gray-700 capitalize">{formatItemKey(key)}:</span>
-              <span className="text-gray-900">{String(value)}</span>
+              <span className="font-medium text-content capitalize">{formatItemKey(key)}:</span>
+              <span className="text-content-strong">{String(value)}</span>
             </div>
           )
         })}
@@ -128,7 +128,7 @@ export function AlmoxarifadoDetalhes() {
       title="Detalhes do Registro de Almoxarifado"
     >
       {() => (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
           <div className="space-y-6">
             {/* Informações Gerais */}
             <DetailSection title="Informações Gerais">

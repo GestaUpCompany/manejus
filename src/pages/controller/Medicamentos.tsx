@@ -194,7 +194,7 @@ export function Medicamentos() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Medicamentos</h1>
+        <h1 className="text-2xl font-bold text-content-strong">Medicamentos</h1>
         {!showForm && (
           <Button onClick={() => setShowForm(true)}>Novo Medicamento</Button>
         )}
@@ -214,7 +214,7 @@ export function Medicamentos() {
             className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
               showInactive
                 ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
             }`}
           >
             {showInactive ? (
@@ -233,13 +233,13 @@ export function Medicamentos() {
       )}
 
       {showForm && (
-        <Card className="bg-white p-6 border-0 shadow-sm">
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">
             {editingMedicamento ? 'Editar Medicamento' : 'Novo Medicamento'}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Tipo <span className="text-red-500">*</span>
               </label>
               <Input
@@ -249,7 +249,7 @@ export function Medicamentos() {
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
                 required
                 placeholder="Ex: Antibiótico, Anti-inflamatório"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
               <datalist id="tipos-medicamentos">
                 {tiposDisponiveis.map((tipo) => (
@@ -258,7 +258,7 @@ export function Medicamentos() {
               </datalist>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Nome Comercial <span className="text-red-500">*</span>
               </label>
               <Input
@@ -267,11 +267,11 @@ export function Medicamentos() {
                 onChange={(e) => setFormData({ ...formData, nome_comercial: e.target.value })}
                 required
                 placeholder="Ex: Penicilina, Dipirona"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Princípio Ativo <span className="text-red-500">*</span>
               </label>
               <Input
@@ -280,11 +280,11 @@ export function Medicamentos() {
                 onChange={(e) => setFormData({ ...formData, principio_ativo: e.target.value })}
                 required
                 placeholder="Ex: Amoxicilina"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Dose Recomendada <span className="text-red-500">*</span>
               </label>
               <Input
@@ -293,7 +293,7 @@ export function Medicamentos() {
                 onChange={(e) => setFormData({ ...formData, dose_recomendada: e.target.value })}
                 required
                 placeholder="Ex: 10mg/kg"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
             <div className="flex gap-2 items-center">
@@ -323,9 +323,9 @@ export function Medicamentos() {
               status={medicamento.ativo}
               onClick={() => handleEdit(medicamento)}
             >
-              <p className="text-sm text-gray-500 mb-2">Princípio Ativo: {medicamento.principio_ativo}</p>
+              <p className="text-sm text-content-muted mb-2">Princípio Ativo: {medicamento.principio_ativo}</p>
               {medicamento.dose_recomendada && (
-                <p className="text-sm text-gray-500 mb-4">Dose: {medicamento.dose_recomendada}</p>
+                <p className="text-sm text-content-muted mb-4">Dose: {medicamento.dose_recomendada}</p>
               )}
               <div className="flex flex-wrap gap-1 sm:gap-2">
                 <Button

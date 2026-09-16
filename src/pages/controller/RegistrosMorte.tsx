@@ -111,7 +111,7 @@ export function RegistrosMorte() {
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Morte</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Morte</h2>
       </div>
 
       <FilterToolbar
@@ -165,13 +165,13 @@ export function RegistrosMorte() {
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
-                    <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                    <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-content-strong">
                       {formatDate(registro.data)}
                     </span>
                   </div>
                   <span
-                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary"
+                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light"
                     onClick={(e) => {
                       e.stopPropagation()
                       setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')
@@ -182,44 +182,44 @@ export function RegistrosMorte() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Usuário:</span>
-                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                    <span className="text-content-muted">Usuário:</span>
+                    <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Causa:</span>
-                    <span className="text-gray-800 font-medium">{registro.causa_morte || '-'}</span>
+                    <span className="text-content-muted">Causa:</span>
+                    <span className="text-content-strong font-medium">{registro.causa_morte || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Lote:</span>
-                    <span className="text-gray-800 font-medium">{registro.lote || '-'}</span>
+                    <span className="text-content-muted">Lote:</span>
+                    <span className="text-content-strong font-medium">{registro.lote || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Pasto:</span>
-                    <span className="text-gray-800 font-medium">{registro.pasto || '-'}</span>
+                    <span className="text-content-muted">Pasto:</span>
+                    <span className="text-content-strong font-medium">{registro.pasto || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Brinco:</span>
-                    <span className="text-gray-800 font-medium">{registro.brinco || '-'}</span>
+                    <span className="text-content-muted">Brinco:</span>
+                    <span className="text-content-strong font-medium">{registro.brinco || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Chip:</span>
-                    <span className="text-gray-800 font-medium">{registro.chip || '-'}</span>
+                    <span className="text-content-muted">Chip:</span>
+                    <span className="text-content-strong font-medium">{registro.chip || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Categoria:</span>
-                    <span className="text-gray-800 font-medium">{registro.categoria || '-'}</span>
+                    <span className="text-content-muted">Categoria:</span>
+                    <span className="text-content-strong font-medium">{registro.categoria || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Sexo:</span>
-                    <span className="text-gray-800 font-medium">{registro.sexo || '-'}</span>
+                    <span className="text-content-muted">Sexo:</span>
+                    <span className="text-content-strong font-medium">{registro.sexo || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Raça:</span>
-                    <span className="text-gray-800 font-medium">{registro.raca || '-'}</span>
+                    <span className="text-content-muted">Raça:</span>
+                    <span className="text-content-strong font-medium">{registro.raca || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Peso (kg):</span>
-                    <span className="text-gray-800 font-medium">{registro.peso_vivo || '-'}</span>
+                    <span className="text-content-muted">Peso (kg):</span>
+                    <span className="text-content-strong font-medium">{registro.peso_vivo || '-'}</span>
                   </div>
                 </div>
               </Card>
@@ -227,12 +227,12 @@ export function RegistrosMorte() {
           </div>
 
           {/* Desktop Table View */}
-          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
+          <Card className="bg-surface-1 overflow-x-auto hidden sm:block" disableHover>
             <Table>
               <Thead>
                 <Tr>
                   <Th
-                    className="cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="cursor-pointer hover:bg-surface-2 transition-colors"
                     onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>

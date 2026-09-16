@@ -720,8 +720,8 @@ export function PlanoNutricionalModal({
     <>
       <Modal isOpen={isOpen} onClose={onClose} title={`Planos Nutricionais — ${categoria?.replace(/\b\w/g, (c) => c.toUpperCase())}`} size="lg">
         {loading ? (
-          <div className="py-12 flex flex-col items-center gap-3 text-gray-500">
-            <svg className="animate-spin h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24">
+          <div className="py-12 flex flex-col items-center gap-3 text-content-muted">
+            <svg className="animate-spin h-6 w-6 text-content-faint" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
@@ -732,48 +732,48 @@ export function PlanoNutricionalModal({
           {/* ========== SEÇÃO: PLANOS ========== */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-semibold text-gray-800">Planos</h3>
-              <span className="text-xs text-gray-400">Visualize e gerencie a sequência</span>
+              <h3 className="text-base font-semibold text-content-strong">Planos</h3>
+              <span className="text-xs text-content-faint">Visualize e gerencie a sequência</span>
             </div>
 
           {/* Plano vigente */}
           {planoVigente && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-semibold text-green-900">Plano Vigente</h4>
-                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
+                <span className="px-2 py-1 bg-green-500/10 text-green-700 dark:text-green-300 text-xs font-medium rounded">
                   Ativo
                 </span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                 <div>
-                  <span className="text-gray-600">Nome:</span>
-                  <p className="font-medium text-gray-900">{planoVigente.nome}</p>
+                  <span className="text-content-muted">Nome:</span>
+                  <p className="font-medium text-content-strong">{planoVigente.nome}</p>
                 </div>
                 <div>
-                  <span className="text-gray-600">Período:</span>
-                  <p className="font-medium text-gray-900">{planoVigente.periodo_dias} dias</p>
+                  <span className="text-content-muted">Período:</span>
+                  <p className="font-medium text-content-strong">{planoVigente.periodo_dias} dias</p>
                 </div>
                 <div>
-                  <span className="text-gray-600">Peso Meta:</span>
-                  <p className="font-medium text-gray-900">{planoVigente.peso_meta_kg.toFixed(2).replace('.', ',')} kg</p>
+                  <span className="text-content-muted">Peso Meta:</span>
+                  <p className="font-medium text-content-strong">{planoVigente.peso_meta_kg.toFixed(2).replace('.', ',')} kg</p>
                 </div>
                 <div>
-                  <span className="text-gray-600">Condição:</span>
-                  <p className="font-medium text-gray-900">
+                  <span className="text-content-muted">Condição:</span>
+                  <p className="font-medium text-content-strong">
                     {planoVigente.migracao_automatica ? CONDICOES[planoVigente.condicao_migracao] : 'Manual'}
                   </p>
                 </div>
               </div>
               {planoVigente.migracao_automatica && !isUltimoPlano(planoVigente.id) && planos.some((p) => p.ordem > planoVigente.ordem && !p.data_fim) && (
-                <div className="mt-4 pt-3 border-t border-green-200">
+                <div className="mt-4 pt-3 border-t border-green-500/30">
                   <Button size="sm" onClick={handleMigracaoAutomatica}>
                     Migrar para Próximo Plano
                   </Button>
                 </div>
               )}
               {!planoVigente.migracao_automatica && (
-                <div className="mt-4 pt-3 border-t border-green-200">
+                <div className="mt-4 pt-3 border-t border-green-500/30">
                   <Button size="sm" variant="danger" onClick={handleEncerrarPlano}>
                     Encerrar Plano
                   </Button>
@@ -790,9 +790,9 @@ export function PlanoNutricionalModal({
               .sort((a, b) => a.ordem - b.ordem)
               .filter((p) => p.data_fim)
             return (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-3">
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-yellow-800">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
                     Nenhum plano está vigente. Inicie um plano para começar.
                   </p>
                 </div>
@@ -824,8 +824,8 @@ export function PlanoNutricionalModal({
                   </div>
                 )}
                 {planosEncerrados.length > 0 && (
-                  <div className="pt-2 border-t border-yellow-200">
-                    <p className="text-xs text-yellow-700 mb-2">Planos encerrados (podem ser reativados):</p>
+                  <div className="pt-2 border-t border-yellow-500/30">
+                    <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">Planos encerrados (podem ser reativados):</p>
                     <div className="space-y-2">
                       {planosEncerrados.map((plano) => (
                         <div key={plano.id} className="flex flex-wrap items-center gap-2">
@@ -857,14 +857,14 @@ export function PlanoNutricionalModal({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-gray-800">Sequência de Planos</h4>
-                  <p className="text-xs text-gray-500">Arraste para reordenar. Planos já iniciados não podem ser movidos.</p>
+                  <h4 className="font-medium text-content-strong">Sequência de Planos</h4>
+                  <p className="text-xs text-content-muted">Arraste para reordenar. Planos já iniciados não podem ser movidos.</p>
                 </div>
                 {planos.some((p) => p.data_fim) && (
                   <button
                     type="button"
                     onClick={() => setShowEncerrados(!showEncerrados)}
-                    className="text-xs text-gray-500 hover:text-gray-700 underline"
+                    className="text-xs text-content-muted hover:text-content underline"
                   >
                     {showEncerrados ? 'Ocultar encerrados' : 'Mostrar encerrados'}
                   </button>
@@ -886,33 +886,33 @@ export function PlanoNutricionalModal({
                       onDragEnd={handleDragEnd}
                       className={`flex items-center justify-between border rounded-lg p-3 transition-colors ${
                         isVigente
-                          ? 'bg-green-50 border-green-200'
+                          ? 'bg-green-500/10 border-green-500/30'
                           : dragOverIndex === sortedIndex
                           ? 'border-primary bg-primary/5'
                           : draggingIndex === sortedIndex
-                          ? 'border-gray-300 opacity-50'
-                          : 'border-gray-200'
+                          ? 'border-surface-3 opacity-50'
+                          : 'border-border-base'
                       } ${canDrag ? 'cursor-move' : ''}`}
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         {canDrag && (
-                          <span className="text-gray-400 select-none flex-shrink-0" title="Arraste para reordenar">⠿</span>
+                          <span className="text-content-faint select-none flex-shrink-0" title="Arraste para reordenar">⠿</span>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">
+                          <p className="font-medium text-content-strong truncate">
                             {sortedIndex + 1}. {plano.nome}
                             {isVigente && (
-                              <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded">Vigente</span>
+                              <span className="ml-2 px-2 py-0.5 bg-green-500/10 text-green-700 dark:text-green-300 text-xs font-medium rounded">Vigente</span>
                             )}
                             {plano.data_fim && !isVigente && (
-                              <span className="ml-2 px-2 py-0.5 bg-gray-200 text-gray-600 text-xs font-medium rounded">Encerrado</span>
+                              <span className="ml-2 px-2 py-0.5 bg-surface-3 text-content-muted text-xs font-medium rounded">Encerrado</span>
                             )}
                           </p>
-                          <p className="text-sm text-gray-600 truncate">
+                          <p className="text-sm text-content-muted truncate">
                             {plano.periodo_dias} dias • Peso meta: {plano.peso_meta_kg.toFixed(2).replace('.', ',')} kg
                           </p>
                           {plano.data_fim && (
-                            <p className="text-xs text-gray-500">Encerrado em {new Date(plano.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                            <p className="text-xs text-content-muted">Encerrado em {new Date(plano.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
                           )}
                           {!plano.data_fim && (
                             <div className="flex items-center gap-2 mt-1">
@@ -929,19 +929,19 @@ export function PlanoNutricionalModal({
                                   onPlanChanged?.()
                                 }}
                                 className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                                  plano.migracao_automatica ? 'bg-primary' : 'bg-gray-300'
+                                  plano.migracao_automatica ? 'bg-primary' : 'bg-surface-3'
                                 }`}
                                 title={plano.migracao_automatica
                                   ? (isUltimoPlano(plano.id) ? 'Encerramento automático ativado' : 'Migração automática ativada')
                                   : (isUltimoPlano(plano.id) ? 'Encerramento automático desativado' : 'Migração automática desativada')}
                               >
                                 <span
-                                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                                  className={`inline-block h-3 w-3 transform rounded-full bg-surface-1 transition-transform ${
                                     plano.migracao_automatica ? 'translate-x-3.5' : 'translate-x-0.5'
                                   }`}
                                 />
                               </button>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-content-muted">
                                 {plano.migracao_automatica
                                   ? (isUltimoPlano(plano.id) ? 'Encerramento automático' : 'Migração automática')
                                   : (isUltimoPlano(plano.id) ? 'Encerramento manual' : 'Migração manual')}
@@ -959,7 +959,7 @@ export function PlanoNutricionalModal({
                                     onPlanChanged?.()
                                   }}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="text-xs border border-gray-200 rounded px-1.5 py-0.5 text-gray-700 bg-white focus:border-primary focus:outline-none cursor-pointer"
+                                  className="text-xs border border-border-base rounded px-1.5 py-0.5 text-content bg-surface-1 focus:border-primary focus:outline-none cursor-pointer"
                                   title="Condição para migração/encerramento automático"
                                 >
                                   <option value="periodo">Período completo</option>
@@ -986,7 +986,7 @@ export function PlanoNutricionalModal({
                             size="sm"
                             variant="secondary"
                             onClick={() => handleDelete(plano)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-500 hover:text-red-700 dark:text-red-300"
                           >
                             Excluir
                           </Button>
@@ -1014,22 +1014,22 @@ export function PlanoNutricionalModal({
           </div>
 
           {/* ========== SEÇÃO: CRIAR/EDITAR PLANO ========== */}
-          <div className="border-t-2 border-gray-200 pt-6">
+          <div className="border-t-2 border-border-base pt-6">
             <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-base font-semibold text-gray-800">
+              <h3 className="text-base font-semibold text-content-strong">
                 {editingPlano ? 'Editar Plano' : 'Novo Plano'}
               </h3>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-content-faint">
                 {editingPlano ? 'Altere os dados e salve' : 'Preencha os dados e adicione à sequência'}
               </span>
               {editingPlano?.ativo && (
-                <span className="ml-auto px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded">
+                <span className="ml-auto px-2 py-0.5 bg-green-500/10 text-green-700 dark:text-green-300 text-xs font-medium rounded">
                   Plano vigente
                 </span>
               )}
             </div>
             {editingPlano?.ativo && (
-              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-700 dark:text-amber-300">
                 Você está editando um plano vigente. Apenas a <strong>duração</strong> e o <strong>peso meta</strong> podem ser alterados.
                 Os demais campos (nome, formulação, GMD, condição de migração) ficam bloqueados para preservar a integridade do plano em execução.
               </div>
@@ -1037,7 +1037,7 @@ export function PlanoNutricionalModal({
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-content mb-1">
                     Nome do Plano
                   </label>
                   <Input
@@ -1050,12 +1050,12 @@ export function PlanoNutricionalModal({
                     placeholder="Ex: Engorda Inicial"
                     required
                     disabled={!!editingPlano?.ativo}
-                    className={`border-gray-200 focus:border-accent ${editingPlano?.ativo ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                    className={`border-border-base focus:border-accent ${editingPlano?.ativo ? 'bg-surface-2 text-content-muted cursor-not-allowed' : ''}`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-content mb-1">
                     Formulação *
                   </label>
                   <select
@@ -1066,7 +1066,7 @@ export function PlanoNutricionalModal({
                     }}
                     required
                     disabled={!!editingPlano?.ativo}
-                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-200 focus:border-accent bg-white ${editingPlano?.ativo ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-border-base focus:border-accent bg-surface-1 ${editingPlano?.ativo ? 'bg-surface-2 text-content-muted cursor-not-allowed' : ''}`}
                   >
                     <option value="">Selecione uma formulação...</option>
                     {formulacoes.map((f) => (
@@ -1079,7 +1079,7 @@ export function PlanoNutricionalModal({
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-content">
                       Duração do Plano *
                     </label>
                     <div className="flex gap-1">
@@ -1089,7 +1089,7 @@ export function PlanoNutricionalModal({
                         className={`px-2 py-0.5 rounded border text-xs font-medium transition-all ${
                           formData.tipo_entrada_periodo === 'periodo'
                             ? 'bg-primary text-white border-primary'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-primary'
+                            : 'bg-surface-1 text-content border-border-base hover:border-primary'
                         }`}
                       >
                         Dias
@@ -1100,7 +1100,7 @@ export function PlanoNutricionalModal({
                         className={`px-2 py-0.5 rounded border text-xs font-medium transition-all ${
                           formData.tipo_entrada_periodo === 'data_final'
                             ? 'bg-primary text-white border-primary'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-primary'
+                            : 'bg-surface-1 text-content border-border-base hover:border-primary'
                         }`}
                       >
                         Data final
@@ -1125,10 +1125,10 @@ export function PlanoNutricionalModal({
                           setFormData({ ...formData, data_final: e.target.value })
                         }
                         min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
-                        className="border-gray-200 focus:border-accent"
+                        className="border-border-base focus:border-accent"
                       />
                       {formData.data_final && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-content-muted mt-1">
                           Equivale a {Math.ceil((new Date(formData.data_final + 'T00:00:00').getTime() - new Date(new Date().setHours(0,0,0,0)).getTime()) / (1000 * 60 * 60 * 24))} dias
                         </p>
                       )}
@@ -1137,7 +1137,7 @@ export function PlanoNutricionalModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-content mb-1">
                     Peso Meta (kg/cab) *
                   </label>
                   <NumericInput
@@ -1154,7 +1154,7 @@ export function PlanoNutricionalModal({
                       const diff = pesoMeta - pesoAtualCategoria
                       if (isNaN(pesoMeta) || pesoMeta <= 0) return null
                       return (
-                        <p className={`text-xs mt-1 ${diff <= 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                        <p className={`text-xs mt-1 ${diff <= 0 ? 'text-red-500' : 'text-content-muted'}`}>
                           {diff > 0
                             ? `${diff.toFixed(2).replace('.', ',')} kg acima do peso atual (${pesoAtualCategoria.toFixed(2).replace('.', ',')} kg)`
                             : `Peso meta deve ser maior que o peso atual (${pesoAtualCategoria.toFixed(2).replace('.', ',')} kg)`}
@@ -1165,7 +1165,7 @@ export function PlanoNutricionalModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-content mb-1">
                     GMD (kg/cab/dia) {editingPlano?.ativo ? '' : '*'}
                   </label>
                   <Input
@@ -1180,15 +1180,15 @@ export function PlanoNutricionalModal({
                     placeholder="Ex: 0,300"
                     required={!editingPlano?.ativo}
                     disabled={!!editingPlano?.ativo}
-                    className={`border-gray-200 focus:border-accent ${editingPlano?.ativo ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                    className={`border-border-base focus:border-accent ${editingPlano?.ativo ? 'bg-surface-2 text-content-muted cursor-not-allowed' : ''}`}
                   />
                   {editingPlano?.ativo && (
-                    <p className="text-xs text-amber-600 mt-1">
+                    <p className="text-xs text-amber-500 mt-1">
                       O GMD não pode ser alterado em um plano vigente.
                     </p>
                   )}
                   {selectedFormulacao?.gmd != null && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-content-muted mt-1">
                       GMD da formulação: {selectedFormulacao.gmd.toFixed(3).replace('.', ',')} kg/cab/dia (referência)
                     </p>
                   )}
@@ -1197,7 +1197,7 @@ export function PlanoNutricionalModal({
 
               {formData.migracao_automatica && (
               <div className={editingPlano?.ativo ? 'opacity-50 pointer-events-none' : ''}>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-content mb-2">
                   {editingPlano && isUltimoPlano(editingPlano.id)
                     ? 'Condição para Encerramento Automático'
                     : 'Condição para Migração Automática'}
@@ -1213,7 +1213,7 @@ export function PlanoNutricionalModal({
                       className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
                         formData.condicao_migracao === cond
                           ? 'bg-primary text-white border-primary'
-                          : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary'
+                          : 'bg-surface-1 text-content border-border-base hover:border-primary hover:text-primary dark:hover:text-primary-light'
                       }`}
                     >
                       {CONDICOES[cond]}
@@ -1224,7 +1224,7 @@ export function PlanoNutricionalModal({
               )}
 
               <div className={editingPlano?.ativo ? 'opacity-50 pointer-events-none' : ''}>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-content mb-2">
                   Migração Automática
                 </label>
                 <div className="flex items-center gap-3">
@@ -1234,16 +1234,16 @@ export function PlanoNutricionalModal({
                       setFormData({ ...formData, migracao_automatica: !formData.migracao_automatica })
                     }
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      formData.migracao_automatica ? 'bg-primary' : 'bg-gray-300'
+                      formData.migracao_automatica ? 'bg-primary' : 'bg-surface-3'
                     }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      className={`inline-block h-4 w-4 transform rounded-full bg-surface-1 transition-transform ${
                         formData.migracao_automatica ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
                   </button>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-content-muted">
                     {formData.migracao_automatica
                       ? (editingPlano && isUltimoPlano(editingPlano.id)
                         ? 'Encerra automaticamente ao atingir a condição'
@@ -1257,28 +1257,28 @@ export function PlanoNutricionalModal({
 
               {/* Dados da formulação selecionada */}
               {selectedFormulacao && (
-                <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-                  <h5 className="text-sm font-semibold text-blue-900 mb-2">
+                <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+                  <h5 className="text-sm font-semibold text-primary dark:text-primary-light mb-2">
                     Dados da Formulação
                   </h5>
                   <div className="grid grid-cols-3 gap-3 text-sm">
                     <div>
-                      <span className="text-gray-600">GMD:</span>
-                      <p className="font-medium text-gray-900">
+                      <span className="text-content-muted">GMD:</span>
+                      <p className="font-medium text-content-strong">
                         {formData.gmd_planejado
                           ? `${formData.gmd_planejado} kg/cab/dia`
                           : '0,000 kg/cab/dia'}
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-600">Consumo MS (%PV):</span>
-                      <p className="font-medium text-gray-900">
+                      <span className="text-content-muted">Consumo MS (%PV):</span>
+                      <p className="font-medium text-content-strong">
                         {selectedFormulacao.consumo_ms_percent_pv?.toFixed(2).replace('.', ',') || '—'}%
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-600">Tipo:</span>
-                      <p className="font-medium text-gray-900">
+                      <span className="text-content-muted">Tipo:</span>
+                      <p className="font-medium text-content-strong">
                         {selectedFormulacao.tipo || '—'}
                       </p>
                     </div>
@@ -1287,13 +1287,13 @@ export function PlanoNutricionalModal({
               )}
 
               {message && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-700 dark:text-red-300">
                   {message}
                 </div>
               )}
 
               {formulacoes.length === 0 && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-800 dark:text-yellow-200">
                   Não há formulações cadastradas para esta fazenda. Cadastre uma formulação primeiro.
                 </div>
               )}

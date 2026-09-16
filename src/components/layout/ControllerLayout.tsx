@@ -371,7 +371,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
 
   const renderMenuItem = (menu: MenuItem, isMobile: boolean) => {
     const showLabel = isMobile || !isSidebarCollapsed
-    const hoverClass = isMobile ? 'hover:bg-gray-50' : ''
+    const hoverClass = isMobile ? 'hover:bg-surface-2' : ''
 
     if (menu.standalone && menu.path) {
       const active = isPathActive(menu.path!)
@@ -389,8 +389,8 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
             !isMobile && isSidebarCollapsed ? 'justify-center' : ''
           } ${
             active
-              ? 'bg-primary/15 text-primary border-primary font-medium'
-              : `text-gray-700 border-transparent ${hoverClass}`
+              ? 'bg-primary/15 dark:bg-primary/35 text-primary dark:text-white border-primary dark:border-primary-light font-medium'
+              : `text-content border-transparent ${hoverClass}`
           }`}
           aria-label={isMobile ? `Ir para ${menu.label}` : undefined}
         >
@@ -415,7 +415,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
               title={menu.label}
               aria-label={menu.label}
               className={`w-full flex items-center justify-center px-3 py-2 rounded-lg transition-all duration-200 border-l-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-                isActive ? 'bg-primary/15 text-primary border-primary font-medium' : 'text-gray-700 border-transparent'
+                isActive ? 'bg-primary/15 dark:bg-primary/35 text-primary dark:text-white border-primary dark:border-primary-light font-medium' : 'text-content border-transparent'
               }`}
             >
               {menu.icon && <span className="flex-shrink-0" aria-hidden="true">{menu.icon}</span>}
@@ -423,9 +423,9 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
             <div
               role="menu"
               aria-label={menu.label}
-              className="absolute left-full top-0 ml-2 w-56 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-150 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-2"
+              className="absolute left-full top-0 ml-2 w-56 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-150 z-50 bg-surface-1 border border-border-base rounded-lg shadow-lg p-2"
             >
-              <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400 border-b border-gray-100 mb-1" aria-hidden="true">
+              <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-content-faint border-b border-border-subtle mb-1" aria-hidden="true">
                 {menu.label}
               </p>
               <div className="space-y-0.5" role="group" aria-label={`Submenu ${menu.label}`}>
@@ -440,12 +440,12 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                       aria-current={active ? 'page' : undefined}
                       className={`w-full text-left px-3 py-1.5 rounded-lg transition-all duration-200 text-sm font-normal flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
                         active
-                          ? 'bg-primary/20 text-primary font-medium'
-                          : 'text-gray-600 hover:bg-gray-50'
+                          ? 'bg-primary/20 dark:bg-primary/35 text-primary dark:text-white font-medium'
+                          : 'text-content-muted hover:bg-surface-2'
                       }`}
                     >
                       <svg
-                        className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'text-primary' : 'text-gray-300'}`}
+                        className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'text-primary' : 'text-content-faint'}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -470,7 +470,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
             aria-expanded={isOpen}
             aria-haspopup="menu"
             className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 flex items-center justify-between border-l-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-              isActive ? 'bg-primary/15 text-primary border-primary font-medium' : `text-gray-700 border-transparent ${hoverClass}`
+              isActive ? 'bg-primary/15 dark:bg-primary/35 text-primary dark:text-white border-primary dark:border-primary-light font-medium' : `text-content border-transparent ${hoverClass}`
             }`}
           >
             <div className="flex items-center gap-3">
@@ -490,7 +490,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
             )}
           </button>
           {isOpen && (
-            <div className="ml-3 mt-1 space-y-0.5 animate-slide-in border-l border-gray-100 pl-3" role="group" aria-label={`Submenu ${menu.label}`}>
+            <div className="ml-3 mt-1 space-y-0.5 animate-slide-in border-l border-border-subtle pl-3" role="group" aria-label={`Submenu ${menu.label}`}>
               {menu.items.map((item) => {
                 const active = isPathActive(item.path)
                 return (
@@ -504,12 +504,12 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                     aria-current={active ? 'page' : undefined}
                     className={`w-full text-left px-3 py-1.5 rounded-lg transition-all duration-200 text-sm font-normal flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
                       active
-                        ? 'bg-primary/20 text-primary font-medium'
-                        : `text-gray-600 ${hoverClass}`
+                        ? 'bg-primary/20 dark:bg-primary/35 text-primary dark:text-white font-medium'
+                        : `text-content-muted ${hoverClass}`
                     }`}
                   >
                     <svg
-                      className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'text-primary' : 'text-gray-300'}`}
+                      className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'text-primary' : 'text-content-faint'}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -540,9 +540,9 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
           if (sectionItems.length === 0) return null
           return (
             <div key={section.id} className={sectionIndex > 0 ? (collapsed ? 'mt-3' : 'mt-4') : ''}>
-              {sectionIndex > 0 && !collapsed && <div className="mx-3 mb-2 border-t border-gray-100" />}
+              {sectionIndex > 0 && !collapsed && <div className="mx-3 mb-2 border-t border-border-subtle" />}
               {showSectionLabel && (
-                <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-content-faint">
                   {section.label}
                 </p>
               )}
@@ -557,7 +557,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-surface-2">
       <ImpersonationBar />
       <Header />
       
@@ -567,16 +567,16 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
           ref={sidebarRef}
           role="navigation"
           aria-label="Navegação principal"
-          className={`${isSidebarCollapsed ? 'w-20 overflow-visible' : 'w-64 overflow-y-auto'} hidden md:block bg-white border-r-2 border-gray-200 fixed top-0 h-screen z-10 transition-all duration-300 flex flex-col`}
+          className={`${isSidebarCollapsed ? 'w-20 overflow-visible' : 'w-64 overflow-y-auto'} hidden md:block bg-surface-1 border-r-2 border-border-base fixed top-0 h-screen z-10 transition-all duration-300 flex flex-col`}
         >
           <div className="p-4 pt-24">
             <div className="flex items-center justify-between mb-4">
-              {!isSidebarCollapsed && <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider" aria-hidden="true">Navegação</p>}
+              {!isSidebarCollapsed && <p className="text-xs font-semibold text-content-faint uppercase tracking-wider" aria-hidden="true">Navegação</p>}
               <button
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 aria-label={isSidebarCollapsed ? 'Expandir menu' : 'Colapsar menu'}
                 aria-expanded={!isSidebarCollapsed}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="p-2 rounded-lg hover:bg-surface-2 transition-colors text-content-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 title={isSidebarCollapsed ? 'Expandir menu' : 'Colapsar menu'}
               >
                 <svg
@@ -595,21 +595,21 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
 
           {/* Bloco de contexto: usuário + farm switcher */}
           {user && (
-            <div className="mt-auto border-t-2 border-gray-200">
+            <div className="mt-auto border-t-2 border-border-base">
               {!isSidebarCollapsed && (
                 <div className="px-4 py-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center text-sm font-semibold flex-shrink-0" aria-hidden="true">
+                  <div className="w-9 h-9 rounded-full bg-primary/20 dark:bg-primary/40 text-primary dark:text-white flex items-center justify-center text-sm font-semibold flex-shrink-0" aria-hidden="true">
                     {(user.nome || '?').split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-800 truncate">{user.nome}</p>
-                    <p className="text-xs text-gray-400 capitalize">{user.papel}</p>
+                    <p className="text-sm font-medium text-content-strong truncate">{user.nome}</p>
+                    <p className="text-xs text-content-faint capitalize">{user.papel}</p>
                   </div>
                 </div>
               )}
               {isSidebarCollapsed && (
                 <div className="px-3 py-3 flex justify-center" title={user.nome}>
-                  <div className="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center text-sm font-semibold" aria-hidden="true">
+                  <div className="w-9 h-9 rounded-full bg-primary/20 dark:bg-primary/40 text-primary dark:text-white flex items-center justify-center text-sm font-semibold" aria-hidden="true">
                     {(user.nome || '?').split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
                   </div>
                 </div>
@@ -631,14 +631,14 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
               role="dialog"
               aria-modal="true"
               aria-label="Menu de navegação"
-              className="bg-white w-64 h-full p-4 overflow-y-auto animate-slide-in"
+              className="bg-surface-1 w-64 h-full p-4 overflow-y-auto animate-slide-in"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider" aria-hidden="true">Navegação</p>
+                <p className="text-xs font-semibold text-content-faint uppercase tracking-wider" aria-hidden="true">Navegação</p>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 rounded-lg transition-all hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  className="p-2 rounded-lg transition-all hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   aria-label="Fechar menu"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -648,14 +648,14 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
               </div>
               {renderMenuSections(true)}
               {user && (
-                <div className="mt-4 border-t-2 border-gray-200 pt-3">
+                <div className="mt-4 border-t-2 border-border-base pt-3">
                   <div className="px-1 py-2 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center text-sm font-semibold flex-shrink-0" aria-hidden="true">
+                    <div className="w-9 h-9 rounded-full bg-primary/20 dark:bg-primary/40 text-primary dark:text-white flex items-center justify-center text-sm font-semibold flex-shrink-0" aria-hidden="true">
                       {(user.nome || '?').split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-800 truncate">{user.nome}</p>
-                      <p className="text-xs text-gray-400 capitalize">{user.papel}</p>
+                      <p className="text-sm font-medium text-content-strong truncate">{user.nome}</p>
+                      <p className="text-xs text-content-faint capitalize">{user.papel}</p>
                     </div>
                   </div>
                   <FarmSwitcher />
@@ -671,7 +671,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
           <button
             onClick={() => setMobileMenuOpen(true)}
             aria-label="Abrir menu de navegação"
-            className="md:hidden mb-4 p-2 bg-white border-2 border-gray-300 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="md:hidden mb-4 p-2 bg-surface-1 border-2 border-surface-3 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />

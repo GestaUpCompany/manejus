@@ -23,14 +23,14 @@ export function PastoDetalhePanel({ detalhe, modoTelaCheia, onFechar, onEditarGe
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">{detalhe.nome}</h2>
+              <h2 className="text-lg font-bold text-content-strong">{detalhe.nome}</h2>
               {detalhe.modulo_nome && (
-                <p className="text-xs text-gray-500">Módulo: {detalhe.modulo_nome}</p>
+                <p className="text-xs text-content-muted">Módulo: {detalhe.modulo_nome}</p>
               )}
             </div>
             <button
               onClick={onFechar}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-content-faint hover:text-content-muted"
               aria-label="Fechar detalhes"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -42,49 +42,49 @@ export function PastoDetalhePanel({ detalhe, modoTelaCheia, onFechar, onEditarGe
           <div className="space-y-2 text-sm">
             {detalhe.setor && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Setor:</span>
+                <span className="text-content-muted">Setor:</span>
                 <span className="font-medium">{detalhe.setor}</span>
               </div>
             )}
             {detalhe.tipo && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Tipo:</span>
+                <span className="text-content-muted">Tipo:</span>
                 <span className="font-medium">{detalhe.tipo}</span>
               </div>
             )}
             {detalhe.area_total_ha != null && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Área total:</span>
+                <span className="text-content-muted">Área total:</span>
                 <span className="font-medium">{detalhe.area_total_ha} ha</span>
               </div>
             )}
             {detalhe.area_util_ha != null && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Área útil:</span>
+                <span className="text-content-muted">Área útil:</span>
                 <span className="font-medium">{detalhe.area_util_ha} ha</span>
               </div>
             )}
             {detalhe.especie && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Espécie:</span>
+                <span className="text-content-muted">Espécie:</span>
                 <span className="font-medium">{detalhe.especie}</span>
               </div>
             )}
             {detalhe.metragem_cocho_m != null && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Cocho:</span>
+                <span className="text-content-muted">Cocho:</span>
                 <span className="font-medium">{detalhe.metragem_cocho_m} m</span>
               </div>
             )}
             {detalhe.fonte_agua_principal && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Água:</span>
+                <span className="text-content-muted">Água:</span>
                 <span className="font-medium">{detalhe.fonte_agua_principal}</span>
               </div>
             )}
             {detalhe.possui_deposito != null && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Depósito:</span>
+                <span className="text-content-muted">Depósito:</span>
                 <span className="font-medium">{detalhe.possui_deposito ? 'Sim' : 'Não'}</span>
               </div>
             )}
@@ -92,29 +92,29 @@ export function PastoDetalhePanel({ detalhe, modoTelaCheia, onFechar, onEditarGe
 
           {/* Lote atual */}
           {detalhe.lote_atual && (
-            <div className="mt-4 pt-3 border-t border-gray-200">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Lote Atual</p>
+            <div className="mt-4 pt-3 border-t border-border-base">
+              <p className="text-xs font-semibold text-content-faint uppercase tracking-wider mb-1">Lote Atual</p>
               <div className="text-sm space-y-1">
                 <p className="font-medium">{detalhe.lote_atual.nome}</p>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-gray-600">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-content-muted">
                   <span>Cabeças:</span>
-                  <span className="font-medium text-gray-800">{detalhe.lote_atual.n_cabecas}</span>
+                  <span className="font-medium text-content-strong">{detalhe.lote_atual.n_cabecas}</span>
                   {detalhe.lote_atual.raca && (
                     <>
                       <span>Raça:</span>
-                      <span className="font-medium text-gray-800">{detalhe.lote_atual.raca}</span>
+                      <span className="font-medium text-content-strong">{detalhe.lote_atual.raca}</span>
                     </>
                   )}
                   {detalhe.lote_atual.sexo && (
                     <>
                       <span>Sexo:</span>
-                      <span className="font-medium text-gray-800">{detalhe.lote_atual.sexo}</span>
+                      <span className="font-medium text-content-strong">{detalhe.lote_atual.sexo}</span>
                     </>
                   )}
                   {detalhe.lote_atual.peso_medio_atual_kg != null && (
                     <>
                       <span>Peso médio:</span>
-                      <span className="font-medium text-gray-800">
+                      <span className="font-medium text-content-strong">
                         {detalhe.lote_atual.peso_medio_atual_kg} kg
                       </span>
                     </>
@@ -126,11 +126,11 @@ export function PastoDetalhePanel({ detalhe, modoTelaCheia, onFechar, onEditarGe
 
           {/* Bebedouros */}
           {detalhe.bebedouros.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-gray-200">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Bebedouros</p>
+            <div className="mt-4 pt-3 border-t border-border-base">
+              <p className="text-xs font-semibold text-content-faint uppercase tracking-wider mb-1">Bebedouros</p>
               <div className="flex flex-wrap gap-1">
                 {detalhe.bebedouros.map((b) => (
-                  <span key={b.id} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded">
+                  <span key={b.id} className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">
                     {b.nome}
                   </span>
                 ))}
@@ -139,7 +139,7 @@ export function PastoDetalhePanel({ detalhe, modoTelaCheia, onFechar, onEditarGe
           )}
 
           {/* Ações: editar pasto, editar geometria e remover geometria */}
-          <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
+          <div className="mt-4 pt-3 border-t border-border-base space-y-2">
             <Button
               variant="secondary"
               onClick={() => navigate(`/controller/pastos?pasto=${detalhe.id}`)}
@@ -150,14 +150,14 @@ export function PastoDetalhePanel({ detalhe, modoTelaCheia, onFechar, onEditarGe
             <Button
               variant="secondary"
               onClick={() => onEditarGeometria(detalhe.id, detalhe.nome)}
-              className="w-full text-blue-600 hover:text-blue-700 border-blue-200"
+              className="w-full text-primary hover:text-blue-700 border-primary/30"
             >
               Editar Geometria
             </Button>
             <Button
               variant="secondary"
               onClick={() => onRemoverGeometria(detalhe.id, detalhe.nome)}
-              className="w-full text-red-600 hover:text-red-700 border-red-200"
+              className="w-full text-red-500 hover:text-red-700 border-red-500/30"
             >
               Remover do Mapa
             </Button>

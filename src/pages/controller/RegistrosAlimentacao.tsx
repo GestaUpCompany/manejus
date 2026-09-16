@@ -115,7 +115,7 @@ export function RegistrosAlimentacao() {
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Alimentação</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Alimentação</h2>
       </div>
 
       <FilterToolbar
@@ -169,8 +169,8 @@ export function RegistrosAlimentacao() {
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
-                    <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                    <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-content-strong">
                       {formatDateTime(registro.data)}
                     </span>
                   </div>
@@ -178,14 +178,14 @@ export function RegistrosAlimentacao() {
                     {registro.modo && (
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         registro.modo === 'marmita'
-                          ? 'bg-orange-100 text-orange-700'
-                          : 'bg-blue-100 text-blue-700'
+                          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                          : 'bg-primary/10 text-primary dark:text-primary-light'
                       }`}>
                         {registro.modo === 'marmita' ? 'Marmita' : 'Cantina'}
                       </span>
                     )}
                     <span
-                      className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary"
+                      className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light"
                       onClick={(e) => {
                         e.stopPropagation()
                         setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')
@@ -196,59 +196,59 @@ export function RegistrosAlimentacao() {
                   </div>
                 </div>
                 <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-500">Usuário:</span>
-                  <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                  <span className="text-content-muted">Usuário:</span>
+                  <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                 </div>
                 {registro.modo === 'marmita' ? (
                   <div className="space-y-2 text-xs sm:text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Fornecedor:</span>
-                      <span className="text-gray-800 font-medium">{registro.fornecedor || '-'}</span>
+                      <span className="text-content-muted">Fornecedor:</span>
+                      <span className="text-content-strong font-medium">{registro.fornecedor || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Qtd. Marmitas:</span>
-                      <span className="text-gray-800 font-medium">{registro.quantidade_marmitas || '-'}</span>
+                      <span className="text-content-muted">Qtd. Marmitas:</span>
+                      <span className="text-content-strong font-medium">{registro.quantidade_marmitas || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Preço Unit.:</span>
-                      <span className="text-gray-800 font-medium">
+                      <span className="text-content-muted">Preço Unit.:</span>
+                      <span className="text-content-strong font-medium">
                         {registro.preco_unitario ? `R$ ${Number(registro.preco_unitario).toFixed(2).replace('.', ',')}` : '-'}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Destinatário:</span>
-                      <span className="text-gray-800 font-medium">{registro.destinatario || '-'}</span>
+                      <span className="text-content-muted">Destinatário:</span>
+                      <span className="text-content-strong font-medium">{registro.destinatario || '-'}</span>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-2 text-xs sm:text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Quem Cozinhou:</span>
-                      <span className="text-gray-800 font-medium">{registro.quem_cozinhou || '-'}</span>
+                      <span className="text-content-muted">Quem Cozinhou:</span>
+                      <span className="text-content-strong font-medium">{registro.quem_cozinhou || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Quem Ajudou:</span>
-                      <span className="text-gray-800 font-medium">{registro.quem_ajudou || '-'}</span>
+                      <span className="text-content-muted">Quem Ajudou:</span>
+                      <span className="text-content-strong font-medium">{registro.quem_ajudou || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Nº Cozinheiras:</span>
-                      <span className="text-gray-800 font-medium">{registro.numero_cozinheiras || '-'}</span>
+                      <span className="text-content-muted">Nº Cozinheiras:</span>
+                      <span className="text-content-strong font-medium">{registro.numero_cozinheiras || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Café Manhã:</span>
-                      <span className="text-gray-800 font-medium">{registro.numero_cafe_manha || '-'}</span>
+                      <span className="text-content-muted">Café Manhã:</span>
+                      <span className="text-content-strong font-medium">{registro.numero_cafe_manha || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Lanches:</span>
-                      <span className="text-gray-800 font-medium">{registro.numero_lanches || '-'}</span>
+                      <span className="text-content-muted">Lanches:</span>
+                      <span className="text-content-strong font-medium">{registro.numero_lanches || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Almoço:</span>
-                      <span className="text-gray-800 font-medium">{registro.numero_refeicoes_almoco || '-'}</span>
+                      <span className="text-content-muted">Almoço:</span>
+                      <span className="text-content-strong font-medium">{registro.numero_refeicoes_almoco || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Jantar:</span>
-                      <span className="text-gray-800 font-medium">{registro.numero_refeicoes_jantar || '-'}</span>
+                      <span className="text-content-muted">Jantar:</span>
+                      <span className="text-content-strong font-medium">{registro.numero_refeicoes_jantar || '-'}</span>
                     </div>
                   </div>
                 )}
@@ -257,12 +257,12 @@ export function RegistrosAlimentacao() {
           </div>
 
           {/* Desktop Table View */}
-          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
+          <Card className="bg-surface-1 overflow-x-auto hidden sm:block" disableHover>
             <Table>
               <Thead>
                 <Tr>
                   <Th
-                    className="cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="cursor-pointer hover:bg-surface-2 transition-colors"
                     onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
@@ -288,8 +288,8 @@ export function RegistrosAlimentacao() {
                     <Td>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         registro.modo === 'marmita'
-                          ? 'bg-orange-100 text-orange-700'
-                          : 'bg-blue-100 text-blue-700'
+                          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                          : 'bg-primary/10 text-primary dark:text-primary-light'
                       }`}>
                         {registro.modo === 'marmita' ? 'Marmita' : 'Cantina'}
                       </span>
@@ -317,7 +317,7 @@ export function RegistrosAlimentacao() {
                         </span>
                       )}
                     </Td>
-                    <Td className="text-gray-500 max-w-xs truncate">
+                    <Td className="text-content-muted max-w-xs truncate">
                       {registro.observacao || '-'}
                     </Td>
                   </Tr>

@@ -339,7 +339,7 @@ export function HistoricoPlanos() {
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-800">Histórico de Planos Nutricionais</h2>
+          <h2 className="text-2xl font-bold text-content-strong">Histórico de Planos Nutricionais</h2>
         </div>
         <div className="grid grid-cols-1 gap-4">
           <CardSkeleton />
@@ -353,7 +353,7 @@ export function HistoricoPlanos() {
     <>
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Histórico de Planos Nutricionais</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Histórico de Planos Nutricionais</h2>
         {planosFiltrados.length > 0 && (
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => { setExportStep(1); setLotesSelecionados(new Set()); setExportModalOpen(true) }}>
@@ -372,20 +372,20 @@ export function HistoricoPlanos() {
           placeholder="Filtrar por lote..."
           value={filtroLote}
           onChange={(e) => setFiltroLote(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-4 py-2 border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
         />
         <input
           type="text"
           placeholder="Filtrar por categoria..."
           value={filtroCategoria}
           onChange={(e) => setFiltroCategoria(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-4 py-2 border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
       {planosFiltrados.length === 0 ? (
-        <Card className="bg-white p-8 border-0 shadow-sm text-center">
-          <p className="text-gray-600">Nenhum registro de plano nutricional encontrado.</p>
+        <Card className="bg-surface-1 p-8 border-0 shadow-sm text-center">
+          <p className="text-content-muted">Nenhum registro de plano nutricional encontrado.</p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -396,27 +396,27 @@ export function HistoricoPlanos() {
             const mSai = sai?.metricas_derivadas
 
             return (
-              <Card key={plano.plano_nutricional_id} className="bg-white p-5 border-0 shadow-sm">
+              <Card key={plano.plano_nutricional_id} className="bg-surface-1 p-5 border-0 shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-content-strong">
                       {plano.nomeLote} —{' '}
                       <span className="capitalize">{plano.categoria}</span>
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-content-muted">
                       Plano: {plano.nomePlano}
                     </p>
                   </div>
                   <div className="text-left md:text-right">
                     <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${
                       plano.vigente
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-blue-100 text-blue-800'
+                        ? 'bg-green-500/10 text-green-800 dark:text-green-200'
+                        : 'bg-primary/10 text-primary dark:text-primary-light'
                     }`}>
                       {plano.vigente ? 'Vigente' : (sai?.motivo_migracao === 'manual' ? 'Migrado Manualmente' : sai?.motivo_migracao === 'automatico' ? 'Migrado Automaticamente' : sai?.motivo_migracao === 'encerramento' ? 'Encerrado' : (sai?.motivo_migracao ? sai.motivo_migracao.replace(/\b\w/g, (c) => c.toUpperCase()) : 'Encerrado'))}
                     </span>
                     {sai && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-content-muted mt-1">
                         {new Date(sai.created_at).toLocaleDateString('pt-BR')}
                       </p>
                     )}
@@ -426,36 +426,36 @@ export function HistoricoPlanos() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Registro de Entrada */}
                   {ent && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold text-blue-900 mb-3">Entrada no Plano</h4>
+                    <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-content-strong mb-3">Entrada no Plano</h4>
                       {ent.created_at && (
-                        <p className="text-xs text-blue-700 mb-2">
+                        <p className="text-xs text-content-muted mb-2">
                           {new Date(ent.created_at).toLocaleDateString('pt-BR')}
                         </p>
                       )}
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <span className="text-gray-600">Peso/cab:</span>
+                          <span className="text-content-muted">Peso/cab:</span>
                           <p className="font-medium">{fmt(mEnt?.peso_inicial_kg_cab)} kg</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">RC:</span>
+                          <span className="text-content-muted">RC:</span>
                           <p className="font-medium">{fmt(mEnt?.rc_inicio)}%</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Cabeças:</span>
+                          <span className="text-content-muted">Cabeças:</span>
                           <p className="font-medium">{mEnt?.quant_atual ?? '—'}</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Produção lote:</span>
+                          <span className="text-content-muted">Produção lote:</span>
                           <p className="font-medium">{fmt(ent.producao_arroba_lote)} @</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Progresso meta:</span>
+                          <span className="text-content-muted">Progresso meta:</span>
                           <p className="font-medium">{fmt(mEnt?.progresso_meta_percent)}%</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Custo/cab:</span>
+                          <span className="text-content-muted">Custo/cab:</span>
                           <p className="font-medium">R$ {fmt(mEnt?.custo_total_producao_cab)}</p>
                         </div>
                       </div>
@@ -464,74 +464,74 @@ export function HistoricoPlanos() {
 
                   {/* Registro de Saída */}
                   {sai ? (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold text-green-900 mb-3">Saída do Plano</h4>
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-content-strong mb-3">Saída do Plano</h4>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <span className="text-gray-600">Peso/cab:</span>
+                          <span className="text-content-muted">Peso/cab:</span>
                           <p className="font-medium">{fmt(mSai?.peso_vivo_medio_lote)} kg</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">RC:</span>
+                          <span className="text-content-muted">RC:</span>
                           <p className="font-medium">{fmt(mSai?.rc_atual)}%</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Cabeças:</span>
+                          <span className="text-content-muted">Cabeças:</span>
                           <p className="font-medium">{mSai?.quant_atual ?? '—'}</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Produção lote:</span>
+                          <span className="text-content-muted">Produção lote:</span>
                           <p className="font-medium">{fmt(sai.producao_arroba_lote)} @</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Duração:</span>
+                          <span className="text-content-muted">Duração:</span>
                           <p className="font-medium">{sai.duracao_dias || 0} dias</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">GMD realizado:</span>
+                          <span className="text-content-muted">GMD realizado:</span>
                           <p className="font-medium">{fmt(sai.gmd_realizado, 3)} kg/dia</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Ganho peso/cab:</span>
+                          <span className="text-content-muted">Ganho peso/cab:</span>
                           <p className="font-medium">{fmt(sai.ganho_peso_total_kg_cab)} kg</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Ganho @/cab:</span>
+                          <span className="text-content-muted">Ganho @/cab:</span>
                           <p className="font-medium">{fmt(mSai?.ganho_arroba_cab)} @</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Progresso meta:</span>
+                          <span className="text-content-muted">Progresso meta:</span>
                           <p className="font-medium">{fmt(mSai?.progresso_meta_percent)}%</p>
                         </div>
                         <div>
-                          <span className="text-gray-600">Custo total/cab:</span>
+                          <span className="text-content-muted">Custo total/cab:</span>
                           <p className="font-medium">R$ {fmt(mSai?.custo_total_producao_cab)}</p>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center justify-center">
-                      <p className="text-sm text-yellow-800">Plano vigente — sem registro de saída</p>
+                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 flex items-center justify-center">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">Plano vigente — sem registro de saída</p>
                     </div>
                   )}
                 </div>
 
                 {/* Delta entre entrada e saída */}
                 {ent && sai && mEnt && mSai && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Variação no Período</h4>
+                  <div className="mt-4 pt-4 border-t border-border-base">
+                    <h4 className="text-sm font-semibold text-content mb-3">Variação no Período</h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                       <div>
-                        <span className="text-gray-600">Peso/cab:</span>
-                        <p className="font-medium text-gray-900 flex items-center gap-1">
+                        <span className="text-content-muted">Peso/cab:</span>
+                        <p className="font-medium text-content-strong flex items-center gap-1">
                           {(() => {
                             const delta = (mSai.peso_vivo_medio_lote ?? 0) - (mEnt.peso_inicial_kg_cab ?? 0)
                             return (
                               <>
                                 {delta > 0 ? (
-                                  <span className="text-green-600 font-bold">&uarr;</span>
+                                  <span className="text-green-500 font-bold">&uarr;</span>
                                 ) : delta < 0 ? (
-                                  <span className="text-red-600 font-bold">&darr;</span>
+                                  <span className="text-red-500 font-bold">&darr;</span>
                                 ) : null}
                                 {fmt(delta)} kg
                               </>
@@ -540,16 +540,16 @@ export function HistoricoPlanos() {
                         </p>
                       </div>
                       <div>
-                        <span className="text-gray-600">RC:</span>
-                        <p className="font-medium text-gray-900 flex items-center gap-1">
+                        <span className="text-content-muted">RC:</span>
+                        <p className="font-medium text-content-strong flex items-center gap-1">
                           {(() => {
                             const delta = (mSai.rc_atual ?? 0) - (mEnt.rc_inicio ?? 0)
                             return (
                               <>
                                 {delta > 0 ? (
-                                  <span className="text-green-600 font-bold">&uarr;</span>
+                                  <span className="text-green-500 font-bold">&uarr;</span>
                                 ) : delta < 0 ? (
-                                  <span className="text-red-600 font-bold">&darr;</span>
+                                  <span className="text-red-500 font-bold">&darr;</span>
                                 ) : null}
                                 {fmt(delta)} p.p.
                               </>
@@ -558,16 +558,16 @@ export function HistoricoPlanos() {
                         </p>
                       </div>
                       <div>
-                        <span className="text-gray-600">Produção lote:</span>
-                        <p className="font-medium text-gray-900 flex items-center gap-1">
+                        <span className="text-content-muted">Produção lote:</span>
+                        <p className="font-medium text-content-strong flex items-center gap-1">
                           {(() => {
                             const delta = (sai.producao_arroba_lote ?? 0) - (ent.producao_arroba_lote ?? 0)
                             return (
                               <>
                                 {delta > 0 ? (
-                                  <span className="text-green-600 font-bold">&uarr;</span>
+                                  <span className="text-green-500 font-bold">&uarr;</span>
                                 ) : delta < 0 ? (
-                                  <span className="text-red-600 font-bold">&darr;</span>
+                                  <span className="text-red-500 font-bold">&darr;</span>
                                 ) : null}
                                 {fmt(delta)} @
                               </>
@@ -576,16 +576,16 @@ export function HistoricoPlanos() {
                         </p>
                       </div>
                       <div>
-                        <span className="text-gray-600">Custo/cab:</span>
-                        <p className="font-medium text-gray-900 flex items-center gap-1">
+                        <span className="text-content-muted">Custo/cab:</span>
+                        <p className="font-medium text-content-strong flex items-center gap-1">
                           {(() => {
                             const delta = (mSai.custo_total_producao_cab ?? 0) - (mEnt.custo_total_producao_cab ?? 0)
                             return (
                               <>
                                 {delta > 0 ? (
-                                  <span className="text-red-600 font-bold">&uarr;</span>
+                                  <span className="text-red-500 font-bold">&uarr;</span>
                                 ) : delta < 0 ? (
-                                  <span className="text-green-600 font-bold">&darr;</span>
+                                  <span className="text-green-500 font-bold">&darr;</span>
                                 ) : null}
                                 R$ {fmt(delta)}
                               </>
@@ -598,8 +598,8 @@ export function HistoricoPlanos() {
                 )}
 
                 {sai?.plano_posterior && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 text-sm text-gray-600">
-                    Próximo plano: <span className="font-medium text-gray-900">{sai.plano_posterior.nome}</span>
+                  <div className="mt-4 pt-4 border-t border-border-base text-sm text-content-muted">
+                    Próximo plano: <span className="font-medium text-content-strong">{sai.plano_posterior.nome}</span>
                   </div>
                 )}
               </Card>
@@ -613,12 +613,12 @@ export function HistoricoPlanos() {
       <Modal isOpen={exportModalOpen} onClose={() => { setExportModalOpen(false); setExportStep(1) }} title="Exportar Auditoria" size="md">
         {exportStep === 1 && (
           <div className="space-y-5">
-            <div className="flex items-center gap-2 text-gray-700">
+            <div className="flex items-center gap-2 text-content">
               <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-white text-sm font-bold">1</span>
               <span className="text-sm font-semibold">Selecione os lotes para exportar</span>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-100 transition-colors"
+            <div className="bg-surface-2 rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:bg-surface-2 transition-colors"
               onClick={() => setLotesSelecionados(new Set())}
             >
               <input
@@ -628,14 +628,14 @@ export function HistoricoPlanos() {
                 onChange={(e) => { if (e.target.checked) setLotesSelecionados(new Set()) }}
                 className="w-4 h-4 accent-primary"
               />
-              <label htmlFor="selectAll" className="text-sm font-medium text-gray-800 cursor-pointer">Todos os lotes</label>
+              <label htmlFor="selectAll" className="text-sm font-medium text-content-strong cursor-pointer">Todos os lotes</label>
             </div>
 
-            <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-56 overflow-y-auto">
+            <div className="border border-border-base rounded-lg divide-y divide-gray-100 max-h-56 overflow-y-auto">
               {[...new Set(planosFiltrados.map((p) => p.nomeLote))].map((nomeLote) => (
                 <div
                   key={nomeLote}
-                  className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${lotesSelecionados.has(nomeLote) ? 'bg-primary/5' : 'hover:bg-gray-50'}`}
+                  className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${lotesSelecionados.has(nomeLote) ? 'bg-primary/5' : 'hover:bg-surface-2'}`}
                   onClick={() => {
                     const next = new Set(lotesSelecionados)
                     if (next.has(nomeLote)) next.delete(nomeLote)
@@ -655,7 +655,7 @@ export function HistoricoPlanos() {
                     }}
                     className="w-4 h-4 accent-primary"
                   />
-                  <label htmlFor={`lote-${nomeLote}`} className="text-sm text-gray-700 cursor-pointer flex-1">{nomeLote}</label>
+                  <label htmlFor={`lote-${nomeLote}`} className="text-sm text-content cursor-pointer flex-1">{nomeLote}</label>
                 </div>
               ))}
             </div>
@@ -668,7 +668,7 @@ export function HistoricoPlanos() {
         )}
         {exportStep === 2 && (
           <div className="space-y-5">
-            <div className="flex items-center gap-2 text-gray-700">
+            <div className="flex items-center gap-2 text-content">
               <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-white text-sm font-bold">2</span>
               <span className="text-sm font-semibold">Selecione o tipo de registro</span>
             </div>
@@ -681,22 +681,22 @@ export function HistoricoPlanos() {
               ].map((opt) => (
                 <div
                   key={opt.val}
-                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${exportTipo === opt.val ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'}`}
+                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${exportTipo === opt.val ? 'border-primary bg-primary/5' : 'border-border-base hover:border-surface-3'}`}
                   onClick={() => setExportTipo(opt.val as 'entrada' | 'saida' | 'ambos')}
                 >
                   <input type="radio" name="exportTipo" checked={exportTipo === opt.val} onChange={() => setExportTipo(opt.val as 'entrada' | 'saida' | 'ambos')} className="w-4 h-4 mt-0.5 accent-primary" />
                   <div>
-                    <p className="text-sm font-medium text-gray-800">{opt.label}</p>
-                    <p className="text-xs text-gray-500">{opt.desc}</p>
+                    <p className="text-sm font-medium text-content-strong">{opt.label}</p>
+                    <p className="text-xs text-content-muted">{opt.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4 text-xs text-gray-600 space-y-1">
-              <div className="flex justify-between"><span className="text-gray-500">Lotes selecionados:</span><span className="font-medium text-gray-800">{lotesSelecionados.size === 0 ? 'Todos' : lotesSelecionados.size}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Tipo:</span><span className="font-medium text-gray-800">{exportTipo === 'entrada' ? 'Entrada' : exportTipo === 'saida' ? 'Saída' : 'Entrada e Saída'}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Arquivos:</span><span className="font-medium text-gray-800">{lotesSelecionados.size > 1 || (lotesSelecionados.size === 0 && [...new Set(planosFiltrados.map((p) => p.nomeLote))].length > 1) ? 'Um por lote' : '1 arquivo'}</span></div>
+            <div className="bg-surface-2 rounded-lg p-4 text-xs text-content-muted space-y-1">
+              <div className="flex justify-between"><span className="text-content-muted">Lotes selecionados:</span><span className="font-medium text-content-strong">{lotesSelecionados.size === 0 ? 'Todos' : lotesSelecionados.size}</span></div>
+              <div className="flex justify-between"><span className="text-content-muted">Tipo:</span><span className="font-medium text-content-strong">{exportTipo === 'entrada' ? 'Entrada' : exportTipo === 'saida' ? 'Saída' : 'Entrada e Saída'}</span></div>
+              <div className="flex justify-between"><span className="text-content-muted">Arquivos:</span><span className="font-medium text-content-strong">{lotesSelecionados.size > 1 || (lotesSelecionados.size === 0 && [...new Set(planosFiltrados.map((p) => p.nomeLote))].length > 1) ? 'Um por lote' : '1 arquivo'}</span></div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -710,16 +710,16 @@ export function HistoricoPlanos() {
       {/* Modal de Exportação PDF */}
       <Modal isOpen={pdfModalOpen} onClose={() => setPdfModalOpen(false)} title="Exportar Relatório PDF" size="md">
         <div className="space-y-5">
-          <div className="flex items-center gap-2 text-gray-700">
+          <div className="flex items-center gap-2 text-content">
             <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-white text-sm font-bold">1</span>
             <span className="text-sm font-semibold">Selecione os lotes para o relatório</span>
           </div>
 
-          <p className="text-xs text-gray-500 -mt-2 ml-9">
+          <p className="text-xs text-content-muted -mt-2 ml-9">
             O relatório PDF inclui sempre entrada e saída de cada plano. Planos sem saída mostram apenas a entrada.
           </p>
 
-          <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-100 transition-colors"
+          <div className="bg-surface-2 rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:bg-surface-2 transition-colors"
             onClick={() => setPdfLotesSelecionados(new Set())}
           >
             <input
@@ -729,14 +729,14 @@ export function HistoricoPlanos() {
               onChange={(e) => { if (e.target.checked) setPdfLotesSelecionados(new Set()) }}
               className="w-4 h-4 accent-primary"
             />
-            <label htmlFor="pdfSelectAll" className="text-sm font-medium text-gray-800 cursor-pointer">Todos os lotes</label>
+            <label htmlFor="pdfSelectAll" className="text-sm font-medium text-content-strong cursor-pointer">Todos os lotes</label>
           </div>
 
-          <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-56 overflow-y-auto">
+          <div className="border border-border-base rounded-lg divide-y divide-gray-100 max-h-56 overflow-y-auto">
             {[...new Set(planosFiltrados.map((p) => p.nomeLote))].map((nomeLote) => (
               <div
                 key={nomeLote}
-                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${pdfLotesSelecionados.has(nomeLote) ? 'bg-primary/5' : 'hover:bg-gray-50'}`}
+                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${pdfLotesSelecionados.has(nomeLote) ? 'bg-primary/5' : 'hover:bg-surface-2'}`}
                 onClick={() => {
                   const next = new Set(pdfLotesSelecionados)
                   if (next.has(nomeLote)) next.delete(nomeLote)
@@ -756,15 +756,15 @@ export function HistoricoPlanos() {
                   }}
                   className="w-4 h-4 accent-primary"
                 />
-                <label htmlFor={`pdf-lote-${nomeLote}`} className="text-sm text-gray-700 cursor-pointer flex-1">{nomeLote}</label>
+                <label htmlFor={`pdf-lote-${nomeLote}`} className="text-sm text-content cursor-pointer flex-1">{nomeLote}</label>
               </div>
             ))}
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4 text-xs text-gray-600 space-y-1">
-            <div className="flex justify-between"><span className="text-gray-500">Lotes selecionados:</span><span className="font-medium text-gray-800">{pdfLotesSelecionados.size === 0 ? 'Todos' : pdfLotesSelecionados.size}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Conteúdo:</span><span className="font-medium text-gray-800">Entrada e Saída (completo)</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Formato:</span><span className="font-medium text-gray-800">PDF com gráficos e tabelas</span></div>
+          <div className="bg-surface-2 rounded-lg p-4 text-xs text-content-muted space-y-1">
+            <div className="flex justify-between"><span className="text-content-muted">Lotes selecionados:</span><span className="font-medium text-content-strong">{pdfLotesSelecionados.size === 0 ? 'Todos' : pdfLotesSelecionados.size}</span></div>
+            <div className="flex justify-between"><span className="text-content-muted">Conteúdo:</span><span className="font-medium text-content-strong">Entrada e Saída (completo)</span></div>
+            <div className="flex justify-between"><span className="text-content-muted">Formato:</span><span className="font-medium text-content-strong">PDF com gráficos e tabelas</span></div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

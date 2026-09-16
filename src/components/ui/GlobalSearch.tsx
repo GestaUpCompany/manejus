@@ -209,22 +209,12 @@ export function GlobalSearch() {
       }
     }
 
-    const handleShortcut = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-        event.preventDefault()
-        setIsOpen(true)
-        inputRef.current?.focus()
-      }
-    }
-
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
-    document.addEventListener('keydown', handleShortcut)
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
-      document.removeEventListener('keydown', handleShortcut)
     }
   }, [])
 
@@ -340,14 +330,14 @@ export function GlobalSearch() {
       <button
         onClick={handleOpen}
         aria-label="Abrir busca"
-        className="flex items-center gap-2 px-3 sm:px-4 py-2 min-h-[44px] bg-white/10 rounded-lg transition-all text-white"
+        className="flex items-center justify-center md:justify-start gap-2 md:gap-2 w-10 h-10 md:w-auto md:h-auto px-0 md:px-4 py-0 md:py-2 md:min-w-[152px] text-white/70 hover:text-white hover:bg-white/10 md:hover:bg-white/10 md:bg-white/5 md:backdrop-blur-sm md:rounded-lg md:ring-1 md:ring-white/10 transition-all"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 md:w-4.5 md:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
-        <span className="hidden md:inline text-sm">Buscar...</span>
-        <kbd className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-white/20 rounded">
-          <span>⌘ + </span>
+        <span className="hidden md:inline text-sm text-white/60">Buscar...</span>
+        <kbd className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-white/10 rounded font-mono text-white/50 ring-1 ring-white/10 ml-auto whitespace-nowrap">
+          <span>Ctrl + </span>
           <span>K</span>
         </kbd>
       </button>
@@ -361,10 +351,10 @@ export function GlobalSearch() {
           />
 
           {/* Search Modal/Panel */}
-          <div className="fixed sm:absolute inset-x-4 sm:inset-auto top-4 bottom-4 sm:top-auto sm:bottom-auto right-0 mt-2 w-[calc(100%-2rem)] sm:w-[480px] bg-white sm:rounded-lg shadow-xl border border-gray-200 overflow-hidden animate-scale-in z-[60] flex flex-col max-h-[80vh] sm:max-h-[600px] rounded-2xl">
-            <div className="p-3 sm:p-4 border-b border-gray-200 shrink-0 flex items-center gap-3">
+          <div className="fixed sm:absolute inset-x-4 sm:inset-auto top-4 bottom-4 sm:top-auto sm:bottom-auto right-0 mt-2 w-[calc(100%-2rem)] sm:w-[480px] bg-surface-1 sm:rounded-lg shadow-xl border border-border-base overflow-hidden animate-scale-in z-[60] flex flex-col max-h-[80vh] sm:max-h-[600px] rounded-2xl">
+            <div className="p-3 sm:p-4 border-b border-border-base shrink-0 flex items-center gap-3">
               <div className="relative flex-1">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-content-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
@@ -376,27 +366,27 @@ export function GlobalSearch() {
                   placeholder="Digite para buscar..."
                   aria-label="Buscar"
                   role="searchbox"
-                  className="w-full pl-10 pr-4 py-3 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
+                  className="w-full pl-10 pr-4 py-3 sm:py-2 border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base bg-surface-1 text-content-strong"
                   autoFocus
                 />
               </div>
               <button
                 onClick={() => setIsOpen(false)}
                 aria-label="Fechar busca"
-                className="p-2 text-gray-400 rounded-lg hover:bg-gray-100 transition-colors sm:hidden"
+                className="p-2 text-content-faint rounded-lg hover:bg-surface-2 transition-colors sm:hidden"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <p className="text-xs text-gray-500 px-3 sm:px-4 pb-3 border-b border-gray-200">
+            <p className="text-xs text-content-muted px-3 sm:px-4 pb-3 border-b border-border-base">
               Pesquise em: {entityList}
             </p>
 
             <div className="overflow-y-auto flex-1">
               {loading && (
-                <div className="p-4 text-center text-gray-500">
+                <div className="p-4 text-center text-content-muted">
                   <svg className="animate-spin h-6 w-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -409,13 +399,13 @@ export function GlobalSearch() {
                 <div className="p-4">
                   {recentSearches.length > 0 ? (
                     <div>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Buscas recentes</p>
+                      <p className="text-xs font-medium text-content-faint uppercase tracking-wide mb-2">Buscas recentes</p>
                       <div className="flex flex-wrap gap-2">
                         {recentSearches.map((term, i) => (
                           <button
                             key={i}
                             onClick={() => handleRecentClick(term)}
-                            className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors text-gray-700"
+                            className="px-3 py-1.5 text-sm bg-surface-2 hover:bg-surface-3 rounded-full transition-colors text-content"
                           >
                             {term}
                           </button>
@@ -423,13 +413,13 @@ export function GlobalSearch() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-center text-gray-500 text-sm sm:text-base">Digite pelo menos 2 caracteres para buscar</p>
+                    <p className="text-center text-content-muted text-sm sm:text-base">Digite pelo menos 2 caracteres para buscar</p>
                   )}
                 </div>
               )}
 
               {!loading && searchTerm.length >= 2 && flatResults.length === 0 && (
-                <div className="p-4 text-center text-gray-500">
+                <div className="p-4 text-center text-content-muted">
                   <p className="text-sm sm:text-base">Nenhum resultado encontrado para "{searchTerm}"</p>
                 </div>
               )}
@@ -438,8 +428,8 @@ export function GlobalSearch() {
                 <div className="py-1">
                   {Object.entries(groupedResults).map(([type, items]) => (
                     <div key={type}>
-                      <div className="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 sticky top-0">
-                        {type} <span className="text-gray-400 font-normal">({items.length})</span>
+                      <div className="px-4 py-1.5 text-xs font-semibold text-content-faint uppercase tracking-wide bg-surface-2 sticky top-0">
+                        {type} <span className="text-content-faint font-normal">({items.length})</span>
                       </div>
                       {items.map((result) => {
                         const globalIndex = flatResults.findIndex(
@@ -452,16 +442,16 @@ export function GlobalSearch() {
                             onClick={() => handleResultClick(result)}
                             onMouseEnter={() => setActiveIndex(globalIndex)}
                             className={`w-full px-4 py-2.5 sm:py-3 text-left transition-all flex items-center gap-3 min-h-[48px] ${
-                              isActive ? 'bg-primary/10 border-l-2 border-primary' : 'hover:bg-gray-50 border-l-2 border-transparent'
+                              isActive ? 'bg-primary/10 border-l-2 border-primary' : 'hover:bg-surface-2 border-l-2 border-transparent'
                             }`}
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{result.label}</p>
+                              <p className="font-medium text-content-strong text-sm sm:text-base truncate">{result.label}</p>
                               {result.subtitle && (
-                                <p className="text-xs sm:text-sm text-gray-500 truncate">{result.subtitle}</p>
+                                <p className="text-xs sm:text-sm text-content-muted truncate">{result.subtitle}</p>
                               )}
                             </div>
-                            <svg className={`w-4 h-4 shrink-0 ${isActive ? 'text-primary' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className={`w-4 h-4 shrink-0 ${isActive ? 'text-primary' : 'text-content-faint'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
                           </button>
@@ -475,18 +465,18 @@ export function GlobalSearch() {
 
             {/* Footer com dicas de teclado */}
             {flatResults.length > 0 && (
-              <div className="border-t border-gray-200 px-4 py-2 flex items-center justify-between text-xs text-gray-400 shrink-0">
+              <div className="border-t border-border-base px-4 py-2 flex items-center justify-between text-xs text-content-faint shrink-0">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px]">↑↓</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-surface-2 rounded text-[10px]">↑↓</kbd>
                     navegar
                   </span>
                   <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px]">↵</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-surface-2 rounded text-[10px]">↵</kbd>
                     selecionar
                   </span>
                   <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px]">esc</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-surface-2 rounded text-[10px]">esc</kbd>
                     fechar
                   </span>
                 </div>

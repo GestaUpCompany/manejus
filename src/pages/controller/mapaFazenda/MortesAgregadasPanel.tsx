@@ -48,18 +48,18 @@ function BarraDistribuicao({ titulo, dados }: { titulo: string; dados: Record<st
   const max = Math.max(...entries.map((e) => e[1]))
   return (
     <div>
-      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">{titulo}</h3>
+      <h3 className="text-xs font-semibold text-content-muted uppercase tracking-wide mb-1.5">{titulo}</h3>
       <div className="space-y-1">
         {entries.map(([key, count]) => (
           <div key={key} className="flex items-center gap-2 text-xs">
-            <span className="w-24 truncate text-gray-700" title={key}>{key}</span>
-            <div className="flex-1 bg-gray-100 rounded h-4 relative overflow-hidden">
+            <span className="w-24 truncate text-content" title={key}>{key}</span>
+            <div className="flex-1 bg-surface-2 rounded h-4 relative overflow-hidden">
               <div
                 className="bg-red-700 h-full rounded"
                 style={{ width: `${(count / max) * 100}%` }}
               />
             </div>
-            <span className="w-6 text-right font-semibold text-gray-900">{count}</span>
+            <span className="w-6 text-right font-semibold text-content-strong">{count}</span>
           </div>
         ))}
       </div>
@@ -90,12 +90,12 @@ export function MortesAgregadasPanel({ mortes, modoTelaCheia, onFechar, onVerDet
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Mortes na área</h2>
-              <p className="text-xs text-gray-500">{total} {total === 1 ? 'registro' : 'registros'}</p>
+              <h2 className="text-lg font-bold text-content-strong">Mortes na área</h2>
+              <p className="text-xs text-content-muted">{total} {total === 1 ? 'registro' : 'registros'}</p>
             </div>
             <button
               onClick={onFechar}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-content-faint hover:text-content-muted"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -105,13 +105,13 @@ export function MortesAgregadasPanel({ mortes, modoTelaCheia, onFechar, onVerDet
 
           <div className="space-y-2 text-sm mb-4">
             <div className="flex justify-between">
-              <span className="text-gray-500">Período:</span>
-              <span className="font-semibold text-gray-900">{primeira} a {ultima}</span>
+              <span className="text-content-muted">Período:</span>
+              <span className="font-semibold text-content-strong">{primeira} a {ultima}</span>
             </div>
             {pesoMedio != null && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Peso médio:</span>
-                <span className="font-semibold text-gray-900">{pesoMedio} kg</span>
+                <span className="text-content-muted">Peso médio:</span>
+                <span className="font-semibold text-content-strong">{pesoMedio} kg</span>
               </div>
             )}
           </div>
@@ -124,21 +124,21 @@ export function MortesAgregadasPanel({ mortes, modoTelaCheia, onFechar, onVerDet
           </div>
 
           <div>
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Registros</h3>
+            <h3 className="text-xs font-semibold text-content-muted uppercase tracking-wide mb-1.5">Registros</h3>
             <div className="space-y-1 max-h-60 overflow-y-auto">
               {mortes.map((m) => (
                 <button
                   key={m.id}
                   onClick={() => onVerDetalhe(m)}
-                  className="w-full flex items-center justify-between text-xs p-1.5 rounded hover:bg-gray-100 text-left"
+                  className="w-full flex items-center justify-between text-xs p-1.5 rounded hover:bg-surface-2 text-left"
                 >
                   <div className="flex flex-col">
-                    <span className="font-semibold text-gray-900">{formatarData(m.data)}</span>
-                    <span className="text-gray-500">{m.causa_morte || 'Causa não informada'}</span>
+                    <span className="font-semibold text-content-strong">{formatarData(m.data)}</span>
+                    <span className="text-content-muted">{m.causa_morte || 'Causa não informada'}</span>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className="text-gray-600">{m.brinco || ''}</span>
-                    <span className="text-gray-400">{m.categoria || ''}</span>
+                    <span className="text-content-muted">{m.brinco || ''}</span>
+                    <span className="text-content-faint">{m.categoria || ''}</span>
                   </div>
                 </button>
               ))}

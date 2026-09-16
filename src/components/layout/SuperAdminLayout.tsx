@@ -61,16 +61,16 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-surface-2">
       <ImpersonationBar />
       <Header />
       <div className="flex">
         {/* Sidebar - Desktop */}
-        <aside className="w-64 hidden md:block bg-white border-r-2 border-gray-200 fixed top-0 h-screen overflow-y-auto z-10">
+        <aside className="w-64 hidden md:block bg-surface-1 border-r-2 border-border-base fixed top-0 h-screen overflow-y-auto z-10">
           <div className="pt-16">
-            <div className="px-4 py-3 border-b border-gray-100">
+            <div className="px-4 py-3 border-b border-border-subtle">
               <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">Plataforma</p>
-              <p className="text-xs text-gray-400 mt-0.5">Super Administrador</p>
+              <p className="text-xs text-content-faint mt-0.5">Super Administrador</p>
             </div>
             <Sidebar items={superAdminItems} title="Plataforma" />
           </div>
@@ -87,14 +87,14 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
               role="dialog"
               aria-modal="true"
               aria-label="Menu de navegação"
-              className="bg-white w-64 h-full p-4 overflow-y-auto animate-slide-in"
+              className="bg-surface-1 w-64 h-full p-4 overflow-y-auto animate-slide-in"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider" aria-hidden="true">Plataforma</p>
+                <p className="text-xs font-semibold text-content-faint uppercase tracking-wider" aria-hidden="true">Plataforma</p>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 rounded-lg transition-all hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  className="p-2 rounded-lg transition-all hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   aria-label="Fechar menu"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -110,11 +110,11 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                       navigate(item.path)
                       setMobileMenuOpen(false)
                     }}
-                    className="w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium border-l-[3px] flex items-center gap-3 text-gray-700 border-transparent hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    className="w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium border-l-[3px] flex items-center gap-3 text-content border-transparent hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     aria-label={`Ir para ${item.label}`}
                   >
                     {item.icon && (
-                      <span className="flex-shrink-0 text-gray-400" aria-hidden="true">
+                      <span className="flex-shrink-0 text-content-faint" aria-hidden="true">
                         {item.icon}
                       </span>
                     )}
@@ -132,7 +132,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
           <button
             onClick={() => setMobileMenuOpen(true)}
             aria-label="Abrir menu de navegação"
-            className="md:hidden mb-4 p-2 bg-white border-2 border-gray-300 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="md:hidden mb-4 p-2 bg-surface-1 border-2 border-surface-3 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />

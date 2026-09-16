@@ -84,7 +84,7 @@ export function GroupedSelect({
   return (
     <div>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-content mb-1">
           {label}
         </label>
       )}
@@ -96,45 +96,45 @@ export function GroupedSelect({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm text-left border-gray-200 focus:border-accent bg-white ${className}`}
+          className={`w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm text-left border-border-base focus:border-accent bg-surface-1 text-content ${className}`}
         >
           {selectedOption ? (
             <span className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white bg-gray-700 px-2.5 py-1 rounded-md shadow-sm">
+              <span className="text-xs font-bold text-white bg-surface-3 px-2.5 py-1 rounded-md shadow-sm">
                 {selectedOption.category}
               </span>
               <span>{selectedOption.name}</span>
             </span>
           ) : (
-            <span className="text-gray-400">{placeholder}</span>
+            <span className="text-content-faint">{placeholder}</span>
           )}
         </button>
 
         {/* Dropdown */}
         {isOpen && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+          <div className="absolute z-50 w-full mt-1 bg-surface-1 border border-border-base rounded-lg shadow-lg max-h-60 overflow-auto">
             {/* Search input */}
-            <div className="p-2 border-b border-gray-100 sticky top-0 bg-white">
+            <div className="p-2 border-b border-border-subtle sticky top-0 bg-surface-1">
               <input
                 type="text"
                 placeholder="Buscar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-accent text-sm"
+                className="w-full px-3 py-2 border border-border-base rounded-lg focus:outline-none focus:border-accent text-sm bg-surface-1 text-content-strong"
                 autoFocus
               />
             </div>
 
             {/* Options */}
             {Object.keys(filteredGroups).length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
+              <div className="p-4 text-center text-content-muted text-sm">
                 Nenhum resultado encontrado
               </div>
             ) : (
               Object.entries(filteredGroups).map(([category, items]) => (
                 <div key={category}>
                   {/* Category header */}
-                  <div className="px-3 py-2.5 bg-gray-100 text-xs font-bold text-gray-700 uppercase tracking-wider sticky top-0 border-b border-gray-200">
+                  <div className="px-3 py-2.5 bg-surface-2 text-xs font-bold text-content uppercase tracking-wider sticky top-0 border-b border-border-base">
                     {category}
                   </div>
                   {/* Category items */}
@@ -143,8 +143,8 @@ export function GroupedSelect({
                       key={item.id}
                       type="button"
                       onClick={() => handleSelect(item)}
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors ${
-                        value === item.name ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-surface-2 transition-colors ${
+                        value === item.name ? 'bg-primary/10 text-primary dark:text-primary-light font-medium' : 'text-content'
                       }`}
                     >
                       {item.name}

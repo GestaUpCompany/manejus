@@ -731,14 +731,14 @@ export function Formulacoes() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Formulações</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Formulações</h2>
         <div className="flex gap-2 items-start">
           <Input
             type="text"
             placeholder="Buscar formulação..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent h-10"
+            className="max-w-xs border-border-base focus:border-accent h-10"
           />
           <button
             type="button"
@@ -746,7 +746,7 @@ export function Formulacoes() {
             className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
               showInactive
                 ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
             }`}
           >
             {showInactive ? (
@@ -764,7 +764,7 @@ export function Formulacoes() {
           <select
             value={premixFilter}
             onChange={(e) => setPremixFilter(e.target.value as 'todos' | 'tmr' | 'premix')}
-            className="px-3 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="px-3 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 bg-surface-1 text-content border-surface-3 hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="todos">Todas</option>
             <option value="tmr">Só TMR</option>
@@ -778,19 +778,19 @@ export function Formulacoes() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setSistemaFilter('todos')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'todos' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'todos' ? 'bg-primary text-white border-primary' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
           >
             Todos <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
           </button>
           <button
             onClick={() => setSistemaFilter('pasto')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'pasto' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'pasto' ? 'bg-primary text-white border-primary' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
           >
             Pasto <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && d.sistema_producao !== 'Confinamento' && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
           </button>
           <button
             onClick={() => setSistemaFilter('confinamento')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'confinamento' ? 'bg-amber-700 text-white border-amber-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'confinamento' ? 'bg-primary text-white border-primary' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
           >
             Confinamento <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && d.sistema_producao === 'Confinamento' && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
           </button>
@@ -798,15 +798,15 @@ export function Formulacoes() {
       )}
 
       {showForm && (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-xl font-semibold text-gray-800">
+            <h3 className="text-xl font-semibold text-content-strong">
               {editingFormulacao ? 'Editar Formulação' : 'Nova Formulação'}
             </h3>
             <button
               type="button"
               onClick={handleCancel}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              className="text-content-faint hover:text-content-muted transition-colors p-1"
               aria-label="Fechar formulário"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -818,22 +818,22 @@ export function Formulacoes() {
             {/* Basic info */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Nome *</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Nome *</label>
                 <Input
                   type="text"
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                   required
                   placeholder="Nome da formulação"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Tipo</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Tipo</label>
                 <select
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-200 focus:border-accent bg-white"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-border-base focus:border-accent bg-surface-1"
                 >
                   <option value="">Selecione...</option>
                   <option value="Sal Mineral">Sal Mineral</option>
@@ -845,14 +845,14 @@ export function Formulacoes() {
               </div>
               {!formData.e_premix && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Meta Consumo MS (%PV)</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Meta Consumo MS (%PV)</label>
                 <Input
                   type="number"
                   step="0.01"
                   value={formData.consumo_ms_percent_pv}
                   onChange={(e) => setFormData({ ...formData, consumo_ms_percent_pv: e.target.value })}
                   placeholder="Ex: 0.30"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
               )}
@@ -862,22 +862,22 @@ export function Formulacoes() {
             {/* Descrição */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Descrição</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Descrição</label>
                 <Input
                   type="text"
                   value={formData.descricao}
                   onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                   placeholder="Descrição opcional"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
               {/* Peso Vivo Médio oculto: custo por categoria será calculado futuramente */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Sistema de Produção</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Sistema de Produção</label>
                 <select
                   value={formData.sistema_producao}
                   onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-200 focus:border-accent bg-white"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-border-base focus:border-accent bg-surface-1"
                 >
                   <option value="">Ambos</option>
                   <option value="Pasto">Pasto</option>
@@ -888,10 +888,10 @@ export function Formulacoes() {
 
             {/* Categorias GMD por formulação (TMR only) */}
             {!formData.e_premix && (
-            <div className="border-t border-gray-200 pt-4">
+            <div className="border-t border-border-base pt-4">
               <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-gray-700">GMD por Categoria</label>
-                <span className="text-xs text-gray-500">Define o GMD usado para evolução de peso de cada categoria do lote</span>
+                <label className="block text-sm font-medium text-content">GMD por Categoria</label>
+                <span className="text-xs text-content-muted">Define o GMD usado para evolução de peso de cada categoria do lote</span>
               </div>
 
               {categoriasGmd.length > 0 && (
@@ -900,12 +900,12 @@ export function Formulacoes() {
                     const catKey = cat.categoria.toLowerCase().trim()
                     const blocked = blockedCategorias[catKey]
                     return (
-                    <div key={idx} className="bg-gray-50 rounded-lg p-2">
+                    <div key={idx} className="bg-surface-2 rounded-lg p-2">
                       <div className="flex items-center gap-3">
                         <div className="flex-1 flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700 capitalize">{cat.categoria}</span>
+                          <span className="text-sm font-medium text-content capitalize">{cat.categoria}</span>
                           {blocked && (
-                            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs rounded font-medium">
+                            <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs rounded font-medium">
                               em uso ({blocked.length} {blocked.length === 1 ? 'lote' : 'lotes'})
                             </span>
                           )}
@@ -917,9 +917,9 @@ export function Formulacoes() {
                               setCategoriasGmd(prev => prev.map((c, i) => i === idx ? { ...c, gmd: val } : c))
                             }}
                             decimals={3}
-                            className="w-24 text-right border-gray-200 focus:border-accent py-1"
+                            className="w-24 text-right border-border-base focus:border-accent py-1"
                           />
-                          <span className="text-xs text-gray-500">kg/dia</span>
+                          <span className="text-xs text-content-muted">kg/dia</span>
                         </div>
                         <button
                           type="button"
@@ -937,7 +937,7 @@ export function Formulacoes() {
                         </button>
                       </div>
                       {blocked && (
-                        <p className="text-xs text-amber-700 mt-1 pl-1">
+                        <p className="text-xs text-amber-700 dark:text-amber-300">
                           Em uso no {blocked.map(l => l.nome).join(', ')}. Remover fará essa categoria parar de evoluir peso. Confirmação será pedida ao salvar.
                         </p>
                       )}
@@ -948,7 +948,7 @@ export function Formulacoes() {
               )}
 
               {categoriasGmd.length === 0 && (
-                <p className="text-sm text-gray-500 mb-3">Nenhuma categoria com GMD cadastrada. Adicione categorias abaixo.</p>
+                <p className="text-sm text-content-muted mb-3">Nenhuma categoria com GMD cadastrada. Adicione categorias abaixo.</p>
               )}
 
               <select
@@ -961,7 +961,7 @@ export function Formulacoes() {
                     e.target.value = ''
                   }
                 }}
-                className="w-full sm:max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white text-sm"
+                className="w-full sm:max-w-md px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-surface-1 text-sm"
               >
                 <option value="">Adicionar categoria...</option>
                 {CATEGORIAS_DISPONIVEIS.map(cat => (
@@ -981,28 +981,28 @@ export function Formulacoes() {
                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 ${
                   formData.e_premix
                     ? 'bg-indigo-100 text-indigo-800 border-indigo-300 hover:bg-indigo-200'
-                    : 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200'
+                    : 'bg-surface-2 text-content-strong border-surface-3 hover:bg-surface-3'
                 }`}
               >
                 {formData.e_premix ? '✓ Premix' : 'Premix'}
               </button>
-              <span className="text-xs text-gray-500 leading-tight">
+              <span className="text-xs text-content-muted leading-tight">
                 Marque se esta formulação é um premix. Ela gerará automaticamente um insumo
                 para uso em outras formulações (TMR do vagão).
               </span>
             </div>
             )}
             {temPremixSelecionado && formData.e_premix && (
-              <div className="p-3 rounded-lg bg-blue-50 border border-blue-300 text-xs text-blue-900">
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-xs text-primary dark:text-primary-light">
                 Esta formulação contém um premix como ingrediente, então não pode ser um premix.
                 O modo premix foi desativado.
               </div>
             )}
 
             {/* Add insumo */}
-            <div className="border-t border-gray-200 pt-4">
+            <div className="border-t border-border-base pt-4">
               {formData.e_premix && selectedInsumos.length === 0 && (
-                <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900">
+                <div className="mb-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-900">
                   <p className="font-semibold mb-1">Premix sem insumos</p>
                   <p>
                     Um premix deve conter pelo menos um insumo para gerar um ingrediente válido
@@ -1010,7 +1010,7 @@ export function Formulacoes() {
                   </p>
                 </div>
               )}
-              <label className="block text-sm font-medium text-gray-700 mb-2">Adicionar Insumo</label>
+              <label className="block text-sm font-medium text-content mb-2">Adicionar Insumo</label>
               <select
                 onChange={(e) => {
                   if (e.target.value) {
@@ -1018,7 +1018,7 @@ export function Formulacoes() {
                     e.target.value = ''
                   }
                 }}
-                className="w-full sm:max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white text-sm"
+                className="w-full sm:max-w-md px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-surface-1 text-sm"
               >
                 <option value="">Selecione um insumo...</option>
                 {insumos.map((i) => (
@@ -1034,38 +1034,38 @@ export function Formulacoes() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-center p-2 font-medium text-gray-700">Insumos</th>
-                      <th className="text-center p-2 font-medium text-gray-700">Teor MS (%)</th>
-                      <th className="text-center p-2 font-medium text-gray-700">Preço (R$/Ton/MN)</th>
-                      <th className="text-center p-2 font-medium text-gray-700 bg-green-50">Form. MS (%)</th>
-                      <th className="text-center p-2 font-medium text-gray-700">Form. MN (%)</th>
-                      <th className="text-center p-2 font-medium text-gray-700">Custo (R$/kg MN)</th>
-                      <th className="text-center p-2 font-medium text-gray-700">Custo (R$/kg MS)</th>
+                    <tr className="bg-surface-2 border-b border-border-base">
+                      <th className="text-center p-2 font-medium text-content">Insumos</th>
+                      <th className="text-center p-2 font-medium text-content">Teor MS (%)</th>
+                      <th className="text-center p-2 font-medium text-content">Preço (R$/Ton/MN)</th>
+                      <th className="text-center p-2 font-medium text-content bg-green-500/10">Form. MS (%)</th>
+                      <th className="text-center p-2 font-medium text-content">Form. MN (%)</th>
+                      <th className="text-center p-2 font-medium text-content">Custo (R$/kg MN)</th>
+                      <th className="text-center p-2 font-medium text-content">Custo (R$/kg MS)</th>
                       <th className="p-2 w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {recalculated.map((item, idx) => (
-                      <tr key={item.insumo_id + idx} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="p-2 text-center font-medium text-gray-800">{item.nome}</td>
-                        <td className="p-2 text-center text-gray-600">{fmt(item.teor_ms)}%</td>
-                        <td className="p-2 text-center text-gray-600">
+                      <tr key={item.insumo_id + idx} className="border-b border-border-subtle hover:bg-surface-2">
+                        <td className="p-2 text-center font-medium text-content-strong">{item.nome}</td>
+                        <td className="p-2 text-center text-content-muted">{fmt(item.teor_ms)}%</td>
+                        <td className="p-2 text-center text-content-muted">
                           R$ {(item.preco_ton_mn || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td className="p-2 text-center bg-green-50">
+                        <td className="p-2 text-center bg-green-500/10">
                           <DecimalInput
                             id={`formula-ms-${idx}`}
                             value={item.formula_teor_ms}
                             onChange={(val) => handleFormulaChange(idx, val)}
-                            className="w-20 text-center border-gray-200 focus:border-accent py-1"
+                            className="w-20 text-center border-border-base focus:border-accent py-1"
                           />
                         </td>
-                        <td className="p-2 text-center text-gray-600">{fmt(item.formula_mn_percent || 0)}%</td>
-                        <td className="p-2 text-center text-gray-600">
+                        <td className="p-2 text-center text-content-muted">{fmt(item.formula_mn_percent || 0)}%</td>
+                        <td className="p-2 text-center text-content-muted">
                           R$ {(item.custo_kg_mn || 0).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                         </td>
-                        <td className="p-2 text-center text-gray-600">
+                        <td className="p-2 text-center text-content-muted">
                           R$ {(item.custo_kg_ms || 0).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                         </td>
                         <td className="p-2 text-center">
@@ -1082,23 +1082,23 @@ export function Formulacoes() {
                       </tr>
                     ))}
                     {/* Total row */}
-                    <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
-                      <td className="p-2 text-center text-gray-800">Total</td>
-                      <td className="p-2 text-center text-gray-800 relative" title="Teor de Matéria Seca da Dieta">
+                    <tr className="border-t-2 border-surface-3 bg-surface-2 font-semibold">
+                      <td className="p-2 text-center text-content-strong">Total</td>
+                      <td className="p-2 text-center text-content-strong relative" title="Teor de Matéria Seca da Dieta">
                         {fmt(teorMSDieta)}%
                         <span className="absolute bottom-0 right-0 w-0 h-0 border-l-[6px] border-l-transparent border-b-[6px] border-b-yellow-400"></span>
                       </td>
                       <td className="p-2"></td>
-                      <td className={`p-2 text-center ${Math.abs(formulaMsTotal - 100) < 0.01 ? 'text-green-700' : 'text-amber-600'}`}>
+                      <td className={`p-2 text-center ${Math.abs(formulaMsTotal - 100) < 0.01 ? 'text-green-700 dark:text-green-300' : 'text-amber-600'}`}>
                         {fmt(formulaMsTotal)}%
                       </td>
-                      <td className="p-2 text-center text-gray-800">
+                      <td className="p-2 text-center text-content-strong">
                         {fmt(recalculated.reduce((s, i) => s + (i.formula_mn_percent || 0), 0))}%
                       </td>
-                      <td className="p-2 text-center text-gray-800">
+                      <td className="p-2 text-center text-content-strong">
                         R$ {custoKgMN.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </td>
-                      <td className="p-2 text-center text-gray-800">
+                      <td className="p-2 text-center text-content-strong">
                         R$ {custoKgMS.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </td>
                       <td className="p-2"></td>
@@ -1122,8 +1122,8 @@ export function Formulacoes() {
                 onClick={() => setFormData({ ...formData, ativo: !formData.ativo })}
                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 ${
                   formData.ativo
-                    ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200'
-                    : 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200'
+                    ? 'bg-green-500/10 text-green-800 dark:text-green-200 border-green-500/30 hover:bg-green-500/10'
+                    : 'bg-surface-2 text-content-strong border-surface-3 hover:bg-surface-3'
                 }`}
               >
                 {formData.ativo ? '✓ Ativo' : '✗ Inativo'}
@@ -1134,8 +1134,8 @@ export function Formulacoes() {
       )}
 
       {!showForm && formulacoes.length === 0 ? (
-        <Card className="bg-white p-12 border-0 shadow-sm text-center">
-          <p className="text-gray-600 mb-4">Nenhuma formulação cadastrada</p>
+        <Card className="bg-surface-1 p-12 border-0 shadow-sm text-center">
+          <p className="text-content-muted mb-4">Nenhuma formulação cadastrada</p>
           <Button onClick={handleNewForm}>Criar Primeira Formulação</Button>
         </Card>
       ) : !showForm ? (
@@ -1164,11 +1164,11 @@ export function Formulacoes() {
                 status={dieta.ativo}
                 onClick={() => handleEdit(dieta)}
               >
-                <div className="space-y-1 mb-4 text-sm text-gray-600">
+                <div className="space-y-1 mb-4 text-sm text-content-muted">
                   {dieta.sistema_producao && (
                     <p>
                       <span className="font-medium">Sistema:</span>{' '}
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${dieta.sistema_producao === 'Confinamento' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${dieta.sistema_producao === 'Confinamento' ? 'bg-amber-500/10 text-amber-800 dark:text-amber-200' : 'bg-green-500/10 text-green-800 dark:text-green-200'}`}>
                         {dieta.sistema_producao === 'Confinamento' ? 'Confinamento' : 'Pasto'}
                       </span>
                     </p>
@@ -1205,7 +1205,7 @@ export function Formulacoes() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleToggleActive(dieta)

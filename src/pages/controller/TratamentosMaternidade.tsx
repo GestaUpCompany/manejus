@@ -172,14 +172,14 @@ export function TratamentosMaternidade() {
       {/* Header */}
       {!showForm && (
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Tratamentos de Maternidade</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Tratamentos de Maternidade</h2>
           <div className="flex flex-col sm:flex-row gap-2 items-start w-full md:w-auto">
             <Input
               type="text"
               placeholder="Buscar tratamento..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10 text-sm"
+              className="w-full sm:max-w-xs border-border-base focus:border-accent h-10 text-sm"
             />
             <button
               type="button"
@@ -187,7 +187,7 @@ export function TratamentosMaternidade() {
               className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
                 showInactive
                   ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
               }`}
             >
               {showInactive ? (
@@ -208,13 +208,13 @@ export function TratamentosMaternidade() {
       )}
 
       {showForm && (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm">
+          <h3 className="text-lg sm:text-xl font-semibold text-content-strong mb-4">
             {editingTratamento ? 'Editar Tratamento' : 'Novo Tratamento'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Nome <span className="text-red-500">*</span>
               </label>
               <Input
@@ -223,7 +223,7 @@ export function TratamentosMaternidade() {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 required
                 placeholder="Nome do tratamento"
-                className="border-gray-200 focus:border-accent"
+                className="border-border-base focus:border-accent"
               />
             </div>
 
@@ -240,8 +240,8 @@ export function TratamentosMaternidade() {
       )}
 
       {!showForm && filteredTratamentos.length === 0 ? (
-        <Card className="bg-white p-8 sm:p-12 border-0 shadow-sm text-center">
-          <p className="text-gray-600 mb-4 text-sm sm:text-base">Nenhum tratamento cadastrado</p>
+        <Card className="bg-surface-1 p-8 sm:p-12 border-0 shadow-sm text-center">
+          <p className="text-content-muted mb-4 text-sm sm:text-base">Nenhum tratamento cadastrado</p>
           <Button onClick={() => setShowForm(true)} className="text-sm">Criar Primeiro Tratamento</Button>
         </Card>
       ) : !showForm ? (
@@ -252,7 +252,7 @@ export function TratamentosMaternidade() {
                 <h3 className="text-lg font-semibold">{tratamento.nome}</h3>
                 <span
                   className={`px-2 py-1 text-xs rounded-full ${
-                    tratamento.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    tratamento.ativo ? 'bg-green-500/10 text-green-800 dark:text-green-200' : 'bg-red-500/10 text-red-800 dark:text-red-200'
                   }`}
                 >
                   {tratamento.ativo ? 'Ativo' : 'Inativo'}

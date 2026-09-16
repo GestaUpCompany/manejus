@@ -369,17 +369,17 @@ export function ConfiguracaoTratos() {
   const getNotaStyle = (nota: number) => {
     switch (nota) {
       case -1:
-        return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-500' }
+        return { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-700 dark:text-red-300', badge: 'bg-red-500' }
       case 0:
-        return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', badge: 'bg-yellow-500' }
+        return { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-700 dark:text-yellow-300', badge: 'bg-yellow-500' }
       case 1:
-        return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', badge: 'bg-green-500' }
+        return { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-700 dark:text-green-300', badge: 'bg-green-500' }
       case 2:
-        return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', badge: 'bg-yellow-500' }
+        return { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-700 dark:text-yellow-300', badge: 'bg-yellow-500' }
       case 3:
-        return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-500' }
+        return { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-700 dark:text-red-300', badge: 'bg-red-500' }
       default:
-        return { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', badge: 'bg-gray-500' }
+        return { bg: 'bg-surface-2', border: 'border-border-base', text: 'text-content', badge: 'bg-surface-20' }
     }
   }
 
@@ -403,19 +403,19 @@ export function ConfiguracaoTratos() {
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">Configuração de Tratos</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-content-strong">Configuração de Tratos</h1>
+        <p className="text-sm text-content-muted mt-1">
           Defina a quantidade de tratos diários, a distribuição percentual por trato e os ajustes de leitura de cocho.
         </p>
       </div>
 
       {/* Card explicativo */}
-      <Card className="p-4 bg-blue-50 border-blue-200">
+      <Card className="p-4 bg-surface-2 border-border-base">
         <div className="flex gap-3">
-          <svg className="w-6 h-6 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-primary dark:text-primary-light shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <div className="text-sm text-blue-800">
+          <div className="text-sm text-content">
             <p className="font-medium mb-1">Como funciona</p>
             <p>
               Os percentuais por trato definem a distribuição do <strong>primeiro dia</strong>. Do segundo dia em diante,
@@ -429,8 +429,8 @@ export function ConfiguracaoTratos() {
       </Card>
 
       {erro && (
-        <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
-          <p className="text-sm text-red-700 font-medium">Erro ao salvar configuração</p>
+        <div className="p-4 bg-red-500/10 border-2 border-red-500/30 rounded-xl">
+          <p className="text-sm text-red-700 dark:text-red-200 font-medium">Erro ao salvar configuração</p>
           <p className="text-xs text-red-500 mt-1">{erro}</p>
         </div>
       )}
@@ -447,7 +447,7 @@ export function ConfiguracaoTratos() {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 tipoSelecionado === tipo
                   ? 'bg-primary text-white'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  : 'bg-surface-1 text-content-muted border border-border-base hover:bg-surface-2'
               }`}
             >
               {t?.label || tipo}
@@ -459,7 +459,7 @@ export function ConfiguracaoTratos() {
             key={t.value}
             type="button"
             onClick={() => handleAdicionarTipo(t.value)}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 border border-dashed border-gray-300 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-content-muted border border-dashed border-surface-3 hover:bg-surface-2 hover:text-content transition-colors"
           >
             + {t.label}
           </button>
@@ -471,12 +471,12 @@ export function ConfiguracaoTratos() {
       ) : (
         <>
           <Card className="p-4 sm:p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">
+            <h2 className="text-lg font-bold text-content-strong mb-4">
               Configuração: {TIPOS.find((t) => t.value === tipoSelecionado)?.label}
             </h2>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+              <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                 Quantidade de tratos por dia
               </label>
               <Input
@@ -485,24 +485,24 @@ export function ConfiguracaoTratos() {
                 value={configAtual.quantidadeTratos}
                 onChange={(e) => handleQuantidadeTratosChange(e.target.value)}
                 placeholder="Ex: 4"
-                className="border-gray-200 focus:border-accent max-w-[200px]"
+                className="border-border-base focus:border-accent max-w-[200px]"
               />
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-content mb-1">
                   Data de início <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="date"
                   value={configAtual.dataInicio}
                   onChange={(e) => handleVigenciaChange('dataInicio', e.target.value)}
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-content mb-1">
                   Data de fim <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -510,22 +510,22 @@ export function ConfiguracaoTratos() {
                   min={configAtual.dataInicio || undefined}
                   value={configAtual.dataFim}
                   onChange={(e) => handleVigenciaChange('dataFim', e.target.value)}
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
             </div>
             {configAtual.dataInicio && configAtual.dataFim && configAtual.dataFim < configAtual.dataInicio && (
-              <p className="-mt-4 mb-4 text-sm font-medium text-red-600">
+              <p className="-mt-4 mb-4 text-sm font-medium text-red-500">
                 A data de fim deve ser igual ou posterior à data de início.
               </p>
             )}
 
             {/* Tabela de percentuais por trato */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Distribuição percentual por trato</h3>
+              <h3 className="text-sm font-semibold text-content mb-2">Distribuição percentual por trato</h3>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border border-gray-200 rounded-lg">
-                  <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                <table className="w-full text-sm text-left border border-border-base rounded-lg">
+                  <thead className="bg-surface-2 text-xs text-content-muted uppercase">
                     <tr>
                       <th className="px-4 py-2">Trato</th>
                       <th className="px-4 py-2">Percentual (%)</th>
@@ -535,7 +535,7 @@ export function ConfiguracaoTratos() {
                   <tbody className="divide-y divide-gray-100">
                     {(configAtual.percentuais || []).map((p) => (
                       <tr key={p.ordem_trato}>
-                        <td className="px-4 py-2 font-medium text-gray-800">{p.ordem_trato}º</td>
+                        <td className="px-4 py-2 font-medium text-content-strong">{p.ordem_trato}º</td>
                         <td className="px-4 py-2">
                           <Input
                             type="number"
@@ -544,7 +544,7 @@ export function ConfiguracaoTratos() {
                             step="0.1"
                             value={p.percentual}
                             onChange={(e) => handlePercentualChange(p.ordem_trato, 'percentual', e.target.value)}
-                            className="w-24 border-gray-200 focus:border-accent"
+                            className="w-24 border-border-base focus:border-accent"
                           />
                         </td>
                         <td className="px-4 py-2">
@@ -552,17 +552,17 @@ export function ConfiguracaoTratos() {
                             type="time"
                             value={p.horario_sugerido}
                             onChange={(e) => handlePercentualChange(p.ordem_trato, 'horario_sugerido', e.target.value)}
-                            className="w-32 border-gray-200 focus:border-accent"
+                            className="w-32 border-border-base focus:border-accent"
                           />
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-gray-50 font-medium">
+                  <tfoot className="bg-surface-2 font-medium">
                     <tr>
-                      <td className="px-4 py-2 text-gray-700">Total</td>
+                      <td className="px-4 py-2 text-content">Total</td>
                       <td className="px-4 py-2">
-                        <span className={percentuaisValidos ? 'text-green-600' : 'text-red-600'}>
+                        <span className={percentuaisValidos ? 'text-green-500' : 'text-red-500'}>
                           {somaPercentuais.toFixed(1)}%
                         </span>
                         {!percentuaisValidos && (
@@ -578,21 +578,21 @@ export function ConfiguracaoTratos() {
 
             {/* Tabela de kg MN por curral (Dia 1) */}
             <div className="mt-6">
-              <h3 className="text-sm font-semibold text-gray-700 mb-1">
+              <h3 className="text-sm font-semibold text-content mb-1">
                 Quantidade total de MN (kg) por curral, Dia 1
               </h3>
-              <p className="text-xs text-gray-500 mb-3">
+              <p className="text-xs text-content-muted mb-3">
                 Informe o total diário de matéria natural (kg) que será trato em cada curral no primeiro dia.
                 O aplicativo usará esses valores como previsão inicial, ajustada depois pelas leituras de cocho.
               </p>
               {(configAtual.currais || []).length === 0 ? (
-                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500 text-center">
+                <div className="p-4 bg-surface-2 border border-border-base rounded-lg text-sm text-content-muted text-center">
                   Nenhum curral ativo cadastrado para esta fazenda.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left border border-gray-200 rounded-lg">
-                    <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                  <table className="w-full text-sm text-left border border-border-base rounded-lg">
+                    <thead className="bg-surface-2 text-xs text-content-muted uppercase">
                       <tr>
                         <th className="px-4 py-2">Curral</th>
                         <th className="px-4 py-2">Lote</th>
@@ -602,8 +602,8 @@ export function ConfiguracaoTratos() {
                     <tbody className="divide-y divide-gray-100">
                       {(configAtual.currais || []).map((c) => (
                         <tr key={c.curral_id}>
-                          <td className="px-4 py-2 font-medium text-gray-800">{c.curral_nome}</td>
-                          <td className="px-4 py-2 text-gray-600">{c.lote_nome || <span className="text-gray-400 italic">Sem lote</span>}</td>
+                          <td className="px-4 py-2 font-medium text-content-strong">{c.curral_nome}</td>
+                          <td className="px-4 py-2 text-content-muted">{c.lote_nome || <span className="text-content-faint italic">Sem lote</span>}</td>
                           <td className="px-4 py-2">
                             <Input
                               type="number"
@@ -612,17 +612,17 @@ export function ConfiguracaoTratos() {
                               value={c.kg_mn_dia}
                               onChange={(e) => handleCurralKgChange(c.curral_id, e.target.value)}
                               placeholder="0"
-                              className="w-28 border-gray-200 focus:border-accent"
+                              className="w-28 border-border-base focus:border-accent"
                             />
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="bg-gray-50 font-medium">
+                    <tfoot className="bg-surface-2 font-medium">
                       <tr>
-                        <td className="px-4 py-2 text-gray-700" colSpan={2}>Total geral</td>
+                        <td className="px-4 py-2 text-content" colSpan={2}>Total geral</td>
                         <td className="px-4 py-2">
-                          <span className="text-gray-800">
+                          <span className="text-content-strong">
                             {(configAtual.currais || []).reduce((sum, c) => sum + (parseFloat(c.kg_mn_dia) || 0), 0).toFixed(1)} kg
                           </span>
                         </td>
@@ -636,7 +636,7 @@ export function ConfiguracaoTratos() {
             {/* Botão salvar */}
             <div className="flex justify-end gap-3 items-center mt-6">
               {salvo && (
-                <span className="text-sm text-green-600 font-medium flex items-center gap-1">
+                <span className="text-sm text-green-500 font-medium flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -653,7 +653,7 @@ export function ConfiguracaoTratos() {
             </div>
 
             {!podeSalvar && (
-              <p className="text-xs text-gray-400 text-right mt-2">
+              <p className="text-xs text-content-faint text-right mt-2">
                 {!percentuaisValidos && 'Os percentuais devem somar 100%. '}
                 {!horariosPreenchidos && 'Todos os horários sugeridos devem ser preenchidos. '}
                 {parseInt(configAtual.quantidadeTratos) <= 0 && 'A quantidade de tratos deve ser maior que zero. '}
@@ -663,21 +663,21 @@ export function ConfiguracaoTratos() {
 
           {/* Seção: Leitura de Cocho */}
           <Card className="p-4 sm:p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-1">Leitura de Cocho</h2>
-            <p className="text-sm text-gray-500 mb-4">
+            <h2 className="text-lg font-bold text-content-strong mb-1">Leitura de Cocho</h2>
+            <p className="text-sm text-content-muted mb-4">
               Configure a porcentagem de ajuste para cada nota de leitura de cocho. As notas são fixas e não podem ser alteradas.
             </p>
 
             {erroNotas && (
-              <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl mb-4">
-                <p className="text-sm text-red-700 font-medium">Erro ao carregar configurações de leitura</p>
+              <div className="p-4 bg-red-500/10 border-2 border-red-500/30 rounded-xl mb-4">
+                <p className="text-sm text-red-700 dark:text-red-200 font-medium">Erro ao carregar configurações de leitura</p>
                 <p className="text-xs text-red-500 mt-1">{erroNotas}</p>
               </div>
             )}
 
             {notasLeitura.length === 0 ? (
-              <div className="p-6 bg-gray-50 rounded-xl border-2 border-gray-200 text-center">
-                <p className="text-sm text-gray-500">
+              <div className="p-6 bg-surface-2 rounded-xl border-2 border-border-base text-center">
+                <p className="text-sm text-content-muted">
                   {fazendaId
                     ? `Nenhuma configuração encontrada para esta fazenda (${fazendaId}).`
                     : 'Não foi possível identificar a fazenda do usuário.'}
@@ -694,7 +694,7 @@ export function ConfiguracaoTratos() {
                   return (
                     <div
                       key={nota}
-                      className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-white rounded-xl border-2 ${style.border} ${style.bg}`}
+                      className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-surface-1 rounded-xl border-2 ${style.border} ${style.bg}`}
                     >
                       {/* Badge da nota */}
                       <div className="flex items-center gap-3 shrink-0">
@@ -703,13 +703,13 @@ export function ConfiguracaoTratos() {
                         </div>
                         <div className="min-w-0">
                           <p className={`font-semibold ${style.text}`}>Nota {nota}</p>
-                          <p className="text-xs text-gray-500">{DESCRICOES_FIXAS[nota]}</p>
+                          <p className="text-xs text-content-muted">{DESCRICOES_FIXAS[nota]}</p>
                         </div>
                       </div>
 
                       {/* Descricao do efeito */}
                       <div className="flex-1 min-w-0 sm:text-right">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-content-muted">
                           Ajuste no próximo trato:
                         </p>
                         <p className={`text-lg font-bold ${style.text}`}>
@@ -725,10 +725,10 @@ export function ConfiguracaoTratos() {
                             step="0.5"
                             value={valorEditado}
                             onChange={e => handleNotaPercentualChange(nota, e.target.value)}
-                            className="w-24 px-3 py-2 border-2 border-gray-200 rounded-lg text-center font-semibold text-gray-700 focus:border-accent focus:outline-none"
+                            className="w-24 px-3 py-2 border-2 border-border-base rounded-lg text-center font-semibold text-content focus:border-accent focus:outline-none"
                             placeholder="0"
                           />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">%</span>
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-faint text-sm pointer-events-none">%</span>
                         </div>
                       </div>
                     </div>
@@ -748,7 +748,7 @@ export function ConfiguracaoTratos() {
                   {savingNotas ? 'Salvando...' : 'Salvar leitura de cocho'}
                 </Button>
                 {salvoNotas && (
-                  <span className="text-sm text-green-600 flex items-center gap-1">
+                  <span className="text-sm text-green-500 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -756,7 +756,7 @@ export function ConfiguracaoTratos() {
                   </span>
                 )}
                 {haAlteracoesNotas && !salvoNotas && (
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-content-muted">
                     Alterações não salvas
                   </span>
                 )}

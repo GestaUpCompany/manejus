@@ -249,12 +249,12 @@ export function Suplementacao() {
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Suplementação</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Suplementação</h2>
       </div>
 
-      <Card className="bg-white p-4 sm:p-6" disableHover>
+      <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
           <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 w-full sm:w-auto">
             <Button
               onClick={() => {
@@ -307,25 +307,25 @@ export function Suplementacao() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div ref={loteDropdownRef} className="relative">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Lotes</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Lotes</label>
             <button
               type="button"
               onClick={() => setLoteDropdownOpen(!loteDropdownOpen)}
-              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left bg-white flex items-center justify-between border-gray-300`}
+              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left bg-surface-1 flex items-center justify-between border-surface-3`}
             >
-              <span className={lotesSelecionados.length === 0 ? 'text-gray-400' : 'text-gray-900'}>
+              <span className={lotesSelecionados.length === 0 ? 'text-content-faint' : 'text-content-strong'}>
                 {lotesSelecionados.length === 0
                   ? 'Selecione os lotes'
                   : lotesSelecionados.length === 1
                     ? lotes.find((l) => l.id === lotesSelecionados[0])?.nome || '1 lote'
                     : `${lotesSelecionados.length} lotes selecionados`}
               </span>
-              <svg className={`w-4 h-4 text-gray-400 transition-transform ${loteDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-4 h-4 text-content-faint transition-transform ${loteDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
             {loteDropdownOpen && (
-              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-auto">
+              <div className="absolute z-50 mt-1 w-full bg-surface-1 border border-border-base rounded-lg shadow-xl max-h-60 overflow-auto">
                 <button
                   type="button"
                   onClick={() => {
@@ -335,14 +335,14 @@ export function Suplementacao() {
                       setLotesSelecionados(lotes.map((l) => l.id))
                     }
                   }}
-                  className="w-full px-3 py-2 text-left text-sm font-medium text-primary hover:bg-primary/10 border-b border-gray-100"
+                  className="w-full px-3 py-2 text-left text-sm font-medium text-primary dark:text-primary-light hover:bg-primary/10 border-b border-border-subtle"
                 >
                   {lotesSelecionados.length === lotes.length ? 'Desmarcar todos' : 'Selecionar todos'}
                 </button>
                 {lotes.map((l) => (
                   <label
                     key={l.id}
-                    className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                    className="flex items-center gap-2 px-3 py-2 hover:bg-surface-2 cursor-pointer text-sm"
                   >
                     <input
                       type="checkbox"
@@ -354,16 +354,16 @@ export function Suplementacao() {
                           setLotesSelecionados(lotesSelecionados.filter((id) => id !== l.id))
                         }
                       }}
-                      className="w-4 h-4 rounded text-primary focus:ring-primary"
+                      className="w-4 h-4 rounded text-primary dark:text-primary-light focus:ring-primary"
                     />
-                    <span className="text-gray-700">{l.nome}</span>
+                    <span className="text-content">{l.nome}</span>
                   </label>
                 ))}
               </div>
             )}
           </div>
           <div className="sm:col-span-2 md:col-span-3">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Buscar</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Buscar</label>
             <Input
               type="text"
               placeholder="Tratador, produto, lote, pasto, kg cocho, kg depósito..."
@@ -373,7 +373,7 @@ export function Suplementacao() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data Início</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Data Início</label>
             <Input
               type="date"
               value={dataInicio}
@@ -382,7 +382,7 @@ export function Suplementacao() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data Fim</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Data Fim</label>
             <Input
               type="date"
               value={dataFim}
@@ -391,7 +391,7 @@ export function Suplementacao() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">&nbsp;</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
@@ -405,24 +405,24 @@ export function Suplementacao() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro de suplementação encontrado</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro de suplementação encontrado</p>
         </Card>
       ) : filteredRegistros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro encontrado com os filtros aplicados</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro encontrado com os filtros aplicados</p>
         </Card>
       ) : (
         <>
           {/* Card de somatória de kg_cocho no período filtrado */}
-          <Card className="bg-white p-4 sm:p-6" disableHover>
+          <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wide">Total suplementado no período</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
+                <p className="text-xs sm:text-sm font-medium text-content-muted uppercase tracking-wide">Total suplementado no período</p>
+                <p className="text-2xl sm:text-3xl font-bold text-content-strong mt-1">
                   {totalKgCocho.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-content-muted mt-1">
                   {filteredRegistros.length} registro(s) {lotesSelecionados.length > 0 ? `· ${lotesSelecionados.length} lote(s)` : '· todos os lotes'}
                 </p>
               </div>
@@ -433,8 +433,8 @@ export function Suplementacao() {
                     const total = totalKgCochoPorLote.get(loteId) || 0
                     return (
                       <div key={loteId} className="rounded-lg bg-primary/10 px-3 py-2 text-sm">
-                        <span className="font-medium text-primary">{lote?.nome || '—'}:</span>{' '}
-                        <span className="font-bold text-gray-900">{total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</span>
+                        <span className="font-medium text-primary dark:text-primary-light">{lote?.nome || '—'}:</span>{' '}
+                        <span className="font-bold text-content-strong">{total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</span>
                       </div>
                     )
                   })}
@@ -442,13 +442,13 @@ export function Suplementacao() {
               )}
             </div>
             {Object.keys(kgPorInsumo).length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">Total por insumo</p>
+              <div className="mt-4 pt-4 border-t border-border-subtle">
+                <p className="text-xs sm:text-sm font-medium text-content-muted uppercase tracking-wide mb-2">Total por insumo</p>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(kgPorInsumo).sort((a, b) => b[1] - a[1]).map(([nome, kg]) => (
-                    <div key={nome} className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-sm">
-                      <span className="font-medium text-gray-700">{nome}:</span>{' '}
-                      <span className="font-bold text-gray-900">{kg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</span>
+                    <div key={nome} className="rounded-lg bg-surface-2 border border-border-base px-3 py-2 text-sm">
+                      <span className="font-medium text-content">{nome}:</span>{' '}
+                      <span className="font-bold text-content-strong">{kg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</span>
                     </div>
                   ))}
                 </div>
@@ -468,13 +468,13 @@ export function Suplementacao() {
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
-                    <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                    <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-content-strong">
                       {formatDate(registro.data)}
                     </span>
                   </div>
                   <span
-                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary"
+                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light"
                     onClick={(e) => {
                       e.stopPropagation()
                       setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')
@@ -485,36 +485,36 @@ export function Suplementacao() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Usuário:</span>
-                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                    <span className="text-content-muted">Usuário:</span>
+                    <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Tratador:</span>
-                    <span className="text-gray-800 font-medium">{registro.tratador || '-'}</span>
+                    <span className="text-content-muted">Tratador:</span>
+                    <span className="text-content-strong font-medium">{registro.tratador || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Formulação:</span>
-                    <span className="text-gray-800 font-medium">{registro.formulacao || '-'}</span>
+                    <span className="text-content-muted">Formulação:</span>
+                    <span className="text-content-strong font-medium">{registro.formulacao || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Lote:</span>
-                    <span className="text-gray-800 font-medium">{registro.lote || '-'}</span>
+                    <span className="text-content-muted">Lote:</span>
+                    <span className="text-content-strong font-medium">{registro.lote || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Pasto:</span>
-                    <span className="text-gray-800 font-medium">{registro.pasto || '-'}</span>
+                    <span className="text-content-muted">Pasto:</span>
+                    <span className="text-content-strong font-medium">{registro.pasto || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">KG Cocho:</span>
-                    <span className="text-gray-800 font-medium">{registro.kg_cocho || 0}</span>
+                    <span className="text-content-muted">KG Cocho:</span>
+                    <span className="text-content-strong font-medium">{registro.kg_cocho || 0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Acumulado Lote:</span>
-                    <span className="text-primary font-semibold">{(acumuladoPorRegistro.get(registro.id) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</span>
+                    <span className="text-content-muted">Acumulado Lote:</span>
+                    <span className="text-primary dark:text-primary-light font-semibold">{(acumuladoPorRegistro.get(registro.id) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">KG Depósito:</span>
-                    <span className="text-gray-800 font-medium">{registro.kg_deposito || 0}</span>
+                    <span className="text-content-muted">KG Depósito:</span>
+                    <span className="text-content-strong font-medium">{registro.kg_deposito || 0}</span>
                   </div>
                 </div>
               </Card>
@@ -522,27 +522,27 @@ export function Suplementacao() {
           </div>
 
           {/* Desktop Table View */}
-          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <Card className="bg-surface-1 overflow-x-auto hidden sm:block" disableHover>
+            <table className="min-w-full divide-y divide-border-base">
+              <thead className="bg-surface-2">
                 <tr>
                   <th
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider cursor-pointer hover:bg-surface-2 transition-colors"
                     onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tratador</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Formulação</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KG Cocho</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acumulado Lote</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KG Depósito</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Tratador</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Formulação</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Lote</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Pasto</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">KG Cocho</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Acumulado Lote</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">KG Depósito</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-surface-1 divide-y divide-border-base">
                 {filteredRegistros
                   .filter((registro) => registro.id)
                   .map((registro) => {
@@ -558,31 +558,31 @@ export function Suplementacao() {
                     <tr
                       key={registro.id}
                       onClick={() => navigate(`/controller/cadernetas/suplementacao/${registro.id}`)}
-                      className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="cursor-pointer hover:bg-surface-2 transition-colors"
                     >
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {formatDate(registro.data)}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.tratador || '-'}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.formulacao || '-'}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.lote || '-'}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.pasto || '-'}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.kg_cocho || 0}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm font-semibold text-primary">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm font-semibold text-primary dark:text-primary-light">
                         {(acumuladoPorRegistro.get(registro.id) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.kg_deposito || 0}
                       </td>
                     </tr>

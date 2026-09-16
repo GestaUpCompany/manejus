@@ -99,7 +99,7 @@ export function EnfermariaDetalhes() {
       title="Detalhes do Registro de Enfermaria"
     >
       {() => (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
           <div className="space-y-6">
             {/* Informações Gerais */}
             <DetailSection title="Informações Gerais">
@@ -142,7 +142,7 @@ export function EnfermariaDetalhes() {
             {/* Diagnósticos */}
             {registro!.diagnosticos && Object.keys(registro!.diagnosticos).length > 0 && (
               <DetailSection title="Diagnósticos" highlighted>
-                <p className="text-sm font-medium text-gray-700">
+                <p className="text-sm font-medium text-content">
                   {Object.entries(registro!.diagnosticos)
                     .filter(([_, value]: [string, any]) => value.valor === 'S')
                     .map(([key]: [string, any]) => DIAGNOSTICO_LABELS[key] || key)
@@ -156,7 +156,7 @@ export function EnfermariaDetalhes() {
               <DetailSection title="Medicamentos" highlighted>
                 <div className="space-y-3">
                   {(registro!.medicamentos as any[]).map((med: any, index: number) => (
-                    <div key={index} className="border-b border-gray-200 pb-2 last:border-0 last:pb-0">
+                    <div key={index} className="border-b border-border-base pb-2 last:border-0 last:pb-0">
                       <DetailField label="Nome" value={formatValue(med.nomeComercial)} />
                       <DetailField label="Tipo" value={formatValue(med.tipo)} />
                       <DetailField label="Dose Aplicada" value={formatValue(med.doseAplicada)} />

@@ -115,15 +115,15 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', contentCl
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl ${sizeClasses[size]} animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col`}
+        className={`relative bg-surface-1 rounded-t-2xl sm:rounded-2xl shadow-2xl ${sizeClasses[size]} animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 shrink-0">
-          <h2 id={titleId} className="text-lg sm:text-xl font-semibold text-gray-900">{title}</h2>
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border-base shrink-0">
+          <h2 id={titleId} className="text-lg sm:text-xl font-semibold text-content-strong">{title}</h2>
           <button
             ref={cancelButtonRef}
             onClick={onClose}
-            className="text-gray-400 rounded transition-all p-1"
+            className="text-content-faint rounded transition-all p-1"
             aria-label="Fechar modal"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,13 +192,13 @@ export function ConfirmModal({
           <span className="text-2xl">{style.icon}</span>
         </div>
         <div className="flex-1">
-          <p className="text-gray-700 whitespace-pre-line">{message}</p>
+          <p className="text-content whitespace-pre-line">{message}</p>
         </div>
       </div>
       <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
         <button
           onClick={onClose}
-          className="flex-1 sm:flex-none px-4 py-2 text-gray-700 bg-gray-100 rounded-lg transition-all min-h-[44px]"
+          className="flex-1 sm:flex-none px-4 py-2 text-content bg-surface-2 rounded-lg transition-all min-h-[44px]"
         >
           {cancelText}
         </button>

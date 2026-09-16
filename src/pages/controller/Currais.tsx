@@ -475,16 +475,16 @@ export function Currais() {
   const renderCurralCard = (curral: Curral) => (
     <Card key={curral.id} className="p-4 shadow-sm border-0">
       <div className="flex justify-between items-start mb-3">
-        <h4 className="font-semibold text-gray-800">{curral.nome}</h4>
+        <h4 className="font-semibold text-content-strong">{curral.nome}</h4>
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
-            curral.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            curral.ativo ? 'bg-green-500/10 text-green-800 dark:text-green-200' : 'bg-red-500/10 text-red-800 dark:text-red-200'
           }`}
         >
           {curral.ativo ? 'Ativo' : 'Inativo'}
         </span>
       </div>
-      <div className="space-y-1 text-sm text-gray-600 mb-4">
+      <div className="space-y-1 text-sm text-content-muted mb-4">
         <p>
           <span className="font-medium">Lote:</span> {curral.lote_nome || '-'}
         </p>
@@ -500,7 +500,7 @@ export function Currais() {
           {curral.ativo ? 'Desativar' : 'Ativar'}
         </Button>
         {!curral.ativo && (
-          <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => setDeleteTarget({ type: 'curral', id: curral.id, nome: curral.nome })}>
+          <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-500 hover:text-red-700" onClick={() => setDeleteTarget({ type: 'curral', id: curral.id, nome: curral.nome })}>
             Excluir
           </Button>
         )}
@@ -511,8 +511,8 @@ export function Currais() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-800">Confinamento</h2>
-        <p className="text-sm text-gray-500">Carregando...</p>
+        <h2 className="text-2xl font-bold text-content-strong">Confinamento</h2>
+        <p className="text-sm text-content-muted">Carregando...</p>
       </div>
     )
   }
@@ -523,8 +523,8 @@ export function Currais() {
       {!showLinhaForm && !showCurralForm && (
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Confinamento</h2>
-            <p className="text-sm text-gray-500">Linhas e currais de confinamento.</p>
+            <h2 className="text-2xl font-bold text-content-strong">Confinamento</h2>
+            <p className="text-sm text-content-muted">Linhas e currais de confinamento.</p>
           </div>
           <div className="flex gap-2">
             <Button onClick={resetLinhaForm}>Nova Linha</Button>
@@ -542,7 +542,7 @@ export function Currais() {
             className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
               showInactive
                 ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
             }`}
           >
             {showInactive ? (
@@ -562,15 +562,15 @@ export function Currais() {
 
       {/* Formulário de Linha */}
       {showLinhaForm && (
-        <Card className="bg-white p-6 border-0 shadow-sm">
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">
+            <h3 className="text-lg font-semibold text-content-strong">
               {editingLinha ? 'Editar Linha' : 'Nova Linha'}
             </h3>
             <button
               type="button"
               onClick={handleLinhaCancel}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              className="text-content-faint hover:text-content-muted transition-colors p-1"
               aria-label="Fechar formulário"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -581,7 +581,7 @@ export function Currais() {
           <form onSubmit={handleLinhaSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Nome <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -590,40 +590,40 @@ export function Currais() {
                   onChange={(e) => setLinhaFormData({ ...linhaFormData, nome: e.target.value })}
                   required
                   placeholder="Nome da linha"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Largura (m)</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Largura (m)</label>
                 <Input
                   type="number"
                   step="0.01"
                   value={linhaFormData.largura_m}
                   onChange={(e) => setLinhaFormData({ ...linhaFormData, largura_m: e.target.value })}
                   placeholder="0.00"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Comprimento (m)</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Comprimento (m)</label>
                 <Input
                   type="number"
                   step="0.01"
                   value={linhaFormData.comprimento_m}
                   onChange={(e) => setLinhaFormData({ ...linhaFormData, comprimento_m: e.target.value })}
                   placeholder="0.00"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Metros de cocho (m)</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Metros de cocho (m)</label>
                 <Input
                   type="number"
                   step="0.01"
                   value={linhaFormData.metros_cocho_m}
                   onChange={(e) => setLinhaFormData({ ...linhaFormData, metros_cocho_m: e.target.value })}
                   placeholder="0.00"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
             </div>
@@ -641,15 +641,15 @@ export function Currais() {
 
       {/* Formulário de Curral */}
       {showCurralForm && (
-        <Card className="bg-white p-6 border-0 shadow-sm">
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">
+            <h3 className="text-lg font-semibold text-content-strong">
               {editingCurral ? 'Editar Curral' : 'Novo Curral'}
             </h3>
             <button
               type="button"
               onClick={handleCurralCancel}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              className="text-content-faint hover:text-content-muted transition-colors p-1"
               aria-label="Fechar formulário"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -660,7 +660,7 @@ export function Currais() {
           <form onSubmit={handleCurralSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Nome <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -669,15 +669,15 @@ export function Currais() {
                   onChange={(e) => setCurralFormData({ ...curralFormData, nome: e.target.value })}
                   required
                   placeholder="Nome do curral"
-                  className="border-gray-200 focus:border-accent text-sm"
+                  className="border-border-base focus:border-accent text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Linha</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Linha</label>
                 <select
                   value={curralFormData.linha_id}
                   onChange={(e) => setCurralFormData({ ...curralFormData, linha_id: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 text-sm min-h-[44px]"
+                  className="w-full px-3 py-2 rounded-lg border-2 border-border-base focus:border-accent bg-surface-1 text-content text-sm min-h-[44px]"
                 >
                   <option value="">Sem linha</option>
                   {linhasFiltradas.map((linha) => (
@@ -688,7 +688,7 @@ export function Currais() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Lote</label>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Lote</label>
                 <select
                   value={curralFormData.lote_id}
                   onChange={(e) => {
@@ -696,7 +696,7 @@ export function Currais() {
                     setCurralFormData({ ...curralFormData, lote_id: loteId })
                     fetchLoteInfo(loteId)
                   }}
-                  className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 text-sm min-h-[44px]"
+                  className="w-full px-3 py-2 rounded-lg border-2 border-border-base focus:border-accent bg-surface-1 text-content text-sm min-h-[44px]"
                 >
                   <option value="">Selecione...</option>
                   {lotes.map((lote) => (
@@ -715,9 +715,9 @@ export function Currais() {
 
             {/* Info on-the-fly do lote */}
             {curralFormData.lote_id && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700">
+              <div className="mt-4 p-4 bg-surface-2 rounded-lg border border-border-base text-sm text-content">
                 {fetchingLoteInfo ? (
-                  <p className="text-gray-500">Carregando...</p>
+                  <p className="text-content-muted">Carregando...</p>
                 ) : loteInfo ? (
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     <span>
@@ -754,7 +754,7 @@ export function Currais() {
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">Categoria(s):</span>
                         {loteInfo.categorias.map((cat, i) => (
-                          <span key={i} className="text-gray-700">
+                          <span key={i} className="text-content">
                             {formatCategoria(cat.categoria)}
                             {loteInfo.categorias.length > 1 && ` (${cat.quant_atual ?? 0})`}
                           </span>
@@ -763,7 +763,7 @@ export function Currais() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-gray-500">Nenhuma informação encontrada.</p>
+                  <p className="text-content-muted">Nenhuma informação encontrada.</p>
                 )}
               </div>
             )}
@@ -790,12 +790,12 @@ export function Currais() {
               <Card key={linha.id} className="border-0 shadow-sm overflow-hidden">
                 {/* Header da linha */}
                 <div
-                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-2 transition-colors"
                   onClick={() => setExpandedLinha(isExpanded ? null : linha.id)}
                 >
                   <div className="flex items-center gap-3">
                     <svg
-                      className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                      className={`w-5 h-5 text-content-faint transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -803,8 +803,8 @@ export function Currais() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <div>
-                      <h3 className="font-semibold text-gray-800">{linha.nome}</h3>
-                      <p className="text-xs text-gray-500">
+                      <h3 className="font-semibold text-content-strong">{linha.nome}</h3>
+                      <p className="text-xs text-content-muted">
                         {curraisDaLinha.length} curral(is)
                         {linha.largura_m != null && ` · ${linha.largura_m}m larg`}
                         {linha.comprimento_m != null && ` · ${linha.comprimento_m}m comp`}
@@ -815,7 +815,7 @@ export function Currais() {
                   <div className="flex flex-wrap items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                     <span
                       className={`shrink-0 px-2 py-1 rounded-full text-xs font-medium ${
-                        linha.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        linha.ativo ? 'bg-green-500/10 text-green-800 dark:text-green-200' : 'bg-red-500/10 text-red-800 dark:text-red-200'
                       }`}
                     >
                       {linha.ativo ? 'Ativo' : 'Inativo'}
@@ -830,7 +830,7 @@ export function Currais() {
                       {linha.ativo ? 'Desativar' : 'Ativar'}
                     </Button>
                     {!linha.ativo && (
-                      <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => setDeleteTarget({ type: 'linha', id: linha.id, nome: linha.nome })}>
+                      <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-500 hover:text-red-700" onClick={() => setDeleteTarget({ type: 'linha', id: linha.id, nome: linha.nome })}>
                         Excluir
                       </Button>
                     )}
@@ -839,13 +839,13 @@ export function Currais() {
 
                 {/* Currais da linha (accordion) */}
                 {isExpanded && (
-                  <div className="border-t border-gray-100 p-4 bg-gray-50/50">
+                  <div className="border-t border-border-subtle p-4 bg-surface-2/50">
                     {curraisDaLinha.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {curraisDaLinha.map(renderCurralCard)}
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500 text-center py-4">
+                      <p className="text-sm text-content-muted text-center py-4">
                         Nenhum curral atribuído a esta linha.
                       </p>
                     )}
@@ -859,12 +859,12 @@ export function Currais() {
           {curraisSemLinha.length > 0 && (
             <Card className="border-0 shadow-sm overflow-hidden">
               <div
-                className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-2 transition-colors"
                 onClick={() => setExpandedLinha(expandedLinha === '__sem_linha' ? null : '__sem_linha')}
               >
                 <div className="flex items-center gap-3">
                   <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform ${expandedLinha === '__sem_linha' ? 'rotate-90' : ''}`}
+                    className={`w-5 h-5 text-content-faint transition-transform ${expandedLinha === '__sem_linha' ? 'rotate-90' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -872,13 +872,13 @@ export function Currais() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                   <div>
-                    <h3 className="font-semibold text-gray-800">Currais sem linha</h3>
-                    <p className="text-xs text-gray-500">{curraisSemLinha.length} curral(is)</p>
+                    <h3 className="font-semibold text-content-strong">Currais sem linha</h3>
+                    <p className="text-xs text-content-muted">{curraisSemLinha.length} curral(is)</p>
                   </div>
                 </div>
               </div>
               {expandedLinha === '__sem_linha' && (
-                <div className="border-t border-gray-100 p-4 bg-gray-50/50">
+                <div className="border-t border-border-subtle p-4 bg-surface-2/50">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {curraisSemLinha.map(renderCurralCard)}
                   </div>
@@ -890,7 +890,7 @@ export function Currais() {
           {/* Empty state */}
           {linhas.length === 0 && currais.length === 0 && (
             <Card className="p-8 text-center border-0">
-              <p className="text-gray-600">Nenhuma linha ou curral cadastrado.</p>
+              <p className="text-content-muted">Nenhuma linha ou curral cadastrado.</p>
             </Card>
           )}
         </div>

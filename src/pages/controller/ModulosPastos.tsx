@@ -427,7 +427,7 @@ export function ModulosPastos() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Módulos</h1>
+        <h1 className="text-2xl font-bold text-content-strong">Módulos</h1>
         <Button onClick={() => setShowForm(true)} disabled={showForm}>
           Novo Módulo
         </Button>
@@ -448,7 +448,7 @@ export function ModulosPastos() {
             className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
               showInactive
                 ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
             }`}
           >
             {showInactive ? (
@@ -475,7 +475,7 @@ export function ModulosPastos() {
             <button
               type="button"
               onClick={handleCancel}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              className="text-content-faint hover:text-content-muted transition-colors p-1"
               aria-label="Fechar formulário"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -485,7 +485,7 @@ export function ModulosPastos() {
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Nome <span className="text-red-500">*</span>
               </label>
               <Input
@@ -498,13 +498,13 @@ export function ModulosPastos() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Setor
               </label>
               <select
                 value={formData.setor_id}
                 onChange={(e) => setFormData({ ...formData, setor_id: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white"
+                className="w-full px-3 py-2 border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-surface-1"
               >
                 <option value="">Selecione um setor</option>
                 {setores.map((setor) => (
@@ -514,13 +514,13 @@ export function ModulosPastos() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Sistema de Produção
               </label>
               <select
                 value={formData.sistema_producao}
                 onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white"
+                className="w-full px-3 py-2 border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-surface-1"
               >
                 <option value="">Selecione</option>
                 <option value="Cria">Cria</option>
@@ -535,7 +535,7 @@ export function ModulosPastos() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Responsável
               </label>
               <Input
@@ -547,7 +547,7 @@ export function ModulosPastos() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Meta de Ocupação (dias)
               </label>
               <Input
@@ -561,20 +561,20 @@ export function ModulosPastos() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content mb-1">
                 Área Total (ha)
               </label>
               <Input
                 type="text"
                 value={calculatedArea.toFixed(2)}
                 disabled
-                className="bg-gray-100"
+                className="bg-surface-2"
               />
-              <p className="text-xs text-gray-500 mt-1">Calculada automaticamente com base nos piquetes selecionados</p>
+              <p className="text-xs text-content-muted mt-1">Calculada automaticamente com base nos piquetes selecionados</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-content mb-2">
                 Piquetes
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
@@ -592,11 +592,11 @@ export function ModulosPastos() {
                     className={`p-3 rounded-lg border-2 text-left transition-all ${
                       selectedPastos.includes(pasto.id)
                         ? 'border-primary bg-primary/10'
-                        : 'border-gray-200 hover:border-gray-300'
+                        : 'border-border-base hover:border-surface-3'
                     }`}
                   >
                     <div className="font-medium">{pasto.nome}</div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-content-muted">
                       {pasto.especie || '—'} • {pasto.area_util_ha?.toFixed(2) || 0} ha
                     </div>
                   </button>
@@ -605,8 +605,8 @@ export function ModulosPastos() {
             </div>
 
             {editingModulo && (
-              <div className="border-t-2 border-gray-100 pt-4 mt-2">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <div className="border-t-2 border-border-subtle pt-4 mt-2">
+                <h3 className="text-sm font-semibold text-content mb-3 flex items-center gap-2">
                   <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
@@ -615,34 +615,34 @@ export function ModulosPastos() {
                 {ocupacaoPorModulo[editingModulo.id]?.length > 0 ? (
                   <div className="space-y-2">
                     {ocupacaoPorModulo[editingModulo.id].some((oc: any) => oc.meta_excedida) && (
-                      <p className="text-xs font-bold text-red-700 flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      <p className="text-xs font-bold text-red-700 dark:text-red-300 flex items-center gap-1 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
                         ⚠️ Um ou mais lotes com meta de ocupação excedida
                       </p>
                     )}
                     {ocupacaoPorModulo[editingModulo.id].map((oc: any) => (
                       <div
                         key={oc.lote_id}
-                        className={`rounded-xl p-4 space-y-2 ${oc.meta_excedida ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}
+                        className={`rounded-xl p-4 space-y-2 ${oc.meta_excedida ? 'bg-red-500/10 border border-red-500/30' : 'bg-green-500/10 border border-green-500/30'}`}
                       >
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           <div>
-                            <p className="text-xs text-gray-500">Lote</p>
-                            <p className="text-sm font-medium text-gray-800">{oc.lote_nome}</p>
+                            <p className="text-xs text-content-muted">Lote</p>
+                            <p className="text-sm font-medium text-content-strong">{oc.lote_nome}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500">Tempo de ocupação</p>
-                            <p className="text-sm font-medium text-gray-800">{oc.periodo_ocupacao_dias} dias</p>
+                            <p className="text-xs text-content-muted">Tempo de ocupação</p>
+                            <p className="text-sm font-medium text-content-strong">{oc.periodo_ocupacao_dias} dias</p>
                           </div>
                           {oc.taxa_lotacao_ua_ha != null && (
                             <div>
-                              <p className="text-xs text-gray-500">Taxa de lotação (módulo)</p>
-                              <p className="text-sm font-semibold text-blue-700">{Number(oc.taxa_lotacao_ua_ha).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} UA/ha</p>
+                              <p className="text-xs text-content-muted">Taxa de lotação (módulo)</p>
+                              <p className="text-sm font-semibold text-primary dark:text-primary-light">{Number(oc.taxa_lotacao_ua_ha).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} UA/ha</p>
                             </div>
                           )}
                           {oc.meta_intervalo_ocupacao_dias && (
                             <div>
-                              <p className="text-xs text-gray-500">Meta</p>
-                              <p className={`text-sm font-medium ${oc.meta_excedida ? 'text-red-700' : 'text-green-700'}`}>
+                              <p className="text-xs text-content-muted">Meta</p>
+                              <p className={`text-sm font-medium ${oc.meta_excedida ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>
                                 {oc.meta_intervalo_ocupacao_dias} dias
                                 {oc.meta_excedida && <span className="ml-1 text-xs">(+{oc.dias_acima_meta}d)</span>}
                               </p>
@@ -650,25 +650,25 @@ export function ModulosPastos() {
                           )}
                           {oc.cabecas_entrada && (
                             <div>
-                              <p className="text-xs text-gray-500">Cabeças na entrada</p>
-                              <p className="text-sm font-medium text-gray-800">{oc.cabecas_entrada}</p>
+                              <p className="text-xs text-content-muted">Cabeças na entrada</p>
+                              <p className="text-sm font-medium text-content-strong">{oc.cabecas_entrada}</p>
                             </div>
                           )}
                           {oc.peso_vivo_medio_entrada_kg && (
                             <div>
-                              <p className="text-xs text-gray-500">Peso médio entrada</p>
-                              <p className="text-sm font-medium text-gray-800">{Number(oc.peso_vivo_medio_entrada_kg).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg</p>
+                              <p className="text-xs text-content-muted">Peso médio entrada</p>
+                              <p className="text-sm font-medium text-content-strong">{Number(oc.peso_vivo_medio_entrada_kg).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg</p>
                             </div>
                           )}
                           {oc.data_hora_entrada && (
                             <div>
-                              <p className="text-xs text-gray-500">Data de entrada</p>
-                              <p className="text-sm font-medium text-gray-800">{new Date(oc.data_hora_entrada).toLocaleDateString('pt-BR')}</p>
+                              <p className="text-xs text-content-muted">Data de entrada</p>
+                              <p className="text-sm font-medium text-content-strong">{new Date(oc.data_hora_entrada).toLocaleDateString('pt-BR')}</p>
                             </div>
                           )}
                         </div>
                         {oc.desvio_percentual_atual != null && (
-                          <p className={`text-xs ${oc.meta_excedida ? 'text-red-600' : 'text-green-600'}`}>
+                          <p className={`text-xs ${oc.meta_excedida ? 'text-red-600 dark:text-red-300' : 'text-green-600 dark:text-green-300'}`}>
                             Desvio atual: {oc.desvio_percentual_atual > 0 ? '+' : ''}{Number(oc.desvio_percentual_atual).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
                           </p>
                         )}
@@ -676,8 +676,8 @@ export function ModulosPastos() {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-xl p-4 bg-gray-50 border border-gray-200">
-                    <p className="text-sm text-gray-500">Nenhum lote ocupando este módulo no momento.</p>
+                  <div className="rounded-xl p-4 bg-surface-2 border border-border-base">
+                    <p className="text-sm text-content-muted">Nenhum lote ocupando este módulo no momento.</p>
                   </div>
                 )}
               </div>
@@ -703,7 +703,7 @@ export function ModulosPastos() {
         </div>
       ) : !showForm && filteredModulos.length === 0 ? (
         <Card>
-          <p className="text-center text-gray-500">
+          <p className="text-center text-content-muted">
             {searchTerm ? 'Nenhum módulo encontrado' : 'Nenhum módulo cadastrado'}
           </p>
         </Card>
@@ -721,28 +721,28 @@ export function ModulosPastos() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-semibold text-lg">{modulo.nome}</h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-content-muted">
                       Área Útil Total: {modulo.area_util_total_ha?.toFixed(2) || 0} ha
                     </p>
                     {modulo.setores?.nome && (
-                      <p className="text-sm text-gray-600">Setor: {modulo.setores.nome}</p>
+                      <p className="text-sm text-content-muted">Setor: {modulo.setores.nome}</p>
                     )}
                     {modulo.sistema_producao && (
-                      <p className="text-sm text-gray-600">Sistema: {modulo.sistema_producao}</p>
+                      <p className="text-sm text-content-muted">Sistema: {modulo.sistema_producao}</p>
                     )}
                     {modulo.responsavel && (
-                      <p className="text-sm text-gray-600">Responsável: {modulo.responsavel}</p>
+                      <p className="text-sm text-content-muted">Responsável: {modulo.responsavel}</p>
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     {ocupacaoPorModulo[modulo.id]?.some((oc: any) => oc.meta_excedida) && (
-                      <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                      <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-700 dark:text-red-200">
                         ⚠️ Meta excedida
                       </span>
                     )}
                     <span
                       className={`px-2 py-1 text-xs rounded-full ${
-                        modulo.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        modulo.ativo ? 'bg-green-500/10 text-green-800 dark:text-green-200' : 'bg-red-500/10 text-red-800 dark:text-red-200'
                       }`}
                     >
                       {modulo.ativo ? 'Ativo' : 'Inativo'}
@@ -751,12 +751,12 @@ export function ModulosPastos() {
                 </div>
                 {modulo.pastos && modulo.pastos.length > 0 && (
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Piquetes ({modulo.pastos.length}):</p>
+                    <p className="text-sm text-content-muted mb-1">Piquetes ({modulo.pastos.length}):</p>
                     <div className="flex flex-wrap gap-1">
                       {modulo.pastos.map((pasto) => (
                         <span
                           key={pasto.id}
-                          className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 text-gray-700"
+                          className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-surface-2 text-content"
                         >
                           {pasto.nome}
                         </span>
@@ -765,13 +765,13 @@ export function ModulosPastos() {
                   </div>
                 )}
                 {ocupacaoPorModulo[modulo.id]?.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-gray-100">
-                    <p className="text-sm text-gray-600 font-medium mb-1">Lotes em ocupação:</p>
+                  <div className="mt-2 pt-2 border-t border-border-subtle">
+                    <p className="text-sm text-content-muted font-medium mb-1">Lotes em ocupação:</p>
                     {ocupacaoPorModulo[modulo.id].map((oc: any) => (
                       <div key={oc.lote_id} className="mb-1">
-                        <p className="text-sm text-gray-600">• <span className="font-medium">{oc.lote_nome}</span> — {oc.periodo_ocupacao_dias} dias</p>
+                        <p className="text-sm text-content-muted">• <span className="font-medium">{oc.lote_nome}</span> — {oc.periodo_ocupacao_dias} dias</p>
                         {oc.meta_intervalo_ocupacao_dias && oc.meta_excedida && (
-                          <p className="text-sm text-red-600 ml-3">⚠️ Meta de {oc.meta_intervalo_ocupacao_dias}d excedida em {oc.dias_acima_meta} dias</p>
+                          <p className="text-sm text-red-500 ml-3">⚠️ Meta de {oc.meta_intervalo_ocupacao_dias}d excedida em {oc.dias_acima_meta} dias</p>
                         )}
                       </div>
                     ))}
@@ -792,7 +792,7 @@ export function ModulosPastos() {
                     variant="secondary"
                     size="sm"
                     onClick={() => handleDeactivateClick(modulo)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-500 hover:text-red-400"
                   >
                     Desativar
                   </Button>
@@ -813,7 +813,7 @@ export function ModulosPastos() {
                     setModuloToDelete(modulo)
                     setShowDeleteModal(true)
                   }}
-                  className="text-red-600 hover:text-red-700"
+                  className="text-red-500 hover:text-red-400"
                 >
                   Excluir
                 </Button>

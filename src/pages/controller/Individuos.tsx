@@ -276,25 +276,25 @@ export function Individuos() {
     switch (syncStatus) {
       case 'automatico_incompleto':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-800 dark:text-yellow-200">
             Criado automaticamente
           </span>
         )
       case 'manual_completo':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-800 dark:text-green-200">
             Completo
           </span>
         )
       case 'manual_incompleto':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-800 dark:text-red-200">
             Incompleto
           </span>
         )
       default:
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-2 text-content-strong">
             Não classificado
           </span>
         )
@@ -341,8 +341,8 @@ export function Individuos() {
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-          <div className="h-10 w-32 bg-gray-200 rounded animate-pulse" />
+          <div className="h-8 w-48 bg-surface-3 rounded animate-pulse" />
+          <div className="h-10 w-32 bg-surface-3 rounded animate-pulse" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <CardSkeleton />
@@ -380,8 +380,8 @@ export function Individuos() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Indivíduos</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-2xl font-bold text-content-strong">Indivíduos</h2>
+          <p className="text-sm text-content-muted mt-1">
             {totalCount} indivíduo{totalCount !== 1 ? 's' : ''} no total
           </p>
         </div>
@@ -398,7 +398,7 @@ export function Individuos() {
             placeholder={placeholderBusca}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="border-gray-200 focus:border-accent h-10 min-h-0"
+            className="border-border-base focus:border-accent h-10 min-h-0"
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -409,8 +409,8 @@ export function Individuos() {
             }}
             className={`h-10 px-3 rounded-lg text-sm font-medium transition-colors ${
               filtroIncompletos
-                ? 'bg-red-100 text-red-800 border border-red-200'
-                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                ? 'bg-red-500/10 text-red-800 dark:text-red-200 border border-red-500/30'
+                : 'bg-surface-1 border border-border-base text-content hover:bg-surface-2'
             }`}
           >
             Incompletos
@@ -422,19 +422,16 @@ export function Individuos() {
             }}
             className={`h-10 px-3 rounded-lg text-sm font-medium transition-colors ${
               filtroAutomaticos
-                ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                ? 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-200 border border-yellow-500/30'
+                : 'bg-surface-1 border border-border-base text-content hover:bg-surface-2'
             }`}
           >
             Criados automaticamente
           </button>
           {temFiltros && (
-            <button
-              onClick={limparFiltros}
-              className="h-10 px-3 rounded-lg text-sm font-medium bg-orange-100 text-orange-800 border border-orange-200 hover:bg-orange-200 transition-colors"
-            >
+            <Button onClick={limparFiltros} variant="secondary" size="sm">
               Limpar filtros
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -500,11 +497,11 @@ export function Individuos() {
       </div>
 
       {/* Identification filter */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+      <div className="bg-surface-1 rounded-xl border border-border-base p-4 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-gray-800">Filtro de identificação</h3>
-            <p className="text-sm text-gray-500">{notaIdentificacao}</p>
+            <h3 className="text-sm font-semibold text-content-strong">Filtro de identificação</h3>
+            <p className="text-sm text-content-muted">{notaIdentificacao}</p>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
             <div className="w-full sm:w-56">
@@ -523,7 +520,7 @@ export function Individuos() {
               />
             </div>
             {searchTerm && (
-              <span className="text-sm text-gray-500 whitespace-nowrap">
+              <span className="text-sm text-content-muted whitespace-nowrap">
                 {individuos.length} resultado{individuos.length !== 1 ? 's' : ''}
               </span>
             )}
@@ -535,7 +532,7 @@ export function Individuos() {
       <div className="md:hidden space-y-4">
         {individuos.length === 0 ? (
           <Card className="p-8 text-center border-0 shadow-sm">
-            <p className="text-gray-600">Nenhum indivíduo encontrado</p>
+            <p className="text-content-muted">Nenhum indivíduo encontrado</p>
           </Card>
         ) : (
           individuos.map((ind) => {
@@ -548,36 +545,36 @@ export function Individuos() {
             >
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <div className="font-semibold text-gray-900 text-lg">
-                    <span className="text-sm font-normal text-gray-500">{identificacao?.label}:</span>{' '}
+                  <div className="font-semibold text-content-strong text-lg">
+                    <span className="text-sm font-normal text-content-muted">{identificacao?.label}:</span>{' '}
                     {identificacao?.value}
                   </div>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-content-muted">
                     {ind.categoria} • {ind.sexo}
                   </p>
                 </div>
                 {getCompletudeBadge(ind.sync_status)}
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
+              <div className="grid grid-cols-2 gap-2 text-sm text-content-muted mb-3">
                 <div>
-                  <span className="text-gray-400">Raça:</span> {ind.raca}
+                  <span className="text-content-faint">Raça:</span> {ind.raca}
                 </div>
                 <div>
-                  <span className="text-gray-400">Nascimento:</span>{' '}
+                  <span className="text-content-faint">Nascimento:</span>{' '}
                   {ind.data_nascimento ? new Date(ind.data_nascimento).toLocaleDateString('pt-BR') : '-'}
                 </div>
                 <div>
-                  <span className="text-gray-400">Status:</span> {ind.status}
+                  <span className="text-content-faint">Status:</span> {ind.status}
                 </div>
                 <div>
-                  <span className="text-gray-400">Peso:</span>{' '}
+                  <span className="text-content-faint">Peso:</span>{' '}
                   {ind.peso_atual_kg ? `${ind.peso_atual_kg} kg` : ind.peso_nascimento_kg ? `${ind.peso_nascimento_kg} kg` : '-'}
                 </div>
                 <div>
-                  <span className="text-gray-400">Lote:</span> {getNomeLote(ind.lote_atual)}
+                  <span className="text-content-faint">Lote:</span> {getNomeLote(ind.lote_atual)}
                 </div>
                 <div>
-                  <span className="text-gray-400">Pasto:</span> {getNomePasto(ind.pasto_atual)}
+                  <span className="text-content-faint">Pasto:</span> {getNomePasto(ind.pasto_atual)}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -601,46 +598,46 @@ export function Individuos() {
 
       {/* Desktop table */}
       <div className="hidden md:block">
-        <div className="overflow-x-auto bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto bg-surface-1 rounded-2xl shadow-lg border-2 border-border-base overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b-2 border-gray-200">
+            <thead className="bg-surface-2 border-b-2 border-border-base">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
                   Identificação
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
                   Categoria
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
                   Sexo
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
                   Raça
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
                   Nascimento
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
                   Lote
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
                   Pasto
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
                   Completude
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
                   Ações
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-border-base">
               {individuos.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-600">
+                  <td colSpan={10} className="px-4 py-8 text-center text-content-muted">
                     Nenhum indivíduo encontrado
                   </td>
                 </tr>
@@ -650,33 +647,33 @@ export function Individuos() {
                   return (
                     <tr
                       key={ind.id}
-                      className="hover:bg-gray-50 transition-colors cursor-pointer"
+                      className="hover:bg-surface-2 transition-colors cursor-pointer"
                       onClick={() => navigate(`/controller/individuos/${ind.id}`)}
                     >
                       <td className="px-4 py-3">
                         {identificacao ? (
-                          <div className="font-medium text-gray-900">
-                            <span className="text-xs font-normal text-gray-500">{identificacao.label}:</span>{' '}
+                          <div className="font-medium text-content-strong">
+                            <span className="text-xs font-normal text-content-muted">{identificacao.label}:</span>{' '}
                             {identificacao.value}
                           </div>
                         ) : (
-                          <div className="font-medium text-gray-900">-</div>
+                          <div className="font-medium text-content-strong">-</div>
                         )}
                         {ind.id_provisorio_cria && identificacao?.label !== 'Provisório' && (
-                          <div className="text-xs text-gray-500">Prov: {ind.id_provisorio_cria}</div>
+                          <div className="text-xs text-content-muted">Prov: {ind.id_provisorio_cria}</div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{ind.categoria}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{ind.sexo}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{ind.raca}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
+                      <td className="px-4 py-3 text-sm text-content">{ind.categoria}</td>
+                      <td className="px-4 py-3 text-sm text-content">{ind.sexo}</td>
+                      <td className="px-4 py-3 text-sm text-content">{ind.raca}</td>
+                      <td className="px-4 py-3 text-sm text-content">
                         {ind.data_nascimento
                           ? new Date(ind.data_nascimento).toLocaleDateString('pt-BR')
                           : '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{ind.status}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{getNomeLote(ind.lote_atual)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{getNomePasto(ind.pasto_atual)}</td>
+                      <td className="px-4 py-3 text-sm text-content">{ind.status}</td>
+                      <td className="px-4 py-3 text-sm text-content">{getNomeLote(ind.lote_atual)}</td>
+                      <td className="px-4 py-3 text-sm text-content">{getNomePasto(ind.pasto_atual)}</td>
                       <td className="px-4 py-3">{getCompletudeBadge(ind.sync_status)}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">

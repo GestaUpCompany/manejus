@@ -59,7 +59,7 @@ export function DetailLayout({
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{title}</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">{title}</h2>
         <div className="flex gap-2">
           {actions}
           <Button variant="secondary" onClick={onBack}>{backLabel}</Button>
@@ -73,7 +73,7 @@ export function DetailLayout({
 interface DetailSectionProps {
   title: string
   children: ReactNode
-  /** Se true, usa bg-gray-50 p-4 rounded-lg como wrapper (para seções destacadas) */
+  /** Se true, usa bg-surface-2 p-4 rounded-lg como wrapper (para seções destacadas) */
   highlighted?: boolean
   className?: string
 }
@@ -84,9 +84,9 @@ interface DetailSectionProps {
 export function DetailSection({ title, children, highlighted, className = '' }: DetailSectionProps) {
   return (
     <div>
-      <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">{title}</h3>
+      <h3 className="text-base sm:text-lg font-semibold text-content-strong mb-3 sm:mb-4">{title}</h3>
       {highlighted ? (
-        <div className={`bg-gray-50 p-4 rounded-lg ${className}`}>{children}</div>
+        <div className={`bg-surface-2 p-4 rounded-lg ${className}`}>{children}</div>
       ) : (
         <div className={className}>{children}</div>
       )}
@@ -104,8 +104,8 @@ interface DetailFieldProps {
  */
 export function DetailField({ label, value }: DetailFieldProps) {
   return (
-    <p className="text-sm sm:text-base">
-      <span className="font-medium text-gray-700">{label}:</span>{' '}
+    <p className="text-sm sm:text-base text-content">
+      <span className="font-medium text-content-muted">{label}:</span>{' '}
       {value ?? '-'}
     </p>
   )

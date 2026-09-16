@@ -1928,7 +1928,7 @@ export function MapaFazenda() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-        <p className="text-gray-500">Carregando mapa...</p>
+        <p className="text-content-muted">Carregando mapa...</p>
       </div>
     )
   }
@@ -1936,7 +1936,7 @@ export function MapaFazenda() {
   if (!fazendaId) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-        <p className="text-gray-500">Nenhuma fazenda vinculada ao seu usuário.</p>
+        <p className="text-content-muted">Nenhuma fazenda vinculada ao seu usuário.</p>
       </div>
     )
   }
@@ -1994,13 +1994,13 @@ export function MapaFazenda() {
     : null
 
   return (
-    <div className={modoTelaCheia ? 'fixed inset-0 z-50 bg-white flex flex-col' : 'space-y-4'}>
+    <div className={modoTelaCheia ? 'fixed inset-0 z-50 bg-surface-1 flex flex-col' : 'space-y-4'}>
       {/* Header (oculto em tela cheia) */}
       {!modoTelaCheia && (
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Mapa da Fazenda</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-content-strong">Mapa da Fazenda</h1>
+          <p className="text-sm text-content-muted">
             Importe KML/KMZ do ArcGIS ou Google Earth, desenhe delimitações de pastos e associe aos cadastros.
           </p>
         </div>
@@ -2009,8 +2009,8 @@ export function MapaFazenda() {
 
       {/* Toolbar (overlay compacto em tela cheia) */}
       <div className={modoTelaCheia
-        ? 'absolute top-2 left-2 right-2 z-10 flex flex-col gap-2 bg-white/95 p-2 rounded-lg border border-gray-200 shadow-lg'
-        : 'flex flex-col gap-2 bg-white p-3 rounded-lg border border-gray-200'
+        ? 'absolute top-2 left-2 right-2 z-10 flex flex-col gap-2 bg-white/95 p-2 rounded-lg border border-border-base shadow-lg'
+        : 'flex flex-col gap-2 bg-surface-1 p-3 rounded-lg border border-border-base'
       }>
         <input
           ref={fileInputRef}
@@ -2041,7 +2041,7 @@ export function MapaFazenda() {
           }}
           className={modoEdicao
             ? 'bg-gray-800 text-white hover:bg-gray-900 border border-gray-900'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'}
+            : 'bg-surface-2 text-content hover:bg-surface-3 border border-surface-3'}
         >
           <span className="flex items-center gap-2">
             {modoEdicao ? (
@@ -2070,7 +2070,7 @@ export function MapaFazenda() {
           variant="secondary"
           size="sm"
           onClick={() => fileInputRef.current?.click()}
-          className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+          className="bg-primary/10 text-primary dark:text-primary-light hover:bg-primary/10 border border-primary/30"
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2087,14 +2087,14 @@ export function MapaFazenda() {
               setFeaturesImportadas(null)
               setImportStatus(null)
             }}
-            className="bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+            className="bg-red-500/10 text-red-700 dark:text-red-300 hover:bg-red-500/10 border border-red-500/30"
           >
             Remover Importação
           </Button>
         )}
 
         {/* Divider */}
-        <div className="w-px h-8 bg-gray-300 mx-1" />
+        <div className="w-px h-8 bg-surface-3 mx-1" />
 
         {/* Grupo 2: Desenhar (colorido por entidade) */}
         <Button
@@ -2102,8 +2102,8 @@ export function MapaFazenda() {
           size="sm"
           onClick={ativarDesenhoPoligono}
           className={drawMode === 'polygon'
-            ? 'bg-green-600 text-white hover:bg-green-700 border border-green-700'
-            : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'}
+            ? 'bg-primary text-white hover:bg-primary/80 border border-green-700'
+            : 'bg-green-500/10 text-green-700 dark:text-green-300 hover:bg-green-500/10 border border-green-500/30'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2117,8 +2117,8 @@ export function MapaFazenda() {
           size="sm"
           onClick={ativarDesenhoPonto}
           className={drawMode === 'point'
-            ? 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-700'
-            : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'}
+            ? 'bg-primary text-white hover:bg-primary/80 border border-blue-700'
+            : 'bg-primary/10 text-primary dark:text-primary-light hover:bg-primary/10 border border-primary/30'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2134,7 +2134,7 @@ export function MapaFazenda() {
           onClick={ativarDesenhoEstrada}
           className={drawMode === 'linestring'
             ? 'bg-amber-600 text-white hover:bg-amber-700 border border-amber-700'
-            : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'}
+            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 border border-amber-500/30'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2149,7 +2149,7 @@ export function MapaFazenda() {
           onClick={ativarDesenhoPontoInteresse}
           className={drawMode === 'point-interesse'
             ? 'bg-purple-600 text-white hover:bg-purple-700 border border-purple-700'
-            : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'}
+            : 'bg-amber-500/10 text-purple-700 hover:bg-amber-500/10 border border-purple-200'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2180,7 +2180,7 @@ export function MapaFazenda() {
           onClick={ativarDesenhoCurral}
           className={drawMode === 'curral'
             ? 'bg-amber-800 text-white hover:bg-amber-900 border border-amber-900'
-            : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-300'}
+            : 'bg-amber-500/10 text-amber-800 dark:text-amber-200 hover:bg-amber-500/10 border border-amber-300'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2191,7 +2191,7 @@ export function MapaFazenda() {
         </Button>
 
         {/* Divider */}
-        <div className="w-px h-8 bg-gray-300 mx-1" />
+        <div className="w-px h-8 bg-surface-3 mx-1" />
 
         {/* Grupo 3: Ferramentas */}
         <Button
@@ -2200,7 +2200,7 @@ export function MapaFazenda() {
           onClick={ativarModoRota}
           className={modoRota
             ? 'bg-indigo-600 text-white hover:bg-indigo-700 border border-indigo-700'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'}
+            : 'bg-surface-2 text-content hover:bg-surface-3 border border-surface-3'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2218,7 +2218,7 @@ export function MapaFazenda() {
           }}
           className={modoSelecaoMultipla
             ? 'bg-gray-700 text-white hover:bg-gray-800 border border-gray-800'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'}
+            : 'bg-surface-2 text-content hover:bg-surface-3 border border-surface-3'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2231,13 +2231,13 @@ export function MapaFazenda() {
           variant="secondary"
           size="sm"
           onClick={limparDesenho}
-          className="bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-600 border border-gray-300"
+          className="bg-surface-2 text-content-muted hover:bg-red-500/10 hover:text-red-500 border border-surface-3"
         >
           Limpar
         </Button>
 
         {/* Divider */}
-        <div className="w-px h-8 bg-gray-300 mx-1" />
+        <div className="w-px h-8 bg-surface-3 mx-1" />
         </>
         )}
 
@@ -2246,7 +2246,7 @@ export function MapaFazenda() {
           size="sm"
           onClick={handleLocalizarDispositivo}
           disabled={localizando}
-          className="bg-gray-100 text-gray-700 hover:bg-blue-50 hover:text-blue-700 border border-gray-300"
+          className="bg-surface-2 text-content hover:bg-primary/10 hover:text-primary dark:hover:text-primary-light border border-surface-3"
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2258,13 +2258,13 @@ export function MapaFazenda() {
         </Button>
 
         {/* Divider */}
-        <div className="w-px h-8 bg-gray-300 mx-1" />
+        <div className="w-px h-8 bg-surface-3 mx-1" />
 
         <Button
           variant="secondary"
           size="sm"
           onClick={() => setModoTelaCheia((v) => !v)}
-          className="bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+          className="bg-surface-2 text-content hover:bg-surface-3 border border-surface-3"
         >
           <span className="flex items-center gap-2">
             {modoTelaCheia ? (
@@ -2287,7 +2287,7 @@ export function MapaFazenda() {
         </div>
 
         {/* Linha 2: camadas + contador */}
-        <div className="flex items-center gap-2 flex-wrap bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
+        <div className="flex items-center gap-2 flex-wrap bg-surface-2 px-2.5 py-1.5 rounded-lg border border-border-base">
           <label className="flex items-center gap-1.5 cursor-pointer text-sm">
             <input
               type="checkbox"
@@ -2373,25 +2373,25 @@ export function MapaFazenda() {
             </span>
           </label>
           {visCamadas.mortes && (
-            <div className="flex items-center gap-1.5 text-xs border-l border-gray-300 pl-2 ml-1">
-              <span className="text-gray-500">Perodo:</span>
+            <div className="flex items-center gap-1.5 text-xs border-l border-surface-3 pl-2 ml-1">
+              <span className="text-content-muted">Perodo:</span>
               <input
                 type="date"
                 value={mortesDataInicio || ''}
                 onChange={(e) => setMortesDataInicio(e.target.value || null)}
-                className="border border-gray-300 rounded px-1 py-0.5 text-xs"
+                className="border border-surface-3 rounded px-1 py-0.5 text-xs"
               />
-              <span className="text-gray-400">at</span>
+              <span className="text-content-faint">at</span>
               <input
                 type="date"
                 value={mortesDataFim || ''}
                 onChange={(e) => setMortesDataFim(e.target.value || null)}
-                className="border border-gray-300 rounded px-1 py-0.5 text-xs"
+                className="border border-surface-3 rounded px-1 py-0.5 text-xs"
               />
               {(mortesDataInicio || mortesDataFim) && (
                 <button
                   onClick={() => { setMortesDataInicio(null); setMortesDataFim(null) }}
-                  className="text-gray-400 hover:text-gray-600 text-xs"
+                  className="text-content-faint hover:text-content-muted text-xs"
                   title="Limpar filtro"
                 >
                   &#10005;
@@ -2404,12 +2404,12 @@ export function MapaFazenda() {
                   onChange={(e) => setAgruparMortes(e.target.checked)}
                   className="accent-red-800"
                 />
-                <span className="text-gray-600">Agrupar</span>
+                <span className="text-content-muted">Agrupar</span>
               </label>
               <button
                 onClick={() => { setModoSelecaoArea(true); setMortesSelecionadas([]); setAreaSelecaoGeoJSON(null) }}
                 disabled={modoSelecaoArea}
-                className="text-xs px-2 py-0.5 rounded border border-red-700 text-red-800 hover:bg-red-50 disabled:opacity-50 disabled:cursor-default ml-1"
+                className="text-xs px-2 py-0.5 rounded border border-red-700 text-red-800 dark:text-red-200 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-default ml-1"
                 title="Selecionar área para ver métricas agregadas"
               >
                 Selecionar área
@@ -2417,7 +2417,7 @@ export function MapaFazenda() {
             </div>
           )}
         </div>
-        <div className="ml-auto text-sm text-gray-500">
+        <div className="ml-auto text-sm text-content-muted">
           {pastos.filter((p) => p.geometria_geojson).length} pastos ·{' '}
           {bebedouros.filter((b) => b.geometria_geojson).length} bebedouros ·{' '}
           {estradas.length} estradas ·{' '}
@@ -2430,10 +2430,10 @@ export function MapaFazenda() {
       {/* Barra de edição de geometria (overlay em tela cheia) */}
       {editandoGeometria && (
         <div className={modoTelaCheia
-          ? 'absolute top-16 left-2 right-2 z-10 flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg flex-wrap shadow-lg'
-          : 'flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg flex-wrap'
+          ? 'absolute top-16 left-2 right-2 z-10 flex items-center gap-3 bg-primary/10 border border-primary/30 p-3 rounded-lg flex-wrap shadow-lg'
+          : 'flex items-center gap-3 bg-primary/10 border border-primary/30 p-3 rounded-lg flex-wrap'
         }>
-          <span className="text-sm font-medium text-blue-800">
+          <span className="text-sm font-medium text-primary dark:text-primary-light">
             Editando geometria do pasto <strong>{editandoGeometria.pastoNome}</strong>.
             Arraste os vértices para reposicioná-los. Clique duas vezes num ponto intermediário para criar um novo vértice. Clique com o botão direito num vértice para removê-lo.
           </span>
@@ -2459,10 +2459,10 @@ export function MapaFazenda() {
       {/* Barra de edição de estrada (overlay em tela cheia) */}
       {editandoEstrada && (
         <div className={modoTelaCheia
-          ? 'absolute top-16 left-2 right-2 z-10 flex items-center gap-3 bg-amber-50 border border-amber-200 p-3 rounded-lg flex-wrap shadow-lg'
-          : 'flex items-center gap-3 bg-amber-50 border border-amber-200 p-3 rounded-lg flex-wrap'
+          ? 'absolute top-16 left-2 right-2 z-10 flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 p-3 rounded-lg flex-wrap shadow-lg'
+          : 'flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 p-3 rounded-lg flex-wrap'
         }>
-          <span className="text-sm font-medium text-amber-800">
+          <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
             Editando estrada <strong>{editandoEstrada.estradaNome}</strong>.
             Arraste os vértices para reposicioná-los. Clique duas vezes num ponto intermediário para criar um novo vértice. Clique com o botão direito num vértice para removê-lo.
           </span>
@@ -2507,10 +2507,10 @@ export function MapaFazenda() {
       {/* Barra de edição de curral (overlay em tela cheia) */}
       {editandoCurral && (
         <div className={modoTelaCheia
-          ? 'absolute top-16 left-2 right-2 z-10 flex items-center gap-3 bg-amber-50 border border-amber-200 p-3 rounded-lg flex-wrap shadow-lg'
-          : 'flex items-center gap-3 bg-amber-50 border border-amber-200 p-3 rounded-lg flex-wrap'
+          ? 'absolute top-16 left-2 right-2 z-10 flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 p-3 rounded-lg flex-wrap shadow-lg'
+          : 'flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 p-3 rounded-lg flex-wrap'
         }>
-          <span className="text-sm font-medium text-amber-800">
+          <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
             Editando curral <strong>{editandoCurral.curralNome}</strong>.
             Arraste os vértices para reposicioná-los. Clique duas vezes num ponto intermediário para criar um novo vértice. Clique com o botão direito num vértice para removê-lo.
           </span>
@@ -2526,17 +2526,17 @@ export function MapaFazenda() {
       {/* Barra de rota (instruções + resultado) */}
       {(modoRota || rotaResultado || rotaErro || calculandoRota) && (
         <div className={modoTelaCheia
-          ? 'absolute top-16 left-2 right-2 z-10 flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg flex-wrap shadow-lg'
-          : 'flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg flex-wrap'
+          ? 'absolute top-16 left-2 right-2 z-10 flex items-center gap-3 bg-primary/10 border border-primary/30 p-3 rounded-lg flex-wrap shadow-lg'
+          : 'flex items-center gap-3 bg-primary/10 border border-primary/30 p-3 rounded-lg flex-wrap'
         }>
           {calculandoRota && (
-            <span className="text-sm font-medium text-blue-800">
+            <span className="text-sm font-medium text-primary dark:text-primary-light">
               Calculando rota...
             </span>
           )}
           {!calculandoRota && modoRota === 'origem' && (
             <>
-              <span className="text-sm font-medium text-blue-800">
+              <span className="text-sm font-medium text-primary dark:text-primary-light">
                 Clique no mapa para marcar a origem (ex: fábrica).
               </span>
               <Button variant="secondary" onClick={cancelarRota} className="ml-auto">Cancelar</Button>
@@ -2544,7 +2544,7 @@ export function MapaFazenda() {
           )}
           {!calculandoRota && modoRota === 'destinos' && (
             <>
-              <span className="text-sm font-medium text-blue-800">
+              <span className="text-sm font-medium text-primary dark:text-primary-light">
                 Origem marcada. Clique nos currais/cochos para adicionar destinos ({rotaDestinos.length} adicionado{rotaDestinos.length === 1 ? '' : 's'}).
               </span>
               {rotaDestinos.length > 0 && (
@@ -2558,7 +2558,7 @@ export function MapaFazenda() {
           )}
           {!calculandoRota && !modoRota && rotaResultado && rotaDistancia != null && (
             <>
-              <span className="text-sm font-medium text-blue-800">
+              <span className="text-sm font-medium text-primary dark:text-primary-light">
                 Rota encontrada: <strong>{(rotaDistancia / 1000).toFixed(2)} km</strong>
                 ({rotaDistancia.toFixed(0)} m) com {rotaDestinos.length} parada{rotaDestinos.length === 1 ? '' : 's'}
               </span>
@@ -2567,7 +2567,7 @@ export function MapaFazenda() {
           )}
           {!calculandoRota && !modoRota && rotaErro && (
             <>
-              <span className="text-sm font-medium text-red-700">{rotaErro}</span>
+              <span className="text-sm font-medium text-red-700 dark:text-red-300">{rotaErro}</span>
               <Button variant="secondary" onClick={cancelarRota} className="ml-auto">Fechar</Button>
             </>
           )}
@@ -2577,10 +2577,10 @@ export function MapaFazenda() {
       {/* Barra de ações em lote (seleção múltipla) */}
       {modoSelecaoMultipla && (
         <div className={modoTelaCheia
-          ? 'absolute top-16 left-2 right-2 z-30 flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg flex-wrap shadow-lg'
-          : 'flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg flex-wrap'
+          ? 'absolute top-16 left-2 right-2 z-30 flex items-center gap-3 bg-primary/10 border border-primary/30 p-3 rounded-lg flex-wrap shadow-lg'
+          : 'flex items-center gap-3 bg-primary/10 border border-primary/30 p-3 rounded-lg flex-wrap'
         }>
-          <span className="text-sm font-medium text-blue-800">
+          <span className="text-sm font-medium text-primary dark:text-primary-light">
             {pastosSelecionados.size === 0
               ? 'Clique nos pastos no mapa para selecioná-los.'
               : `${pastosSelecionados.size} pasto(s) selecionado(s).`}
@@ -2590,7 +2590,7 @@ export function MapaFazenda() {
               <Button
                 variant="secondary"
                 onClick={() => setShowRemocaoLoteModal(true)}
-                className="text-red-600 hover:text-red-700 border-red-200"
+                className="text-red-500 hover:text-red-700 dark:text-red-300 border-red-500/30"
               >
                 Remover Geometrias
               </Button>
@@ -2612,8 +2612,8 @@ export function MapaFazenda() {
       {importStatus && (
         <div
           className={modoTelaCheia
-            ? `absolute bottom-2 left-2 z-10 p-3 pr-8 rounded-lg text-sm shadow-lg ${importStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : importStatus.type === 'error' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-blue-50 text-blue-800 border border-blue-200'}`
-            : `p-3 pr-8 rounded-lg text-sm relative ${importStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : importStatus.type === 'error' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-blue-50 text-blue-800 border border-blue-200'}`
+            ? `absolute bottom-2 left-2 z-10 p-3 pr-8 rounded-lg text-sm shadow-lg ${importStatus.type === 'success' ? 'bg-green-500/10 text-green-800 dark:text-green-200 border border-green-500/30' : importStatus.type === 'error' ? 'bg-red-500/10 text-red-800 dark:text-red-200 border border-red-500/30' : 'bg-primary/10 text-primary dark:text-primary-light border border-primary/30'}`
+            : `p-3 pr-8 rounded-lg text-sm relative ${importStatus.type === 'success' ? 'bg-green-500/10 text-green-800 dark:text-green-200 border border-green-500/30' : importStatus.type === 'error' ? 'bg-red-500/10 text-red-800 dark:text-red-200 border border-red-500/30' : 'bg-primary/10 text-primary dark:text-primary-light border border-primary/30'}`
           }
         >
           {importStatus.msg}
@@ -2637,7 +2637,7 @@ export function MapaFazenda() {
         {/* Mapa */}
         <div className={modoTelaCheia
           ? 'flex-1 relative'
-          : 'flex-1 relative rounded-lg overflow-hidden border border-gray-200'
+          : 'flex-1 relative rounded-lg overflow-hidden border border-border-base'
         } style={modoTelaCheia
           ? { height: '100%' }
           : { height: 'calc(100vh - 280px)', minHeight: '400px' }

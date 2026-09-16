@@ -107,7 +107,7 @@ export function ManutencaoMaquinasDetalhes() {
       title="Detalhes do Registro de Manutenção de Máquinas"
     >
       {() => (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
           <div className="space-y-6">
             {/* Informações Gerais */}
             <DetailSection title="Informações Gerais">
@@ -130,7 +130,7 @@ export function ManutencaoMaquinasDetalhes() {
                     <div key={key} className="space-y-1">
                       <DetailField label={CHECKLIST_LABELS[key] || key} value={simNao(item.valor)} />
                       {item.observacao && (
-                        <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {item.observacao}</p>
+                        <p className="text-sm text-content-muted"><span className="font-medium">Obs.:</span> {item.observacao}</p>
                       )}
                     </div>
                   ))}

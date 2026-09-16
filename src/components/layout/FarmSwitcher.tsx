@@ -130,27 +130,27 @@ export function FarmSwitcher() {
 
   return (
     <>
-      <div className="border-t-2 border-gray-200 p-4">
-        <div className="bg-blue-50 p-3 rounded-lg space-y-3">
+      <div className="border-t-2 border-border-base p-4">
+        <div className="bg-primary/10 p-3 rounded-lg space-y-3">
           <div>
-            <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wider">Grupo</p>
-            <p className="text-sm font-medium text-gray-800 truncate">{grupo.nome}</p>
+            <p className="text-[10px] text-primary dark:text-white font-semibold uppercase tracking-wider">Grupo</p>
+            <p className="text-sm font-medium text-content-strong truncate">{grupo.nome}</p>
           </div>
-          <div className="border-t border-blue-100 pt-2">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Fazenda atual</p>
-            <p className="text-sm font-medium text-gray-800 truncate">{fazenda?.nome || '...'}</p>
+          <div className="border-t border-primary/20 pt-2">
+            <p className="text-[10px] text-content dark:text-content-strong uppercase tracking-wider">Fazenda atual</p>
+            <p className="text-sm font-medium text-content-strong truncate">{fazenda?.nome || '...'}</p>
           </div>
           {outrasFazendas.length > 0 && (
-            <div className="border-t border-blue-100 pt-2">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Trocar para</p>
+            <div className="border-t border-primary/20 pt-2">
+              <p className="text-[10px] text-content dark:text-content-strong uppercase tracking-wider mb-1.5">Trocar para</p>
               <div className="space-y-0.5">
                 {outrasFazendas.map(f => (
                   <button
                     key={f.id}
                     onClick={() => handleSwitchClick(f)}
-                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-gray-700 hover:bg-blue-100 transition-colors flex items-center gap-2"
+                    className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-content-strong hover:bg-primary/20 transition-colors flex items-center gap-2"
                   >
-                    <svg className="w-3.5 h-3.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 flex-shrink-0 text-primary dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                     </svg>
                     <span className="truncate">{f.nome}</span>
@@ -170,15 +170,15 @@ export function FarmSwitcher() {
       >
         <div className="space-y-4">
           <div>
-            <p className="text-sm text-gray-600 mb-2">
+            <p className="text-sm text-content-muted mb-2">
               Você está prestes a trocar para a fazenda:
             </p>
-            <p className="font-bold text-gray-800">{selectedFazenda?.nome}</p>
-            <p className="text-xs text-gray-500">Acesso: {selectedFazenda?.acesso_id}</p>
+            <p className="font-bold text-content-strong">{selectedFazenda?.nome}</p>
+            <p className="text-xs text-content-muted">Acesso: {selectedFazenda?.acesso_id}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-content mb-1">
               Senha do Controller *
             </label>
             <input
@@ -187,14 +187,14 @@ export function FarmSwitcher() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Digite a senha"
               autoFocus
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+              className="w-full px-4 py-3 bg-surface-1 text-content-strong placeholder-content-faint border-2 border-surface-3 rounded-lg focus:outline-none focus:border-primary"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && password && !switching) {
                   handleSwitch()
                 }
               }}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-content-muted mt-1">
               O email do controller desta fazenda já é conhecido. Você só precisa digitar a senha.
             </p>
           </div>
@@ -208,7 +208,7 @@ export function FarmSwitcher() {
           <div className="flex gap-3 justify-end">
             <button
               onClick={() => setShowSwitchModal(false)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-content bg-surface-2 rounded-lg hover:bg-surface-3 transition-colors"
             >
               Cancelar
             </button>

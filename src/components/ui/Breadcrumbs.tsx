@@ -50,6 +50,36 @@ export function Breadcrumbs({ maxItems = 3 }: BreadcrumbsProps) {
         .replace(/caderneta/g, 'Caderneta')
         .replace(/detalhes/g, 'Detalhes')
         .replace(/cadastro/g, 'Cadastro')
+        .replace(/configuracoes/g, 'Configurações')
+        .replace(/abastecimento/g, 'Abastecimento')
+        .replace(/alimentacao/g, 'Alimentação')
+        .replace(/almoxarifado/g, 'Almoxarifado')
+        .replace(/cantina/g, 'Cantina')
+        .replace(/clima/g, 'Clima')
+        .replace(/enfermaria/g, 'Enfermaria')
+        .replace(/individuo/g, 'Indivíduo')
+        .replace(/individuos/g, 'Indivíduos')
+        .replace(/limpeza/g, 'Limpeza')
+        .replace(/marmita/g, 'Marmita')
+        .replace(/materiais/g, 'Materiais')
+        .replace(/maternidade/g, 'Maternidade')
+        .replace(/medicamentos/g, 'Medicamentos')
+        .replace(/monitoramento/g, 'Monitoramento')
+        .replace(/morte/g, 'Morte')
+        .replace(/movimentacao/g, 'Movimentação')
+        .replace(/operacoes/g, 'Operações')
+        .replace(/pastagens/g, 'Pastagens')
+        .replace(/pasto/g, 'Pasto')
+        .replace(/pastos/g, 'Pastos')
+        .replace(/problemas/g, 'Problemas')
+        .replace(/programacao/g, 'Programação')
+        .replace(/relatorios/g, 'Relatórios')
+        .replace(/reproducao/g, 'Reprodução')
+        .replace(/rodeio/g, 'Rodeio')
+        .replace(/suplementacao/g, 'Suplementação')
+        .replace(/tratos/g, 'Tratos')
+        .replace(/usuario/g, 'Usuário')
+        .replace(/usuarios/g, 'Usuários')
         .split(' ')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ')
@@ -70,21 +100,21 @@ export function Breadcrumbs({ maxItems = 3 }: BreadcrumbsProps) {
     : breadcrumbs
 
   return (
-    <nav className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600 py-2 px-4 md:px-6 bg-gray-50 border-b border-gray-200 breadcrumb-fade-in overflow-x-auto whitespace-nowrap scrollbar-hide">
+    <nav className="flex items-center space-x-2 text-xs sm:text-sm text-content-muted py-2 px-4 md:px-6 bg-surface-2 border-b border-border-base breadcrumb-fade-in overflow-x-auto whitespace-nowrap scrollbar-hide">
       {displayBreadcrumbs.map((breadcrumb, index) => (
         <div key={breadcrumb.path} className="flex items-center flex-shrink-0">
           {index > 0 && (
-            <svg className="w-3 h-3 sm:w-4 sm:h-4 mx-1 sm:mx-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4 mx-1 sm:mx-2 text-content-faint flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           )}
           {breadcrumb.label === '...' ? (
-            <span className="text-gray-400">{breadcrumb.label}</span>
+            <span className="text-content-faint">{breadcrumb.label}</span>
           ) : (
             <button
               onClick={() => navigate(breadcrumb.path)}
               className={`link-hover ${
-                index === displayBreadcrumbs.length - 1 ? 'text-gray-900 font-medium cursor-default' : ''
+                index === displayBreadcrumbs.length - 1 ? 'text-content-strong font-medium cursor-default' : ''
               }`}
               disabled={index === displayBreadcrumbs.length - 1}
             >

@@ -103,12 +103,12 @@ export function Bebedouros() {
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Bebedouros</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Bebedouros</h2>
       </div>
 
-      <Card className="bg-white p-4 sm:p-6" disableHover>
+      <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
           <Button
             onClick={() => exportToXLSX(filteredRegistros, BEBEDOUROS_EXPORT_CONFIG, fazendaNome)}
             disabled={filteredRegistros.length === 0}
@@ -119,7 +119,7 @@ export function Bebedouros() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
             <Input
               type="text"
               placeholder="Responsável, lote, pasto, nº bebedouro, leitura, observação..."
@@ -129,7 +129,7 @@ export function Bebedouros() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
             <Input
               type="date"
               value={dataInicio}
@@ -138,7 +138,7 @@ export function Bebedouros() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
             <Input
               type="date"
               value={dataFim}
@@ -147,7 +147,7 @@ export function Bebedouros() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
@@ -160,8 +160,8 @@ export function Bebedouros() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro de bebedouros encontrado</p>
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro de bebedouros encontrado</p>
         </Card>
       ) : (
         <>
@@ -170,18 +170,18 @@ export function Bebedouros() {
             {filteredRegistros.map((registro) => (
               <Card
                 key={registro.id}
-                className="bg-white p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                className="bg-surface-1 p-4 cursor-pointer hover:shadow-lg transition-shadow"
                 onClick={() => navigate(`/controller/cadernetas/bebedouros/${registro.id}`)}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
-                    <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                    <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-content-strong">
                       {formatDate(registro.data)}
                     </span>
                   </div>
                   <span
-                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary"
+                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light"
                     onClick={(e) => {
                       e.stopPropagation()
                       setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')
@@ -192,33 +192,33 @@ export function Bebedouros() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Usuário:</span>
-                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                    <span className="text-content-muted">Usuário:</span>
+                    <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Responsável:</span>
-                    <span className="text-gray-800 font-medium">{registro.responsavel || '-'}</span>
+                    <span className="text-content-muted">Responsável:</span>
+                    <span className="text-content-strong font-medium">{registro.responsavel || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Lote:</span>
-                    <span className="text-gray-800 font-medium">{registro.lote || '-'}</span>
+                    <span className="text-content-muted">Lote:</span>
+                    <span className="text-content-strong font-medium">{registro.lote || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Pasto:</span>
-                    <span className="text-gray-800 font-medium">{registro.pasto || '-'}</span>
+                    <span className="text-content-muted">Pasto:</span>
+                    <span className="text-content-strong font-medium">{registro.pasto || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Nº Bebedouro:</span>
-                    <span className="text-gray-800 font-medium">{registro.numero_bebedouro || '-'}</span>
+                    <span className="text-content-muted">Nº Bebedouro:</span>
+                    <span className="text-content-strong font-medium">{registro.numero_bebedouro || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Leitura:</span>
-                    <span className="text-gray-800 font-medium">{registro.leitura_bebedouro || '-'}</span>
+                    <span className="text-content-muted">Leitura:</span>
+                    <span className="text-content-strong font-medium">{registro.leitura_bebedouro || '-'}</span>
                   </div>
                   {registro.observacao && (
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Observação:</span>
-                      <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.observacao}</span>
+                      <span className="text-content-muted">Observação:</span>
+                      <span className="text-content-strong font-medium truncate max-w-[150px]">{registro.observacao}</span>
                     </div>
                   )}
                 </div>
@@ -227,12 +227,12 @@ export function Bebedouros() {
           </div>
 
           {/* Desktop Table View */}
-          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
+          <Card className="bg-surface-1 overflow-x-auto hidden sm:block" disableHover>
             <Table>
               <Thead>
                 <Tr>
                   <Th
-                    className="cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="cursor-pointer hover:bg-surface-2 transition-colors"
                     onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>

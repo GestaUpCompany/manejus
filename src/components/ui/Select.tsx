@@ -96,7 +96,7 @@ export function Select({
   return (
     <div className="mb-4">
       {label && (
-        <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">
+        <label className="block text-xs sm:text-sm font-semibold text-content mb-2">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
@@ -107,17 +107,17 @@ export function Select({
           ref={triggerRef}
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left bg-white ${
-            error ? 'border-red-500' : 'border-gray-300'
+          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left bg-surface-1 text-content-strong ${
+            error ? 'border-red-500' : 'border-surface-3'
           } ${className}`}
         >
           {selectedOption ? (
             <span>{selectedOption.label}</span>
           ) : (
-            <span className="text-gray-400">{placeholder}</span>
+            <span className="text-content-faint">{placeholder}</span>
           )}
           <svg
-            className={`w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 text-content-faint transition-transform ${isOpen ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -131,10 +131,10 @@ export function Select({
           <div
             ref={dropdownRef}
             style={dropdownStyle}
-            className="bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-auto"
+            className="bg-surface-1 border border-border-base rounded-lg shadow-xl max-h-60 overflow-auto"
           >
             {options.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
+              <div className="p-4 text-center text-content-muted text-sm">
                 Nenhuma opção disponível
               </div>
             ) : (
@@ -143,8 +143,8 @@ export function Select({
                   key={option.value}
                   type="button"
                   onClick={() => handleSelect(option)}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors ${
-                    value === option.value ? 'bg-primary/10 text-primary font-medium' : 'text-gray-700'
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-surface-2 transition-colors ${
+                    value === option.value ? 'bg-primary/10 text-primary dark:text-primary-light font-medium' : 'text-content'
                   }`}
                 >
                   {option.label}

@@ -262,14 +262,14 @@ export function Insumos() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Insumos</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Insumos</h2>
         <div className="flex gap-2 items-start">
           <Input
             type="text"
             placeholder="Buscar insumo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent h-10"
+            className="max-w-xs border-border-base focus:border-accent h-10"
           />
           <Button onClick={() => setShowForm(true)} className="h-10">Novo Insumo</Button>
           {!showForm && (
@@ -279,7 +279,7 @@ export function Insumos() {
             className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
               showInactive
                 ? 'bg-primary text-white border-primary hover:bg-primary/90'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
             }`}
           >
             {showInactive ? (
@@ -299,15 +299,15 @@ export function Insumos() {
       </div>
 
       {showForm && (
-        <Card className="bg-white p-6 border-0 shadow-sm">
+        <Card className="bg-surface-1 p-6 border-0 shadow-sm">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-xl font-semibold text-gray-800">
+            <h3 className="text-xl font-semibold text-content-strong">
               {editingInsumo ? 'Editar Insumo' : 'Novo Insumo'}
             </h3>
             <button
               type="button"
               onClick={handleCancel}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              className="text-content-faint hover:text-content-muted transition-colors p-1"
               aria-label="Fechar formulário"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -318,7 +318,7 @@ export function Insumos() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Nome *
                 </label>
                 <Input
@@ -327,19 +327,19 @@ export function Insumos() {
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                   required
                   placeholder="Nome do insumo"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Tipo <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
                   required
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-300 bg-white"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-surface-3 bg-surface-1"
                 >
                   <option value="">Selecione...</option>
                   <option value="Aditivo">Aditivo</option>
@@ -355,13 +355,13 @@ export function Insumos() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Fornecedor
                 </label>
                 <select
                   value={formData.fornecedor}
                   onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-300 bg-white"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-surface-3 bg-surface-1"
                 >
                   <option value="">Selecione um fornecedor...</option>
                   {fornecedores.map((f) => (
@@ -371,7 +371,7 @@ export function Insumos() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Teor MS (%) <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -381,12 +381,12 @@ export function Insumos() {
                   onChange={(e) => setFormData({ ...formData, teor_ms: e.target.value })}
                   required
                   placeholder="Ex: 88,00"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Preço (R$/Ton/MN) <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -396,7 +396,7 @@ export function Insumos() {
                   onChange={(e) => setFormData({ ...formData, preco_ton_mn: maskCurrency(e.target.value) })}
                   required
                   placeholder="Ex: R$ 750,00"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-border-base focus:border-accent"
                 />
               </div>
 
@@ -414,8 +414,8 @@ export function Insumos() {
                 onClick={() => setFormData({ ...formData, ativo: !formData.ativo })}
                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 ${
                   formData.ativo
-                    ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200'
-                    : 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200'
+                    ? 'bg-green-500/10 text-green-800 dark:text-green-200 border-green-300 hover:bg-green-200'
+                    : 'bg-surface-2 text-content-strong border-surface-3 hover:bg-surface-3'
                 }`}
               >
                 {formData.ativo ? '✓ Ativo' : '✗ Inativo'}
@@ -456,17 +456,17 @@ export function Insumos() {
                 )}
                 <div className="space-y-2 mb-4">
                   {insumo.fornecedor && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-content-muted">
                       <span className="font-medium">Fornecedor:</span> {insumo.fornecedor}
                     </p>
                   )}
                   {insumo.teor_ms !== undefined && insumo.teor_ms !== null && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-content-muted">
                       <span className="font-medium">Teor MS:</span> {fmt(insumo.teor_ms)}%
                     </p>
                   )}
                   {insumo.preco_ton_mn !== undefined && insumo.preco_ton_mn !== null && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-content-muted">
                       <span className="font-medium">Preço:</span> R$ {insumo.preco_ton_mn.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/Ton/MN
                     </p>
                   )}
@@ -488,7 +488,7 @@ export function Insumos() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleToggleActive(insumo)

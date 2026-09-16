@@ -89,15 +89,15 @@ export function RegistrosAlimentacaoDetalhes() {
       title="Detalhes do Registro de Alimentação"
     >
       {() => (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
           <div className="space-y-6">
             {/* Badge do modo */}
             {registro!.modo && (
               <div>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                   registro!.modo === 'marmita'
-                    ? 'bg-orange-100 text-orange-700'
-                    : 'bg-blue-100 text-blue-700'
+                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                    : 'bg-primary/10 text-primary dark:text-primary-light'
                 }`}>
                   {registro!.modo === 'marmita' ? 'Marmita' : 'Cantina'}
                 </span>
@@ -156,7 +156,7 @@ export function RegistrosAlimentacaoDetalhes() {
                 <div className="space-y-2">
                   {registro!.itens.map((item: any, index: number) => (
                     <p key={index} className="text-sm">
-                      <span className="font-medium text-gray-700">{item.nome || item.item || 'Item'}:</span> {item.quantidade || '-'} {item.unidade || ''}
+                      <span className="font-medium text-content">{item.nome || item.item || 'Item'}:</span> {item.quantidade || '-'} {item.unidade || ''}
                     </p>
                   ))}
                 </div>

@@ -2,7 +2,7 @@ import type { ThHTMLAttributes, TdHTMLAttributes, TableHTMLAttributes, HTMLAttri
 
 export function Table({ className = '', children, ...props }: TableHTMLAttributes<HTMLTableElement>) {
   return (
-    <table className={`min-w-full divide-y divide-gray-200 ${className}`} {...props}>
+    <table className={`min-w-full divide-y divide-border-base ${className}`} {...props}>
       {children}
     </table>
   )
@@ -10,7 +10,7 @@ export function Table({ className = '', children, ...props }: TableHTMLAttribute
 
 export function Thead({ className = '', children, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <thead className={`bg-gray-50 ${className}`} {...props}>
+    <thead className={`bg-surface-2 ${className}`} {...props}>
       {children}
     </thead>
   )
@@ -18,7 +18,7 @@ export function Thead({ className = '', children, ...props }: HTMLAttributes<HTM
 
 export function Tbody({ className = '', children, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <tbody className={`bg-white divide-y divide-gray-200 ${className}`} {...props}>
+    <tbody className={`bg-surface-1 divide-y divide-border-base ${className}`} {...props}>
       {children}
     </tbody>
   )
@@ -26,7 +26,7 @@ export function Tbody({ className = '', children, ...props }: HTMLAttributes<HTM
 
 export function Tr({ className = '', children, ...props }: HTMLAttributes<HTMLTableRowElement>) {
   return (
-    <tr className={`hover:bg-gray-50 transition-colors ${className}`} {...props}>
+    <tr className={`hover:bg-surface-2 transition-colors ${className}`} {...props}>
       {children}
     </tr>
   )
@@ -35,7 +35,7 @@ export function Tr({ className = '', children, ...props }: HTMLAttributes<HTMLTa
 export function Th({ className = '', children, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
-      className={`px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}
+      className={`px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider ${className}`}
       {...props}
     >
       {children}
@@ -45,7 +45,7 @@ export function Th({ className = '', children, ...props }: ThHTMLAttributes<HTML
 
 export function Td({ className = '', children, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <td className={`px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900 ${className}`} {...props}>
+    <td className={`px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong ${className}`} {...props}>
       {children}
     </td>
   )

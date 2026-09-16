@@ -290,7 +290,7 @@ export function Notificacoes() {
     switch (tipo) {
       case 'info':
         return (
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
             <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -298,7 +298,7 @@ export function Notificacoes() {
         )
       case 'warning':
         return (
-          <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center shrink-0">
             <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
@@ -306,7 +306,7 @@ export function Notificacoes() {
         )
       case 'error':
         return (
-          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
             <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -314,7 +314,7 @@ export function Notificacoes() {
         )
       case 'success':
         return (
-          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
             <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -362,8 +362,8 @@ export function Notificacoes() {
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">Notificações</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-content-strong">Notificações</h1>
+        <p className="text-sm text-content-muted mt-1">
           {totalNaoLidas > 0
             ? `${totalNaoLidas} não lida${totalNaoLidas > 1 ? 's' : ''} de ${notificacoes.length} notificação${notificacoes.length !== 1 ? 's' : ''} exibida${notificacoes.length !== 1 ? 's' : ''}`
             : 'Todas as notificações foram lidas'
@@ -374,56 +374,56 @@ export function Notificacoes() {
       {/* Configurações */}
       <Card className="p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-4">
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-content-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <h2 className="text-lg font-semibold text-gray-800">Configurações de Notificações</h2>
+          <h2 className="text-lg font-semibold text-content-strong">Configurações de Notificações</h2>
         </div>
 
         {loadingConfig ? (
           <div className="animate-pulse space-y-3">
-            <div className="h-10 bg-gray-200 rounded"></div>
-            <div className="h-10 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-10 bg-surface-3 rounded"></div>
+            <div className="h-10 bg-surface-3 rounded w-1/2"></div>
           </div>
         ) : (
           <div className="space-y-4">
             {/* Toggle lembrete de tratos */}
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="font-medium text-gray-700">Lembrete diário de tratos</p>
-                <p className="text-sm text-gray-500">Envia notificação no fim da tarde com os horários dos tratos do dia seguinte</p>
+                <p className="font-medium text-content">Lembrete diário de tratos</p>
+                <p className="text-sm text-content-muted">Envia notificação no fim da tarde com os horários dos tratos do dia seguinte</p>
               </div>
               <button
                 onClick={toggleTratos}
-                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${tratosAtivo ? 'bg-green-500' : 'bg-gray-300'}`}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${tratosAtivo ? 'bg-primary' : 'bg-surface-3'}`}
               >
-                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${tratosAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-surface-1 transition-transform ${tratosAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
 
-            <div className="border-t border-gray-100 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Recategorização de lotes</p>
+            <div className="border-t border-border-subtle pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-content-faint mb-3">Recategorização de lotes</p>
 
               {/* Toggle on/off */}
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="font-medium text-gray-700">Notificações de recategorização</p>
-                  <p className="text-sm text-gray-500">Ativa ou desativa alertas de lotes próximos do limite da faixa</p>
+                  <p className="font-medium text-content">Notificações de recategorização</p>
+                  <p className="text-sm text-content-muted">Ativa ou desativa alertas de lotes próximos do limite da faixa</p>
                 </div>
                 <button
                   onClick={toggleRecategorizacao}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${recategorizacaoAtivo ? 'bg-green-500' : 'bg-gray-300'}`}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${recategorizacaoAtivo ? 'bg-primary' : 'bg-surface-3'}`}
                 >
-                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${recategorizacaoAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-surface-1 transition-transform ${recategorizacaoAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
               </div>
 
               {/* Percentual de aviso slider */}
               <div className={`mt-4 ${recategorizacaoAtivo ? '' : 'opacity-50 pointer-events-none'}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="font-medium text-gray-700">Percentual de aviso</label>
-                  <span className="text-lg font-bold text-primary">{percentualAviso}%</span>
+                  <label className="font-medium text-content">Percentual de aviso</label>
+                  <span className="text-lg font-bold text-primary dark:text-primary-light">{percentualAviso}%</span>
                 </div>
                 <input
                   type="range"
@@ -432,13 +432,13 @@ export function Notificacoes() {
                   step={1}
                   value={percentualAviso}
                   onChange={e => handleSliderChange(Number(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
+                  className="w-full h-2 bg-surface-3 rounded-lg appearance-none cursor-pointer accent-primary"
                 />
-                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <div className="flex justify-between text-xs text-content-faint mt-1">
                   <span>50%</span>
                   <span>99%</span>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-content-muted mt-2">
                   Notificar quando o lote atingir <strong>{percentualAviso}%</strong> do limite superior da faixa de categoria.
                   Ex: com {percentualAviso}%, um lote na categoria "Boi Magro" (limite 450 kg) dispara alerta aos {(450 * percentualAviso / 100).toFixed(0)} kg.
                 </p>
@@ -448,13 +448,13 @@ export function Notificacoes() {
             {/* Status de salvamento automático */}
             <div className="flex items-center gap-2 min-h-[20px]">
               {savingConfig && (
-                <span className="text-sm text-gray-500 flex items-center gap-1">
+                <span className="text-sm text-content-muted flex items-center gap-1">
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
                   Salvando...
                 </span>
               )}
               {configSalvo && (
-                <span className="text-sm text-green-600 flex items-center gap-1">
+                <span className="text-sm text-green-500 flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -471,7 +471,7 @@ export function Notificacoes() {
         <select
           value={filtroTipo}
           onChange={e => setFiltroTipo(e.target.value as FiltroTipo)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-transparent"
+          className="px-3 py-2 border border-surface-3 rounded-lg text-sm bg-surface-1 focus:ring-2 focus:ring-primary focus:border-transparent"
         >
           <option value="todos">Todos os tipos</option>
           <option value="warning">Avisos</option>
@@ -483,7 +483,7 @@ export function Notificacoes() {
         <select
           value={filtroLida}
           onChange={e => setFiltroLida(e.target.value as FiltroLida)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-transparent"
+          className="px-3 py-2 border border-surface-3 rounded-lg text-sm bg-surface-1 focus:ring-2 focus:ring-primary focus:border-transparent"
         >
           <option value="todas">Todas</option>
           <option value="naolidas">Não lidas</option>
@@ -495,7 +495,7 @@ export function Notificacoes() {
           placeholder="Buscar..."
           value={busca}
           onChange={e => setBusca(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-transparent flex-1 min-w-[150px]"
+          className="px-3 py-2 border border-surface-3 rounded-lg text-sm bg-surface-1 focus:ring-2 focus:ring-primary focus:border-transparent flex-1 min-w-[150px]"
         />
 
         <div className="flex gap-2 ml-auto">
@@ -524,31 +524,31 @@ export function Notificacoes() {
       {loading && notificacoes.length === 0 ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="animate-pulse flex gap-3 p-4 bg-white rounded-xl border border-gray-100">
-              <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0"></div>
+            <div key={i} className="animate-pulse flex gap-3 p-4 bg-surface-1 rounded-xl border border-border-subtle">
+              <div className="w-10 h-10 bg-surface-3 rounded-full shrink-0"></div>
               <div className="flex-1 space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                <div className="h-4 bg-surface-3 rounded w-1/3"></div>
+                <div className="h-3 bg-surface-3 rounded w-2/3"></div>
               </div>
             </div>
           ))}
         </div>
       ) : notificacoes.length === 0 ? (
         <Card className="p-8 text-center">
-          <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-12 h-12 mx-auto mb-3 text-content-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
-          <p className="text-gray-500">Nenhuma notificação encontrada</p>
+          <p className="text-content-muted">Nenhuma notificação encontrada</p>
         </Card>
       ) : (
         <div className="space-y-2">
           {notificacoes.map(notif => (
             <div
               key={notif.id}
-              className={`flex gap-3 p-4 bg-white rounded-xl border transition-all hover:shadow-sm cursor-pointer ${
+              className={`flex gap-3 p-4 bg-surface-1 rounded-xl border transition-all hover:shadow-sm cursor-pointer ${
                 notif.lida
-                  ? 'border-gray-100'
-                  : 'border-l-4 border-l-yellow-400 border-y-gray-100 border-r-gray-100'
+                  ? 'border-border-subtle'
+                  : 'border-l-4 border-l-yellow-400 border-y-border-subtle border-r-border-subtle'
               }`}
               onClick={() => handleNotificacaoClick(notif)}
             >
@@ -557,12 +557,12 @@ export function Notificacoes() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className={`font-medium text-gray-800 ${!notif.lida ? 'font-bold' : ''}`}>
+                    <p className={`font-medium text-content-strong ${!notif.lida ? 'font-bold' : ''}`}>
                       {notif.titulo}
                     </p>
-                    <p className="text-sm text-gray-600 mt-0.5">{notif.mensagem}</p>
+                    <p className="text-sm text-content-muted mt-0.5">{notif.mensagem}</p>
                     {notif.dados_jsonb?.tipo_alerta === 'nova_categoria_movimentacao' && (
-                      <div className={`mt-2 p-2 rounded-lg border text-xs ${notif.dados_jsonb.formulacao_cobre ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-red-50 border-red-300 text-red-900'}`}>
+                      <div className={`mt-2 p-2 rounded-lg border text-xs ${notif.dados_jsonb.formulacao_cobre ? 'bg-primary/10 border-primary/30 text-primary dark:text-primary-light' : 'bg-red-500/10 border-red-500/30 text-red-900'}`}>
                         <p className="font-semibold">
                           {notif.dados_jsonb.formulacao_cobre ? 'Categoria adicionada à formulação do lote' : 'Formulação do lote não contempla esta categoria'}
                         </p>
@@ -578,15 +578,15 @@ export function Notificacoes() {
                       </div>
                     )}
                   </div>
-                  <span className="text-xs text-gray-400 shrink-0">{formatTime(notif.created_at)}</span>
+                  <span className="text-xs text-content-faint shrink-0">{formatTime(notif.created_at)}</span>
                 </div>
 
                 <div className="flex items-center gap-3 mt-2">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-surface-2 text-content-muted">
                     {getTipoLabel(notif.tipo)}
                   </span>
                   {notif.acao_label && notif.acao_url && (
-                    <span className="text-xs text-primary font-medium">
+                    <span className="text-xs text-primary dark:text-primary-light font-medium">
                       {notif.acao_label} →
                     </span>
                   )}
@@ -596,7 +596,7 @@ export function Notificacoes() {
                         e.stopPropagation()
                         handleMarcarComoLida(notif.id)
                       }}
-                      className="text-xs text-gray-400 hover:text-gray-600"
+                      className="text-xs text-content-faint hover:text-content-muted"
                     >
                       Marcar como lida
                     </button>
@@ -606,7 +606,7 @@ export function Notificacoes() {
                       e.stopPropagation()
                       setConfirmDeleteId(notif.id)
                     }}
-                    className="text-xs text-gray-400 hover:text-red-500 ml-auto"
+                    className="text-xs text-content-faint hover:text-red-500 ml-auto"
                   >
                     Remover
                   </button>

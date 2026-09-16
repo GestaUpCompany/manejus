@@ -104,7 +104,7 @@ export function RegistrosMorteDetalhes() {
       title="Detalhes do Registro de Morte"
     >
       {() => (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
           <div className="space-y-6">
             {/* Informações Gerais */}
             <DetailSection title="Informações Gerais">
@@ -124,12 +124,12 @@ export function RegistrosMorteDetalhes() {
                 <DetailField label="Categoria" value={registro!.categoria === 'outros' && registro!.categoria_outros ? `${registro!.categoria} (${registro!.categoria_outros})` : formatValue(registro!.categoria)} />
               </div>
               {registro!.individuo_id && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="mt-3 pt-3 border-t border-border-base">
                   <p className="text-sm">
-                    <span className="font-medium text-gray-700">Indivíduo:</span>{' '}
+                    <span className="font-medium text-content">Indivíduo:</span>{' '}
                     <button
                       onClick={() => navigate(`/controller/individuos/${registro!.individuo_id}`)}
-                      className="text-primary hover:underline font-medium"
+                      className="text-primary dark:text-primary-light hover:underline font-medium"
                     >
                       Ver indivíduo
                     </button>
@@ -157,7 +157,7 @@ export function RegistrosMorteDetalhes() {
             {/* Sinais Clínicos */}
             {registro!.diagnosticos && Object.keys(registro!.diagnosticos).length > 0 && (
               <DetailSection title="Sinais Clínicos" highlighted>
-                <p className="text-sm font-medium text-gray-700">
+                <p className="text-sm font-medium text-content">
                   {Object.entries(registro!.diagnosticos)
                     .filter(([_, value]: [string, any]) => value.valor === 'S')
                     .map(([key]: [string, any]) => SINAIS_CLINICOS_LABELS[key] || key)

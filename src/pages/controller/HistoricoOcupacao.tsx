@@ -180,9 +180,9 @@ export function HistoricoOcupacao() {
   }
 
   const getDesvioClass = (desvio?: number | null) => {
-    if (desvio == null) return 'text-gray-500'
-    if (desvio > 0) return 'text-red-600 font-semibold'
-    return 'text-green-600'
+    if (desvio == null) return 'text-content-muted'
+    if (desvio > 0) return 'text-red-500 font-semibold'
+    return 'text-green-500'
   }
 
   const limparFiltros = () => {
@@ -212,8 +212,8 @@ export function HistoricoOcupacao() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Histórico de Ocupação</h1>
-          <p className="text-sm text-gray-500 mt-1">Entradas e saídas de lotes em pastos e módulos</p>
+          <h1 className="text-2xl font-bold text-content-strong">Histórico de Ocupação</h1>
+          <p className="text-sm text-content-muted mt-1">Entradas e saídas de lotes em pastos e módulos</p>
         </div>
       </div>
 
@@ -223,11 +223,11 @@ export function HistoricoOcupacao() {
           {/* Primeira linha: Toggle, Busca, Status */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 items-stretch sm:items-center">
             {/* Toggle Pasto / Módulo */}
-            <div className="flex bg-gray-100 rounded-lg p-1 w-full sm:w-auto">
+            <div className="flex bg-surface-2 rounded-lg p-1 w-full sm:w-auto">
               <button
                 onClick={() => setTipo('pasto')}
                 className={`flex-1 sm:flex-none px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                  tipo === 'pasto' ? 'bg-white text-primary shadow-sm' : 'text-gray-600'
+                  tipo === 'pasto' ? 'bg-surface-1 text-primary dark:text-primary-light shadow-sm' : 'text-content-muted'
                 }`}
               >
                 Por Pasto
@@ -235,7 +235,7 @@ export function HistoricoOcupacao() {
               <button
                 onClick={() => setTipo('modulo')}
                 className={`flex-1 sm:flex-none px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                  tipo === 'modulo' ? 'bg-white text-primary shadow-sm' : 'text-gray-600'
+                  tipo === 'modulo' ? 'bg-surface-1 text-primary dark:text-primary-light shadow-sm' : 'text-content-muted'
                 }`}
               >
                 Por Módulo
@@ -249,17 +249,17 @@ export function HistoricoOcupacao() {
                 placeholder="Buscar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full px-3 py-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
 
             {/* Status */}
             <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-600">Status:</label>
+              <label className="text-xs text-content-muted">Status:</label>
               <select
                 value={statusFiltro}
                 onChange={(e) => setStatusFiltro(e.target.value as 'todos' | 'ativos' | 'encerrados')}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent w-full sm:w-auto"
+                className="px-3 py-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent w-full sm:w-auto"
               >
                 <option value="todos">Todos</option>
                 <option value="ativos">Ativos</option>
@@ -271,25 +271,25 @@ export function HistoricoOcupacao() {
           {/* Segunda linha: Filtros agrupados */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 items-stretch sm:items-center text-sm">
             {/* Filtros temporais */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg w-full sm:w-auto">
-              <span className="text-xs font-medium text-gray-600 whitespace-nowrap">Data:</span>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-surface-2 px-3 py-2 rounded-lg w-full sm:w-auto">
+              <span className="text-xs font-medium text-content-muted whitespace-nowrap">Data:</span>
               <input
                 type="date"
                 value={dataInicio}
                 onChange={(e) => setDataInicio(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto"
+                className="px-2 py-1.5 border border-surface-3 rounded text-xs w-full sm:w-auto"
               />
-              <span className="text-gray-400 hidden sm:inline">—</span>
+              <span className="text-content-faint hidden sm:inline">—</span>
               <input
                 type="date"
                 value={dataFim}
                 onChange={(e) => setDataFim(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto"
+                className="px-2 py-1.5 border border-surface-3 rounded text-xs w-full sm:w-auto"
               />
               <select
                 value={periodoRapido}
                 onChange={(e) => setPeriodoRapido(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto"
+                className="px-2 py-1.5 border border-surface-3 rounded text-xs w-full sm:w-auto"
               >
                 <option value="">Rápido</option>
                 <option value="7">7d</option>
@@ -300,12 +300,12 @@ export function HistoricoOcupacao() {
             </div>
 
             {/* Filtros por entidade */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg w-full sm:w-auto">
-              <span className="text-xs font-medium text-gray-600 whitespace-nowrap">Entidade:</span>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-surface-2 px-3 py-2 rounded-lg w-full sm:w-auto">
+              <span className="text-xs font-medium text-content-muted whitespace-nowrap">Entidade:</span>
               <select
                 value={loteSelecionado}
                 onChange={(e) => setLoteSelecionado(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto min-w-[120px]"
+                className="px-2 py-1.5 border border-surface-3 rounded text-xs w-full sm:w-auto min-w-[120px]"
               >
                 <option value="">Lote</option>
                 {lotesDisponiveis.map(l => (
@@ -315,7 +315,7 @@ export function HistoricoOcupacao() {
               <select
                 value={pastoSelecionado}
                 onChange={(e) => setPastoSelecionado(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto min-w-[120px]"
+                className="px-2 py-1.5 border border-surface-3 rounded text-xs w-full sm:w-auto min-w-[120px]"
               >
                 <option value="">Pasto</option>
                 {pastosDisponiveis.map(p => (
@@ -325,7 +325,7 @@ export function HistoricoOcupacao() {
               <select
                 value={moduloSelecionado}
                 onChange={(e) => setModuloSelecionado(e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto min-w-[120px]"
+                className="px-2 py-1.5 border border-surface-3 rounded text-xs w-full sm:w-auto min-w-[120px]"
               >
                 <option value="">Módulo</option>
                 {modulosDisponiveis.map(m => (
@@ -335,42 +335,42 @@ export function HistoricoOcupacao() {
             </div>
 
             {/* Filtros por métricas */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg w-full sm:w-auto">
-              <span className="text-xs font-medium text-gray-600 whitespace-nowrap">Métricas:</span>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-surface-2 px-3 py-2 rounded-lg w-full sm:w-auto">
+              <span className="text-xs font-medium text-content-muted whitespace-nowrap">Métricas:</span>
               <div className="flex items-center gap-1 w-full sm:w-auto">
-                <span className="text-xs text-gray-500 whitespace-nowrap">UA/ha</span>
+                <span className="text-xs text-content-muted whitespace-nowrap">UA/ha</span>
                 <input
                   type="number"
                   placeholder="Min"
                   value={taxaLotacaoMin}
                   onChange={(e) => setTaxaLotacaoMin(e.target.value)}
-                  className="w-16 px-2 py-1.5 border border-gray-300 rounded text-xs"
+                  className="w-16 px-2 py-1.5 border border-surface-3 rounded text-xs"
                 />
-                <span className="text-gray-400">-</span>
+                <span className="text-content-faint">-</span>
                 <input
                   type="number"
                   placeholder="Max"
                   value={taxaLotacaoMax}
                   onChange={(e) => setTaxaLotacaoMax(e.target.value)}
-                  className="w-16 px-2 py-1.5 border border-gray-300 rounded text-xs"
+                  className="w-16 px-2 py-1.5 border border-surface-3 rounded text-xs"
                 />
               </div>
               <div className="flex items-center gap-1 w-full sm:w-auto">
-                <span className="text-xs text-gray-500 whitespace-nowrap">Dias</span>
+                <span className="text-xs text-content-muted whitespace-nowrap">Dias</span>
                 <input
                   type="number"
                   placeholder="Min"
                   value={diasMin}
                   onChange={(e) => setDiasMin(e.target.value)}
-                  className="w-12 px-1 py-1.5 border border-gray-300 rounded text-xs"
+                  className="w-12 px-1 py-1.5 border border-surface-3 rounded text-xs"
                 />
-                <span className="text-gray-400">-</span>
+                <span className="text-content-faint">-</span>
                 <input
                   type="number"
                   placeholder="Max"
                   value={diasMax}
                   onChange={(e) => setDiasMax(e.target.value)}
-                  className="w-12 px-1 py-1.5 border border-gray-300 rounded text-xs"
+                  className="w-12 px-1 py-1.5 border border-surface-3 rounded text-xs"
                 />
               </div>
             </div>
@@ -378,7 +378,7 @@ export function HistoricoOcupacao() {
             {/* Botão limpar filtros */}
             <button
               onClick={limparFiltros}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors w-full sm:w-auto"
+              className="px-4 py-2 border border-surface-3 rounded-lg text-sm text-content-muted hover:bg-surface-2 transition-colors w-full sm:w-auto"
             >
               Limpar filtros
             </button>
@@ -395,81 +395,81 @@ export function HistoricoOcupacao() {
         </div>
       ) : filtrado.length === 0 ? (
         <Card>
-          <p className="text-center text-gray-500 py-8">
+          <p className="text-center text-content-muted py-8">
             {searchTerm || statusFiltro !== 'todos' || dataInicio || dataFim || periodoRapido || loteSelecionado || pastoSelecionado || moduloSelecionado || taxaLotacaoMin || taxaLotacaoMax || diasMin || diasMax ? 'Nenhum registro encontrado com os filtros aplicados' : 'Nenhum histórico de ocupação disponível'}
           </p>
         </Card>
       ) : (
         <Card>
           <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <table className="min-w-full divide-y divide-border-base text-sm">
               <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Lote</th>
+                <tr className="bg-surface-2">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">Lote</th>
                   {tipo === 'pasto' ? (
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Pasto</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">Pasto</th>
                   ) : (
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Módulo</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">Módulo</th>
                   )}
                   {tipo === 'pasto' && (
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Módulo</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">Módulo</th>
                   )}
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Entrada</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Saída</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Dias</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Cab. Entrada</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Peso Entrada</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Cab. Saída</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Peso Saída</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Meta (dias)</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Desvio (%)</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-blue-600 uppercase tracking-wider">Taxa (UA/ha)</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">Entrada</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">Saída</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Dias</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Cab. Entrada</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Peso Entrada</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Cab. Saída</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Peso Saída</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Meta (dias)</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Desvio (%)</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-primary dark:text-primary-light uppercase tracking-wider">Taxa (UA/ha)</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-content-muted uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
+              <tbody className="bg-surface-1 divide-y divide-border-subtle">
                 {itensPaginados.map((item) => (
-                  <tr key={item.historico_id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{item.lote_nome}</td>
+                  <tr key={item.historico_id} className="hover:bg-surface-2 transition-colors">
+                    <td className="px-4 py-3 font-medium text-content-strong whitespace-nowrap">{item.lote_nome}</td>
                     {tipo === 'pasto' ? (
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{item.pasto_nome || '—'}</td>
+                      <td className="px-4 py-3 text-content-muted whitespace-nowrap">{item.pasto_nome || '—'}</td>
                     ) : (
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{item.modulo_nome || '—'}</td>
+                      <td className="px-4 py-3 text-content-muted whitespace-nowrap">{item.modulo_nome || '—'}</td>
                     )}
                     {tipo === 'pasto' && (
-                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{item.modulo_nome || '—'}</td>
+                      <td className="px-4 py-3 text-content-muted text-xs whitespace-nowrap">{item.modulo_nome || '—'}</td>
                     )}
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatarData(item.data_hora_entrada)}</td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatarData(item.data_hora_saida)}</td>
-                    <td className="px-4 py-3 text-right text-gray-600 whitespace-nowrap">
+                    <td className="px-4 py-3 text-content-muted whitespace-nowrap">{formatarData(item.data_hora_entrada)}</td>
+                    <td className="px-4 py-3 text-content-muted whitespace-nowrap">{formatarData(item.data_hora_saida)}</td>
+                    <td className="px-4 py-3 text-right text-content-muted whitespace-nowrap">
                       {item.periodo_ocupacao_dias != null ? (
-                        <span className={item.meta_intervalo_ocupacao_dias && item.periodo_ocupacao_dias > item.meta_intervalo_ocupacao_dias ? 'text-red-600 font-semibold' : ''}>
+                        <span className={item.meta_intervalo_ocupacao_dias && item.periodo_ocupacao_dias > item.meta_intervalo_ocupacao_dias ? 'text-red-500 font-semibold' : ''}>
                           {item.periodo_ocupacao_dias}
                         </span>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-600 whitespace-nowrap">{item.cabecas_entrada ?? '—'}</td>
-                    <td className="px-4 py-3 text-right text-gray-600 whitespace-nowrap">{formatarPeso(item.peso_vivo_medio_entrada_kg)}</td>
-                    <td className="px-4 py-3 text-right text-gray-600 whitespace-nowrap">{item.cabecas_saida ?? '—'}</td>
-                    <td className="px-4 py-3 text-right text-gray-600 whitespace-nowrap">{formatarPeso(item.peso_vivo_medio_saida_kg)}</td>
-                    <td className="px-4 py-3 text-right text-gray-500 whitespace-nowrap">{item.meta_intervalo_ocupacao_dias ?? '—'}</td>
+                    <td className="px-4 py-3 text-right text-content-muted whitespace-nowrap">{item.cabecas_entrada ?? '—'}</td>
+                    <td className="px-4 py-3 text-right text-content-muted whitespace-nowrap">{formatarPeso(item.peso_vivo_medio_entrada_kg)}</td>
+                    <td className="px-4 py-3 text-right text-content-muted whitespace-nowrap">{item.cabecas_saida ?? '—'}</td>
+                    <td className="px-4 py-3 text-right text-content-muted whitespace-nowrap">{formatarPeso(item.peso_vivo_medio_saida_kg)}</td>
+                    <td className="px-4 py-3 text-right text-content-muted whitespace-nowrap">{item.meta_intervalo_ocupacao_dias ?? '—'}</td>
                     <td className={`px-4 py-3 text-right whitespace-nowrap ${getDesvioClass(item.desvio_tempo_ocupacao_percent)}`}>
                       {item.desvio_tempo_ocupacao_percent != null
                         ? `${item.desvio_tempo_ocupacao_percent > 0 ? '+' : ''}${item.desvio_tempo_ocupacao_percent.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
                         : '—'}
                     </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap font-semibold text-blue-700">
+                    <td className="px-4 py-3 text-right whitespace-nowrap font-semibold text-primary dark:text-primary-light">
                       {item.taxa_lotacao_ua_ha != null
                         ? item.taxa_lotacao_ua_ha.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                         : '—'}
                     </td>
                     <td className="px-4 py-3 text-center whitespace-nowrap">
                       {item.data_hora_saida == null ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-800 dark:text-green-200">
                           Ativo
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-2 text-content-muted">
                           Encerrado
                         </span>
                       )}
@@ -480,7 +480,7 @@ export function HistoricoOcupacao() {
             </table>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 pb-2 mt-3">
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-content-faint">
               {filtrado.length} registro{filtrado.length !== 1 ? 's' : ''} | Página {paginaSegura} de {totalPaginas}
             </p>
             {totalPaginas > 1 && (
@@ -488,14 +488,14 @@ export function HistoricoOcupacao() {
                 <button
                   onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
                   disabled={paginaSegura === 1}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 border border-surface-3 rounded-lg text-xs font-medium text-content-muted hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Anterior
                 </button>
                 <button
                   onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
                   disabled={paginaSegura === totalPaginas}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 border border-surface-3 rounded-lg text-xs font-medium text-content-muted hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Próxima
                 </button>

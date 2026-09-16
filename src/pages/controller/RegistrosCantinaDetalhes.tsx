@@ -84,7 +84,7 @@ export function RegistrosCantinaDetalhes() {
       title="Detalhes do Registro de Cantina"
     >
       {() => (
-        <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
           <div className="space-y-6">
             {/* Informações Gerais */}
             <DetailSection title="Informações Gerais">
@@ -113,7 +113,7 @@ export function RegistrosCantinaDetalhes() {
                 <div className="space-y-2">
                   {registro!.itens.map((item: any, index: number) => (
                     <p key={index} className="text-sm">
-                      <span className="font-medium text-gray-700">{item.nome || item.item || 'Item'}:</span> {item.quantidade || '-'} {item.unidade || ''}
+                      <span className="font-medium text-content">{item.nome || item.item || 'Item'}:</span> {item.quantidade || '-'} {item.unidade || ''}
                     </p>
                   ))}
                 </div>

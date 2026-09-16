@@ -764,7 +764,7 @@ export function MapaCamadas({
                 onRemoverBebedouro(popupBebedouro.id, popupBebedouro.nome)
                 setPopupBebedouro(null)
               }}
-              className="text-xs text-red-600 hover:text-red-700 font-medium"
+              className="text-xs text-red-500 hover:text-red-700 font-medium"
             >
               Remover do mapa
             </button>

@@ -189,8 +189,8 @@ export function PlanoNutricionalCategoriaModal({
       size="md"
     >
       {loading ? (
-        <div className="py-8 flex flex-col items-center gap-3 text-gray-500">
-          <svg className="animate-spin h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24">
+        <div className="py-8 flex flex-col items-center gap-3 text-content-muted">
+          <svg className="animate-spin h-6 w-6 text-content-faint" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
@@ -199,13 +199,13 @@ export function PlanoNutricionalCategoriaModal({
       ) : (
         <div className="space-y-4">
           {isBezerroAope ? (
-            <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
-              <p className="text-sm font-medium text-amber-900">GMD de {categoria}</p>
-              <p className="text-xs text-amber-700 mt-1">
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-300">GMD de {categoria}</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                 Bezerros/bezerras ao pé usam GMD próprio (padrão: 0,600 / 0,500). Não há plano nutricional para esta categoria.
               </p>
               {gmdCategoria != null && (
-                <p className="text-lg font-bold text-amber-900 mt-2">{gmdCategoria.toFixed(3).replace('.', ',')} kg/cab/dia</p>
+                <p className="text-lg font-bold text-amber-700 dark:text-amber-300 mt-2">{gmdCategoria.toFixed(3).replace('.', ',')} kg/cab/dia</p>
               )}
             </div>
           ) : (
@@ -214,25 +214,25 @@ export function PlanoNutricionalCategoriaModal({
               {planoVigente ? (
                 <div className="space-y-3">
                   {/* Header do plano vigente */}
-                  <div className="bg-gradient-to-br from-green-50 to-green-100/50 border-2 border-green-300 rounded-xl p-4">
+                  <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-2 border-green-500/30 rounded-xl p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-bold text-green-700 uppercase tracking-wider">Plano Vigente</p>
-                        <h4 className="text-base font-bold text-green-900 mt-0.5">{planoVigente.nome}</h4>
+                        <p className="text-xs font-bold text-green-700 dark:text-green-300 uppercase tracking-wider">Plano Vigente</p>
+                        <h4 className="text-base font-bold text-green-700 dark:text-green-300 mt-0.5">{planoVigente.nome}</h4>
                       </div>
                       <span className="px-2.5 py-1 bg-green-600 text-white text-xs font-bold rounded-full">Ativo</span>
                     </div>
-                    <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-600">
-                      <span><span className="text-gray-500">Início:</span> <span className="font-medium text-gray-800">{planoVigente.data_inicio ? new Date(planoVigente.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</span></span>
-                      {formulacaoLote && <span><span className="text-gray-500">Formulação:</span> <span className="font-medium text-gray-800">{formulacaoLote.nome}</span></span>}
+                    <div className="flex flex-wrap gap-4 mt-2 text-xs text-content-muted">
+                      <span><span className="text-content-muted">Início:</span> <span className="font-medium text-content-strong">{planoVigente.data_inicio ? new Date(planoVigente.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</span></span>
+                      {formulacaoLote && <span><span className="text-content-muted">Formulação:</span> <span className="font-medium text-content-strong">{formulacaoLote.nome}</span></span>}
                     </div>
                   </div>
 
                   {/* Aviso: categoria não contemplada pela formulação */}
                   {gmdCategoria == null && formulacaoLoteId && (
-                    <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">
-                      <p className="text-sm font-medium text-amber-900">Categoria sem GMD</p>
-                      <p className="text-xs text-amber-700 mt-1">
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                      <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Categoria sem GMD</p>
+                      <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                         O plano está ativo, mas a formulação "{formulacaoLote?.nome || 'vigente'}" não contempla a categoria "{categoria}". Esta categoria não evolui peso.
                       </p>
                       {onOpenFormulacao && formulacaoLoteId && (
@@ -248,19 +248,19 @@ export function PlanoNutricionalCategoriaModal({
                   )}
 
                   {/* Campos de personalização */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-3">
-                    <p className="text-xs font-semibold text-gray-700">Personalizar para esta categoria</p>
+                  <div className="bg-surface-1 border border-border-base rounded-lg p-3 space-y-3">
+                    <p className="text-xs font-semibold text-content">Personalizar para esta categoria</p>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Período (dias)</label>
+                        <label className="block text-xs font-medium text-content mb-1">Período (dias)</label>
                         <Input type="number" value={periodoDias} onChange={(e) => setPeriodoDias(e.target.value)} placeholder="Ex: 90" className="text-sm" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Peso Meta (kg)</label>
+                        <label className="block text-xs font-medium text-content mb-1">Peso Meta (kg)</label>
                         <Input type="text" inputMode="decimal" value={pesoMetaKg} onChange={(e) => setPesoMetaKg(e.target.value)} placeholder="Ex: 500,00" className="text-sm" />
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-content-muted">
                       Se o período desta categoria terminar antes das outras, ela para de evoluir peso e aguarda o fim das demais.
                     </p>
                     <Button size="sm" onClick={handleSalvar} disabled={saving}>
@@ -269,8 +269,8 @@ export function PlanoNutricionalCategoriaModal({
                   </div>
                 </div>
               ) : (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm text-yellow-800">
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
                     {planosFila.length > 0
                       ? 'Nenhum plano vigente no lote. Use a gestão de planos do lote para iniciar.'
                       : 'Nenhum plano cadastrado no lote. Use a gestão de planos do lote para criar.'}
@@ -280,7 +280,7 @@ export function PlanoNutricionalCategoriaModal({
 
               {/* Resumo da fila do lote */}
               {planosFila.length > 0 && (
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex items-center gap-2 text-xs text-content-muted">
                   <span className="font-medium">Fila:</span>
                   {planosFila.map((p, i) => (
                     <span key={p.id} className="truncate">
@@ -294,17 +294,17 @@ export function PlanoNutricionalCategoriaModal({
               {/* GMD e peso atual como mini-cards */}
               <div className="grid grid-cols-2 gap-3">
                 {gmdCategoria != null && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">GMD</p>
-                    <p className="text-lg font-bold text-gray-900">{gmdCategoria.toFixed(3).replace('.', ',')}</p>
-                    <p className="text-[10px] text-gray-400">kg/cab/dia</p>
+                  <div className="bg-surface-2 border border-border-base rounded-lg p-3 text-center">
+                    <p className="text-xs text-content-muted mb-1">GMD</p>
+                    <p className="text-lg font-bold text-content-strong">{gmdCategoria.toFixed(3).replace('.', ',')}</p>
+                    <p className="text-[10px] text-content-faint">kg/cab/dia</p>
                   </div>
                 )}
                 {pesoAtual != null && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Peso Atual</p>
-                    <p className="text-lg font-bold text-gray-900">{Number(pesoAtual).toFixed(2).replace('.', ',')}</p>
-                    <p className="text-[10px] text-gray-400">kg/cab</p>
+                  <div className="bg-surface-2 border border-border-base rounded-lg p-3 text-center">
+                    <p className="text-xs text-content-muted mb-1">Peso Atual</p>
+                    <p className="text-lg font-bold text-content-strong">{Number(pesoAtual).toFixed(2).replace('.', ',')}</p>
+                    <p className="text-[10px] text-content-faint">kg/cab</p>
                   </div>
                 )}
               </div>
@@ -312,18 +312,18 @@ export function PlanoNutricionalCategoriaModal({
           )}
 
           {message && (
-            <div className={`p-3 rounded-lg text-sm ${message.includes('Erro') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+            <div className={`p-3 rounded-lg text-sm ${message.includes('Erro') ? 'bg-red-500/10 text-red-700 dark:text-red-300' : 'bg-green-500/10 text-green-700 dark:text-green-300'}`}>
               {message}
             </div>
           )}
 
           {/* Botão para abrir modal completo do lote */}
           {onOpenLoteModal && !isBezerroAope && (
-            <div className="border-t border-gray-200 pt-4">
+            <div className="border-t border-border-base pt-4">
               <Button variant="secondary" onClick={() => { onClose(); onOpenLoteModal(); }} className="w-full">
                 Gerenciar Planos do Lote →
               </Button>
-              <p className="text-xs text-gray-400 text-center mt-1">
+              <p className="text-xs text-content-faint text-center mt-1">
                 Criar, encerrar, migrar e reordenar planos do lote
               </p>
             </div>

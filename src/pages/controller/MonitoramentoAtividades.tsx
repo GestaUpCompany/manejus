@@ -28,10 +28,10 @@ const PRIORIDADE_CORES: Record<number, string> = {
 }
 
 const STATUS_CORES: Record<string, string> = {
-  pendente: 'bg-gray-100 text-gray-700',
-  em_andamento: 'bg-blue-100 text-blue-700',
-  concluido: 'bg-green-100 text-green-700',
-  concluida: 'bg-green-100 text-green-700',
+  pendente: 'bg-surface-2 text-content',
+  em_andamento: 'bg-primary/10 text-primary dark:text-primary-light',
+  concluido: 'bg-green-500/10 text-green-700 dark:text-green-300',
+  concluida: 'bg-green-500/10 text-green-700 dark:text-green-300',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -49,24 +49,24 @@ const STATUS_BORDA_HEX: Record<string, string> = {
 }
 
 const STATUS_CHIPS = [
-  { value: 'pendente', label: 'Pendente', corAtivo: 'bg-gray-200 text-gray-700' },
-  { value: 'em_andamento', label: 'Em Andamento', corAtivo: 'bg-blue-200 text-blue-700' },
-  { value: 'concluido', label: 'Concluído', corAtivo: 'bg-green-200 text-green-700' },
+  { value: 'pendente', label: 'Pendente', corAtivo: 'bg-surface-3 text-content' },
+  { value: 'em_andamento', label: 'Em Andamento', corAtivo: 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light' },
+  { value: 'concluido', label: 'Concluído', corAtivo: 'bg-green-500/10 text-green-700 dark:text-green-300' },
 ] as const
 
 const ORDEM_GRUPOS = ['em_andamento', 'pendente', 'concluido']
 
 const GRUPO_INFO: Record<string, { label: string; corDot: string; corTexto: string }> = {
-  em_andamento: { label: 'Em Andamento', corDot: 'bg-blue-500', corTexto: 'text-blue-700' },
-  pendente: { label: 'Pendentes', corDot: 'bg-gray-400', corTexto: 'text-gray-700' },
-  concluido: { label: 'Concluídas', corDot: 'bg-green-500', corTexto: 'text-green-700' },
+  em_andamento: { label: 'Em Andamento', corDot: 'bg-blue-500', corTexto: 'text-primary dark:text-primary-light' },
+  pendente: { label: 'Pendentes', corDot: 'bg-gray-400', corTexto: 'text-content' },
+  concluido: { label: 'Concluídas', corDot: 'bg-green-500', corTexto: 'text-green-700 dark:text-green-300' },
 }
 
 const KANBAN_COLUNAS = [
-  { status: 'em_andamento', label: 'Em Andamento', corDot: 'bg-blue-500', headerBg: 'bg-blue-50' },
-  { status: 'pendente', label: 'Pendentes', corDot: 'bg-gray-400', headerBg: 'bg-gray-50' },
-  { status: 'concluido', label: 'Concluídas', corDot: 'bg-green-500', headerBg: 'bg-green-50' },
-  { status: '__justificada__', label: 'Justificadas', corDot: 'bg-amber-500', headerBg: 'bg-amber-50' },
+  { status: 'em_andamento', label: 'Em Andamento', corDot: 'bg-blue-500', headerBg: 'bg-primary/10' },
+  { status: 'pendente', label: 'Pendentes', corDot: 'bg-gray-400', headerBg: 'bg-surface-2' },
+  { status: 'concluido', label: 'Concluídas', corDot: 'bg-green-500', headerBg: 'bg-green-500/10' },
+  { status: '__justificada__', label: 'Justificadas', corDot: 'bg-amber-500', headerBg: 'bg-amber-500/10' },
 ]
 
 const AVATAR_CORES = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500', 'bg-indigo-500']
@@ -558,7 +558,7 @@ export function MonitoramentoAtividades() {
       <div
         key={atividade.id}
         onClick={() => setDetalheAtividade(atividade)}
-        className={`p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 ${isAtrasada ? 'bg-red-50' : 'bg-white'} ${isFlash ? 'ring-2 ring-blue-400' : ''}`}
+        className={`p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 ${isAtrasada ? 'bg-red-500/10' : 'bg-surface-1'} ${isFlash ? 'ring-2 ring-blue-400' : ''}`}
         style={{ borderLeftColor: bordaCor }}
       >
         <div className="flex items-center justify-between gap-3">
@@ -567,9 +567,9 @@ export function MonitoramentoAtividades() {
               <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${PRIORIDADE_CORES[atividade.prioridade] || 'bg-gray-400'}`} />
             )}
             <div className="min-w-0 flex-1">
-              <h4 className="font-medium text-gray-800 truncate text-sm">{atividade.titulo}</h4>
+              <h4 className="font-medium text-content-strong truncate text-sm">{atividade.titulo}</h4>
               {metaParts.length > 0 && (
-                <div className="text-xs text-gray-500 mt-0.5 truncate">
+                <div className="text-xs text-content-muted mt-0.5 truncate">
                   {metaParts.join(' · ')}
                 </div>
               )}
@@ -597,18 +597,18 @@ export function MonitoramentoAtividades() {
                   )
                 })}
                 {atividade.funcionarios.length > 4 && (
-                  <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-[9px] font-bold ring-2 ring-gray-200">
+                  <div className="w-6 h-6 rounded-full bg-surface-3 flex items-center justify-center text-content-muted text-[9px] font-bold ring-2 ring-gray-200">
                     +{atividade.funcionarios.length - 4}
                   </div>
                 )}
               </div>
             )}
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CORES[atividade.status] || 'bg-gray-100'}`}>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CORES[atividade.status] || 'bg-surface-2'}`}>
               {STATUS_LABELS[atividade.status] || atividade.status}
             </span>
             {/* Badge Atrasada removida: o fundo bg-red-50 já sinaliza visualmente */}
             {atividade.nao_prevista && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-purple-700">
                 Não prevista
               </span>
             )}
@@ -618,11 +618,11 @@ export function MonitoramentoAtividades() {
         {/* Barra de progresso só quando há progresso parcial (0 < progresso < 100) */}
         {totalFunc > 0 && progresso > 0 && progresso < 100 && (
           <div className="mt-2">
-            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <div className="flex items-center justify-between text-xs text-content-muted mb-1">
               <span>{concluidas}/{totalFunc} concluíram</span>
-              <span className="text-blue-600">{progresso}%</span>
+              <span className="text-primary dark:text-primary-light">{progresso}%</span>
             </div>
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all bg-blue-500"
                 style={{ width: `${progresso}%` }}
@@ -635,10 +635,10 @@ export function MonitoramentoAtividades() {
   }
 
   const STATUS_BADGE_CORES: Record<string, string> = {
-    pendente: 'bg-gray-100 text-gray-600',
-    em_andamento: 'bg-blue-100 text-blue-700',
-    concluida: 'bg-green-100 text-green-700',
-    justificada: 'bg-orange-100 text-orange-700',
+    pendente: 'bg-surface-2 text-content-muted',
+    em_andamento: 'bg-primary/10 text-primary dark:text-primary-light',
+    concluida: 'bg-green-500/10 text-green-700 dark:text-green-300',
+    justificada: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
   }
 
   const STATUS_BADGE_LABELS: Record<string, string> = {
@@ -650,10 +650,10 @@ export function MonitoramentoAtividades() {
 
   // === KPIs ===
   const KPI_ITEMS = [
-    { key: 'em_andamento', label: 'Em Andamento', cor: 'text-blue-600', clickable: true, highlight: 'blue' },
-    { key: 'pendente', label: 'Pendentes', cor: 'text-gray-700', clickable: true, highlight: null },
-    { key: 'concluido', label: 'Concluídas', cor: 'text-green-600', clickable: true, highlight: null },
-    { key: 'atrasada', label: 'Atrasadas', cor: 'text-red-600', clickable: true, highlight: 'red' },
+    { key: 'em_andamento', label: 'Em Andamento', cor: 'text-primary dark:text-primary-light', clickable: true, highlight: 'blue' },
+    { key: 'pendente', label: 'Pendentes', cor: 'text-content', clickable: true, highlight: null },
+    { key: 'concluido', label: 'Concluídas', cor: 'text-green-500', clickable: true, highlight: null },
+    { key: 'atrasada', label: 'Atrasadas', cor: 'text-red-500', clickable: true, highlight: 'red' },
   ] as const
 
   // === Render ===
@@ -662,24 +662,24 @@ export function MonitoramentoAtividades() {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div className="h-8 w-64 bg-gray-200 rounded animate-pulse" />
-          <div className="h-8 w-32 bg-gray-200 rounded-lg animate-pulse" />
+          <div className="h-8 w-64 bg-surface-3 rounded animate-pulse" />
+          <div className="h-8 w-32 bg-surface-3 rounded-lg animate-pulse" />
         </div>
         <div className="space-y-3">
           <div className="flex gap-3">
-            <div className="h-11 flex-1 bg-gray-200 rounded-lg animate-pulse" />
-            <div className="h-11 w-56 bg-gray-200 rounded-lg animate-pulse" />
-            <div className="h-11 w-48 bg-gray-200 rounded-lg animate-pulse" />
+            <div className="h-11 flex-1 bg-surface-3 rounded-lg animate-pulse" />
+            <div className="h-11 w-56 bg-surface-3 rounded-lg animate-pulse" />
+            <div className="h-11 w-48 bg-surface-3 rounded-lg animate-pulse" />
           </div>
           <div className="flex gap-2">
-            {[1, 2, 3, 4].map((i) => <div key={i} className="h-8 w-28 bg-gray-200 rounded-full animate-pulse" />)}
+            {[1, 2, 3, 4].map((i) => <div key={i} className="h-8 w-28 bg-surface-3 rounded-full animate-pulse" />)}
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />)}
+          {[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="h-20 bg-surface-2 rounded-lg animate-pulse" />)}
         </div>
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-gray-100 rounded-lg animate-pulse" />)}
+          {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-surface-2 rounded-lg animate-pulse" />)}
         </div>
       </div>
     )
@@ -689,17 +689,17 @@ export function MonitoramentoAtividades() {
     <div className="space-y-6 max-w-full min-w-0 overflow-x-hidden">
       {/* Header + view toggle */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Monitoramento de Atividades</h2>
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+        <h2 className="text-2xl font-bold text-content-strong">Monitoramento de Atividades</h2>
+        <div className="flex items-center gap-1 bg-surface-2 rounded-lg p-1">
           <button
             onClick={() => setVista('lista')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${vista === 'lista' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${vista === 'lista' ? 'bg-surface-1 text-content-strong shadow-sm' : 'text-content-muted'}`}
           >
             Lista
           </button>
           <button
             onClick={() => setVista('kanban')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${vista === 'kanban' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${vista === 'kanban' ? 'bg-surface-1 text-content-strong shadow-sm' : 'text-content-muted'}`}
           >
             Board
           </button>
@@ -714,12 +714,12 @@ export function MonitoramentoAtividades() {
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar por título ou descrição..."
-            className="flex-1 min-w-[320px] md:min-w-[420px] border-gray-300 focus:border-accent min-h-[40px]"
+            className="flex-1 min-w-[320px] md:min-w-[420px] border-surface-3 focus:border-accent min-h-[40px]"
           />
           <select
             value={funcionarioSelecionado}
             onChange={(e) => setFuncionarioSelecionado(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm md:w-48"
+            className="px-3 py-2 border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-surface-1 text-sm md:w-48"
           >
             <option value="">Todos os responsáveis</option>
             {funcionarios.map((f) => (
@@ -729,7 +729,7 @@ export function MonitoramentoAtividades() {
           <select
             value={prioridadeSelecionada}
             onChange={(e) => setPrioridadeSelecionada(e.target.value === '' ? '' : Number(e.target.value))}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm md:w-52"
+            className="px-3 py-2 border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-surface-1 text-sm md:w-52"
           >
             <option value="">Todas as prioridades</option>
             {prioridades.map((p) => (
@@ -744,7 +744,7 @@ export function MonitoramentoAtividades() {
                   key={chip.value}
                   onClick={() => toggleStatus(chip.value)}
                   className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
-                    ativo ? chip.corAtivo + ' ring-1 ring-offset-1 ring-gray-400' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    ativo ? chip.corAtivo + ' ring-1 ring-offset-1 ring-gray-400' : 'bg-surface-2 text-content-muted hover:bg-surface-3'
                   }`}
                 >
                   {chip.label}
@@ -754,7 +754,7 @@ export function MonitoramentoAtividades() {
             {temFiltrosAtivos && (
               <button
                 onClick={limparFiltros}
-                className="px-2.5 py-1 rounded-full text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                className="px-2.5 py-1 rounded-full text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors"
               >
                 Limpar
               </button>
@@ -764,7 +764,7 @@ export function MonitoramentoAtividades() {
       </div>
 
       {/* KPIs - stat strip compacta */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-2 py-2.5 flex items-stretch gap-1 overflow-x-auto">
+      <div className="bg-surface-1 rounded-lg shadow-sm border border-border-subtle px-2 py-2.5 flex items-stretch gap-1 overflow-x-auto">
         {KPI_ITEMS.map((kpi, idx) => {
           const valor = (kpis as any)[kpi.key] as number
           const isClickable = kpi.clickable && valor > 0
@@ -776,10 +776,10 @@ export function MonitoramentoAtividades() {
               key={kpi.key}
               onClick={isClickable ? () => handleKpiClick(kpi.key === 'concluido' ? 'concluido' : kpi.key) : undefined}
               disabled={!isClickable}
-              className={`flex-1 min-w-[110px] flex flex-col items-start px-3 py-1 rounded-md transition-all text-left ${highlightClass} ${isClickable ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'}`}
+              className={`flex-1 min-w-[110px] flex flex-col items-start px-3 py-1 rounded-md transition-all text-left ${highlightClass} ${isClickable ? 'hover:bg-surface-2 cursor-pointer' : 'cursor-default'}`}
               style={idx > 0 ? { borderLeft: '1px solid #f1f5f9' } : undefined}
             >
-              <span className="text-[11px] text-gray-500 leading-tight flex items-center">
+              <span className="text-[11px] text-content-muted leading-tight flex items-center">
                 {kpi.label}
                 {renderTendencia(kpi.key)}
               </span>
@@ -794,12 +794,12 @@ export function MonitoramentoAtividades() {
         <div>
           <button
             onClick={() => toggleSecao('trabalhandoAgora')}
-            className="text-base font-semibold text-gray-700 mb-2 flex items-center gap-2 w-full text-left"
+            className="text-base font-semibold text-content mb-2 flex items-center gap-2 w-full text-left"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
             Trabalhando agora
-            <span className="text-sm font-normal text-gray-500">({sessoesAbertas.length})</span>
-            <span className="ml-auto text-gray-400 text-xs">{secoesAbertas.trabalhandoAgora ? '▲' : '▼'}</span>
+            <span className="text-sm font-normal text-content-muted">({sessoesAbertas.length})</span>
+            <span className="ml-auto text-content-faint text-xs">{secoesAbertas.trabalhandoAgora ? '▲' : '▼'}</span>
           </button>
           {secoesAbertas.trabalhandoAgora && (
           <div className="flex flex-col sm:flex-row gap-2 overflow-x-auto pb-1">
@@ -814,18 +814,18 @@ export function MonitoramentoAtividades() {
                       if (atv) setDetalheAtividade(atv)
                     }
                   }}
-                  className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-md px-3 py-1.5 hover:bg-blue-100 transition-colors text-left flex-shrink-0 min-w-0 sm:min-w-[220px]"
+                  className="flex items-center gap-2 bg-primary/10 border border-blue-100 rounded-md px-3 py-1.5 hover:bg-primary/10 transition-colors text-left flex-shrink-0 min-w-0 sm:min-w-[220px]"
                 >
                   <div className={`w-7 h-7 rounded-full ${getCorAvatar(s.funcionario_nome || '?')} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0`}>
                     {getIniciais(s.funcionario_nome || '?')}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-800 text-xs truncate">{s.atividade_titulo || 'Atividade'}</p>
-                    <p className="text-[11px] text-gray-500 truncate">{s.funcionario_nome || 'Funcionário'}</p>
+                    <p className="font-medium text-content-strong text-xs truncate">{s.atividade_titulo || 'Atividade'}</p>
+                    <p className="text-[11px] text-content-muted truncate">{s.funcionario_nome || 'Funcionário'}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold tabular-nums text-blue-700 leading-tight">{formatarTempo(decorrido)}</p>
-                    <p className="text-[10px] text-gray-400 leading-tight">desde {formatarHoraCurta(s.inicio_at)}</p>
+                    <p className="text-sm font-bold tabular-nums text-primary dark:text-primary-light leading-tight">{formatarTempo(decorrido)}</p>
+                    <p className="text-[10px] text-content-faint leading-tight">desde {formatarHoraCurta(s.inicio_at)}</p>
                   </div>
                 </button>
               )
@@ -839,12 +839,12 @@ export function MonitoramentoAtividades() {
       {vista === 'lista' ? (
         <div className="space-y-6">
           <div>
-            <h3 className="text-xl font-bold text-gray-800 mb-3">
+            <h3 className="text-xl font-bold text-content-strong mb-3">
               Atividades {planejadasFiltradas.length !== atividades.length && `(${planejadasFiltradas.length} de ${atividades.filter(a => !a.nao_prevista).length})`}
             </h3>
             {planejadasSemJustificadas.length === 0 ? (
-              <Card className="bg-white p-8 border-0 shadow-sm text-center">
-                <p className="text-gray-600">
+              <Card className="bg-surface-1 p-8 border-0 shadow-sm text-center">
+                <p className="text-content-muted">
                   {temFiltrosAtivos ? 'Nenhuma atividade encontrada com os filtros aplicados' : 'Nenhuma atividade encontrada'}
                 </p>
               </Card>
@@ -853,13 +853,13 @@ export function MonitoramentoAtividades() {
                 {ORDEM_GRUPOS.map((status) => {
                   const items = atividadesAgrupadas[status]
                   if (!items || items.length === 0) return null
-                  const info = GRUPO_INFO[status] || { label: status, corDot: 'bg-gray-400', corTexto: 'text-gray-700' }
+                  const info = GRUPO_INFO[status] || { label: status, corDot: 'bg-gray-400', corTexto: 'text-content' }
                   return (
                     <div key={status}>
                       <div className="flex items-center gap-2 mb-3">
                         <div className={`w-3 h-3 rounded-full ${info.corDot}`} />
                         <h4 className={`font-medium text-sm ${info.corTexto}`}>{info.label}</h4>
-                        <span className="text-xs text-gray-400">({items.length})</span>
+                        <span className="text-xs text-content-faint">({items.length})</span>
                       </div>
                       <div className="space-y-3">
                         {items.map((a) => renderCard(a))}
@@ -880,12 +880,12 @@ export function MonitoramentoAtividades() {
             <div>
               <button
                 onClick={() => toggleSecao('justificadas')}
-                className="text-base font-semibold text-gray-700 mb-2 flex items-center gap-2 w-full text-left"
+                className="text-base font-semibold text-content mb-2 flex items-center gap-2 w-full text-left"
               >
                 <span className="w-3 h-3 rounded-full bg-amber-500" />
                 Atividades justificadas
-                <span className="text-sm font-normal text-gray-500">({justificadasFiltradas.length})</span>
-                <span className="ml-auto text-gray-400 text-xs">{secoesAbertas.justificadas ? '▲' : '▼'}</span>
+                <span className="text-sm font-normal text-content-muted">({justificadasFiltradas.length})</span>
+                <span className="ml-auto text-content-faint text-xs">{secoesAbertas.justificadas ? '▲' : '▼'}</span>
               </button>
               {secoesAbertas.justificadas && (
               <>
@@ -894,13 +894,13 @@ export function MonitoramentoAtividades() {
                   {ORDEM_GRUPOS.map((status) => {
                     const items = justificadasAgrupadas[status]
                     if (!items || items.length === 0) return null
-                    const info = GRUPO_INFO[status] || { label: status, corDot: 'bg-gray-400', corTexto: 'text-gray-700' }
+                    const info = GRUPO_INFO[status] || { label: status, corDot: 'bg-gray-400', corTexto: 'text-content' }
                     return (
                       <div key={status}>
                         <div className="flex items-center gap-2 mb-3">
                           <div className={`w-3 h-3 rounded-full ${info.corDot}`} />
                           <h4 className={`font-medium text-sm ${info.corTexto}`}>{info.label}</h4>
-                          <span className="text-xs text-gray-400">({items.length})</span>
+                          <span className="text-xs text-content-faint">({items.length})</span>
                         </div>
                         <div className="space-y-3">
                           {items.map((a) => renderCard(a, false, '#f97316'))}
@@ -921,7 +921,7 @@ export function MonitoramentoAtividades() {
         </div>
       ) : (
         <div>
-          <h3 className="text-xl font-bold text-gray-800 mb-3">
+          <h3 className="text-xl font-bold text-content-strong mb-3">
             Board {planejadasFiltradas.length !== atividades.length && `(${planejadasFiltradas.length} de ${atividades.filter(a => !a.nao_prevista).length})`}
           </h3>
           <div className="flex gap-4 overflow-x-auto pb-4">
@@ -933,12 +933,12 @@ export function MonitoramentoAtividades() {
                 <div key={col.status} className="flex-shrink-0 w-72">
                   <div className={`flex items-center gap-2 mb-3 px-3 py-2 rounded-lg ${col.headerBg}`}>
                     <div className={`w-3 h-3 rounded-full ${col.corDot}`} />
-                    <span className="font-medium text-sm text-gray-700">{col.label}</span>
-                    <span className="text-xs text-gray-400 ml-auto">({items.length})</span>
+                    <span className="font-medium text-sm text-content">{col.label}</span>
+                    <span className="text-xs text-content-faint ml-auto">({items.length})</span>
                   </div>
                   <div className="space-y-2">
                     {items.length === 0 ? (
-                      <div className="text-center text-xs text-gray-400 py-8 border-2 border-dashed border-gray-100 rounded-lg">
+                      <div className="text-center text-xs text-content-faint py-8 border-2 border-dashed border-border-subtle rounded-lg">
                         Vazio
                       </div>
                     ) : (
@@ -949,7 +949,7 @@ export function MonitoramentoAtividades() {
                         {items.length > KANBAN_LIMITE_INICIAL && (
                           <button
                             onClick={() => toggleKanbanColuna(col.status)}
-                            className="w-full text-center text-xs text-gray-500 font-medium py-1.5 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors"
+                            className="w-full text-center text-xs text-content-muted font-medium py-1.5 rounded-md border border-border-base hover:bg-surface-2 transition-colors"
                           >
                             {kanbanExpandido[col.status]
                               ? `Ver menos`
@@ -971,26 +971,26 @@ export function MonitoramentoAtividades() {
         <div>
           <button
             onClick={() => toggleSecao('desempenho')}
-            className="text-sm font-medium uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-2 w-full text-left"
+            className="text-sm font-medium uppercase tracking-wide text-content-muted mb-3 flex items-center gap-2 w-full text-left"
           >
             Desempenho por Funcionário
-            <span className="text-gray-400 text-xs normal-case tracking-normal">{secoesAbertas.desempenho ? '▲' : '▼'}</span>
+            <span className="text-content-faint text-xs normal-case tracking-normal">{secoesAbertas.desempenho ? '▲' : '▼'}</span>
           </button>
           {secoesAbertas.desempenho && (
-          <Card className="bg-white border-0 shadow-sm overflow-x-auto">
+          <Card className="bg-surface-1 border-0 shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2.5 px-4 font-medium text-gray-600">Funcionário</th>
-                  <th className="text-left py-2.5 px-4 font-medium text-gray-600" title="Atribuídas (concluídas / em andamento / pendentes)">
+                <tr className="border-b border-border-base">
+                  <th className="text-left py-2.5 px-4 font-medium text-content-muted">Funcionário</th>
+                  <th className="text-left py-2.5 px-4 font-medium text-content-muted" title="Atribuídas (concluídas / em andamento / pendentes)">
                     Progresso
                   </th>
-                  <th className="text-center py-2.5 px-3 font-medium text-gray-600">Não prev.</th>
-                  <th className="text-center py-2.5 px-3 font-medium text-gray-600 whitespace-nowrap">Tempo prod.</th>
-                  <th className="text-left py-2.5 px-4 font-medium text-gray-600 min-w-[120px]">
+                  <th className="text-center py-2.5 px-3 font-medium text-content-muted">Não prev.</th>
+                  <th className="text-center py-2.5 px-3 font-medium text-content-muted whitespace-nowrap">Tempo prod.</th>
+                  <th className="text-left py-2.5 px-4 font-medium text-content-muted min-w-[120px]">
                     <span className="inline-flex items-center gap-1" title="Taxa de conclusão = concluídas ÷ atribuídas. Mostra o percentual de atividades que o funcionário concluiu entre todas as que recebeu.">
                       Taxa
-                      <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <svg className="w-3.5 h-3.5 text-content-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </span>
                   </th>
                 </tr>
@@ -999,33 +999,33 @@ export function MonitoramentoAtividades() {
                 {metricasFuncionario.map((m, i) => {
                   const taxa = m.atribuidas > 0 ? Math.round((m.concluidas / m.atribuidas) * 100) : 0
                   return (
-                    <tr key={i} className="border-b border-gray-100 last:border-0">
+                    <tr key={i} className="border-b border-border-subtle last:border-0">
                       <td className="py-2.5 px-4">
                         <div className="flex items-center gap-2">
                           <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${getCorAvatar(m.nome)}`}>
                             {getIniciais(m.nome)}
                           </div>
-                          <span className="font-medium text-gray-800 text-sm">{m.nome}</span>
+                          <span className="font-medium text-content-strong text-sm">{m.nome}</span>
                         </div>
                       </td>
-                      <td className="py-2.5 px-4 text-gray-700">
+                      <td className="py-2.5 px-4 text-content">
                         <span className="font-medium">{m.atribuidas}</span>
-                        <span className="text-gray-400 text-xs ml-1.5">
-                          (<span className="text-green-600">{m.concluidas}✓</span>
+                        <span className="text-content-faint text-xs ml-1.5">
+                          (<span className="text-green-500">{m.concluidas}✓</span>
                           {' · '}
-                          <span className="text-blue-600">{m.emAndamento}▶</span>
+                          <span className="text-primary dark:text-primary-light">{m.emAndamento}▶</span>
                           {' · '}
-                          <span className="text-gray-500">{m.pendentes}○</span>)
+                          <span className="text-content-muted">{m.pendentes}○</span>)
                         </span>
                       </td>
                       <td className="text-center py-2.5 px-3 text-purple-600 font-medium">{m.naoPrevistas || '-'}</td>
-                      <td className="text-center py-2.5 px-3 text-gray-700 font-medium whitespace-nowrap text-xs">{m.tempoProdutivo > 0 ? formatarTempo(m.tempoProdutivo) : '-'}</td>
+                      <td className="text-center py-2.5 px-3 text-content font-medium whitespace-nowrap text-xs">{m.tempoProdutivo > 0 ? formatarTempo(m.tempoProdutivo) : '-'}</td>
                       <td className="py-2.5 px-4">
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden min-w-[50px]">
+                          <div className="flex-1 h-2 bg-surface-2 rounded-full overflow-hidden min-w-[50px]">
                             <div className={`h-full rounded-full ${getCorBarra(taxa)}`} style={{ width: `${taxa}%` }} />
                           </div>
-                          <span className="text-xs font-medium text-gray-700 min-w-[32px]">{taxa}%</span>
+                          <span className="text-xs font-medium text-content min-w-[32px]">{taxa}%</span>
                         </div>
                       </td>
                     </tr>
@@ -1043,31 +1043,31 @@ export function MonitoramentoAtividades() {
         <div>
           <button
             onClick={() => toggleSecao('imprevistos')}
-            className="text-sm font-medium uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-2 w-full text-left"
+            className="text-sm font-medium uppercase tracking-wide text-content-muted mb-3 flex items-center gap-2 w-full text-left"
           >
             <span className="text-amber-500 text-base">⚠️</span>
             Imprevistos recentes
-            <span className="text-xs font-normal normal-case tracking-normal text-gray-400">({imprevistosRecentes.length} nos últimos 7 dias)</span>
-            <span className="ml-auto text-gray-400 text-xs normal-case tracking-normal">{secoesAbertas.imprevistos ? '▲' : '▼'}</span>
+            <span className="text-xs font-normal normal-case tracking-normal text-content-faint">({imprevistosRecentes.length} nos últimos 7 dias)</span>
+            <span className="ml-auto text-content-faint text-xs normal-case tracking-normal">{secoesAbertas.imprevistos ? '▲' : '▼'}</span>
           </button>
           {secoesAbertas.imprevistos && (
-          <Card className="bg-white border-0 shadow-sm overflow-x-auto">
+          <Card className="bg-surface-1 border-0 shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Quando</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Tipo</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Atividade</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Funcionário</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Descrição</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">Impacto</th>
+                <tr className="border-b border-border-base">
+                  <th className="text-left py-3 px-4 font-medium text-content-muted">Quando</th>
+                  <th className="text-left py-3 px-4 font-medium text-content-muted">Tipo</th>
+                  <th className="text-left py-3 px-4 font-medium text-content-muted">Atividade</th>
+                  <th className="text-left py-3 px-4 font-medium text-content-muted">Funcionário</th>
+                  <th className="text-left py-3 px-4 font-medium text-content-muted">Descrição</th>
+                  <th className="text-center py-3 px-4 font-medium text-content-muted">Impacto</th>
                 </tr>
               </thead>
               <tbody>
                 {imprevistosRecentes.slice(0, 20).map((i) => (
                   <tr
                     key={i.id}
-                    className="border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50"
+                    className="border-b border-border-subtle last:border-0 cursor-pointer hover:bg-surface-2"
                     onClick={() => {
                       if (i.atividade_id) {
                         const atv = atividades.find((a) => a.id === i.atividade_id)
@@ -1075,17 +1075,17 @@ export function MonitoramentoAtividades() {
                       }
                     }}
                   >
-                    <td className="py-3 px-4 text-gray-500 whitespace-nowrap">{formatarDataHora(i.ocorrido_at)}</td>
+                    <td className="py-3 px-4 text-content-muted whitespace-nowrap">{formatarDataHora(i.ocorrido_at)}</td>
                     <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-medium">
                         <span className="text-xs">⚠️</span>
                         {i.tipo}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-gray-700 truncate max-w-[180px]">{i.atividade_titulo || '-'}</td>
-                    <td className="py-3 px-4 text-gray-600">{i.funcionario_nome || '-'}</td>
-                    <td className="py-3 px-4 text-gray-500 truncate max-w-[200px]">{i.descricao || '-'}</td>
-                    <td className="py-3 px-4 text-center text-gray-600 whitespace-nowrap">
+                    <td className="py-3 px-4 text-content truncate max-w-[180px]">{i.atividade_titulo || '-'}</td>
+                    <td className="py-3 px-4 text-content-muted">{i.funcionario_nome || '-'}</td>
+                    <td className="py-3 px-4 text-content-muted truncate max-w-[200px]">{i.descricao || '-'}</td>
+                    <td className="py-3 px-4 text-center text-content-muted whitespace-nowrap">
                       {i.impacto_minutos != null ? `${i.impacto_minutos}min` : '-'}
                     </td>
                   </tr>
@@ -1102,12 +1102,12 @@ export function MonitoramentoAtividades() {
         <div>
           <button
             onClick={() => toggleSecao('naoPrevistas')}
-            className="text-sm font-medium uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-2 w-full text-left"
+            className="text-sm font-medium uppercase tracking-wide text-content-muted mb-3 flex items-center gap-2 w-full text-left"
           >
             <span className="w-3 h-3 rounded-full bg-purple-500" />
             Atividades não previstas
-            <span className="text-xs font-normal normal-case tracking-normal text-gray-400">({naoPrevistasFiltradas.length})</span>
-            <span className="ml-auto text-gray-400 text-xs normal-case tracking-normal">{secoesAbertas.naoPrevistas ? '▲' : '▼'}</span>
+            <span className="text-xs font-normal normal-case tracking-normal text-content-faint">({naoPrevistasFiltradas.length})</span>
+            <span className="ml-auto text-content-faint text-xs normal-case tracking-normal">{secoesAbertas.naoPrevistas ? '▲' : '▼'}</span>
           </button>
           {secoesAbertas.naoPrevistas && (
           <>
@@ -1120,20 +1120,20 @@ export function MonitoramentoAtividades() {
                 <div
                   key={a.id}
                   onClick={() => setDetalheAtividade(a)}
-                  className="p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 bg-white border-purple-400"
+                  className="p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 bg-surface-1 border-purple-400"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <h4 className="font-medium text-gray-800 text-sm truncate">{a.titulo}</h4>
-                      <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-500">
+                      <h4 className="font-medium text-content-strong text-sm truncate">{a.titulo}</h4>
+                      <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-content-muted">
                         {func && <span>{func.funcionario_nome}</span>}
                         {isConcluidaNp && tempo > 0 && (
-                          <span className="text-green-700 font-medium">⏱ {formatarTempo(tempo)}</span>
+                          <span className="text-green-700 dark:text-green-300 font-medium">⏱ {formatarTempo(tempo)}</span>
                         )}
                         <span>{formatarPeriodo(a.data_inicio, a.data_fim)}</span>
                       </div>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${STATUS_CORES[a.status] || 'bg-gray-100'}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${STATUS_CORES[a.status] || 'bg-surface-2'}`}>
                       {STATUS_LABELS[a.status] || a.status}
                     </span>
                   </div>
@@ -1173,10 +1173,10 @@ export function MonitoramentoAtividades() {
               {totalFunc > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-500 font-medium">Progresso geral</span>
-                    <span className="text-xs font-medium text-gray-700">{concluidasModal}/{totalFunc} ({progressoModal}%)</span>
+                    <span className="text-xs text-content-muted font-medium">Progresso geral</span>
+                    <span className="text-xs font-medium text-content">{concluidasModal}/{totalFunc} ({progressoModal}%)</span>
                   </div>
-                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2.5 bg-surface-2 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${progressoModal === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
                       style={{ width: `${progressoModal}%` }}
@@ -1187,56 +1187,56 @@ export function MonitoramentoAtividades() {
 
               {detalheAtividade.descricao && (
                 <div>
-                  <p className="text-xs text-gray-500 font-medium mb-1">Descrição</p>
-                  <p className="text-sm text-gray-700">{detalheAtividade.descricao}</p>
+                  <p className="text-xs text-content-muted font-medium mb-1">Descrição</p>
+                  <p className="text-sm text-content">{detalheAtividade.descricao}</p>
                 </div>
               )}
 
               <div className="flex flex-wrap gap-3 text-sm">
                 <div>
-                  <span className="text-gray-500">Período: </span>
-                  <span className="font-medium text-gray-800">{formatarPeriodo(detalheAtividade.data_inicio, detalheAtividade.data_fim)}</span>
+                  <span className="text-content-muted">Período: </span>
+                  <span className="font-medium text-content-strong">{formatarPeriodo(detalheAtividade.data_inicio, detalheAtividade.data_fim)}</span>
                 </div>
                 {detalheAtividade.setor_nome && (
                   <div>
-                    <span className="text-gray-500">Setor: </span>
-                    <span className="font-medium text-gray-800">{detalheAtividade.setor_nome}</span>
+                    <span className="text-content-muted">Setor: </span>
+                    <span className="font-medium text-content-strong">{detalheAtividade.setor_nome}</span>
                   </div>
                 )}
                 {detalheAtividade.local && (
                   <div>
-                    <span className="text-gray-500">Local: </span>
-                    <span className="font-medium text-gray-800">{detalheAtividade.local}</span>
+                    <span className="text-content-muted">Local: </span>
+                    <span className="font-medium text-content-strong">{detalheAtividade.local}</span>
                   </div>
                 )}
                 {!detalheAtividade.nao_prevista && (
                 <div>
-                  <span className="text-gray-500">Prioridade: </span>
-                  <span className="font-medium text-gray-800">
+                  <span className="text-content-muted">Prioridade: </span>
+                  <span className="font-medium text-content-strong">
                     {prioridades.find((p) => p.nivel === detalheAtividade.prioridade)?.nome || `Nível ${detalheAtividade.prioridade}`}
                   </span>
                 </div>
                 )}
                 <div>
-                  <span className="text-gray-500">Status: </span>
+                  <span className="text-content-muted">Status: </span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CORES[detalheAtividade.status]}`}>
                     {STATUS_LABELS[detalheAtividade.status] || detalheAtividade.status}
                   </span>
                   {detalheAtividade.atrasada && (
-                    <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                    <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 dark:text-red-300">
                       Atrasada
                     </span>
                   )}
                   {detalheAtividade.nao_prevista && (
-                    <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                    <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-purple-700">
                       Não prevista
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-xs text-gray-500 font-medium mb-3">Status por Responsável</p>
+              <div className="border-t border-border-subtle pt-4">
+                <p className="text-xs text-content-muted font-medium mb-3">Status por Responsável</p>
                 <div className="space-y-3">
                   {detalheAtividade.funcionarios?.map((af) => {
                     const sessoesAf = sessoesDetalhe.filter((s) => s.atividade_funcionario_id === af.id)
@@ -1248,19 +1248,19 @@ export function MonitoramentoAtividades() {
                     const hasMetadata = (af.inicio_at || af.fim_at || tempoProdutivo > 0)
                     const hasContent = (af.detalhamento || af.justificativa || af.foto_url || sessoesAf.length > 0 || imprevistosAf.length > 0)
                     return (
-                      <div key={af.id} className="py-2.5 border-b border-gray-100 last:border-0">
+                      <div key={af.id} className="py-2.5 border-b border-border-subtle last:border-0">
                         {/* Zona 1: header (avatar + nome + status + ação) */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 ${getCorAvatar(af.funcionario_nome || '?')}`}>
                               {getIniciais(af.funcionario_nome || '?')}
                             </div>
-                            <span className="text-sm font-medium text-gray-800 truncate">{af.funcionario_nome}</span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${STATUS_BADGE_CORES[af.status_individual] || 'bg-gray-100 text-gray-600'}`}>
+                            <span className="text-sm font-medium text-content-strong truncate">{af.funcionario_nome}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${STATUS_BADGE_CORES[af.status_individual] || 'bg-surface-2 text-content-muted'}`}>
                               {STATUS_BADGE_LABELS[af.status_individual] || af.status_individual}
                             </span>
                             {temSessaoAberta && (
-                              <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-medium flex-shrink-0">
+                              <span className="inline-flex items-center gap-1 text-xs text-primary dark:text-primary-light font-medium flex-shrink-0">
                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                                 gravando
                               </span>
@@ -1270,7 +1270,7 @@ export function MonitoramentoAtividades() {
                             <button
                               onClick={() => handleReabrirAtividade(af.id)}
                               disabled={reabrindoId === af.id}
-                              className="text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 flex-shrink-0"
+                              className="text-xs font-medium text-primary dark:text-primary-light hover:text-primary dark:hover:text-primary-light disabled:opacity-50 flex-shrink-0"
                             >
                               {reabrindoId === af.id ? 'Reabrindo...' : '↻ Reabrir'}
                             </button>
@@ -1279,9 +1279,9 @@ export function MonitoramentoAtividades() {
 
                         {/* Zona 2: metadata (tempo, datas) */}
                         {hasMetadata && (
-                          <div className="ml-9 mt-1 text-xs text-gray-400 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          <div className="ml-9 mt-1 text-xs text-content-faint flex flex-wrap items-center gap-x-2 gap-y-0.5">
                             {tempoProdutivo > 0 && (
-                              <span className="text-gray-600 font-medium">⏱ {formatarTempo(tempoProdutivo)}</span>
+                              <span className="text-content-muted font-medium">⏱ {formatarTempo(tempoProdutivo)}</span>
                             )}
                             {af.inicio_at && <span>Iniciou: {formatarDataHora(af.inicio_at)}</span>}
                             {af.inicio_at && af.fim_at && <span>·</span>}
@@ -1293,12 +1293,12 @@ export function MonitoramentoAtividades() {
                         {hasContent && (
                           <div className="ml-9 mt-1.5 space-y-1.5">
                             {af.detalhamento && (
-                              <div className="text-xs text-gray-600 italic bg-gray-50 rounded px-2 py-1">
+                              <div className="text-xs text-content-muted italic bg-surface-2 rounded px-2 py-1">
                                 "{af.detalhamento}"
                               </div>
                             )}
                             {af.justificativa && (
-                              <div className="text-xs text-orange-700 bg-orange-50 rounded px-2 py-1">
+                              <div className="text-xs text-amber-700 dark:text-amber-300 bg-amber-500/10 rounded px-2 py-1">
                                 <span className="font-semibold">Justificativa: </span>
                                 {af.justificativa}
                                 {af.justificada_at && (
@@ -1311,11 +1311,11 @@ export function MonitoramentoAtividades() {
                                 <img
                                   src={af.foto_url}
                                   alt="Foto da conclusão"
-                                  className="w-full max-w-[240px] rounded-lg border border-gray-200"
+                                  className="w-full max-w-[240px] rounded-lg border border-border-base"
                                   loading="lazy"
                                 />
                                 {af.latitude !== null && af.longitude !== null && (
-                                  <p className="text-[10px] text-gray-500 inline-flex items-center gap-1">
+                                  <p className="text-[10px] text-content-muted inline-flex items-center gap-1">
                                     📍 {af.latitude?.toFixed(5)}, {af.longitude?.toFixed(5)}
                                     {af.gps_accuracy ? ` (±${Math.round(af.gps_accuracy)}m)` : ''}
                                   </p>
@@ -1324,27 +1324,27 @@ export function MonitoramentoAtividades() {
                             )}
                             {sessoesAf.length > 0 && (
                               <div className="space-y-0.5">
-                                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Sessões ({sessoesAf.length})</p>
+                                <p className="text-[10px] text-content-faint font-medium uppercase tracking-wide">Sessões ({sessoesAf.length})</p>
                                 {sessoesAf.map((s) => (
-                                  <div key={s.id} className="flex items-center gap-2 text-xs text-gray-500">
+                                  <div key={s.id} className="flex items-center gap-2 text-xs text-content-muted">
                                     <span className={`w-1.5 h-1.5 rounded-full ${s.trabalhada ? 'bg-green-400' : 'bg-amber-400'}`} />
                                     <span>{formatarHoraCurta(s.inicio_at)} → {s.fim_at ? formatarHoraCurta(s.fim_at) : '...'}</span>
                                     <span className="font-medium">{s.duracao_segundos != null ? formatarTempo(s.duracao_segundos) : 'em andamento'}</span>
-                                    {s.motivo_pausa && <span className="text-gray-400">({s.motivo_pausa})</span>}
+                                    {s.motivo_pausa && <span className="text-content-faint">({s.motivo_pausa})</span>}
                                   </div>
                                 ))}
                               </div>
                             )}
                             {imprevistosAf.length > 0 && (
                               <div className="space-y-0.5">
-                                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Imprevistos ({imprevistosAf.length})</p>
+                                <p className="text-[10px] text-content-faint font-medium uppercase tracking-wide">Imprevistos ({imprevistosAf.length})</p>
                                 {imprevistosAf.map((i) => (
-                                  <div key={i.id} className="flex items-center gap-2 text-xs text-gray-500">
+                                  <div key={i.id} className="flex items-center gap-2 text-xs text-content-muted">
                                     <span className="text-xs text-amber-500">⚠️</span>
                                     <span className="font-medium">{i.tipo}</span>
-                                    <span className="text-gray-400">· {formatarHoraCurta(i.ocorrido_at)}</span>
-                                    {i.impacto_minutos != null && <span className="text-gray-400">({i.impacto_minutos}min)</span>}
-                                    {i.descricao && <span className="text-gray-400 truncate">— {i.descricao}</span>}
+                                    <span className="text-content-faint">· {formatarHoraCurta(i.ocorrido_at)}</span>
+                                    {i.impacto_minutos != null && <span className="text-content-faint">({i.impacto_minutos}min)</span>}
+                                    {i.descricao && <span className="text-content-faint truncate">— {i.descricao}</span>}
                                   </div>
                                 ))}
                               </div>
