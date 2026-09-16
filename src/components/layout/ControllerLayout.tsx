@@ -567,7 +567,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
           ref={sidebarRef}
           role="navigation"
           aria-label="Navegação principal"
-          className={`${isSidebarCollapsed ? 'w-20 overflow-visible' : 'w-64 overflow-y-auto'} hidden md:block bg-surface-1 border-r-2 border-border-base fixed top-0 h-screen z-10 transition-all duration-300 flex flex-col`}
+          className={`${isSidebarCollapsed ? 'w-20 overflow-visible' : 'w-64 overflow-y-auto'} hidden md:block bg-green-50 dark:bg-surface-1 border-r-2 border-green-200 dark:border-border-base fixed top-0 h-screen z-10 transition-all duration-300 flex flex-col`}
         >
           <div className="p-4 pt-24">
             <div className="flex items-center justify-between mb-4">
@@ -631,7 +631,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
               role="dialog"
               aria-modal="true"
               aria-label="Menu de navegação"
-              className="bg-surface-1 w-64 h-full p-4 overflow-y-auto animate-slide-in"
+              className="bg-green-50 dark:bg-surface-1 w-64 h-full p-4 overflow-y-auto animate-slide-in"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
