@@ -14,6 +14,7 @@ interface RegistroAlmoxarifado {
   dispositivo_id?: string
   nome_usuario?: string
   data: string
+  tipo?: 'retirada' | 'devolucao'
   quem_entregou?: string
   quem_pegou?: string
   setor?: string
@@ -33,6 +34,7 @@ export function Almoxarifado() {
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'retirada' | 'devolucao'>('todos')
 
   useEffect(() => {
     loadRegistros()
@@ -78,8 +80,9 @@ export function Almoxarifado() {
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
+    const matchesTipo = tipoFiltro === 'todos' || (registro.tipo || 'retirada') === tipoFiltro
 
-    return matchesSearch && matchesDataInicio && matchesDataFim
+    return matchesSearch && matchesDataInicio && matchesDataFim && matchesTipo
   }).sort((a, b) => {
     const dateA = new Date(a.data)
     const dateB = new Date(b.data)
@@ -143,12 +146,19 @@ export function Almoxarifado() {
               className="text-sm"
             />
           </div>
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight">Tipo</label>
+            <select value={tipoFiltro} onChange={(e) => setTipoFiltro(e.target.value as typeof tipoFiltro)} className="w-full rounded-lg border border-border-base bg-surface-1 px-3 py-2 text-sm text-content">
+              <option value="todos">Todos</option><option value="retirada">Retiradas</option><option value="devolucao">Devoluções</option>
+            </select>
+          </div>
           <div className="sm:col-span-2">
             <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
               setDataFim('')
+              setTipoFiltro('todos')
             }} className="w-full sm:w-auto text-sm">
               Limpar Filtros
             </Button>
@@ -175,6 +185,9 @@ export function Almoxarifado() {
                     <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
                     <span className="text-xs sm:text-sm font-semibold text-content-strong">
                       {formatDateTime(registro.data)}
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${registro.tipo === 'devolucao' ? 'bg-blue-500/10 text-blue-700' : 'bg-primary/10 text-primary'}`}>
+                      {registro.tipo === 'devolucao' ? 'Devolução' : 'Retirada'}
                     </span>
                   </div>
                   <span
@@ -234,6 +247,7 @@ export function Almoxarifado() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Tipo</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Quem Entregou</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Quem Pegou</th>
@@ -252,6 +266,7 @@ export function Almoxarifado() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {formatDateTime(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong"><span className={`rounded-full px-2 py-1 text-xs ${registro.tipo === 'devolucao' ? 'bg-blue-500/10 text-blue-700' : 'bg-primary/10 text-primary'}`}>{registro.tipo === 'devolucao' ? 'Devolução' : 'Retirada'}</span></td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.quem_entregou || '-'}

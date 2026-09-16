@@ -10,6 +10,9 @@ interface ItemAlmoxarifado {
   fazenda_id: string
   nome: string
   classificacao: string
+  unidade: string
+  estoque_minimo: number
+  controla_estoque: boolean
   ativo: boolean
 }
 
@@ -23,6 +26,9 @@ export function ItensAlmoxarifado() {
   const [formData, setFormData] = useState({
     nome: '',
     classificacao: '',
+    unidade: 'un',
+    estoque_minimo: '0',
+    controla_estoque: true,
   })
   const [submitting, setSubmitting] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
@@ -81,6 +87,9 @@ export function ItensAlmoxarifado() {
       fazenda_id: fazendaId,
       nome: formData.nome,
       classificacao: formData.classificacao,
+      unidade: formData.unidade,
+      estoque_minimo: Number(formData.estoque_minimo) || 0,
+      controla_estoque: formData.controla_estoque,
     }
 
     let error
@@ -101,10 +110,7 @@ export function ItensAlmoxarifado() {
     if (error) {
       console.error('Erro ao salvar item:', error)
     } else {
-      setFormData({
-        nome: '',
-        classificacao: '',
-      })
+      setFormData({ nome: '', classificacao: '', unidade: 'un', estoque_minimo: '0', controla_estoque: true })
       setShowForm(false)
       setEditingItem(null)
       loadItens()
@@ -118,16 +124,16 @@ export function ItensAlmoxarifado() {
     setFormData({
       nome: item.nome,
       classificacao: item.classificacao,
+      unidade: item.unidade || 'un',
+      estoque_minimo: String(item.estoque_minimo || 0),
+      controla_estoque: item.controla_estoque ?? true,
     })
     setShowForm(true)
   }
 
   const handleCancel = () => {
     setEditingItem(null)
-    setFormData({
-      nome: '',
-      classificacao: '',
-    })
+    setFormData({ nome: '', classificacao: '', unidade: 'un', estoque_minimo: '0', controla_estoque: true })
     setShowForm(false)
   }
 
@@ -263,6 +269,30 @@ export function ItensAlmoxarifado() {
                 ]}
               />
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                label="Unidade de medida"
+                value={formData.unidade}
+                onChange={(value) => setFormData({ ...formData, unidade: value })}
+                options={[
+                  { value: 'un', label: 'Unidade' }, { value: 'kg', label: 'kg' }, { value: 'g', label: 'g' },
+                  { value: 'L', label: 'Litro' }, { value: 'mL', label: 'mL' }, { value: 'm', label: 'Metro' },
+                  { value: 'cx', label: 'Caixa' }, { value: 'pct', label: 'Pacote' }, { value: 'par', label: 'Par' }, { value: 'kit', label: 'Kit' },
+                ]}
+              />
+              <Input
+                type="number"
+                min="0"
+                step="0.001"
+                label="Estoque mínimo"
+                value={formData.estoque_minimo}
+                onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-content cursor-pointer">
+              <input type="checkbox" checked={formData.controla_estoque} onChange={(e) => setFormData({ ...formData, controla_estoque: e.target.checked })} />
+              Controlar este item no estoque
+            </label>
 
             <div className="flex gap-2 items-center">
               <Button type="submit" disabled={submitting} className="flex-1 sm:flex-none text-sm">

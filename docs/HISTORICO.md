@@ -816,3 +816,15 @@ Alterado `MAX_DATA_POINTS_PER_PAGE` em `api/pdf/consumo.js` de `20` para `12`.
 **Solução:** reduzir o limite para 12 pontos de dados por página. A partir de 13 barras, o lote é dividido em páginas de continuação, mantendo a legibilidade dos rótulos de CMS, %PV e leitura de cocho. A lógica de `chunkDados` e paginação já existente continua valendo; apenas o tamanho do chunk mudou.
 
 Disparador: quando mencionar "gráfico denso", "limite de barras", "continuação do gráfico de consumo", `MAX_DATA_POINTS_PER_PAGE` no PDF de consumo, ou problemas de legibilidade das barras do relatório de consumo, ler esta seção.
+
+### Estoque de almoxarifado e devoluções no PWA (2026-09-16)
+
+Implementado o estoque de itens do almoxarifado nos dois repositórios, com entradas e ajustes no Painel Web, baixa automática das retiradas do PWA, saldo e custo médio ponderado por item.
+
+A fase 2 adicionou o tipo `devolucao` ao registro do PWA. O app busca pendências via `get_itens_pendentes_devolucao`, mantém o resultado em cache e permite fallback pelo catálogo quando não há pendência disponível. Itens escolhidos pela lista carregam `retiradaId` e `retiradaItemIndex` para rastreabilidade.
+
+A integridade é decidida no banco: a trigger calcula o saldo devolvível por retirada, incorpora apenas a quantidade aprovada ao estoque e marca o excedente em `requer_revisao`. O Painel exibe a fila de devoluções retidas e permite ao controller incorporá-las após conferência física.
+
+Preços foram isolados do PWA. O catálogo do app usa a view `itens_almoxarifado_pwa`, sem `custo_unitario` ou `custo_total_estoque`; políticas da tabela principal restringem acesso direto a usuários `admin` e `controller`.
+
+Migrations: `20260916150000_create_estoque_almoxarifado.sql`, `20260916160000_devolucao_almoxarifado.sql` e `20260916170000_impl_devolucao_almoxarifado.sql`, aplicadas via `supabase db push`. Branch compartilhada: `feat/estoque-almoxarifado`.
