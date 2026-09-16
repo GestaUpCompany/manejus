@@ -106,6 +106,7 @@ interface DadosRelatorioMorte {
   linhas: LinhaMorte[]
   resumo: ResumoMorte
   periodo_anterior?: PeriodoAnterior
+  pastos_geo?: { nome: string; geometry: { type: string; coordinates: unknown } }[]
 }
 
 interface RelatorioInfo {
@@ -506,6 +507,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
         fazendaLogoUrl: relatorioInfo.fazenda_logo_url,
         linhas: linhasFiltradas,
         resumo: resumoParaPDF,
+        pastosGeo: dados.pastos_geo ?? [],
       }
       const blob = await gerarRelatorioMortePDFPuppeteer(parametrosPDF)
 

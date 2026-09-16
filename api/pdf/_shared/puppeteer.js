@@ -13,7 +13,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
 
-async function findLocalChrome(puppeteer) {
+export async function findLocalChrome(puppeteer) {
   // 1) Override explícito por variável de ambiente
   if (process.env.PUPPETEER_EXECUTABLE_PATH && existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
     return process.env.PUPPETEER_EXECUTABLE_PATH
@@ -90,11 +90,13 @@ async function findLocalChrome(puppeteer) {
  * @param {'A4'|'A3'|'Letter'} [opts.format]  Formato do papel. Default: A4.
  * @param {boolean} [opts.landscape]          Orientação paisagem. Default: true.
  * @param {number}  [opts.timeoutMs]          Timeout para carregar a página. Default: 30000.
+ * @param {string[]} [opts.launchArgs]        Flags extras de launch do Chromium
+ *        (ex: '--enable-unsafe-swiftshader' para WebGL de mapas).
  * @param {(page: import('puppeteer-core').Page) => Promise<void>} [opts.beforePdf]
  *        Hook opcional para aguardar sinais dinâmicos (ex: window.__chartsReady).
  * @returns {Promise<Buffer>} Buffer com o PDF renderizado.
  */
-export async function generatePdf({ html, format = 'A4', landscape = true, timeoutMs = 30000, beforePdf }) {
+export async function generatePdf({ html, format = 'A4', landscape = true, timeoutMs = 30000, launchArgs = [], beforePdf }) {
   const [{ default: chromium }, { default: puppeteer }] = await Promise.all([
     import('@sparticuz/chromium'),
     import('puppeteer-core'),
@@ -108,7 +110,7 @@ export async function generatePdf({ html, format = 'A4', landscape = true, timeo
   }
 
   const browser = await puppeteer.launch({
-    args: isVercel ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: (isVercel ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox']).concat(launchArgs),
     defaultViewport: { width: 1280, height: 900 },
     executablePath,
     headless: true,

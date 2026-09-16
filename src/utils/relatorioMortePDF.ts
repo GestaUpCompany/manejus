@@ -31,6 +31,8 @@ export interface LinhaMorte {
   diagnosticos: Record<string, DiagnosticoItem> | null
   observacao_identificacao: string | null
   nome_usuario: string | null
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export interface AgregadoItem {
@@ -70,6 +72,11 @@ export interface ResumoMorte {
   variacao_mortes?: number | null
 }
 
+export interface PastoGeo {
+  nome: string
+  geometry: { type: string; coordinates: unknown }
+}
+
 export interface ParametrosRelatorioMorte {
   dataInicio: string
   dataFim: string
@@ -77,6 +84,7 @@ export interface ParametrosRelatorioMorte {
   fazendaLogoUrl?: string | null
   linhas: LinhaMorte[]
   resumo: ResumoMorte
+  pastosGeo?: PastoGeo[]
 }
 
 // === Helpers ===

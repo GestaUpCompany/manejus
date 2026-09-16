@@ -13,7 +13,7 @@ async function carregarLogo(path: string): Promise<string> {
 // Isso derruba o payload de ~2-4MB (dominado pelas imagens) para ~centenas de
 // KB e evita esbarrar em MAX_BODY_BYTES antes do volume real de dados importar.
 export async function gerarRelatorioMortePDFPuppeteer(params: ParametrosRelatorioMorte): Promise<Blob> {
-  const { dataInicio, dataFim, fazendaNome, fazendaLogoUrl, linhas, resumo } = params
+  const { dataInicio, dataFim, fazendaNome, fazendaLogoUrl, linhas, resumo, pastosGeo } = params
   const [logoGestao, logoFazenda] = await Promise.all([
     carregarLogo('/images/manejus360.png'),
     fazendaLogoUrl ? carregarLogo(fazendaLogoUrl) : Promise.resolve(''),
@@ -22,7 +22,7 @@ export async function gerarRelatorioMortePDFPuppeteer(params: ParametrosRelatori
   const response = await fetch('/api/pdf/morte', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dataInicio, dataFim, fazendaNome, logoGestao, logoFazenda, resumo, linhas }),
+    body: JSON.stringify({ dataInicio, dataFim, fazendaNome, logoGestao, logoFazenda, resumo, linhas, pastosGeo }),
   })
   if (!response.ok) {
     throw new Error(`Falha ao gerar PDF com Puppeteer (${response.status})`)

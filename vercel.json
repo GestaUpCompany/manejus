@@ -7,7 +7,7 @@
   ],
   "functions": {
     "api/pdf/*.js": {
-      "includeFiles": "node_modules/chart.js/dist/chart.umd.min.js",
+      "includeFiles": "node_modules/{chart.js/dist/chart.umd.min.js,maplibre-gl/dist/maplibre-gl.js,maplibre-gl/dist/maplibre-gl.css}",
       "maxDuration": 60
     }
   }

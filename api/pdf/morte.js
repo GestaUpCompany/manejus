@@ -8,6 +8,7 @@
 import { escapeHtml, dateFmt, numFmt, intFmt, moneyFmt, titleCase } from './_shared/formatters.js'
 import { diagLabel } from './_shared/labels.js'
 import { getChartJsScript } from './_shared/chartjs.js'
+import { getMaplibreAssets } from './_shared/maplibre.js'
 import { generatePdf } from './_shared/puppeteer.js'
 import {
   renderHeader,
@@ -110,6 +111,17 @@ const MORTE_CSS = `
 .detail-table th, .detail-table td{border-right:1px solid #d8e0db}
 .detail-table th:last-child, .detail-table td:last-child{border-right:none}
 .detail-table tbody tr:nth-child(even){background:#f7faf8}
+.map-row{display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:4mm}
+.map-row.duo{grid-template-columns:1fr 1fr}
+.map-card{height:118mm;border:1px solid #dce5df;border-radius:6px;padding:8px;background:#fff;overflow:hidden;display:flex;flex-direction:column}
+.map-card .chart-heading{height:auto;min-height:8mm;padding-bottom:2.5mm}
+.map-body{flex:1;min-height:0;position:relative;border-radius:4px;overflow:hidden;background:#3a4a3a}
+#mapa-morte,#mapa-morte-zoom{position:absolute;inset:0}
+.map-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#93a099;font-size:13px;background:#fafcfb}
+.map-ranking{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.map-ranking .rank-label{font-size:12px;color:#8a9890;margin-right:4px}
+.map-ranking .rank-pill{border:1px solid #dce5df;border-radius:999px;padding:3px 10px;font-size:12px;color:#30463a;background:#f6f9f7}
+.map-ranking .rank-pill b{color:#991b1b}
 `
 
 // Script rodado dentro do browser headless para desenhar os 5 gráficos da
@@ -216,7 +228,154 @@ const CHARTS_INIT_JS = `
 })();
 `
 
-export async function renderMorteHtml(input) {
+// Script do mapa de mortalidade: instancia MapLibre (UMD injetado antes deste
+// bloco) com os mesmos tiles ESRI World Imagery e o mesmo estilo de camadas do
+// MapaFazenda.tsx (pastos verdes translúcidos com contorno e label, mortes como
+// círculos vermelhos). Enquadra todos os pontos no mapa geral e, quando há
+// concentração, um segundo mapa dá zoom nos focos. Sinaliza window.__mapReady
+// para o Puppeteer imprimir. Se WebGL não estiver disponível no Chromium
+// headless, cai num SVG equiretangular com polígonos + círculos.
+const MAP_INIT_JS = `
+(function(){
+  var done = false
+  function finish(){ if (!done) { done = true; window.__mapReady = true } }
+  // Trava de segurança: o PDF nunca fica refém de tiles ou do mapa.
+  setTimeout(finish, 20000)
+
+  var data = window.__reportData || {}
+  var mapa = data.mapa || {}
+  var pontos = mapa.pontos || []
+  var foco = mapa.foco || []
+  var pastosFC = mapa.pastos || { type: 'FeatureCollection', features: [] }
+
+  var elGeral = document.getElementById('mapa-morte')
+  var elZoom = document.getElementById('mapa-morte-zoom')
+  if (!elGeral) { finish(); return }
+
+  function toFC(pts){
+    return { type: 'FeatureCollection', features: pts.map(function(p){ return { type: 'Feature', geometry: { type: 'Point', coordinates: p }, properties: {} } }) }
+  }
+
+  // maplibre-gl v5 removeu supported() da API pública; o construtor do Map
+  // lança exceção quando WebGL não está disponível, o que o catch cobre.
+  if (!pontos.length || !window.maplibregl) {
+    renderFallback(elGeral, pontos)
+    if (elZoom) renderFallback(elZoom, foco.length ? foco : pontos)
+    finish()
+    return
+  }
+
+  var alvo = elZoom ? 2 : 1
+  var ready = 0
+  function oneReady(){ ready += 1; if (ready >= alvo) finish() }
+
+  var style = {
+    version: 8,
+    sources: {
+      esri: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19 },
+      esriLabels: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19 }
+    },
+    layers: [
+      { id: 'bg', type: 'background', paint: { 'background-color': '#3a4a3a' } },
+      { id: 'esri', type: 'raster', source: 'esri' },
+      { id: 'esri-labels', type: 'raster', source: 'esriLabels' }
+    ]
+  }
+
+  function fitTo(map, pts){
+    if (pts.length === 1) { map.jumpTo({ center: pts[0], zoom: 14 }); return }
+    var b = new maplibregl.LngLatBounds(pts[0], pts[0])
+    pts.forEach(function(p){ b.extend(p) })
+    map.fitBounds(b, { padding: 60, maxZoom: 15, duration: 0 })
+  }
+
+  function buildMap(el, fitPts){
+    var map = new maplibregl.Map({
+      container: el, style: style, center: [-55, -13], zoom: 4,
+      attributionControl: false, interactive: false, fadeDuration: 0
+    })
+    var signaled = false
+    function mapDone(){ if (!signaled) { signaled = true; oneReady() } }
+    map.on('load', function(){
+      if (pastosFC.features.length) {
+        map.addSource('pastos', { type: 'geojson', data: pastosFC })
+        map.addLayer({ id: 'pastos-fill', type: 'fill', source: 'pastos', paint: { 'fill-color': '#22c55e', 'fill-opacity': 0.25 } })
+        map.addLayer({ id: 'pastos-line', type: 'line', source: 'pastos', paint: { 'line-color': '#16a34a', 'line-width': 2 } })
+        map.addLayer({ id: 'pastos-label', type: 'symbol', source: 'pastos', layout: { 'text-field': ['get', 'nome'], 'text-size': 11, 'text-allow-overlap': true }, paint: { 'text-color': '#15803d', 'text-halo-color': '#ffffff', 'text-halo-width': 2 } })
+      }
+      map.addSource('mortes', { type: 'geojson', data: toFC(fitPts) })
+      map.addLayer({
+        id: 'mortes-pontos', type: 'circle', source: 'mortes',
+        paint: { 'circle-radius': 7, 'circle-color': '#991b1b', 'circle-opacity': 0.9, 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' }
+      })
+      fitTo(map, fitPts)
+      // Primeiro idle após o fit: tiles da viewport final já terminaram.
+      map.once('idle', mapDone)
+      setTimeout(mapDone, 12000)
+    })
+    map.on('error', function(){ /* falhas de tile não bloqueiam; idle/timeout resolvem */ })
+    return map
+  }
+
+  try {
+    buildMap(elGeral, pontos)
+    if (elZoom) buildMap(elZoom, foco.length ? foco : pontos)
+  } catch (e) {
+    renderFallback(elGeral, pontos)
+    if (elZoom) renderFallback(elZoom, foco.length ? foco : pontos)
+    finish()
+  }
+
+  function renderFallback(el, pts){
+    if (!pts.length) {
+      el.innerHTML = '<div class="map-empty">Nenhuma morte com geolocalização no período</div>'
+      return
+    }
+    // Coleta vértices dos pastos junto com os pontos para o enquadramento.
+    var all = pts.slice()
+    pastosFC.features.forEach(function(f){
+      var rings = f.geometry && f.geometry.type === 'MultiPolygon'
+        ? f.geometry.coordinates.map(function(poly){ return poly[0] })
+        : f.geometry && f.geometry.coordinates ? [f.geometry.coordinates[0]] : []
+      rings.forEach(function(ring){ ring.forEach(function(c){ all.push(c) }) })
+    })
+    var lats = all.map(function(p){ return p[1] })
+    var lngs = all.map(function(p){ return p[0] })
+    var minLat = Math.min.apply(null, lats), maxLat = Math.max.apply(null, lats)
+    var minLng = Math.min.apply(null, lngs), maxLng = Math.max.apply(null, lngs)
+    var W = 1000, H = 560, pad = 50
+    var scale = Math.min((W - 2 * pad) / Math.max(maxLng - minLng, 0.0001), (H - 2 * pad) / Math.max(maxLat - minLat, 0.0001))
+    var cx = (minLng + maxLng) / 2, cy = (minLat + maxLat) / 2
+    function xy(p){ return [W / 2 + (p[0] - cx) * scale, H / 2 - (p[1] - cy) * scale] }
+    var polys = pastosFC.features.map(function(f){
+      var rings = f.geometry && f.geometry.type === 'MultiPolygon'
+        ? f.geometry.coordinates.map(function(poly){ return poly[0] })
+        : f.geometry && f.geometry.coordinates ? [f.geometry.coordinates[0]] : []
+      return rings.map(function(ring){
+        var d = ring.map(function(c, i){ var q = xy(c); return (i ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1) }).join('') + 'Z'
+        return '<path d="' + d + '" fill="#22c55e" fill-opacity="0.25" stroke="#16a34a" stroke-width="2"/>'
+      }).join('')
+    }).join('')
+    var labels = pastosFC.features.map(function(f){
+      var ring = f.geometry && f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates[0][0] : (f.geometry && f.geometry.coordinates ? f.geometry.coordinates[0] : null)
+      if (!ring || !ring.length || !f.properties || !f.properties.nome) return ''
+      var sx = 0, sy = 0
+      ring.forEach(function(c){ var q = xy(c); sx += q[0]; sy += q[1] })
+      return '<text x="' + (sx / ring.length).toFixed(1) + '" y="' + (sy / ring.length).toFixed(1) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#15803d" stroke="#ffffff" stroke-width="0.6" paint-order="stroke">' + String(f.properties.nome).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</text>'
+    }).join('')
+    var circles = pts.map(function(p){
+      var q = xy(p)
+      return '<circle cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="7" fill="#991b1b" fill-opacity="0.9" stroke="#ffffff" stroke-width="2"/>'
+    }).join('')
+    el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:100%;background:#eef3ee">' + polys + labels + circles + '</svg>'
+  }
+})();
+`
+
+// `incluirMapa` fica desligado por padrão: o relatório geral compõe esta função
+// via reportRegistry e não deve ganhar a página de mapa. Só o endpoint
+// /api/pdf/morte (relatório individual) passa { incluirMapa: true }.
+export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
   const resumo = input.resumo
   const rows = [...input.linhas].sort((a, b) =>
     a.data !== b.data ? b.data.localeCompare(a.data) : (a.lote_nome ?? '').localeCompare(b.lote_nome ?? ''),
@@ -247,12 +406,60 @@ export async function renderMorteHtml(input) {
       ? `${titleCase(categoriaPrincipal.label)} concentra ${totalCategorias ? ((categoriaPrincipal.valor / totalCategorias) * 100).toFixed(1).replace('.', ',') : '0,0'}% das mortes; ${sexoPrincipal.label.toLowerCase()} representa ${resumo.total_mortes ? ((sexoPrincipal.valor / resumo.total_mortes) * 100).toFixed(1).replace('.', ',') : '0,0'}% dos registros.`
       : ''
 
+  // Coordenadas válidas para o mapa (vêm das linhas da RPC desde que a
+  // migration 20260916120000 passou a expor latitude/longitude).
+  const linhasGeo = input.linhas.filter((l) => Number.isFinite(l?.latitude) && Number.isFinite(l?.longitude))
+  const pontos = linhasGeo.map((l) => [l.longitude, l.latitude])
+  const temPaginaMapa = incluirMapa && rows.length > 0
+
+  // Geometrias dos pastos (vêm do payload via RPC pastos_geo). Montadas como
+  // FeatureCollection para o MapLibre e para o fallback SVG.
+  const pastosFC = {
+    type: 'FeatureCollection',
+    features: (Array.isArray(input.pastosGeo) ? input.pastosGeo : [])
+      .filter((p) => p && p.geometry && p.geometry.coordinates)
+      .map((p) => ({ type: 'Feature', properties: { nome: p.nome || '' }, geometry: p.geometry })),
+  }
+
+  // Clustering greedy por raio (~440m): agrupa pontos próximos ao centroide
+  // de um cluster existente. Focos = clusters com >= 3 mortes; o mapa de
+  // detalhe enquadra a união dos focos quando eles não cobrem tudo. Raio
+  // maior (ex: 0.008) funde pastos vizinhos num cluster só e o detalhe
+  // nunca aparece em fazendas compactas.
+  const RAIO_CLUSTER = 0.004
+  const clusters = []
+  for (const p of pontos) {
+    let best = null
+    let bestDist = RAIO_CLUSTER
+    for (const c of clusters) {
+      const d = Math.hypot(p[0] - c.lng, p[1] - c.lat)
+      if (d < bestDist) { bestDist = d; best = c }
+    }
+    if (best) {
+      best.pontos.push(p)
+      best.lng = best.pontos.reduce((s, q) => s + q[0], 0) / best.pontos.length
+      best.lat = best.pontos.reduce((s, q) => s + q[1], 0) / best.pontos.length
+    } else {
+      clusters.push({ lng: p[0], lat: p[1], pontos: [p] })
+    }
+  }
+  const focoPontos = clusters.filter((c) => c.pontos.length >= 3).flatMap((c) => c.pontos)
+  const temDetalhe = focoPontos.length >= 3 && focoPontos.length < pontos.length
+
+  // Ranking de pastos entre as mortes georreferenciadas (campo textual já
+  // preenchido no registro).
+  const pastoCount = new Map()
+  for (const l of linhasGeo) {
+    if (l.pasto) pastoCount.set(l.pasto, (pastoCount.get(l.pasto) || 0) + 1)
+  }
+  const rankingPastos = [...pastoCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
+
   // Paginação da tabela de detalhamento: chunks de DETAIL_ROWS_PER_PAGE
   const detailChunks = rows.length === 0 ? [[]] : []
   for (let i = 0; i < rows.length; i += DETAIL_ROWS_PER_PAGE) {
     detailChunks.push(rows.slice(i, i + DETAIL_ROWS_PER_PAGE))
   }
-  const totalPages = 4 + detailChunks.length
+  const totalPages = 4 + (temPaginaMapa ? 1 : 0) + detailChunks.length
 
   const brand = { logoGestao: input.logoGestao, logoFazenda: input.logoFazenda, fazendaNome: input.fazendaNome }
   const period = { dataInicio: input.dataInicio, dataFim: input.dataFim }
@@ -310,6 +517,32 @@ export async function renderMorteHtml(input) {
     ${renderFooter({ ...period, page: 4, totalPages })}
   `)
 
+  const rankingHtml = rankingPastos.length
+    ? `<div class="map-ranking"><span class="rank-label">Concentração por pasto (mortes georreferenciadas):</span>${rankingPastos
+        .map(([nome, n]) => `<span class="rank-pill"><b>${escapeHtml(nome)}</b> · ${n} ${n === 1 ? 'morte' : 'mortes'} (${pontos.length ? Math.round((n / pontos.length) * 100) : 0}%)</span>`)
+        .join('')}</div>`
+    : ''
+
+  const mapaPage = temPaginaMapa
+    ? pageSection(`
+    ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Distribuição geográfica', sectionLabel: 'Mapa' })}
+    <p class="section-kicker">Localização das ocorrências</p>
+    <div class="map-row${temDetalhe ? ' duo' : ''}">
+      <div class="map-card">
+        <div class="chart-heading"><strong>Mapa de mortalidade</strong><span>Cada círculo vermelho representa um registro de morte${pontos.length ? '' : ' · sem coordenadas GPS no período'}</span></div>
+        <div class="map-body"><div id="mapa-morte"></div></div>
+      </div>
+      ${temDetalhe ? `<div class="map-card">
+        <div class="chart-heading"><strong>Detalhe do foco</strong><span>Zoom nas concentrações · ${focoPontos.length} de ${pontos.length} registros</span></div>
+        <div class="map-body"><div id="mapa-morte-zoom"></div></div>
+      </div>` : ''}
+    </div>
+    ${rankingHtml}
+    ${renderFooter({ ...period, page: 5, totalPages })}
+  `)
+    : ''
+  const detailPageOffset = 4 + (temPaginaMapa ? 1 : 0)
+
   const detailHeader = `<thead><tr><th>Data</th><th>Lote</th><th>Pasto</th><th>Sexo</th><th>Idade</th><th>Peso</th><th>Categoria</th><th>Causa</th><th>Diagnósticos</th></tr></thead>`
   const renderDetailRow = (line, index) =>
     `<tr class="${index % 2 ? '' : 'striped'}"><td>${dateFmt(line.data)}</td><td>${escapeHtml(line.lote_nome)}</td><td>${escapeHtml(line.pasto)}</td><td>${escapeHtml(line.sexo)}</td><td>${escapeHtml(line.idade)}</td><td class="numeric">${numFmt(line.peso_vivo, 0)}</td><td>${escapeHtml(titleCase(line.categoria))}</td><td>${escapeHtml(line.causa_morte)}</td><td>${escapeHtml(compactDiagnostics(line.diagnosticos))}</td></tr>`
@@ -329,18 +562,27 @@ export async function renderMorteHtml(input) {
         ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: sectionName, sectionLabel: 'Registros' })}
         <p class="section-kicker">Rastreabilidade dos registros</p>
         ${content}
-        ${renderFooter({ ...period, page: 4 + chunkIndex + 1, totalPages })}
+        ${renderFooter({ ...period, page: detailPageOffset + chunkIndex + 1, totalPages })}
       `)
     })
     .join('')
 
+  // MapLibre é opcional: se o dist não estiver acessível (nem local nem CDN),
+  // o relatório segue sem o script e o init cai no fallback SVG/mensagem.
+  let maplibre = { script: '', css: '' }
+  if (temPaginaMapa && pontos.length) {
+    try {
+      maplibre = await getMaplibreAssets()
+    } catch {}
+  }
   const chartJsScript = await getChartJsScript()
   return htmlDocument({
     title: 'Relatório de Mortalidade',
-    extraCss: MORTE_CSS,
-    body: `${page1}${page2}${page3}${page4}${detailPages}`,
+    extraCss: MORTE_CSS + maplibre.css,
+    extraScripts: maplibre.script ? [maplibre.script] : [],
+    body: `${page1}${page2}${page3}${page4}${mapaPage}${detailPages}`,
     chartJsScript,
-    chartsInit: CHARTS_INIT_JS,
+    chartsInit: CHARTS_INIT_JS + MAP_INIT_JS,
     dataJson: {
       dataInicio: input.dataInicio,
       dataFim: input.dataFim,
@@ -351,6 +593,7 @@ export async function renderMorteHtml(input) {
         por_sexo: resumo.por_sexo ?? [],
         por_pasto: resumo.por_pasto ?? [],
       },
+      mapa: { pontos, foco: focoPontos, pastos: pastosFC },
     },
   })
 }
@@ -370,14 +613,21 @@ export default async function handler(req, res) {
 
   try {
     console.log('[PDF Morte] Iniciando renderização. Linhas:', body.linhas.length)
-    const html = await renderMorteHtml(body)
+    const html = await renderMorteHtml(body, { incluirMapa: true })
     console.log('[PDF Morte] HTML montado. Bytes:', Buffer.byteLength(html, 'utf8'))
+    const temMapa = body.linhas.some((l) => Number.isFinite(l?.latitude) && Number.isFinite(l?.longitude))
     const pdf = await generatePdf({
       html,
       format: 'A4',
       landscape: true,
+      // Flags para WebGL por software no headless; sem elas o MapLibre pode
+      // falhar em ambientes sem GPU e cair no fallback SVG.
+      launchArgs: temMapa ? ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'] : [],
       beforePdf: async (page) => {
         await page.waitForFunction('window.__chartsReady === true', { timeout: 15000 }).catch(() => {})
+        if (temMapa) {
+          await page.waitForFunction('window.__mapReady === true', { timeout: 20000 }).catch(() => {})
+        }
       },
     })
     console.log('[PDF Morte] PDF gerado. Bytes:', pdf.length)

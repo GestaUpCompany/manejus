@@ -117,12 +117,15 @@ export function chartCard({ canvasId, title, subtitle = '', hasData = true, heig
  * Chart.js (via getChartJsScript()); `chartsInit` é o JS que roda no browser
  * headless para desenhar os gráficos usando `dataJson` como fonte de dados.
  */
-export function htmlDocument({ title, extraCss = '', body, chartJsScript = '', chartsInit = '', dataJson = null }) {
+export function htmlDocument({ title, extraCss = '', extraScripts = [], body, chartJsScript = '', chartsInit = '', dataJson = null }) {
   const dataScript = dataJson
     ? `<script>window.__reportData=${JSON.stringify(dataJson).replace(/</g, '\\u003c')};</script>`
     : ''
+  const vendorScripts = extraScripts.map((s) => `<script>${s}</script>`).join('')
   const chartsScript = chartJsScript
     ? `<script>${chartJsScript}</script>${chartsInit ? `<script>${chartsInit}</script>` : ''}`
-    : ''
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${BASE_CSS}${extraCss}</style></head><body>${body}${dataScript}${chartsScript}</body></html>`
+    : chartsInit
+      ? `<script>${chartsInit}</script>`
+      : ''
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${BASE_CSS}${extraCss}</style></head><body>${body}${dataScript}${vendorScripts}${chartsScript}</body></html>`
 }
