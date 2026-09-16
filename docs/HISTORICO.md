@@ -1,5 +1,17 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Fix da devolução agregada do almoxarifado (2026-09-16)
+
+O teste end-to-end da fase 2 do estoque de almoxarifado expôs um bug de integridade na trigger `trg_retirada_almoxarifado_mov`. No caminho sem vínculo de retirada (fallback do catálogo no PWA), o saldo devolvível era calculado como `total de retiradas - devoluções com retirada_id IS NULL`, ou seja, devoluções vinculadas já aprovadas não eram descontadas do agregado. Resultado observado: com 2 furadeiras retiradas e 1 já devolvida via vínculo, uma devolução não vinculada de 5 unidades foi aprovada em 2 quando o pendente real era 1.
+
+A migration `20260916210000_fix_devolucao_pendente_agregado.sql` corrige a trigger para subtrair todas as devoluções aprovadas do item e da pessoa, independente de vínculo, e remove o filtro `necessitaDevolucao='S'` do cálculo de integridade do fallback: qualquer item retirado e ainda não devolvido pode retornar (sobra de consumível volta à prateleira). O flag continua governando apenas a lista de pendências exibida pela RPC `get_itens_pendentes_devolucao`, que passou a abater devoluções aprovadas sem vínculo das pendências por alocação em ordem de retirada (mais antiga primeiro). A comparação de `itemId` no JSONB passou a ser feita como texto (`= v_item_id::text`) para não quebrar em registros legados com valor inválido.
+
+Validado na fazenda de testes (`d649c65e`): devolução não vinculada de furadeira sem pendente foi integralmente retida (`quantidade_aprovada = 0`, `requer_revisao = true`, estoque inalterado); devolução de 3 m de mangueira (consumível com `necessitaDevolucao='N'`, saldo devolvível de 5 m) foi aprovada integralmente. A movimentação errada criada durante o teste foi corrigida pontualmente (`quantidade_aprovada` 2 → 1, estoque recalculado pela trigger).
+
+A branch precisou receber os arquivos de migration `20260916000011`, `20260916180000`, `20260916190000` e `20260916200000` do `master` (boletim de rebanho e capas) porque já estavam aplicados no remoto e o `db push` exige arquivo local para toda versão aplicada. Como são arquivos idênticos aos do `master`, o merge futuro não gera conflito.
+
+Disparador: quando mencionar "devolução aprovada a mais", "pendente agregado errado", `retirada_id IS NULL` na trigger do almoxarifado, ou "devolução de consumível retida", ler esta seção.
+
 ## Correção do shift de datas no XLSX de suplementação (2026-09-16)
 
 - As colunas "Data Anterior" e "Trato Seguinte" do export de `Suplementacao.tsx` saíam um dia antes do real (ex.: trato de 16/09 com anterior real em 15/09 exibia 14/09, com intervalo correto de 1 dia). Causa: o código gerava `new Date("YYYY-MM-DD").toISOString()` (meia-noite UTC) e o `formatDate` convertia o instante para `America/Cuiaba` (UTC-4), caindo em 20h do dia anterior. Os intervalos saíam certos porque eram calculados numericamente, sem conversão.
