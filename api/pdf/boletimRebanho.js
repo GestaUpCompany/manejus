@@ -13,14 +13,15 @@ const BOLETIM_CSS = `
 .boletim-note{margin-top:3mm;color:#718078;font-size:10px}
 .boletim-intro{margin:0 0 3mm;color:#52635a;font-size:11px}
 .saldo-final-resumo{margin-top:4mm}
-.saldo-local-card{border:1px solid #dce5df;border-radius:6px;padding:4mm 5mm;background:#fff}
-.saldo-local-header{display:flex;align-items:center;justify-content:space-between;gap:6mm;margin-bottom:3mm}
+.saldo-local-card{border:1px solid #dce5df;border-radius:6px;padding:3mm 5mm;background:#fff}
+.saldo-local-header{display:flex;align-items:center;justify-content:space-between;gap:6mm;margin-bottom:2mm}
 .saldo-local-title{font-size:13px;font-weight:700;color:#30463a}
-.saldo-final-kpi{display:flex;align-items:baseline;gap:2mm;border-radius:4px;background:#eef5f0;border:1px solid #bcd3c4;padding:1.5mm 4mm;white-space:nowrap}
+.saldo-final-kpi{display:flex;align-items:center;gap:2mm;border-radius:4px;background:#eef5f0;border:1px solid #bcd3c4;padding:1.5mm 4mm;white-space:nowrap}
 .saldo-final-kpi .saldo-valor{font-size:17px;font-weight:700;color:#0b6a42;line-height:1;font-variant-numeric:tabular-nums}
-.saldo-final-kpi .saldo-label{font-size:10px;color:#52635a}
+.saldo-final-kpi .saldo-label{font-size:11px;color:#52635a}
 .saldo-local-row{display:grid;grid-template-columns:28mm 1fr 20mm;align-items:center;gap:3mm;height:6mm}
-.saldo-local-label{font-size:10px;color:#52635a;font-weight:700}.saldo-local-track{height:5mm;background:#eef3f0;border-radius:1mm;overflow:hidden}.saldo-local-bar{height:100%;background:#2f8f68;border-radius:1mm}.saldo-local-value{font-size:10px;color:#0b6a42;text-align:right;font-variant-numeric:tabular-nums}
+.saldo-local-label{font-size:10px;color:#52635a;font-weight:700}.saldo-local-track{height:70%;min-height:2.4mm;background:#eef3f0;border-radius:1mm;overflow:hidden}.saldo-local-bar{height:100%;background:#2f8f68;border-radius:1mm}.saldo-local-value{font-size:10px;color:#0b6a42;text-align:right;font-variant-numeric:tabular-nums}
+.saldo-local-card--denso .saldo-local-label,.saldo-local-card--denso .saldo-local-value{font-size:9px}
 `
 
 const COLUMNS = [
@@ -69,12 +70,14 @@ function renderSaldoFinalResumo(dados) {
     .filter((local) => local.saldoFinal != null)
     .sort((a, b) => Number(b.saldoFinal) - Number(a.saldoFinal))
   const maiorSaldo = Math.max(Number(saldoGeral ?? 0), ...locais.map((local) => Number(local.saldoFinal ?? 0)), 1)
+  const alturaLinha = Math.min(6, Math.max(3.2, 36 / Math.max(locais.length, 1)))
+  const classeDensidade = alturaLinha < 4.8 ? ' saldo-local-card--denso' : ''
   const barras = locais.map((local) => {
     const largura = Math.max((Number(local.saldoFinal) / maiorSaldo) * 100, 0)
     const label = LOCAL_LABELS[local.fazenda] ?? local.fazenda
-    return `<div class="saldo-local-row"><span class="saldo-local-label">${escapeHtml(label)}</span><div class="saldo-local-track"><div class="saldo-local-bar" style="width:${largura.toFixed(2)}%"></div></div><span class="saldo-local-value">${formatValue(local.saldoFinal)}</span></div>`
+    return `<div class="saldo-local-row" style="height:${alturaLinha.toFixed(1)}mm"><span class="saldo-local-label">${escapeHtml(label)}</span><div class="saldo-local-track"><div class="saldo-local-bar" style="width:${largura.toFixed(2)}%"></div></div><span class="saldo-local-value">${formatValue(local.saldoFinal)}</span></div>`
   }).join('')
-  return `<div class="saldo-final-resumo"><div class="saldo-local-card"><div class="saldo-local-header"><span class="saldo-local-title">Saldo final por local</span><span class="saldo-final-kpi"><span class="saldo-label">Saldo final geral</span><span class="saldo-valor">${formatValue(saldoGeral)}</span></span></div>${barras}</div></div>`
+  return `<div class="saldo-final-resumo"><div class="saldo-local-card${classeDensidade}"><div class="saldo-local-header"><span class="saldo-local-title">Saldo final por local</span><span class="saldo-final-kpi"><span class="saldo-label">Saldo final geral</span><span class="saldo-valor">${formatValue(saldoGeral)}</span></span></div>${barras}</div></div>`
 }
 
 function renderTable(registros) {

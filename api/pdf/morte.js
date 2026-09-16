@@ -361,9 +361,8 @@ const MAP_INIT_JS = `
 })();
 `
 
-// `incluirMapa` fica desligado por padrão: o relatório geral compõe esta função
-// via reportRegistry e não deve ganhar a página de mapa. Só o endpoint
-// /api/pdf/morte (relatório individual) passa { incluirMapa: true }.
+// `incluirMapa` liga a página de mapa apenas quando há mortes
+// georreferenciadas: sem coordenadas, nenhuma seção de mapa é renderizada.
 export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
   const resumo = input.resumo
   const rows = [...input.linhas].sort((a, b) =>
@@ -399,7 +398,7 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
   // migration 20260916120000 passou a expor latitude/longitude).
   const linhasGeo = input.linhas.filter((l) => Number.isFinite(l?.latitude) && Number.isFinite(l?.longitude))
   const pontos = linhasGeo.map((l) => [l.longitude, l.latitude])
-  const temPaginaMapa = incluirMapa && rows.length > 0
+  const temPaginaMapa = incluirMapa && pontos.length > 0
 
   // Geometrias dos pastos (vêm do payload via RPC pastos_geo). Montadas como
   // FeatureCollection para o MapLibre e para o fallback SVG.
@@ -493,7 +492,7 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
     <p class="section-kicker">Localização das ocorrências</p>
     <div class="map-row">
       <div class="map-card">
-        <div class="chart-heading"><strong>Mapa de mortalidade</strong><span>Cada círculo vermelho representa um registro de morte${pontos.length ? '' : ' · sem coordenadas GPS no período'}</span></div>
+        <div class="chart-heading"><strong>Mapa de mortalidade</strong><span>Cada círculo vermelho representa um registro de morte</span></div>
         <div class="map-body"><div id="mapa-morte"></div></div>
       </div>
     </div>
