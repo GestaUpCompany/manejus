@@ -1,5 +1,14 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Correção do shift de datas no XLSX de suplementação (2026-09-16)
+
+- As colunas "Data Anterior" e "Trato Seguinte" do export de `Suplementacao.tsx` saíam um dia antes do real (ex.: trato de 16/09 com anterior real em 15/09 exibia 14/09, com intervalo correto de 1 dia). Causa: o código gerava `new Date("YYYY-MM-DD").toISOString()` (meia-noite UTC) e o `formatDate` convertia o instante para `America/Cuiaba` (UTC-4), caindo em 20h do dia anterior. Os intervalos saíam certos porque eram calculados numericamente, sem conversão.
+- `data_anterior`/`data_proximo` agora são emitidos como date-only `YYYY-MM-DD` no fuso da fazenda via novo helper `toFarmDateOnly` em `formatDate.ts`, que o `formatDate` renderiza sem conversão (branch de strings date-only).
+- A série por lote passou a ser ordenada pelo timestamp completo (`data`, tiebreak `created_at`) em vez de só pelo dia: antes, registros do mesmo dia ficavam na ordem reversa de criação, e o "anterior" podia apontar para um trato do mesmo dia registrado depois dele.
+- O intervalo passou a contar dias de calendário no fuso local (consistente com a coluna "Data Atual"), e não mais dias UTC.
+
+Disparador: quando mencionar "data anterior errada", "trato seguinte errado", "xlsx de suplementação com data errada", "shift de -1 dia no export", `toFarmDateOnly`, ler esta seção.
+
 ## Redesign do sidebar: hierarquia visual, acessibilidade e command palette (2026-09-15)
 
 - O sidebar do `ControllerLayout` foi reorganizado em 4 seções semânticas (Principal, Operação, Insumos & Estoque, Sistema) com headers e divisores visuais, eliminando a lista plana de 12 itens sem hierarquia.

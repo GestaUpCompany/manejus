@@ -34,6 +34,18 @@ export function formatDate(dateStr: string | null | undefined): string {
   return `${parts.day}/${parts.month}/${parts.year}`
 }
 
+/**
+ * Retorna a data (YYYY-MM-DD) de um timestamp no fuso da fazenda.
+ * Como o resultado é date-only, formatDate o exibe sem conversão de fuso,
+ * o que evita o shift de -1 dia ao exportar datas derivadas de timestamptz.
+ */
+export function toFarmDateOnly(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null
+  const parts = getPartsInTimezone(dateStr)
+  if (!parts) return null
+  return `${parts.year}-${parts.month}-${parts.day}`
+}
+
 export function formatDateTime(dateStr: string | null | undefined): string {
   if (!dateStr) return '-'
   const parts = getPartsInTimezone(dateStr)
