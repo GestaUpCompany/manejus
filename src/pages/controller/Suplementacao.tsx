@@ -5,7 +5,7 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToXLSX } from '../../utils/exportXLSX'
 import { SUPLEMENTACAO_EXPORT_CONFIG } from '../../utils/exportConfigs'
-import { formatDate } from '../../utils/formatDate'
+import { formatDate, toFarmDateOnly } from '../../utils/formatDate'
 import { getFazendaIdForUser, getFazendaNome } from '../../utils/fazendaContext'
 
 interface RegistroSuplementacao {
@@ -260,12 +260,15 @@ export function Suplementacao() {
               onClick={() => {
               // Pre-computar data_anterior e intervalo_dias para cada registro
               // baseado na serie por lote_id ordenada por data ( independente da formulação)
-              // Normaliza para meia-noite (YYYY-MM-DD) para que o intervalo conte dias de calendário,
-              // independentemente do horário do registro (o campo data é timestamptz, não date).
-              const toDateOnly = (dateStr: string) => new Date(dateStr.substring(0, 10))
-              const sorted = [...filteredRegistros].sort((a, b) =>
-                toDateOnly(a.data).getTime() - toDateOnly(b.data).getTime()
-              )
+              // Ordena pelo timestamp completo para que registros do mesmo dia fiquem em
+              // ordem cronológica real, e normaliza para o dia de calendário no fuso da
+              // fazenda (YYYY-MM-DD) para que o intervalo conte dias locais e o formatDate
+              // exiba a data sem conversão de fuso (o campo data é timestamptz, não date).
+              const DAY_MS = 1000 * 60 * 60 * 24
+              const sorted = [...filteredRegistros].sort((a, b) => {
+                const diff = new Date(a.data).getTime() - new Date(b.data).getTime()
+                return diff !== 0 ? diff : new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              })
               const seriesMap = new Map<string, typeof sorted>()
               for (const reg of sorted) {
                 const key = reg.lote_id || ''
@@ -278,20 +281,20 @@ export function Suplementacao() {
                 const idx = series.indexOf(reg)
                 const prev = idx > 0 ? series[idx - 1] : null
                 const next = idx < series.length - 1 ? series[idx + 1] : null
-                const dataAtual = toDateOnly(reg.data)
-                const dataAnterior = prev ? toDateOnly(prev.data) : null
-                const dataProximo = next ? toDateOnly(next.data) : null
-                const intervalo = dataAnterior
-                  ? Math.max(Math.round((dataAtual.getTime() - dataAnterior.getTime()) / (1000 * 60 * 60 * 24)), 0)
+                const dataAtual = toFarmDateOnly(reg.data)
+                const dataAnterior = prev ? toFarmDateOnly(prev.data) : null
+                const dataProximo = next ? toFarmDateOnly(next.data) : null
+                const intervalo = dataAtual && dataAnterior
+                  ? Math.max(Math.round((new Date(dataAtual).getTime() - new Date(dataAnterior).getTime()) / DAY_MS), 0)
                   : null
-                const intervaloAteProximo = dataProximo
-                  ? Math.max(Math.round((dataProximo.getTime() - dataAtual.getTime()) / (1000 * 60 * 60 * 24)), 0)
+                const intervaloAteProximo = dataAtual && dataProximo
+                  ? Math.max(Math.round((new Date(dataProximo).getTime() - new Date(dataAtual).getTime()) / DAY_MS), 0)
                   : null
                 return {
                   ...reg,
-                  data_anterior: dataAnterior ? dataAnterior.toISOString() : null,
+                  data_anterior: dataAnterior,
                   intervalo_dias: intervalo,
-                  data_proximo: dataProximo ? dataProximo.toISOString() : null,
+                  data_proximo: dataProximo,
                   intervalo_ate_proximo_dias: intervaloAteProximo,
                   total_acumulado_lote: acumuladoPorRegistro.get(reg.id) || 0
                 }

@@ -26,6 +26,54 @@
 - **Convenção**: classes de tabela de relatórios Puppeteer devem levar prefixo do relatório, pois o CSS compartilha um único namespace global no documento composto.
 - **Verificação**: `_tmp_smoke/abastecimento/verify_colisao_css.mjs` compõe abastecimento + morte (ordem que reproduzia o bug) e mede o layout real no Chromium: coluna 1 voltou a 18%, "Litros" a 8% centralizado, sem overflow de "Máquina/Veículo"; tabela do morte mantém 11%/25%.
 
+## Revisão completa do fluxo de devolução do almoxarifado (2026-09-16)
+
+Revisão de ponta a ponta do fluxo retirada/devolução com foco em offline-first (eventos duráveis, ordem arbitrária de sincronização, idempotência, servidor autoritativo). Quatro migrations novas no schema, todas aplicadas via `db push` e testadas na fazenda `d649c65e`.
+
+`20260916220000_revisao_fluxo_devolucao_almoxarifado.sql`:
+- Índice único de movimentação passa a incluir `retirada_id`/`retirada_item_index` e a trigger agrega itens duplicados do mesmo registro por `(item, retirada, índice)`, somando quantidades. Antes, um registro com o mesmo item duas vezes violava o índice e o sync inteiro falhava.
+- Caminho vinculado passa a respeitar também o saldo agregado da pessoa (`min(pendente da retirada, pendente agregado)`): devolver 2 sem vínculo e depois tentar 1 vinculada à mesma retirada agora aprova 0, não 1.
+- Nova função `reprocessar_devolucoes_almoxarifado` reavalia devoluções retidas quando retiradas chegam, mudam ou somem: cobre sync fora de ordem e edição/exclusão de retirada. Devolução que perde lastro tem `quantidade_aprovada` reduzida e volta à fila.
+- `movimentacoes_almoxarifado.aprovacao_manual` preserva a decisão do controller ("Incorporar ao estoque") entre reprocessamentos e re-sincronizações.
+- Advisory lock por `(fazenda, item, pessoa)` serializa aprovações concorrentes.
+- Policies de `movimentacoes_almoxarifado` restritas a `admin`/`controller`: a tabela carrega `custo_unitario` (WAC) e peões com vínculo de fazenda conseguiam lê-la direto, furando a proteção de preço feita na view `itens_almoxarifado_pwa`.
+- Coluna `registros_almoxarifado.tipo` recriada de forma defensiva (existia no remoto mas nenhum arquivo de migration a criava).
+
+`20260916230000_fix_advisory_lock_hashtext.sql`: o Postgres do projeto não tem `hashtextextended(text)` de um argumento; o lock passou a usar a forma de dois inteiros com `hashtext`.
+
+`20260916240000_drop_fk_retirada_id.sql`: removida a FK `movimentacoes_almoxarifado.retirada_id -> registros_almoxarifado`. Com a FK, uma devolução que sincronizava antes da retirada correspondente falhava no insert e o evento nem chegava ao banco. O vínculo virou campo informativo e o reprocessamento resolve quando a retirada chega. Efeito colateral observado: o PostgREST manteve a FK dropada no cache de schema e passou a responder 300 (relacionamento ambíguo) no embed `registros_almoxarifado(...)`; a query da fila de revisão no Painel usa agora hint explícito `!registro_origem_id`.
+
+`20260916250000_unidade_almoxarifado_imutavel.sql`: `movimentacoes_almoxarifado.unidade` guarda snapshot da unidade no lançamento (backfill incluído) e trigger bloqueia troca de `unidade` em item com estoque ou movimentação ativa. Antes, mudar m para un reescrevia o sentido de todo o histórico sem aviso. O formulário de itens no Painel desabilita o campo nesse caso e explica o motivo; o histórico de movimentações passa a exibir a unidade do snapshot.
+
+Painel: fila de revisão mostra quem devolveu (join com o registro de origem) e o botão incorporar marca `aprovacao_manual`. PWA: labels corretos em modo devolução ("Quantidade devolvida", sem campos de retirada), aviso âmbar quando a quantidade excede o pendente informando que o excedente ficará retido, e o catálogo não exibe mais "saldo" no modo devolução.
+
+Testes executados: agregação de item duplicado (1+1 virou baixa de 2), devolução antes da retirada (retida com aprovada 0 e liberada sozinha ao chegar a retirada), cap agregado no caminho vinculado, propagação de exclusão de retirada (devolução aprovada 2 voltou para 0 com revisão), idempotência por `local_id` (23505 no retry), trava de unidade (bloqueada na Mangueira com estoque, permitida no Alicate sem histórico). Registros de teste removidos por soft-delete direto.
+
+Limitação real que permanece por desenho: `quem_pegou` é texto livre, então grafias diferentes da mesma pessoa criam débitos separados no agregado; e nenhum sistema offline-first consegue exibir saldo global verdadeiro em dispositivos desconectados, o que o servidor resolve na reconciliação, não na tela.
+
+Disparador: quando mencionar "devolução fora de ordem", "reprocessamento de devolução", `aprovacao_manual`, "troca de unidade de item", "unidade travada no cadastro", advisory lock de almoxarifado, ou FK de `retirada_id`, ler esta seção.
+
+## Fix da devolução agregada do almoxarifado (2026-09-16)
+
+O teste end-to-end da fase 2 do estoque de almoxarifado expôs um bug de integridade na trigger `trg_retirada_almoxarifado_mov`. No caminho sem vínculo de retirada (fallback do catálogo no PWA), o saldo devolvível era calculado como `total de retiradas - devoluções com retirada_id IS NULL`, ou seja, devoluções vinculadas já aprovadas não eram descontadas do agregado. Resultado observado: com 2 furadeiras retiradas e 1 já devolvida via vínculo, uma devolução não vinculada de 5 unidades foi aprovada em 2 quando o pendente real era 1.
+
+A migration `20260916210000_fix_devolucao_pendente_agregado.sql` corrige a trigger para subtrair todas as devoluções aprovadas do item e da pessoa, independente de vínculo, e remove o filtro `necessitaDevolucao='S'` do cálculo de integridade do fallback: qualquer item retirado e ainda não devolvido pode retornar (sobra de consumível volta à prateleira). O flag continua governando apenas a lista de pendências exibida pela RPC `get_itens_pendentes_devolucao`, que passou a abater devoluções aprovadas sem vínculo das pendências por alocação em ordem de retirada (mais antiga primeiro). A comparação de `itemId` no JSONB passou a ser feita como texto (`= v_item_id::text`) para não quebrar em registros legados com valor inválido.
+
+Validado na fazenda de testes (`d649c65e`): devolução não vinculada de furadeira sem pendente foi integralmente retida (`quantidade_aprovada = 0`, `requer_revisao = true`, estoque inalterado); devolução de 3 m de mangueira (consumível com `necessitaDevolucao='N'`, saldo devolvível de 5 m) foi aprovada integralmente. A movimentação errada criada durante o teste foi corrigida pontualmente (`quantidade_aprovada` 2 → 1, estoque recalculado pela trigger).
+
+A branch precisou receber os arquivos de migration `20260916000011`, `20260916180000`, `20260916190000` e `20260916200000` do `master` (boletim de rebanho e capas) porque já estavam aplicados no remoto e o `db push` exige arquivo local para toda versão aplicada. Como são arquivos idênticos aos do `master`, o merge futuro não gera conflito.
+
+Disparador: quando mencionar "devolução aprovada a mais", "pendente agregado errado", `retirada_id IS NULL` na trigger do almoxarifado, ou "devolução de consumível retida", ler esta seção.
+
+## Correção do shift de datas no XLSX de suplementação (2026-09-16)
+
+- As colunas "Data Anterior" e "Trato Seguinte" do export de `Suplementacao.tsx` saíam um dia antes do real (ex.: trato de 16/09 com anterior real em 15/09 exibia 14/09, com intervalo correto de 1 dia). Causa: o código gerava `new Date("YYYY-MM-DD").toISOString()` (meia-noite UTC) e o `formatDate` convertia o instante para `America/Cuiaba` (UTC-4), caindo em 20h do dia anterior. Os intervalos saíam certos porque eram calculados numericamente, sem conversão.
+- `data_anterior`/`data_proximo` agora são emitidos como date-only `YYYY-MM-DD` no fuso da fazenda via novo helper `toFarmDateOnly` em `formatDate.ts`, que o `formatDate` renderiza sem conversão (branch de strings date-only).
+- A série por lote passou a ser ordenada pelo timestamp completo (`data`, tiebreak `created_at`) em vez de só pelo dia: antes, registros do mesmo dia ficavam na ordem reversa de criação, e o "anterior" podia apontar para um trato do mesmo dia registrado depois dele.
+- O intervalo passou a contar dias de calendário no fuso local (consistente com a coluna "Data Atual"), e não mais dias UTC.
+
+Disparador: quando mencionar "data anterior errada", "trato seguinte errado", "xlsx de suplementação com data errada", "shift de -1 dia no export", `toFarmDateOnly`, ler esta seção.
+
 ## Redesign do sidebar: hierarquia visual, acessibilidade e command palette (2026-09-15)
 
 - O sidebar do `ControllerLayout` foi reorganizado em 4 seções semânticas (Principal, Operação, Insumos & Estoque, Sistema) com headers e divisores visuais, eliminando a lista plana de 12 itens sem hierarquia.
@@ -833,3 +881,15 @@ Alterado `MAX_DATA_POINTS_PER_PAGE` em `api/pdf/consumo.js` de `20` para `12`.
 **Solução:** reduzir o limite para 12 pontos de dados por página. A partir de 13 barras, o lote é dividido em páginas de continuação, mantendo a legibilidade dos rótulos de CMS, %PV e leitura de cocho. A lógica de `chunkDados` e paginação já existente continua valendo; apenas o tamanho do chunk mudou.
 
 Disparador: quando mencionar "gráfico denso", "limite de barras", "continuação do gráfico de consumo", `MAX_DATA_POINTS_PER_PAGE` no PDF de consumo, ou problemas de legibilidade das barras do relatório de consumo, ler esta seção.
+
+### Estoque de almoxarifado e devoluções no PWA (2026-09-16)
+
+Implementado o estoque de itens do almoxarifado nos dois repositórios, com entradas e ajustes no Painel Web, baixa automática das retiradas do PWA, saldo e custo médio ponderado por item.
+
+A fase 2 adicionou o tipo `devolucao` ao registro do PWA. O app busca pendências via `get_itens_pendentes_devolucao`, mantém o resultado em cache e permite fallback pelo catálogo quando não há pendência disponível. Itens escolhidos pela lista carregam `retiradaId` e `retiradaItemIndex` para rastreabilidade.
+
+A integridade é decidida no banco: a trigger calcula o saldo devolvível por retirada, incorpora apenas a quantidade aprovada ao estoque e marca o excedente em `requer_revisao`. O Painel exibe a fila de devoluções retidas e permite ao controller incorporá-las após conferência física.
+
+Preços foram isolados do PWA. O catálogo do app usa a view `itens_almoxarifado_pwa`, sem `custo_unitario` ou `custo_total_estoque`; políticas da tabela principal restringem acesso direto a usuários `admin` e `controller`.
+
+Migrations: `20260916150000_create_estoque_almoxarifado.sql`, `20260916160000_devolucao_almoxarifado.sql` e `20260916170000_impl_devolucao_almoxarifado.sql`, aplicadas via `supabase db push`. Branch compartilhada: `feat/estoque-almoxarifado`.
