@@ -1,4 +1,4 @@
-export type TipoRelatorioGeral = 'abastecimento' | 'consumo' | 'bebedouros' | 'morte'
+export type TipoRelatorioGeral = 'abastecimento' | 'consumo' | 'bebedouros' | 'morte' | 'boletim_rebanho'
 
 export interface RelatorioGeralCatalogoItem {
   id: TipoRelatorioGeral
@@ -26,6 +26,11 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
     id: 'morte',
     titulo: 'Mortes',
     descricao: 'Mortalidade, causas, categorias e impacto financeiro.',
+  },
+  {
+    id: 'boletim_rebanho',
+    titulo: 'Boletim de Rebanho',
+    descricao: 'Resumo geral e composição do rebanho por local no mês de referência.',
   },
 ]
 

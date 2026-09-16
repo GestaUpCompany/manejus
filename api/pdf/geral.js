@@ -9,13 +9,16 @@ const DIA_MS = 86_400_000
 function validarBody(body) {
   if (!body || typeof body !== 'object') return 'Payload inválido'
   if (typeof body.fazendaId !== 'string' || typeof body.fazendaNome !== 'string') return 'Fazenda inválida'
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(body.dataInicio) || !/^\d{4}-\d{2}-\d{2}$/.test(body.dataFim)) return 'Período inválido'
-  const inicio = new Date(`${body.dataInicio}T00:00:00Z`)
-  const fim = new Date(`${body.dataFim}T00:00:00Z`)
-  const dias = Math.floor((fim.getTime() - inicio.getTime()) / DIA_MS) + 1
-  if (!Number.isFinite(dias) || dias < 1 || dias > 31) return 'O período deve ter entre 1 e 31 dias'
-  if (!Array.isArray(body.reports) || body.reports.length < 1 || body.reports.length > 4) return 'Seleção de relatórios inválida'
+  if (!Array.isArray(body.reports) || body.reports.length < 1 || body.reports.length > 5) return 'Seleção de relatórios inválida'
   const tipos = body.reports.map((report) => report?.tipo)
+  const temOperacionais = tipos.some((tipo) => tipo !== 'boletim_rebanho')
+  if (temOperacionais) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(body.dataInicio) || !/^\d{4}-\d{2}-\d{2}$/.test(body.dataFim)) return 'Período inválido'
+    const inicio = new Date(`${body.dataInicio}T00:00:00Z`)
+    const fim = new Date(`${body.dataFim}T00:00:00Z`)
+    const dias = Math.floor((fim.getTime() - inicio.getTime()) / DIA_MS) + 1
+    if (!Number.isFinite(dias) || dias < 1 || dias > 31) return 'O período deve ter entre 1 e 31 dias'
+  }
   if (tipos.some((tipo) => !isReportType(tipo)) || new Set(tipos).size !== tipos.length) return 'Relatório desconhecido ou duplicado'
   if (body.imagemCapaPath && !body.imagemCapaPath.startsWith(`${body.fazendaId}/capas/`)) return 'Imagem de capa inválida'
   return null

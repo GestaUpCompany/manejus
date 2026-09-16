@@ -1,0 +1,2 @@
+-- Placeholder for a migration already applied remotely.
+-- The original file is not present in this checkout.

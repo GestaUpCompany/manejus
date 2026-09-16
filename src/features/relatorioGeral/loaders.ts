@@ -4,6 +4,7 @@ import type { DadosPDFBebedouros } from '../../utils/relatorioBebedourosPDF'
 import type { LoteRelatorio } from '../../utils/relatorioConsumoPDF'
 import type { LinhaMorte, ParametrosRelatorioMorte, PastoGeo, ResumoMorte } from '../../utils/relatorioMortePDF'
 import type { TipoRelatorioGeral } from './catalogo'
+import type { DadosPDFBoletimRebanho } from './boletimRebanho'
 
 interface FazendaRelatorio {
   id: string
@@ -65,6 +66,7 @@ export type PayloadRelatorioGeral =
   | { tipo: 'consumo'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; lotes: LoteRelatorio[] } }
   | { tipo: 'bebedouros'; dados: DadosPDFBebedouros }
   | { tipo: 'morte'; dados: ParametrosRelatorioMorte }
+  | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
 
 const CHECKLIST_ITEMS = [
   { key: 'agua_suficiente', label: 'Água insuficiente' },
@@ -431,11 +433,33 @@ async function carregarMortes(
   }
 }
 
-const LOADERS: Record<TipoRelatorioGeral, (fazenda: FazendaRelatorio, dataInicio: string, dataFim: string) => Promise<PayloadRelatorioGeral>> = {
+export interface OpcoesCarregamentoRelatorios {
+  boletim?: DadosPDFBoletimRebanho
+}
+
+async function carregarBoletim(
+  fazenda: FazendaRelatorio,
+  _dataInicio: string,
+  _dataFim: string,
+  opcoes?: OpcoesCarregamentoRelatorios,
+): Promise<PayloadRelatorioGeral> {
+  if (!opcoes?.boletim) throw new Error('Selecione uma planilha e um mês de referência para o Boletim de Rebanho.')
+  return {
+    tipo: 'boletim_rebanho',
+    dados: {
+      ...opcoes.boletim,
+      fazendaNome: fazenda.nome,
+      fazendaLogoUrl: fazenda.logoUrl,
+    },
+  }
+}
+
+const LOADERS: Record<TipoRelatorioGeral, (fazenda: FazendaRelatorio, dataInicio: string, dataFim: string, opcoes?: OpcoesCarregamentoRelatorios) => Promise<PayloadRelatorioGeral>> = {
   abastecimento: carregarAbastecimento,
   consumo: carregarConsumo,
   bebedouros: carregarBebedouros,
   morte: carregarMortes,
+  boletim_rebanho: carregarBoletim,
 }
 
 export async function carregarRelatoriosGerais(
@@ -444,11 +468,12 @@ export async function carregarRelatoriosGerais(
   dataInicio: string,
   dataFim: string,
   onEtapa?: (titulo: string) => void,
+  opcoes?: OpcoesCarregamentoRelatorios,
 ): Promise<PayloadRelatorioGeral[]> {
   const resultados: PayloadRelatorioGeral[] = []
   for (const tipo of tipos) {
     onEtapa?.(`Carregando ${tipo}`)
-    resultados.push(await LOADERS[tipo](fazenda, dataInicio, dataFim))
+    resultados.push(await LOADERS[tipo](fazenda, dataInicio, dataFim, opcoes))
   }
   return resultados
 }

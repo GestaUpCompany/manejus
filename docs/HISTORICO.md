@@ -1,5 +1,23 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Gráfico de saldo final por local no Boletim de Rebanho (2026-09-16)
+
+- A página do consolidado anual passou a exibir um card de saldo final geral e um gráfico horizontal estilizado com o saldo final de cada local da aba `GERAL`.
+- Os locais são ordenados do maior para o menor saldo e usam as abreviações `CONF`, `SEDE`, `CALIF`, `SERRA`, `NOVA`, `SJOÃO` e `MEIO`, mantendo a leitura visual da referência do Power BI.
+- O gráfico foi incluído apenas na página geral; as páginas mensais por local continuam exibindo somente suas tabelas.
+
+
+## Boletim de Rebanho por planilha no infográfico mensal (2026-09-16)
+
+- O infográfico mensal passou a aceitar o `Boletim de Rebanho` como seção selecionável e reordenável.
+- A planilha anual `.xlsx`, `.xlsm` ou `.xls` é persistida por fazenda e ano no bucket privado `relatorios-gerais`, com substituição pelo upload mais recente.
+- O parser incorporado segue o core do projeto `BoletimGestaup`: reconhece abas mensais, blocos por local, categorias e campos de movimentação, separa o consolidado da aba `GERAL` dos locais do mês escolhido e preserva células vazias como `null`.
+- O modal permite informar o ano, carregar/substituir a planilha e selecionar um único mês disponível. Quando somente o boletim é selecionado, o intervalo operacional deixa de ser obrigatório; relatórios operacionais continuam limitados a 31 dias. O ano e o upload ficam liberados somente quando o boletim está selecionado, e avisos internos da normalização não são exibidos ao usuário quando o arquivo é aceito.
+- O renderizador Puppeteer gera tabelas estilizadas com a identidade visual do infográfico, uma página de resumo anual e uma página para cada local do mês selecionado. Valores vazios são apresentados como `-`.
+- A migration `20260916000011_boletim_rebanho_storage` ampliou os MIME types aceitos pelo bucket existente. A migration `20260916180000_boletim_rebanho_octet_stream` adicionou `application/octet-stream` como fallback, e o frontend passou a enviar um `Blob` com MIME normalizado pela extensão. A migration `20260916190000_boletim_rebanho_normalize_mime` alinhou o MIME do XLSM para a forma minúscula normalizada pelo Storage.
+- Validação com a planilha Maringá3: 1.040 registros normalizados, 10 registros no consolidado anual, 7 locais no mês de julho, 8 páginas na seção e 10 páginas no infográfico completo com capa e encerramento.
+
+
 ## Colisão de CSS `.detail-table` no infográfico mensal (2026-09-16)
 
 - **Sintoma**: na tabela "Detalhamento por Máquina/Veículo" do relatório geral, o cabeçalho "Litros" aparecia deslocado para a esquerda, sobreposto a "Máquina/Veículo".
