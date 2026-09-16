@@ -27,8 +27,9 @@ const MAX_LINES = 20000
 const MAX_BODY_BYTES = 8_000_000
 
 // Quantas linhas do detalhamento cabem em uma página A4 landscape com o header
-// e o footer padrão. Testado com 13px de fonte e ~30px por linha.
-const DETAIL_ROWS_PER_PAGE = 15
+// e o footer padrão. Linhas quebram para 2+ linhas com frequência (Idade e
+// Diagnósticos), então o limite assume ~11mm por linha, não 30px.
+const DETAIL_ROWS_PER_PAGE = 10
 
 function isPDFData(value) {
   if (!value || typeof value !== 'object') return false
