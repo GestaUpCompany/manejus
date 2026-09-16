@@ -21,7 +21,7 @@ export const REPORT_REGISTRY = {
   },
   morte: {
     title: 'Relatório de Mortalidade',
-    render: renderMorteHtml,
+    render: (dados) => renderMorteHtml(dados, { incluirMapa: true }),
     hasData: (dados) => (dados.linhas?.length ?? 0) > 0,
   },
 }

@@ -66,7 +66,7 @@ describe('compositor do relatório geral', () => {
       ],
     })
     expect(html.indexOf('Análise de Consumo')).toBeLessThan(html.indexOf('Relatório de Mortalidade'))
-    expect(html).toContain('Página 2 de 8')
-    expect(html).toContain('Página 8 de 8')
+    expect(html).toContain('Página 2 de 9')
+    expect(html).toContain('Página 9 de 9')
   })
 })

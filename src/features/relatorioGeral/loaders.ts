@@ -2,7 +2,7 @@ import { supabase } from '../../services/supabaseClient'
 import type { DadosPDFRelatorioAbastecimento } from '../../utils/relatorioAbastecimentoPDF'
 import type { DadosPDFBebedouros } from '../../utils/relatorioBebedourosPDF'
 import type { LoteRelatorio } from '../../utils/relatorioConsumoPDF'
-import type { LinhaMorte, ParametrosRelatorioMorte, ResumoMorte } from '../../utils/relatorioMortePDF'
+import type { LinhaMorte, ParametrosRelatorioMorte, PastoGeo, ResumoMorte } from '../../utils/relatorioMortePDF'
 import type { TipoRelatorioGeral } from './catalogo'
 
 interface FazendaRelatorio {
@@ -51,6 +51,7 @@ interface DadosMorteRpc {
   linhas: LinhaMorte[]
   resumo: ResumoMorte
   rebanho_total?: number
+  pastos_geo?: PastoGeo[]
   periodo_anterior?: {
     total_mortes: number
     taxa_mortalidade: number | null
@@ -426,7 +427,7 @@ async function carregarMortes(
   }
   return {
     tipo: 'morte',
-    dados: { dataInicio, dataFim, fazendaNome: fazenda.nome, fazendaLogoUrl: fazenda.logoUrl, linhas, resumo },
+    dados: { dataInicio, dataFim, fazendaNome: fazenda.nome, fazendaLogoUrl: fazenda.logoUrl, linhas, resumo, pastosGeo: dados?.pastos_geo ?? [] },
   }
 }
 

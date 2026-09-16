@@ -61,12 +61,20 @@ export default async function handler(req, res) {
         periodoLabel: body.periodoLabel,
       },
     })
+    // Mapa da seção de morte: só aguarda/ativa WebGL quando há pontos com GPS.
+    const temMapa = reports.some((report) =>
+      report.tipo === 'morte' &&
+      (report.dados?.linhas ?? []).some((l) => Number.isFinite(l?.latitude) && Number.isFinite(l?.longitude)))
     const pdf = await generatePdf({
       html,
       format: 'A4',
       landscape: true,
+      launchArgs: temMapa ? ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'] : [],
       beforePdf: async (page) => {
         await page.waitForFunction('window.__chartsReady === true', { timeout: 20000 }).catch(() => {})
+        if (temMapa) {
+          await page.waitForFunction('window.__mapReady === true', { timeout: 20000 }).catch(() => {})
+        }
       },
     })
     res.setHeader('Content-Type', 'application/pdf')
