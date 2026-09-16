@@ -1,5 +1,32 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Revisão completa do fluxo de devolução do almoxarifado (2026-09-16)
+
+Revisão de ponta a ponta do fluxo retirada/devolução com foco em offline-first (eventos duráveis, ordem arbitrária de sincronização, idempotência, servidor autoritativo). Quatro migrations novas no schema, todas aplicadas via `db push` e testadas na fazenda `d649c65e`.
+
+`20260916220000_revisao_fluxo_devolucao_almoxarifado.sql`:
+- Índice único de movimentação passa a incluir `retirada_id`/`retirada_item_index` e a trigger agrega itens duplicados do mesmo registro por `(item, retirada, índice)`, somando quantidades. Antes, um registro com o mesmo item duas vezes violava o índice e o sync inteiro falhava.
+- Caminho vinculado passa a respeitar também o saldo agregado da pessoa (`min(pendente da retirada, pendente agregado)`): devolver 2 sem vínculo e depois tentar 1 vinculada à mesma retirada agora aprova 0, não 1.
+- Nova função `reprocessar_devolucoes_almoxarifado` reavalia devoluções retidas quando retiradas chegam, mudam ou somem: cobre sync fora de ordem e edição/exclusão de retirada. Devolução que perde lastro tem `quantidade_aprovada` reduzida e volta à fila.
+- `movimentacoes_almoxarifado.aprovacao_manual` preserva a decisão do controller ("Incorporar ao estoque") entre reprocessamentos e re-sincronizações.
+- Advisory lock por `(fazenda, item, pessoa)` serializa aprovações concorrentes.
+- Policies de `movimentacoes_almoxarifado` restritas a `admin`/`controller`: a tabela carrega `custo_unitario` (WAC) e peões com vínculo de fazenda conseguiam lê-la direto, furando a proteção de preço feita na view `itens_almoxarifado_pwa`.
+- Coluna `registros_almoxarifado.tipo` recriada de forma defensiva (existia no remoto mas nenhum arquivo de migration a criava).
+
+`20260916230000_fix_advisory_lock_hashtext.sql`: o Postgres do projeto não tem `hashtextextended(text)` de um argumento; o lock passou a usar a forma de dois inteiros com `hashtext`.
+
+`20260916240000_drop_fk_retirada_id.sql`: removida a FK `movimentacoes_almoxarifado.retirada_id -> registros_almoxarifado`. Com a FK, uma devolução que sincronizava antes da retirada correspondente falhava no insert e o evento nem chegava ao banco. O vínculo virou campo informativo e o reprocessamento resolve quando a retirada chega. Efeito colateral observado: o PostgREST manteve a FK dropada no cache de schema e passou a responder 300 (relacionamento ambíguo) no embed `registros_almoxarifado(...)`; a query da fila de revisão no Painel usa agora hint explícito `!registro_origem_id`.
+
+`20260916250000_unidade_almoxarifado_imutavel.sql`: `movimentacoes_almoxarifado.unidade` guarda snapshot da unidade no lançamento (backfill incluído) e trigger bloqueia troca de `unidade` em item com estoque ou movimentação ativa. Antes, mudar m para un reescrevia o sentido de todo o histórico sem aviso. O formulário de itens no Painel desabilita o campo nesse caso e explica o motivo; o histórico de movimentações passa a exibir a unidade do snapshot.
+
+Painel: fila de revisão mostra quem devolveu (join com o registro de origem) e o botão incorporar marca `aprovacao_manual`. PWA: labels corretos em modo devolução ("Quantidade devolvida", sem campos de retirada), aviso âmbar quando a quantidade excede o pendente informando que o excedente ficará retido, e o catálogo não exibe mais "saldo" no modo devolução.
+
+Testes executados: agregação de item duplicado (1+1 virou baixa de 2), devolução antes da retirada (retida com aprovada 0 e liberada sozinha ao chegar a retirada), cap agregado no caminho vinculado, propagação de exclusão de retirada (devolução aprovada 2 voltou para 0 com revisão), idempotência por `local_id` (23505 no retry), trava de unidade (bloqueada na Mangueira com estoque, permitida no Alicate sem histórico). Registros de teste removidos por soft-delete direto.
+
+Limitação real que permanece por desenho: `quem_pegou` é texto livre, então grafias diferentes da mesma pessoa criam débitos separados no agregado; e nenhum sistema offline-first consegue exibir saldo global verdadeiro em dispositivos desconectados, o que o servidor resolve na reconciliação, não na tela.
+
+Disparador: quando mencionar "devolução fora de ordem", "reprocessamento de devolução", `aprovacao_manual`, "troca de unidade de item", "unidade travada no cadastro", advisory lock de almoxarifado, ou FK de `retirada_id`, ler esta seção.
+
 ## Fix da devolução agregada do almoxarifado (2026-09-16)
 
 O teste end-to-end da fase 2 do estoque de almoxarifado expôs um bug de integridade na trigger `trg_retirada_almoxarifado_mov`. No caminho sem vínculo de retirada (fallback do catálogo no PWA), o saldo devolvível era calculado como `total de retiradas - devoluções com retirada_id IS NULL`, ou seja, devoluções vinculadas já aprovadas não eram descontadas do agregado. Resultado observado: com 2 furadeiras retiradas e 1 já devolvida via vínculo, uma devolução não vinculada de 5 unidades foi aprovada em 2 quando o pendente real era 1.
