@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Colisão de CSS `.detail-table` no infográfico mensal (2026-09-16)
+
+- **Sintoma**: na tabela "Detalhamento por Máquina/Veículo" do relatório geral, o cabeçalho "Litros" aparecia deslocado para a esquerda, sobreposto a "Máquina/Veículo".
+- **Causa raiz**: `morte.js` e `abastecimento.js` usavam a mesma classe `.detail-table` com larguras/fontes divergentes (9 colunas vs 10). O `composeReports` concatena o `<style>` de todos os relatórios num único documento, então o último CSS carregado vencia globalmente: a tabela de abastecimento herdava as larguras do morte (coluna 1 caía de 18% para 11%, fonte subia para 13px) e "Máquina/Veículo" estourava para dentro da coluna "Litros". A colisão era bidirecional e também podia corromper a tabela do morte.
+- **Correção**: classes namespaced por relatório, `.abast-detail-table` em `api/pdf/abastecimento.js` e `.morte-detail-table` em `api/pdf/morte.js`, isolando as regras independente da ordem de composição. Coluna "Litros" (`th`/`td` `nth-child(2)`) centralizada conforme solicitado.
+- **Convenção**: classes de tabela de relatórios Puppeteer devem levar prefixo do relatório, pois o CSS compartilha um único namespace global no documento composto.
+- **Verificação**: `_tmp_smoke/abastecimento/verify_colisao_css.mjs` compõe abastecimento + morte (ordem que reproduzia o bug) e mede o layout real no Chromium: coluna 1 voltou a 18%, "Litros" a 8% centralizado, sem overflow de "Máquina/Veículo"; tabela do morte mantém 11%/25%.
+
 ## Redesign do sidebar: hierarquia visual, acessibilidade e command palette (2026-09-15)
 
 - O sidebar do `ControllerLayout` foi reorganizado em 4 seções semânticas (Principal, Operação, Insumos & Estoque, Sistema) com headers e divisores visuais, eliminando a lista plana de 12 itens sem hierarquia.

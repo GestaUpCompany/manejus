@@ -157,6 +157,9 @@ const dateShortFmt = (value) => {
 // coluna à esquerda + área de conteúdo à direita), pills condicionais, grid
 // de 2 colunas para os gráficos inferiores, larguras das colunas das tabelas.
 // Mesmo critério do MORTE_CSS/CONSUMO_CSS: específico demais para o _shared/.
+// Classes de tabela levam prefixo do relatório (.abast-detail-table): no
+// infográfico mensal o CSS de todos os relatórios é concatenado num único
+// <style>, então uma classe genérica (.detail-table) colide com a do morte.
 const ABASTECIMENTO_CSS = `
 .page{display:flex;flex-direction:column}
 .abast-content{flex:1;display:flex;flex-direction:column;min-height:0}
@@ -173,23 +176,24 @@ const ABASTECIMENTO_CSS = `
 .charts-col .chart-card{height:auto}
 .chart-main{height:120mm}
 .chart-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;height:135mm}
-.detail-table th:nth-child(1){width:18%}
-.detail-table th:nth-child(2){width:8%}
-.detail-table th:nth-child(3){width:6%}
-.detail-table th:nth-child(4){width:7%}
-.detail-table th:nth-child(5){width:7%}
-.detail-table th:nth-child(6){width:7%}
-.detail-table th:nth-child(7){width:9%}
-.detail-table th:nth-child(8){width:9%}
-.detail-table th:nth-child(9){width:10%}
-.detail-table th:nth-child(10){width:19%}
-.detail-table td{font-size:12px;padding:6px 5px;line-height:1.25}
-.detail-table th{font-size:11px;padding:6px 5px}
-.detail-table tr.total-row{font-weight:700;background:#eef5f0}
-.detail-table tr.total-row td{color:#0b6a42}
-.detail-table th, .detail-table td{border-right:1px solid #d8e0db}
-.detail-table th:last-child, .detail-table td:last-child{border-right:none}
-.detail-table tbody tr:nth-child(even){background:#f7faf8}
+.abast-detail-table th:nth-child(1){width:18%}
+.abast-detail-table th:nth-child(2){width:8%}
+.abast-detail-table th:nth-child(3){width:6%}
+.abast-detail-table th:nth-child(4){width:7%}
+.abast-detail-table th:nth-child(5){width:7%}
+.abast-detail-table th:nth-child(6){width:7%}
+.abast-detail-table th:nth-child(7){width:9%}
+.abast-detail-table th:nth-child(8){width:9%}
+.abast-detail-table th:nth-child(9){width:10%}
+.abast-detail-table th:nth-child(10){width:19%}
+.abast-detail-table th:nth-child(2), .abast-detail-table td:nth-child(2){text-align:center}
+.abast-detail-table td{font-size:12px;padding:6px 5px;line-height:1.25}
+.abast-detail-table th{font-size:11px;padding:6px 5px}
+.abast-detail-table tr.total-row{font-weight:700;background:#eef5f0}
+.abast-detail-table tr.total-row td{color:#0b6a42}
+.abast-detail-table th, .abast-detail-table td{border-right:1px solid #d8e0db}
+.abast-detail-table th:last-child, .abast-detail-table td:last-child{border-right:none}
+.abast-detail-table tbody tr:nth-child(even){background:#f7faf8}
 .oper-table th:nth-child(1){width:30%}
 .oper-table th:nth-child(2){width:45%}
 .oper-table th:nth-child(3){width:25%}
@@ -401,7 +405,7 @@ function detailTable1Html(detalhes, totalLitros, totalRegistros) {
     })
     .join('')
   const totalRow = `<tr class="total-row"><td>Total</td><td class="numeric">${intFmtLocale(totalLitros)} L</td><td class="numeric">100%</td><td class="numeric">${intFmtLocale(totalRegistros)}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`
-  return `<table class="detail-table">${header}<tbody>${rows}${totalRow}</tbody></table>`
+  return `<table class="abast-detail-table">${header}<tbody>${rows}${totalRow}</tbody></table>`
 }
 
 function detailTable2Html(detalhes) {
