@@ -113,11 +113,10 @@ const MORTE_CSS = `
 .detail-table th:last-child, .detail-table td:last-child{border-right:none}
 .detail-table tbody tr:nth-child(even){background:#f7faf8}
 .map-row{display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:4mm}
-.map-row.duo{grid-template-columns:1fr 1fr}
 .map-card{height:118mm;border:1px solid #dce5df;border-radius:6px;padding:8px;background:#fff;overflow:hidden;display:flex;flex-direction:column}
 .map-card .chart-heading{height:auto;min-height:8mm;padding-bottom:2.5mm}
 .map-body{flex:1;min-height:0;position:relative;border-radius:4px;overflow:hidden;background:#3a4a3a}
-#mapa-morte,#mapa-morte-zoom{position:absolute;inset:0}
+#mapa-morte{position:absolute;inset:0}
 .map-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#93a099;font-size:13px;background:#fafcfb}
 .map-ranking{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .map-ranking .rank-label{font-size:12px;color:#8a9890;margin-right:4px}
@@ -232,8 +231,7 @@ const CHARTS_INIT_JS = `
 // Script do mapa de mortalidade: instancia MapLibre (UMD injetado antes deste
 // bloco) com os mesmos tiles ESRI World Imagery e o mesmo estilo de camadas do
 // MapaFazenda.tsx (pastos verdes translúcidos com contorno e label, mortes como
-// círculos vermelhos). Enquadra todos os pontos no mapa geral e, quando há
-// concentração, um segundo mapa dá zoom nos focos. Sinaliza window.__mapReady
+// círculos vermelhos). Enquadra todos os pontos e sinaliza window.__mapReady
 // para o Puppeteer imprimir. Se WebGL não estiver disponível no Chromium
 // headless, cai num SVG equiretangular com polígonos + círculos.
 const MAP_INIT_JS = `
@@ -246,11 +244,9 @@ const MAP_INIT_JS = `
   var data = window.__reportData || {}
   var mapa = data.mapa || {}
   var pontos = mapa.pontos || []
-  var foco = mapa.foco || []
   var pastosFC = mapa.pastos || { type: 'FeatureCollection', features: [] }
 
   var elGeral = document.getElementById('mapa-morte')
-  var elZoom = document.getElementById('mapa-morte-zoom')
   if (!elGeral) { finish(); return }
 
   function toFC(pts){
@@ -261,14 +257,9 @@ const MAP_INIT_JS = `
   // lança exceção quando WebGL não está disponível, o que o catch cobre.
   if (!pontos.length || !window.maplibregl) {
     renderFallback(elGeral, pontos)
-    if (elZoom) renderFallback(elZoom, foco.length ? foco : pontos)
     finish()
     return
   }
-
-  var alvo = elZoom ? 2 : 1
-  var ready = 0
-  function oneReady(){ ready += 1; if (ready >= alvo) finish() }
 
   var style = {
     version: 8,
@@ -295,8 +286,7 @@ const MAP_INIT_JS = `
       container: el, style: style, center: [-55, -13], zoom: 4,
       attributionControl: false, interactive: false, fadeDuration: 0
     })
-    var signaled = false
-    function mapDone(){ if (!signaled) { signaled = true; oneReady() } }
+    function mapDone(){ if (!signaled) { signaled = true; finish() } }
     map.on('load', function(){
       if (pastosFC.features.length) {
         map.addSource('pastos', { type: 'geojson', data: pastosFC })
@@ -320,10 +310,8 @@ const MAP_INIT_JS = `
 
   try {
     buildMap(elGeral, pontos)
-    if (elZoom) buildMap(elZoom, foco.length ? foco : pontos)
   } catch (e) {
     renderFallback(elGeral, pontos)
-    if (elZoom) renderFallback(elZoom, foco.length ? foco : pontos)
     finish()
   }
 
@@ -422,31 +410,6 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
       .map((p) => ({ type: 'Feature', properties: { nome: p.nome || '' }, geometry: p.geometry })),
   }
 
-  // Clustering greedy por raio (~440m): agrupa pontos próximos ao centroide
-  // de um cluster existente. Focos = clusters com >= 3 mortes; o mapa de
-  // detalhe enquadra a união dos focos quando eles não cobrem tudo. Raio
-  // maior (ex: 0.008) funde pastos vizinhos num cluster só e o detalhe
-  // nunca aparece em fazendas compactas.
-  const RAIO_CLUSTER = 0.004
-  const clusters = []
-  for (const p of pontos) {
-    let best = null
-    let bestDist = RAIO_CLUSTER
-    for (const c of clusters) {
-      const d = Math.hypot(p[0] - c.lng, p[1] - c.lat)
-      if (d < bestDist) { bestDist = d; best = c }
-    }
-    if (best) {
-      best.pontos.push(p)
-      best.lng = best.pontos.reduce((s, q) => s + q[0], 0) / best.pontos.length
-      best.lat = best.pontos.reduce((s, q) => s + q[1], 0) / best.pontos.length
-    } else {
-      clusters.push({ lng: p[0], lat: p[1], pontos: [p] })
-    }
-  }
-  const focoPontos = clusters.filter((c) => c.pontos.length >= 3).flatMap((c) => c.pontos)
-  const temDetalhe = focoPontos.length >= 3 && focoPontos.length < pontos.length
-
   // Ranking de pastos entre as mortes georreferenciadas (campo textual já
   // preenchido no registro).
   const pastoCount = new Map()
@@ -528,15 +491,11 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
     ? pageSection(`
     ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Distribuição geográfica', sectionLabel: 'Mapa' })}
     <p class="section-kicker">Localização das ocorrências</p>
-    <div class="map-row${temDetalhe ? ' duo' : ''}">
+    <div class="map-row">
       <div class="map-card">
         <div class="chart-heading"><strong>Mapa de mortalidade</strong><span>Cada círculo vermelho representa um registro de morte${pontos.length ? '' : ' · sem coordenadas GPS no período'}</span></div>
         <div class="map-body"><div id="mapa-morte"></div></div>
       </div>
-      ${temDetalhe ? `<div class="map-card">
-        <div class="chart-heading"><strong>Detalhe do foco</strong><span>Zoom nas concentrações · ${focoPontos.length} de ${pontos.length} registros</span></div>
-        <div class="map-body"><div id="mapa-morte-zoom"></div></div>
-      </div>` : ''}
     </div>
     ${rankingHtml}
     ${renderFooter({ ...period, page: 5, totalPages })}
@@ -594,7 +553,7 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
         por_sexo: resumo.por_sexo ?? [],
         por_pasto: resumo.por_pasto ?? [],
       },
-      mapa: { pontos, foco: focoPontos, pastos: pastosFC },
+      mapa: { pontos, pastos: pastosFC },
     },
   })
 }
