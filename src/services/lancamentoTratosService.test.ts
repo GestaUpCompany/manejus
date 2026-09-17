@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcularTratosDoDia, limparReaisLancamento } from './lancamentoTratosService'
+import { calcularTratosDoDia, limparReaisLancamento, validarLancamentosTratos, type LancamentoTratoLinha } from './lancamentoTratosService'
 
 const percentuais = [
   { ordem_trato: 1, percentual: 30, horario_sugerido: '07:00' },
@@ -86,5 +86,51 @@ describe('calcularTratosDoDia', () => {
     const limpas = limparReaisLancamento(linhas)
     expect(limpas[0].tratos[0].kgReal).toBeNull()
     expect(limpas[0].tratos[0].registroId).toBe('registro')
+  })
+})
+
+function linhaBase(overrides: Partial<LancamentoTratoLinha> = {}): LancamentoTratoLinha {
+  return {
+    curralId: 'curral',
+    curralNome: 'Curral 1',
+    linhaNome: null,
+    loteId: 'lote',
+    loteNome: 'Lote 1',
+    dietaNome: 'Dieta',
+    quantidadeCabecas: 10,
+    pesoVivoKg: 400,
+    categorias: 'Boi Gordo',
+    tratoAnteriorKg: null,
+    leituraDia: null,
+    ajusteLeituraPct: null,
+    kgBaseDia: 100,
+    consumoKgCabDia: 10,
+    quantidadeTratos: 1,
+    tratos: [{ ordemTrato: 1, percentual: 100, horarioSugerido: null, kgPlanejado: 100, kgReal: 50, registroId: null }],
+    ...overrides,
+  }
+}
+
+describe('validarLancamentosTratos', () => {
+  it('rejeita valores reais negativos', () => {
+    const linhas = [linhaBase({
+      tratos: [{ ordemTrato: 1, percentual: 100, horarioSugerido: null, kgPlanejado: 100, kgReal: -5, registroId: null }],
+    })]
+    expect(validarLancamentosTratos(linhas)).toHaveLength(1)
+    expect(validarLancamentosTratos(linhas)[0]).toContain('negativo')
+  })
+
+  it('rejeita linha sem lote com valor preenchido', () => {
+    const linhas = [linhaBase({ loteId: null, loteNome: 'Sem lote' })]
+    expect(validarLancamentosTratos(linhas)[0]).toContain('sem lote')
+  })
+
+  it('ignora linhas sem valor preenchido e aceita linhas válidas', () => {
+    const semPreencher = linhaBase({
+      loteId: null,
+      tratos: [{ ordemTrato: 1, percentual: 100, horarioSugerido: null, kgPlanejado: 100, kgReal: null, registroId: null }],
+    })
+    expect(validarLancamentosTratos([semPreencher])).toHaveLength(0)
+    expect(validarLancamentosTratos([linhaBase()])).toHaveLength(0)
   })
 })

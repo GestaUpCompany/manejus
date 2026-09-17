@@ -267,6 +267,23 @@ export async function carregarLancamentoTratos(
   return { fazendaId, data, tipo, programacaoId: programacao.id, linhas }
 }
 
+export function validarLancamentosTratos(linhas: LancamentoTratoLinha[]): string[] {
+  const problemas: string[] = []
+  for (const linha of linhas) {
+    const preenchidos = linha.tratos.filter((trato) => trato.kgReal !== null)
+    if (preenchidos.length === 0) continue
+    if (!linha.loteId) {
+      problemas.push(`${linha.curralNome}: sem lote vinculado`)
+    }
+    for (const trato of preenchidos) {
+      if ((trato.kgReal ?? 0) < 0) {
+        problemas.push(`${linha.loteNome} (${linha.curralNome}), trato ${trato.ordemTrato}: valor negativo`)
+      }
+    }
+  }
+  return problemas
+}
+
 export async function salvarLancamentosTratos(params: {
   fazendaId: string
   data: string
@@ -274,12 +291,17 @@ export async function salvarLancamentosTratos(params: {
   nomeUsuario: string
   linhas: LancamentoTratoLinha[]
 }): Promise<void> {
+  const problemas = validarLancamentosTratos(params.linhas)
+  if (problemas.length > 0) {
+    throw new Error(problemas.join('; '))
+  }
+
   const registros = params.linhas.flatMap((linha) => linha.tratos
     .filter((trato) => trato.kgReal !== null)
     .map((trato) => ({
       id: trato.registroId || undefined,
       fazenda_id: params.fazendaId,
-      data: new Date(`${params.data}T12:00:00`).toISOString(),
+      data: new Date(`${params.data}T12:00:00-04:00`).toISOString(),
       nome_usuario: params.nomeUsuario,
       curral_id: linha.curralId,
       lote_id: linha.loteId,
@@ -288,16 +310,13 @@ export async function salvarLancamentosTratos(params: {
       kg_ofertado_real: trato.kgReal,
       leitura_cocho_nota: linha.leituraDia,
       programacao_id: params.programacaoId,
+      origem: 'painel',
+      local_id: `painel-${linha.curralId}-${params.data}-${trato.ordemTrato}`,
     })))
   if (registros.length === 0) return
 
-  for (const registro of registros) {
-    const { id, ...payload } = registro
-    const result = id
-      ? await supabase.from('registros_oferta_trato').update(payload).eq('id', id)
-      : await supabase.from('registros_oferta_trato').insert(payload)
-    if (result.error) throw result.error
-  }
+  const { error } = await supabase.rpc('lancar_tratos_folha', { p_registros: registros })
+  if (error) throw error
 }
 
 export function limparReaisLancamento(linhas: LancamentoTratoLinha[]): LancamentoTratoLinha[] {

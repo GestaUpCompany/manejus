@@ -1,5 +1,21 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Endurecimento de segurança do lançamento de tratos (2026-09-17)
+
+A auditoria da tela de lançamento de tratos identificou que `registros_oferta_trato` estava com policies permissivas (`USING true` / `WITH CHECK true`), que a gravação não era transacional e que a unicidade por `(curral_id, data, ordem_trato)` usava o instante exato (timestamptz), permitindo duplicatas entre painel (meio-dia fixo) e PWA (horário real). A migration `20260917100000_seguranca_lancamento_tratos` corrigiu os quatro pontos:
+
+- **RLS por fazenda**: as quatro policies foram recriadas com `user_has_fazenda_access(fazenda_id)`, mesmo padrão já usado em `registros_leitura_cocho`. Os 48 peões ativos possuem vínculo em `usuario_fazenda`, então o sync do PWA continua autorizado; impersonação também não quebra porque troca a sessão para o usuário alvo. Acesso `anon` foi removido das policies.
+- **Integridade**: CHECK constraints `kg_planejado >= 0` e `kg_ofertado_real >= 0` (já existia `ordem_trato > 0`). Nenhum registro negativo existia no banco.
+- **Unicidade por dia operacional**: índice único `(curral_id, (data AT TIME ZONE 'America/Cuiaba')::date, ordem_trato) WHERE deleted_at IS NULL`. Um segundo registro do mesmo curral/trato/dia agora falha em vez de duplicar, inclusive em corrida entre painel e PWA.
+- **Origem**: coluna `origem text NOT NULL DEFAULT 'pwa'` (`'pwa'`/`'painel'`). O painel grava `origem='painel'` e `local_id` determinístico `painel-{curral}-{data}-{ordem}`.
+- **RPC `lancar_tratos_folha(jsonb)`**: gravação atômica e validada no servidor (mesma fazenda, vínculo do usuário, curral/lote/programação pertencentes à fazenda, kg não negativo, ordem dentro da programação). Resolve o registro lógico por curral+dia+ordem antes de inserir, então um trato já gravado pelo PWA é atualizado em vez de duplicado; `data`, `origem` e `local_id` originais são preservados no update.
+
+Painel: `salvarLancamentosTratos` passou a chamar a RPC, `data` usa meio-dia fixo em `-04:00` (Cuiabá, sem horário de verão), `validarLancamentosTratos` bloqueia valores negativos e trato preenchido sem lote, campo com valor negativo fica vermelho, e banner âmbar lista currais sem lote/dieta/cabeças. Erros da RPC aparecem com a mensagem do banco.
+
+Verificação na fazenda de testes via devtools: RPC rejeitou curral de outra fazenda; lançamento de 4 tratos gravou com `origem='painel'`, `sync_status='synced'` e `local_id` correto; salvamento repetido atualizou em vez de duplicar. Ponto de atenção de teste: `fill`/`fill_form` do chrome-devtools não disparam `onChange` do React em input `type=date` nem no `fill_form` com vários campos; para testar troca de data é preciso setar o valor via `HTMLInputElement.prototype` + `dispatchEvent(new Event('input'))` e preencher os campos Real um a um com `fill`.
+
+Observação: as tabelas `programacao_tratos`, `programacao_tratos_percentuais` e `programacao_tratos_currais` ainda usam policies permissivas (`USING true`); recomenda-se aplicar o mesmo padrão em trabalho futuro.
+
 ## Lançamento de tratos e planilha de campo no Painel Web (2026-09-17)
 
 - O módulo de confinamento ganhou a rota protegida `/controller/lancamento-tratos`, disponível no menu Confinamento e TIP para os tipos Engorda, Sequestro e TIP.

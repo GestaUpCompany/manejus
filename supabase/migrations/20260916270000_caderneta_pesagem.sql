@@ -1,0 +1,3 @@
+-- Placeholder: migration caderneta_pesagem já aplicada no remoto
+-- (registrada em schema_migrations como 20260916270000). Arquivo criado para
+-- sincronizar o histórico local com o remoto, conforme fluxo de repair.

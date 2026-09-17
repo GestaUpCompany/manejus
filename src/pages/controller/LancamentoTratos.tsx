@@ -34,6 +34,7 @@ function formatarData(data: string): string {
 }
 
 function classeReal(valor: number | null): string {
+  if (valor != null && valor < 0) return 'border-red-500 bg-red-50 text-red-700 focus:border-red-600'
   if (valor == null) return 'border-yellow-400 bg-white focus:border-primary'
   return 'border-green-500 bg-green-50 text-green-800 focus:border-green-600'
 }
@@ -113,7 +114,10 @@ export function LancamentoTratos() {
       setSuccess('Lançamentos salvos com sucesso.')
     } catch (err) {
       console.error('Erro ao salvar lançamento de tratos:', err)
-      setError('Não foi possível salvar os lançamentos. Verifique os campos e tente novamente.')
+      const mensagem = err && typeof err === 'object' && 'message' in err && err.message
+        ? String(err.message)
+        : 'Não foi possível salvar os lançamentos. Verifique os campos e tente novamente.'
+      setError(mensagem)
     } finally {
       setSaving(false)
     }
@@ -126,6 +130,13 @@ export function LancamentoTratos() {
 
   const dados = fazendaId && programacaoId ? { fazendaId, data, tipo, programacaoId, linhas } : null
   const tratosPreenchidos = linhas.reduce((total, linha) => total + linha.tratos.filter((trato) => trato.kgReal !== null).length, 0)
+  const avisos = linhas.flatMap((linha) => {
+    const faltantes: string[] = []
+    if (!linha.loteId) faltantes.push('sem lote vinculado')
+    if (!linha.dietaNome) faltantes.push('sem dieta ativa')
+    if (!linha.quantidadeCabecas) faltantes.push('sem cabeças ativas')
+    return faltantes.length ? [`${linha.curralNome} (${linha.loteNome}): ${faltantes.join(', ')}`] : []
+  })
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-[1800px] mx-auto">
@@ -155,6 +166,14 @@ export function LancamentoTratos() {
 
       {error && <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {success && <div className="rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-700">{success}</div>}
+      {!loading && avisos.length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+          <p className="font-semibold">Dados incompletos em {avisos.length} curral(is):</p>
+          <ul className="mt-1 list-disc pl-5 space-y-0.5">
+            {avisos.map((aviso) => <li key={aviso}>{aviso}</li>)}
+          </ul>
+        </div>
+      )}
 
       {!loading && !programacaoId && (
         <Card className="p-8 text-center text-content-muted">
