@@ -76,8 +76,10 @@ export function RelatorioCapaGallery({ fazendaId, selecionada, onSelect, disable
       </div>
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <button type="button" disabled={disabled} onClick={() => onSelect(null, '')} className={`aspect-[1.414/1] rounded-lg border-2 bg-gradient-to-br from-green-900 via-green-700 to-blue-900 p-3 text-left text-xs font-semibold text-white ${selecionada === null ? 'border-amber-400 ring-2 ring-amber-200' : 'border-transparent'}`}>
-          Capa institucional
+        <button type="button" disabled={disabled} onClick={() => onSelect(null, '/images/capa-padrao.png')} className={`relative aspect-[1.414/1] overflow-hidden rounded-lg border-2 p-3 text-left text-xs font-semibold text-white ${selecionada === null ? 'border-amber-400 ring-2 ring-amber-200' : 'border-transparent'}`}>
+          <img src="/images/capa-padrao.png" alt="Capa padrão" className="absolute inset-0 h-full w-full object-cover" />
+          <span className="absolute inset-0 bg-gradient-to-r from-green-950/85 via-green-800/55 to-blue-950/40" />
+          <span className="relative">Capa padrão</span>
         </button>
         {loading ? (
           <div className="aspect-[1.414/1] animate-pulse rounded-lg bg-surface-2" />

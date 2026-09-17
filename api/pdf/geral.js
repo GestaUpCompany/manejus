@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { generatePdf } from './_shared/puppeteer.js'
 import { composeReports } from './_shared/reportComposer.js'
 import { isReportType } from './_shared/reportRegistry.js'
@@ -5,6 +6,22 @@ import { createAuthenticatedSupabase, downloadImageDataUrl } from './_shared/sup
 
 const MAX_BODY_BYTES = 4_000_000
 const DIA_MS = 86_400_000
+
+// Capa padrão institucional (foto de rebanho) embutida no bundle da função.
+// Usada quando a fazenda não escolheu imagem própria na galeria de capas;
+// vale para fazendas existentes e futuras. Em Vercel, o vercel.json inclui o
+// arquivo no bundle via includeFiles.
+let capaPadraoCache = null
+function capaPadraoDataUrl() {
+  if (capaPadraoCache === null) {
+    try {
+      capaPadraoCache = `data:image/png;base64,${readFileSync(new URL('./_shared/capa-padrao.png', import.meta.url)).toString('base64')}`
+    } catch {
+      capaPadraoCache = ''
+    }
+  }
+  return capaPadraoCache
+}
 
 function validarBody(body) {
   if (!body || typeof body !== 'object') return 'Payload inválido'
@@ -47,7 +64,7 @@ export default async function handler(req, res) {
     const supabase = await createAuthenticatedSupabase(req, body.fazendaId)
     const [logoEmpresa, imagemCapa] = await Promise.all([
       downloadImageDataUrl(supabase, 'system/gestaupcompany.png'),
-      body.imagemCapaPath ? downloadImageDataUrl(supabase, body.imagemCapaPath) : Promise.resolve(''),
+      body.imagemCapaPath ? downloadImageDataUrl(supabase, body.imagemCapaPath) : Promise.resolve(capaPadraoDataUrl()),
     ])
     const reports = body.reports.map((report) => ({
       ...report,

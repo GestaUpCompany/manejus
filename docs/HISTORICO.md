@@ -1,5 +1,15 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Lançamento de tratos e planilha de campo no Painel Web (2026-09-17)
+
+- O módulo de confinamento ganhou a rota protegida `/controller/lancamento-tratos`, disponível no menu Confinamento e TIP para os tipos Engorda, Sequestro e TIP.
+- A tela opera por curral, exibe lote, dieta, cabeças, trato anterior, leitura de cocho, previsto diário e pares dinâmicos Previsto/Real conforme a quantidade de tratos configurada.
+- O cálculo reproduz a regra do PWA para o primeiro dia, ajuste pela leitura de cocho anterior e compensação do último trato.
+- Os lançamentos são inseridos ou atualizados diretamente em `registros_oferta_trato`, mantendo o mesmo destino usado pelo PWA.
+- Foi adicionado o exportador ExcelJS da folha de campo, com título, data, cabeçalhos agrupados por trato, colunas Real vazias, orientação paisagem e ajuste para uma página de largura.
+- Foram adicionados testes unitários para a distribuição inicial, ajuste de leitura e compensação do último trato.
+- Verificação: `npx tsc --noEmit`, `npm run test` com 58 testes aprovados e `npm run build` aprovados. O lint do repositório continua indisponível porque não há configuração ESLint encontrada na raiz.
+
 ## Gráfico de saldo final por local no Boletim de Rebanho (2026-09-16)
 
 - A página do consolidado anual passou a exibir um card de saldo final geral e um gráfico horizontal estilizado com o saldo final de cada local da aba `GERAL`.

@@ -32,7 +32,7 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
   const [nomeArquivoBoletim, setNomeArquivoBoletim] = useState('')
   const [carregandoPlanilha, setCarregandoPlanilha] = useState(false)
   const [imagemCapa, setImagemCapa] = useState<string | null>(null)
-  const [imagemCapaPreview, setImagemCapaPreview] = useState('')
+  const [imagemCapaPreview, setImagemCapaPreview] = useState('/images/capa-padrao.png')
   const [gerando, setGerando] = useState(false)
   const [etapa, setEtapa] = useState('')
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)

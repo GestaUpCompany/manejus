@@ -62,6 +62,7 @@ const Atividades = laz(() => import('./pages/controller/Atividades'), 'Atividade
 const MonitoramentoAtividades = laz(() => import('./pages/controller/MonitoramentoAtividades'), 'MonitoramentoAtividades')
 const Currais = laz(() => import('./pages/controller/Currais'), 'Currais')
 const ConfiguracaoTratos = laz(() => import('./pages/controller/ProgramacaoTratos'), 'ConfiguracaoTratos')
+const LancamentoTratos = laz(() => import('./pages/controller/LancamentoTratos'), 'LancamentoTratos')
 const AcompanhamentoTratos = laz(() => import('./pages/controller/AcompanhamentoTratos'), 'AcompanhamentoTratos')
 const HistoricoDietas = laz(() => import('./pages/controller/HistoricoDietas'), 'HistoricoDietas')
 const BebedourosCadastro = laz(() => import('./pages/controller/BebedourosCadastro'), 'BebedourosCadastro')
@@ -572,6 +573,18 @@ function App() {
                 <ConfinamentoRoute>
                   <ControllerLayout>
                     <ConfiguracaoTratos />
+                  </ControllerLayout>
+                </ConfinamentoRoute>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/lancamento-tratos"
+            element={
+              <ControllerRoute>
+                <ConfinamentoRoute>
+                  <ControllerLayout>
+                    <LancamentoTratos />
                   </ControllerLayout>
                 </ConfinamentoRoute>
               </ControllerRoute>
