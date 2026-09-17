@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as XLSX from 'xlsx'
-import { agruparBoletim, normalizarPlanilhaBoletim } from './boletimRebanho'
+import { agruparBoletim, listarLocaisBoletim, normalizarPlanilhaBoletim } from './boletimRebanho'
 
 const header = ['Descrição', 'Inic.', 'Com.', 'Vend.', 'Mort.', 'Cons.', 'Nasc.', 'Ent.', 'Saí.', 'Evol +', 'Evol -', 'Final', 'Peso Médio (kg)', 'Peso Total (kg)', 'Total UA', 'Valor (kg)', 'Valor Total']
 const categories = [
@@ -40,6 +40,23 @@ function workbookComLinhasOcultas() {
   }
   XLSX.utils.book_append_sheet(wb, geral, 'GERAL')
   XLSX.utils.book_append_sheet(wb, julho, 'Julho')
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+}
+
+function workbookComCabecalhosVazios() {
+  const wb = XLSX.utils.book_new()
+  const geral = [[''], ...bloco('Consolidado', 42)]
+  const julho = [
+    [''],
+    ...bloco('Fazenda Sede', 21),
+    ['', ...header],
+    ['', 'Total do Rebanho'],
+    ['', ...header],
+    ['', 'Total do Rebanho'],
+    ...bloco('GRUPO AGRO GENTILIN', 42),
+  ]
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(geral), 'GERAL')
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(julho), 'Julho')
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
 }
 
@@ -83,6 +100,28 @@ describe('normalizador do Boletim de Rebanho', () => {
     const resultado = normalizarPlanilhaBoletim(workbookComLocalZerado())
     const agrupado = agruparBoletim(resultado.registros, 7)
     expect(agrupado.locais.map((local) => local.fazenda)).toEqual(['Fazenda Sede'])
+  })
+
+  it('exclui locais ocultos do mês e do resumo anual, mantendo o consolidado', () => {
+    const resultado = normalizarPlanilhaBoletim(workbookComLinhasOcultas())
+    const agrupado = agruparBoletim(resultado.registros, 7, new Set(['Fazenda Chibata']))
+    expect(agrupado.geral).toHaveLength(10)
+    expect(agrupado.locais).toHaveLength(0)
+    expect(agrupado.locaisGeral).toHaveLength(0)
+  })
+
+  it('ignora cabeçalhos sem dados na escolha do consolidado', () => {
+    const resultado = normalizarPlanilhaBoletim(workbookComCabecalhosVazios())
+    expect(resultado.registros.every((registro) => registro.fazenda !== 'GRUPO AGRO GENTILIN')).toBe(true)
+    const agrupado = agruparBoletim(resultado.registros, 7)
+    expect(agrupado.locais.map((local) => local.fazenda)).toEqual(['Fazenda Sede'])
+  })
+
+  it('lista apenas locais que renderizam no PDF', () => {
+    const resultado = normalizarPlanilhaBoletim(workbookComLocalZerado())
+    expect(listarLocaisBoletim(resultado.registros)).toEqual(['Fazenda Sede'])
+    const comOcultos = normalizarPlanilhaBoletim(workbookComLinhasOcultas())
+    expect(listarLocaisBoletim(comOcultos.registros)).toEqual(['Fazenda Chibata'])
   })
 
   it('renderiza uma tabela para o consolidado e outra para cada local', async () => {

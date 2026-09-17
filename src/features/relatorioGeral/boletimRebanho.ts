@@ -191,13 +191,14 @@ function extrairRegistrosDaAba(sheet: XLSX.WorkSheet, nomeAba: string): { regist
     const header = Array.from({ length: COLUNAS_HEADER.length }, (_, index) => normalizarTexto(valorCelula(sheet, row, 1 + index)))
     if (header[0] !== COLUNAS_HEADER[0]) continue
 
-    if (!locais.includes(local)) locais.push(local)
+    const antesDoBloco = registros.length
     for (let dataRow = row + 1; dataRow <= Math.min(row + 12, range.e.r); dataRow += 1) {
       if (linhaOculta(sheet, dataRow)) continue
       const descricao = normalizarTexto(valorCelula(sheet, dataRow, 1))
       if (!descricao || descricao === 'Total do Rebanho') break
       registros.push(criarRegistro(sheet, dataRow, local, nomeAba, mesNumero))
     }
+    if (registros.length > antesDoBloco && !locais.includes(local)) locais.push(local)
   }
 
   const consolidado = locais.includes('Consolidado')
@@ -251,16 +252,32 @@ function blocoZerado(registros: RegistroBoletimRebanho[]): boolean {
   return registros.every((registro) => CAMPOS_MOVIMENTO.every((campo) => registro[campo] == null || registro[campo] === 0))
 }
 
-function agruparPorFazenda(registros: RegistroBoletimRebanho[], mesNumero: number) {
+function agruparPorFazenda(registros: RegistroBoletimRebanho[], mesNumero: number, excluir?: ReadonlySet<string>) {
   return [...new Set(registros
-    .filter((registro) => registro.mesNumero === mesNumero && registro.fazenda !== 'Consolidado')
+    .filter((registro) => registro.mesNumero === mesNumero && registro.fazenda !== 'Consolidado' && !excluir?.has(registro.fazenda))
     .map((registro) => registro.fazenda))]
     .sort((a, b) => a.localeCompare(b, 'pt-BR'))
     .map((fazenda) => ({ fazenda, registros: registros.filter((registro) => registro.mesNumero === mesNumero && registro.fazenda === fazenda) }))
     .filter((local) => !blocoZerado(local.registros))
 }
 
-export function agruparBoletim(registros: RegistroBoletimRebanho[], mesNumero: number) {
+export function agruparBoletim(registros: RegistroBoletimRebanho[], mesNumero: number, excluir?: ReadonlySet<string>) {
   const geral = registros.filter((registro) => registro.mesNumero === 13 && registro.fazenda === 'Consolidado')
-  return { geral, locais: agruparPorFazenda(registros, mesNumero), locaisGeral: agruparPorFazenda(registros, 13) }
+  return { geral, locais: agruparPorFazenda(registros, mesNumero, excluir), locaisGeral: agruparPorFazenda(registros, 13, excluir) }
+}
+
+export function listarLocaisBoletim(registros: RegistroBoletimRebanho[]): string[] {
+  const blocos = new Map<string, RegistroBoletimRebanho[]>()
+  for (const registro of registros) {
+    if (registro.fazenda === 'Consolidado') continue
+    const chave = `${registro.fazenda}||${registro.mesNumero}`
+    const bloco = blocos.get(chave)
+    if (bloco) bloco.push(registro)
+    else blocos.set(chave, [registro])
+  }
+  const locais = new Set<string>()
+  for (const [chave, bloco] of blocos) {
+    if (!blocoZerado(bloco)) locais.add(chave.split('||')[0])
+  }
+  return [...locais].sort((a, b) => a.localeCompare(b, 'pt-BR'))
 }

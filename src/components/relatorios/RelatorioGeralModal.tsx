@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Modal, useToast } from '../ui'
 import { RelatorioCapaGallery } from './RelatorioCapaGallery'
 import { RELATORIOS_GERAIS, type TipoRelatorioGeral } from '../../features/relatorioGeral/catalogo'
-import { agruparBoletim, normalizarPlanilhaBoletim, type DadosPDFBoletimRebanho, type ResultadoNormalizacaoBoletim } from '../../features/relatorioGeral/boletimRebanho'
+import { agruparBoletim, listarLocaisBoletim, normalizarPlanilhaBoletim, type DadosPDFBoletimRebanho, type ResultadoNormalizacaoBoletim } from '../../features/relatorioGeral/boletimRebanho'
 import { contarDiasInclusivos, formatarPeriodoCapa, validarPeriodoRelatorio } from '../../features/relatorioGeral/periodo'
 import { carregarRelatoriosGerais } from '../../features/relatorioGeral/loaders'
 import { baixarRelatorioGeral, gerarRelatorioGeral } from '../../services/relatorioGeralService'
@@ -20,6 +20,18 @@ const ORDEM_PADRAO = RELATORIOS_GERAIS.map((item) => item.id)
 const SELECIONADOS_PADRAO = new Set<TipoRelatorioGeral>(ORDEM_PADRAO.filter((id) => id !== 'boletim_rebanho'))
 const ANO_ATUAL = new Date().getFullYear()
 
+const chaveLocaisOcultos = (fazenda: string, ano: number) => `infografico:locais-ocultos:${fazenda}:${ano}`
+
+function lerLocaisOcultos(fazenda: string, ano: number): Set<string> {
+  try {
+    const bruto = localStorage.getItem(chaveLocaisOcultos(fazenda, ano))
+    const lista: unknown = bruto ? JSON.parse(bruto) : []
+    return new Set(Array.isArray(lista) ? lista.filter((item): item is string => typeof item === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+
 export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, fazendaLogoUrl }: Props) {
   const toast = useToast()
   const [dataInicio, setDataInicio] = useState('')
@@ -30,6 +42,7 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
   const [selecionados, setSelecionados] = useState<Set<TipoRelatorioGeral>>(new Set(SELECIONADOS_PADRAO))
   const [boletim, setBoletim] = useState<ResultadoNormalizacaoBoletim | null>(null)
   const [nomeArquivoBoletim, setNomeArquivoBoletim] = useState('')
+  const [locaisOcultos, setLocaisOcultos] = useState<Set<string>>(new Set())
   const [carregandoPlanilha, setCarregandoPlanilha] = useState(false)
   const [imagemCapa, setImagemCapa] = useState<string | null>(null)
   const [imagemCapaPreview, setImagemCapaPreview] = useState('/images/capa-padrao.png')
@@ -89,10 +102,12 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
     setImagemCapa(null)
     setImagemCapaPreview('')
     setEtapa('')
+    setLocaisOcultos(lerLocaisOcultos(fazendaId, ANO_ATUAL))
   }, [isOpen, fazendaId])
 
   useEffect(() => {
     if (!isOpen) return
+    setLocaisOcultos(lerLocaisOcultos(fazendaId, anoBoletim))
     void carregarPersistida(anoBoletim)
   }, [isOpen, anoBoletim])
 
@@ -101,13 +116,16 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
   const temOperacionais = tiposSelecionados.some((id) => id !== 'boletim_rebanho')
   const erroPeriodo = temOperacionais ? validarPeriodoRelatorio(dataInicio, dataFim) : null
   const dias = contarDiasInclusivos(dataInicio, dataFim)
+  const locaisDisponiveis = useMemo(() => (boletim ? listarLocaisBoletim(boletim.registros) : []), [boletim])
   const dadosBoletim: DadosPDFBoletimRebanho | undefined = useMemo(() => {
     if (!boletim || !mesBoletim) return undefined
     const mes = boletim.mesesDisponiveis.find((item) => item.numero === mesBoletim)
     if (!mes) return undefined
-    const agrupado = agruparBoletim(boletim.registros, mesBoletim)
+    const agrupado = agruparBoletim(boletim.registros, mesBoletim, locaisOcultos)
     return { ano: anoBoletim, mesReferencia: mes.nome, mesNumero: mesBoletim, ...agrupado }
-  }, [boletim, mesBoletim, anoBoletim])
+  }, [boletim, mesBoletim, anoBoletim, locaisOcultos])
+  const locaisIncluidos = locaisDisponiveis.filter((local) => !locaisOcultos.has(local)).length
+  const todosLocaisOcultos = locaisDisponiveis.length > 0 && locaisIncluidos === 0
   const podeGerar = tiposSelecionados.length > 0 && !gerando && !carregandoPlanilha && (!temOperacionais || !erroPeriodo) && (!temBoletim || Boolean(dadosBoletim))
   const resumo = useMemo(() => tiposSelecionados.map((id) => RELATORIOS_GERAIS.find((item) => item.id === id)?.titulo).filter(Boolean).join(' · '), [tiposSelecionados])
   const periodoCapa = formatarPeriodoCapa(dataInicio, dataFim) || (dadosBoletim ? `${dadosBoletim.mesReferencia} de ${dadosBoletim.ano}` : '')
@@ -119,6 +137,22 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
       else proximo.add(id)
       return proximo
     })
+  }
+
+  const gravarLocaisOcultos = (ocultos: Set<string>) => {
+    setLocaisOcultos(ocultos)
+    try {
+      localStorage.setItem(chaveLocaisOcultos(fazendaId, anoBoletim), JSON.stringify([...ocultos]))
+    } catch {
+      // localStorage indisponível: mantém apenas o estado em memória
+    }
+  }
+
+  const toggleLocal = (local: string) => {
+    const proximo = new Set(locaisOcultos)
+    if (proximo.has(local)) proximo.delete(local)
+    else proximo.add(local)
+    gravarLocaisOcultos(proximo)
   }
 
   const handleDragStart = (index: number) => setDraggingIndex(index)
@@ -186,6 +220,26 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
               <span className="text-xs text-content-muted">{nomeArquivoBoletim || 'Nenhuma planilha salva para este ano.'}</span>
             </div>
             {temBoletim && boletim && <label className="mt-3 block text-xs font-medium text-content">Mês de referência<select value={mesBoletim ?? ''} disabled={gerando || carregandoPlanilha} onChange={(event) => setMesBoletim(Number(event.target.value))} className="mt-1 w-full rounded-lg border border-surface-3 bg-surface-1 px-3 py-2 text-sm text-content-strong">{boletim.mesesDisponiveis.map((mes) => <option key={mes.numero} value={mes.numero}>{mes.nome}</option>)}</select></label>}
+            {temBoletim && boletim && locaisDisponiveis.length > 0 && (
+              <div className="mt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-content">Locais incluídos ({locaisIncluidos} de {locaisDisponiveis.length})</span>
+                  <div className="flex gap-3 text-xs font-semibold text-primary">
+                    <button type="button" disabled={gerando} onClick={() => gravarLocaisOcultos(new Set())} className="hover:underline disabled:opacity-50">Todos</button>
+                    <button type="button" disabled={gerando} onClick={() => gravarLocaisOcultos(new Set(locaisDisponiveis))} className="hover:underline disabled:opacity-50">Nenhum</button>
+                  </div>
+                </div>
+                <div className="mt-2 grid max-h-40 grid-cols-1 gap-1 overflow-y-auto sm:grid-cols-2">
+                  {locaisDisponiveis.map((local) => (
+                    <label key={local} className="flex items-center gap-2 rounded-lg border border-border-base bg-surface-1 px-2 py-1.5 text-xs text-content-strong">
+                      <input type="checkbox" checked={!locaisOcultos.has(local)} disabled={gerando} onChange={() => toggleLocal(local)} className="h-4 w-4 flex-shrink-0 rounded border-surface-3 text-primary" />
+                      <span className="truncate">{local}</span>
+                    </label>
+                  ))}
+                </div>
+                {todosLocaisOcultos && <p className="mt-2 text-xs text-amber-600">Todos os locais ocultos: o boletim sairá apenas com o Consolidado.</p>}
+              </div>
+            )}
             {temBoletim && !boletim && <p className="mt-3 text-xs text-red-600">Envie a planilha para selecionar o mês de referência.</p>}
           </section>
 
