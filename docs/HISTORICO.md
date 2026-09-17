@@ -5,6 +5,7 @@
 - O módulo de confinamento ganhou a rota protegida `/controller/lancamento-tratos`, disponível no menu Confinamento e TIP para os tipos Engorda, Sequestro e TIP.
 - A tela opera por curral, exibe lote, dieta, cabeças, trato anterior, leitura de cocho, previsto diário e pares dinâmicos Previsto/Real conforme a quantidade de tratos configurada.
 - O cálculo reproduz a regra do PWA para o primeiro dia, ajuste pela leitura de cocho anterior e compensação do último trato.
+- A leitura de cocho do próprio dia do trato é considerada no painel; a compensação do último trato só é aplicada depois que já existem Reais anteriores no mesmo dia.
 - Os lançamentos são inseridos ou atualizados diretamente em `registros_oferta_trato`, mantendo o mesmo destino usado pelo PWA.
 - Foi adicionado o exportador ExcelJS da folha de campo, com título, data, cabeçalhos agrupados por trato, colunas Real vazias, orientação paisagem e ajuste para uma página de largura.
 - Foram adicionados testes unitários para a distribuição inicial, ajuste de leitura e compensação do último trato.

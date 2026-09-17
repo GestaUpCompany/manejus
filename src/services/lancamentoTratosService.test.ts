@@ -25,6 +25,22 @@ describe('calcularTratosDoDia', () => {
     expect(resultado.tratos.map((trato) => trato.kgPlanejado)).toEqual([30, 20, 20, 30])
   })
 
+  it('mantém a distribuição percentual no dia seguinte enquanto nenhum trato foi realizado', () => {
+    const resultado = calcularTratosDoDia({
+      quantidadeTratos: 4,
+      percentuais,
+      kgMnDia: 100,
+      totalRealDiaAnterior: 100,
+      leituraDia: 2,
+      ajusteLeituraPct: -5,
+      registrosDoDia: [],
+      programacaoId: 'programacao',
+    })
+
+    expect(resultado.kgBaseDia).toBe(95)
+    expect(resultado.tratos.map((trato) => trato.kgPlanejado)).toEqual([28.5, 19, 19, 28.5])
+  })
+
   it('aplica ajuste do cocho e fecha o último trato com o saldo', () => {
     const resultado = calcularTratosDoDia({
       quantidadeTratos: 4,

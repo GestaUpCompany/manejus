@@ -91,7 +91,7 @@ function agruparUltimoDiaPorCurral(registros: RegistroOferta[]): Map<string, num
 function ultimaLeituraPorLote(leituras: LeituraCocho[], data: string): Map<string, LeituraCocho> {
   const resultado = new Map<string, LeituraCocho>()
   for (const leitura of leituras) {
-    if (!leitura.lote_id || leitura.data.slice(0, 10) >= data || resultado.has(leitura.lote_id)) continue
+    if (!leitura.lote_id || leitura.data.slice(0, 10) > data || resultado.has(leitura.lote_id)) continue
     resultado.set(leitura.lote_id, leitura)
   }
   return resultado
@@ -120,7 +120,7 @@ export function calcularTratosDoDia(params: {
     const registro = registrosPorOrdem.get(ordem)
     let kgPlanejado = kgBaseDia > 0 ? kgBaseDia * percentual / 100 : null
 
-    if (ordem === params.quantidadeTratos && params.totalRealDiaAnterior != null && kgBaseDia !== null) {
+    if (ordem === params.quantidadeTratos && params.totalRealDiaAnterior != null && params.registrosDoDia.length > 0 && kgBaseDia !== null) {
       kgPlanejado = Math.max(0, kgBaseDia - totalRealAnteriorNoDia)
     }
 
