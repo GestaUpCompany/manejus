@@ -5,6 +5,7 @@ import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import { useFazenda } from '../../hooks/useDashboardQueries'
 import {
   carregarLancamentoTratos,
+  limparReaisLancamento,
   parseKgLancamento,
   salvarLancamentosTratos,
   type LancamentoTratoLinha,
@@ -108,8 +109,8 @@ export function LancamentoTratos() {
         nomeUsuario: user.nome,
         linhas,
       })
+      setLinhas((atuais) => limparReaisLancamento(atuais))
       setSuccess('Lançamentos salvos com sucesso.')
-      await carregar()
     } catch (err) {
       console.error('Erro ao salvar lançamento de tratos:', err)
       setError('Não foi possível salvar os lançamentos. Verifique os campos e tente novamente.')

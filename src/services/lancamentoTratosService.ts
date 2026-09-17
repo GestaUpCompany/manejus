@@ -300,6 +300,13 @@ export async function salvarLancamentosTratos(params: {
   }
 }
 
+export function limparReaisLancamento(linhas: LancamentoTratoLinha[]): LancamentoTratoLinha[] {
+  return linhas.map((linha) => ({
+    ...linha,
+    tratos: linha.tratos.map((trato) => ({ ...trato, kgReal: null })),
+  }))
+}
+
 export function parseKgLancamento(value: string): number | null {
   return numero(value)
 }

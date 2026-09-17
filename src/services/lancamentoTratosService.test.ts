@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcularTratosDoDia } from './lancamentoTratosService'
+import { calcularTratosDoDia, limparReaisLancamento } from './lancamentoTratosService'
 
 const percentuais = [
   { ordem_trato: 1, percentual: 30, horario_sugerido: '07:00' },
@@ -61,5 +61,30 @@ describe('calcularTratosDoDia', () => {
     expect(resultado.tratos[1].kgPlanejado).toBe(19)
     expect(resultado.tratos[3].kgPlanejado).toBe(47)
     expect(resultado.tratos[0].kgReal).toBe(30)
+  })
+
+  it('limpa os valores reais sem perder os identificadores dos registros', () => {
+    const linhas = [{
+      curralId: 'curral',
+      curralNome: 'Curral 1',
+      linhaNome: null,
+      loteId: 'lote',
+      loteNome: 'Lote 1',
+      dietaNome: null,
+      quantidadeCabecas: 10,
+      pesoVivoKg: 400,
+      categorias: 'Boi Gordo',
+      tratoAnteriorKg: null,
+      leituraDia: 1,
+      ajusteLeituraPct: 0,
+      kgBaseDia: 100,
+      consumoKgCabDia: 10,
+      quantidadeTratos: 1,
+      tratos: [{ ordemTrato: 1, percentual: 100, horarioSugerido: null, kgPlanejado: 100, kgReal: 98, registroId: 'registro' }],
+    }]
+
+    const limpas = limparReaisLancamento(linhas)
+    expect(limpas[0].tratos[0].kgReal).toBeNull()
+    expect(limpas[0].tratos[0].registroId).toBe('registro')
   })
 })
