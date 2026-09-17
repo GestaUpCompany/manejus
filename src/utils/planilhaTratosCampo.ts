@@ -41,7 +41,7 @@ function estilizarCelula(cell: ExcelJS.Cell, fill: string, fontColor = 'FFFFFF',
 export async function criarPlanilhaTratosCampo(data: LancamentoTratosData, fazendaNome: string): Promise<ExcelJS.Workbook> {
   const ExcelJSMod = await import('exceljs')
   const workbook = new ExcelJSMod.default.Workbook()
-  const worksheet = workbook.addWorksheet('Trato de Campo')
+  const worksheet = workbook.addWorksheet('Folha de Trato')
   const quantidadeTratos = data.linhas.reduce((maior, linha) => Math.max(maior, linha.quantidadeTratos), 0)
   const ultimaColuna = CABECALHOS_FIXOS.length + quantidadeTratos * 2 + 1
 
@@ -144,7 +144,7 @@ export async function baixarPlanilhaTratosCampo(data: LancamentoTratosData, faze
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `Trato Projetado Confinamento - ${sanitizarNome(fazendaNome)} - ${dataBR(data.data).replace(/\//g, '-')} - ${data.tipo}.xlsx`
+  link.download = `Folha de Trato - ${sanitizarNome(fazendaNome)} - ${dataBR(data.data).replace(/\//g, '-')} - ${data.tipo}.xlsx`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)

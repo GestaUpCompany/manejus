@@ -134,7 +134,7 @@ export function LancamentoTratos() {
           <p className="text-sm text-content-muted mt-1">Digite os valores reais da folha de campo por curral.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={baixar} disabled={!dados || linhas.length === 0}>Baixar planilha de campo</Button>
+          <Button variant="secondary" onClick={baixar} disabled={!dados || linhas.length === 0}>Baixar Folha de Trato</Button>
           <Button onClick={salvar} disabled={!dados || saving || tratosPreenchidos === 0}>{saving ? 'Salvando...' : 'Salvar lançamentos'}</Button>
         </div>
       </div>
