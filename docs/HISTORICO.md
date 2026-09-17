@@ -1,5 +1,15 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## RLS por fazenda nas tabelas de programação de tratos (2026-09-17)
+
+As três tabelas de programação de tratos ainda usavam policies permissivas (`USING true` / `WITH CHECK true`), permitindo a qualquer autenticado ler, alterar e apagar a programação de qualquer fazenda. A migration `20260917140000_rls_programacao_tratos` aplicou o mesmo padrão de `registros_oferta_trato`:
+
+- **`programacao_tratos`**: as quatro policies usam `user_has_fazenda_access(fazenda_id)`.
+- **`programacao_tratos_percentuais` e `programacao_tratos_currais`**: não possuem `fazenda_id`; o novo helper `user_has_programacao_access(programacao_id)` (SECURITY DEFINER) resolve a fazenda via `programacao_id` e delega a `user_has_fazenda_access`. UPDATE carrega o predicado em `USING` e `WITH CHECK`, impedindo mover uma linha para uma programação de fazenda inacessível. `EXECUTE` do helper foi revogado de `anon`/`PUBLIC`.
+- O PWA só lê essas tabelas (`getProgramacaoTratosCompleta`, `getTiposProgramacaoTratos`); as escritas acontecem apenas na tela Configuração de Tratos do painel. Ambos os perfis possuem vínculo em `usuario_fazenda`, então nenhum fluxo quebra.
+
+Verificação na fazenda de testes via devtools, usando o client autenticado da própria aplicação: o painel carregou o lançamento e a configuração com os 4 currais e percentuais; o PWA exibiu "4/4 tratos" normalmente. Na bateria de negação: INSERT em `programacao_tratos` de fazenda alheia foi rejeitado (42501), UPDATE em fazenda alheia afetou 0 linhas, INSERT de percentual/curral sob `programacao_id` inacessível foi rejeitado (42501) e UPDATE movendo percentual para programação inacessível também foi rejeitado (42501). Na bateria positiva, um ciclo completo INSERT/UPDATE/DELETE em programação própria funcionou e o banco ficou com o total original de registros.
+
 ## Endurecimento de segurança do lançamento de tratos (2026-09-17)
 
 A auditoria da tela de lançamento de tratos identificou que `registros_oferta_trato` estava com policies permissivas (`USING true` / `WITH CHECK true`), que a gravação não era transacional e que a unicidade por `(curral_id, data, ordem_trato)` usava o instante exato (timestamptz), permitindo duplicatas entre painel (meio-dia fixo) e PWA (horário real). A migration `20260917100000_seguranca_lancamento_tratos` corrigiu os quatro pontos:
@@ -14,7 +24,7 @@ Painel: `salvarLancamentosTratos` passou a chamar a RPC, `data` usa meio-dia fix
 
 Verificação na fazenda de testes via devtools: RPC rejeitou curral de outra fazenda; lançamento de 4 tratos gravou com `origem='painel'`, `sync_status='synced'` e `local_id` correto; salvamento repetido atualizou em vez de duplicar. Ponto de atenção de teste: `fill`/`fill_form` do chrome-devtools não disparam `onChange` do React em input `type=date` nem no `fill_form` com vários campos; para testar troca de data é preciso setar o valor via `HTMLInputElement.prototype` + `dispatchEvent(new Event('input'))` e preencher os campos Real um a um com `fill`.
 
-Observação: as tabelas `programacao_tratos`, `programacao_tratos_percentuais` e `programacao_tratos_currais` ainda usam policies permissivas (`USING true`); recomenda-se aplicar o mesmo padrão em trabalho futuro.
+Observação: as tabelas `programacao_tratos`, `programacao_tratos_percentuais` e `programacao_tratos_currais` também usavam policies permissivas (`USING true`) nesta data; foram corrigidas na migration `20260917140000_rls_programacao_tratos` (ver seção "RLS por fazenda nas tabelas de programação de tratos").
 
 ## Lançamento de tratos e planilha de campo no Painel Web (2026-09-17)
 
