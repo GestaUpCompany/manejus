@@ -25,6 +25,9 @@ const TIPOS_COMBUSTIVEL = [
   { value: 'Diesel Comum', label: 'Diesel Comum' },
 ]
 
+// Data local (YYYY-MM-DD) no fuso do navegador, evita deslocamento UTC apos 20h
+const hojeLocal = () => new Date().toLocaleDateString('en-CA')
+
 export function EstoqueCombustivel() {
   const { user } = useAuth()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
@@ -51,6 +54,7 @@ export function EstoqueCombustivel() {
   const [modalAjuste, setModalAjuste] = useState<Tanque | null>(null)
   const [ajusteForm, setAjusteForm] = useState({
     novo_saldo_l: '',
+    custo_medio_l: '',
     observacao: '',
   })
 
@@ -141,7 +145,7 @@ export function EstoqueCombustivel() {
 
   // Helpers
   const saldoTotal = tanques.reduce((sum, t) => sum + Number(t.saldo_atual_l), 0)
-  const valorEstoque = tanques.reduce((sum, t) => sum + Number(t.saldo_atual_l) * Number(t.custo_medio_l), 0)
+  const valorEstoque = tanques.reduce((sum, t) => sum + Math.max(0, Number(t.saldo_atual_l)) * Number(t.custo_medio_l), 0)
   const tanquesEmAlerta = tanques.filter((t) => Number(t.saldo_atual_l) <= Number(t.limite_alerta_l) && t.limite_alerta_l > 0)
 
   const tanquesAtivos = tanques.filter((t) => t.ativo)
@@ -180,9 +184,6 @@ export function EstoqueCombustivel() {
         const { error } = await supabase.from('tanques_combustivel').update(payload).eq('id', tanqueEditando.id)
         if (error) throw error
       } else {
-        const { data: newTanque, error } = await supabase.from('tanques_combustivel').insert(payload).select('id').single()
-        if (error) throw error
-
         // Se houver saldo inicial, registrar movimentacao
         const saldoInicial = parseFloat(tanqueForm.saldo_inicial_l) || 0
         const precoInicial = parseFloat(tanqueForm.preco_inicial_l) || 0
@@ -190,33 +191,36 @@ export function EstoqueCombustivel() {
         if (capacidadeMaxima > 0 && saldoInicial > capacidadeMaxima) {
           throw new Error(`Saldo inicial (${saldoInicial} L) não pode ultrapassar a capacidade do tanque (${capacidadeMaxima} L).`)
         }
-        if (saldoInicial > 0 && precoInicial > 0) {
-          // Com preco: entrada normal (WAC calcula custo medio)
-          const valorTotal = saldoInicial * precoInicial
+        const { data: newTanque, error } = await supabase.from('tanques_combustivel').insert(payload).select('id').single()
+        if (error) throw error
+
+        if (saldoInicial > 0) {
+          // Com preco: entrada normal (WAC calcula custo medio); sem preco: ajuste define saldo absoluto e o custo medio fica 0 ate a primeira entrada real
+          const movimento = precoInicial > 0
+            ? {
+                tipo_movimentacao: 'entrada',
+                quantidade_l: saldoInicial,
+                valor_total: parseFloat((saldoInicial * precoInicial).toFixed(2)),
+                preco_por_litro: precoInicial,
+                observacao: 'Saldo inicial do tanque',
+              }
+            : {
+                tipo_movimentacao: 'ajuste',
+                quantidade_l: saldoInicial,
+                observacao: 'Saldo inicial do tanque (sem custo)',
+              }
           const { error: movError } = await supabase.from('movimentacoes_combustivel').insert({
             fazenda_id: fazendaId,
             tanque_id: newTanque.id,
-            tipo_movimentacao: 'entrada',
-            quantidade_l: saldoInicial,
-            valor_total: parseFloat(valorTotal.toFixed(2)),
-            preco_por_litro: precoInicial,
-            data: new Date().toISOString().split('T')[0],
+            ...movimento,
+            data: hojeLocal(),
             origem: 'estoque_inicial',
-            observacao: 'Saldo inicial do tanque',
           })
-          if (movError) throw movError
-        } else if (saldoInicial > 0) {
-          // Sem preco: ajuste define saldo absoluto, custo medio fica 0 ate a primeira entrada real
-          const { error: movError } = await supabase.from('movimentacoes_combustivel').insert({
-            fazenda_id: fazendaId,
-            tanque_id: newTanque.id,
-            tipo_movimentacao: 'ajuste',
-            quantidade_l: saldoInicial,
-            data: new Date().toISOString().split('T')[0],
-            origem: 'estoque_inicial',
-            observacao: 'Saldo inicial do tanque (sem custo)',
-          })
-          if (movError) throw movError
+          if (movError) {
+            // Compensar: remover o tanque criado para nao ficar registro orfao sem saldo
+            await supabase.from('tanques_combustivel').delete().eq('id', newTanque.id)
+            throw movError
+          }
         }
       }
       setModalTanque(false)
@@ -254,7 +258,7 @@ export function EstoqueCombustivel() {
         quantidade_l: litros,
         valor_total: valorTotal,
         preco_por_litro: precoPorLitro,
-        data: new Date().toISOString().split('T')[0],
+        data: hojeLocal(),
         origem: 'painel_entrada',
         fornecedor: entradaForm.fornecedor || null,
         nota_fiscal: entradaForm.nota_fiscal || null,
@@ -337,6 +341,7 @@ export function EstoqueCombustivel() {
     setModalAjuste(tanque)
     setAjusteForm({
       novo_saldo_l: String(tanque.saldo_atual_l),
+      custo_medio_l: '',
       observacao: '',
     })
   }
@@ -355,11 +360,20 @@ export function EstoqueCombustivel() {
         tanque_id: modalAjuste.id,
         tipo_movimentacao: 'ajuste',
         quantidade_l: novoSaldo,
-        data: new Date().toISOString().split('T')[0],
+        data: hojeLocal(),
         origem: 'painel_ajuste',
         observacao: ajusteForm.observacao || 'Ajuste de inventario',
       })
       if (error) throw error
+      // Custo medio opcional: corrige tanques com saldo inicial sem preco
+      const custoMedio = parseFloat(ajusteForm.custo_medio_l)
+      if (!Number.isNaN(custoMedio) && custoMedio > 0) {
+        const { error: custoError } = await supabase
+          .from('tanques_combustivel')
+          .update({ custo_medio_l: custoMedio })
+          .eq('id', modalAjuste.id)
+        if (custoError) throw new Error(`Ajuste aplicado, mas o custo médio não foi atualizado: ${custoError.message}`)
+      }
       setModalAjuste(null)
       loadAll()
     } catch (err: any) {
@@ -452,10 +466,11 @@ export function EstoqueCombustivel() {
           <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4">
             {tanquesAtivos.map((tanque) => {
               const pctOcupacao = tanque.capacidade_maxima_l > 0
-                ? Math.min(100, (Number(tanque.saldo_atual_l) / Number(tanque.capacidade_maxima_l)) * 100)
+                ? Math.max(0, Math.min(100, (Number(tanque.saldo_atual_l) / Number(tanque.capacidade_maxima_l)) * 100))
                 : 0
               const emAlerta = tanque.limite_alerta_l > 0 && Number(tanque.saldo_atual_l) <= Number(tanque.limite_alerta_l)
-              const valorTanque = Number(tanque.saldo_atual_l) * Number(tanque.custo_medio_l)
+              const saldoNegativo = Number(tanque.saldo_atual_l) < 0
+              const valorTanque = Math.max(0, Number(tanque.saldo_atual_l)) * Number(tanque.custo_medio_l)
               return (
                 <Card key={tanque.id} className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
                   <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
@@ -502,8 +517,8 @@ export function EstoqueCombustivel() {
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span className="text-content-muted">Saldo atual</span>
-                      <span className="font-semibold text-content-strong">
-                        {Number(tanque.saldo_atual_l).toLocaleString('pt-BR')} L
+                      <span className={`font-semibold ${saldoNegativo ? 'text-red-600' : 'text-content-strong'}`}>
+                        {Number(tanque.saldo_atual_l).toLocaleString('pt-BR')} L{saldoNegativo ? ' (reconciliar)' : ''}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -859,6 +874,14 @@ export function EstoqueCombustivel() {
             onChange={(e) => setAjusteForm({ ...ajusteForm, novo_saldo_l: e.target.value })}
             required
           />
+          <Input
+            label="Custo Médio (R$/L) — opcional"
+            type="number"
+            placeholder="Ex: 6.50"
+            value={ajusteForm.custo_medio_l}
+            onChange={(e) => setAjusteForm({ ...ajusteForm, custo_medio_l: e.target.value })}
+          />
+          <p className="text-xs text-content-muted">Use para corrigir o custo médio quando o saldo inicial foi registrado sem preço. Se vazio, o custo médio atual é mantido.</p>
           <Input
             label="Motivo do Ajuste"
             placeholder="Ex: Inventario fisico, evaporacao, correcao"
