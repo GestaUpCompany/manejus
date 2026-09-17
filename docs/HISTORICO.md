@@ -932,3 +932,31 @@ A integridade é decidida no banco: a trigger calcula o saldo devolvível por re
 Preços foram isolados do PWA. O catálogo do app usa a view `itens_almoxarifado_pwa`, sem `custo_unitario` ou `custo_total_estoque`; políticas da tabela principal restringem acesso direto a usuários `admin` e `controller`.
 
 Migrations: `20260916150000_create_estoque_almoxarifado.sql`, `20260916160000_devolucao_almoxarifado.sql` e `20260916170000_impl_devolucao_almoxarifado.sql`, aplicadas via `supabase db push`. Branch compartilhada: `feat/estoque-almoxarifado`.
+
+### Auditoria do estoque de combustível: RLS por fazenda, sync da baixa e hardening (2026-09-17)
+
+Auditoria completa do módulo antes do uso com dados reais. O saldo negativo continua aceito operacionalmente; as correções fecham os gaps de segurança, sincronização e fuso que restavam.
+
+**1. RLS por fazenda (migration `20260917130000_rls_estoque_combustivel.sql`)**
+
+`tanques_combustivel` e `movimentacoes_combustivel` tinham policies `USING (true)`/`WITH CHECK (true)` para authenticated: qualquer usuário podia ler, alterar e apagar dados de qualquer fazenda via API. Substituídas pelas 8 policies padrão `user_has_fazenda_access(fazenda_id)`, mesmo modelo de `registros_oferta_trato`. A trigger de baixa é SECURITY DEFINER e não foi afetada; peões do PWA passam porque possuem `usuario_fazenda`.
+
+**2. Sync da baixa com o ciclo de vida do abastecimento (migrations `20260917150000_combustivel_sync_baixa_update.sql` e `20260917160000_fix_sync_baixa_sem_tanque.sql`)**
+
+A baixa automática era AFTER INSERT apenas: editar `total_abastecido`, trocar `tanque_id` ou soft-deletar o abastecimento deixava a movimentação órfã e o saldo divergente para sempre. Agora uma trigger AFTER UPDATE cobre os três casos: mudança de total atualiza `quantidade_l` da baixa vinculada (WAC recalcula pela trigger existente); troca de tanque remove a baixa do antigo e cria no novo; soft-delete remove a baixa, devolve o saldo e limpa `baixa_estoque_id`; restore recria a baixa e desconta novamente. Abastecimento sem `tanque_id` não gera movimentação.
+
+**3. Idempotência da entrada de combustível no PWA (`syncService.ts`)**
+
+O sync fazia `.insert()` puro em `movimentacoes_combustivel`: após falha de rede, o retry dependia do índice único e o "Reenviar" caía num branch `update` sem case para a tabela (retornava sucesso sem fazer nada). Trocado para `.upsert(data, { onConflict: 'local_id' })` no create e adicionado o case `movimentacoes_combustivel` no branch update com o mesmo upsert.
+
+**4. Fuso horário na coluna `data` (date)**
+
+Painel gravava `new Date().toISOString().split('T')[0]` (data UTC) e o PWA enviava `brWithTimeToIso` com offset; movimentações após 20h em Cuiabá caíam no dia seguinte, deslocando o KPI "Consumo do Mês" e o histórico. Painel passou a usar data local do navegador; PWA envia `brToIso` da parte de dia do `registro.data`; trigger grava `(NEW.data AT TIME ZONE 'America/Cuiaba')::date`.
+
+**5. Hardening do Painel (`EstoqueCombustivel.tsx`)**
+
+`salvarTanque` agora compensa o tanque órfão se a movimentação de saldo inicial falhar. Quantidades e preços rejeitam valores negativos na UI; saldo de ajuste (inventário absoluto) não aceita negativo, pois saldo negativo só deve surgir de baixas. KPI "Valor em Estoque" usa `max(0, saldo)` e saldo negativo ganha badge de reconciliação pendente em vez de R$ negativo. Modal de ajuste ganhou campo opcional "custo médio (R$/L)" que atualiza `custo_medio_l` junto com o ajuste, cobrindo o caso de saídas a R$ 0 após saldo inicial sem preço. A função `validar_capacidade_tanque` foi corrigida para descontar a movimentação antiga em UPDATE (bug latente).
+
+**Validação:** ciclo testado na fazenda de testes (`d649c65e`): abastecimento 50 L gerou baixa 50 L e saldo 950; edição para 60 L atualizou a baixa (saldo 940); soft-delete removeu a baixa e restaurou saldo 1000 com `baixa_estoque_id` nulo; restore recriou a baixa (saldo 940); reversão ao total original deixou saldo 950.
+
+Disparador: quando mencionar "RLS combustível", "baixa órfã", "estorno de baixa", "restaurar abastecimento", "upsert movimentacoes_combustivel", "sync combustível", "data UTC combustível", "ajuste custo médio", "validar_capacidade_tanque UPDATE", ou retomar a auditoria do módulo de combustível, ler esta seção.
