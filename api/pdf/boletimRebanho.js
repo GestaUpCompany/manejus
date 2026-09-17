@@ -4,7 +4,7 @@ import { htmlDocument, page as pageSection, renderHeader } from './_shared/templ
 const BOLETIM_CSS = `
 .boletim-table{margin-top:3mm;border-radius:6px;overflow:hidden}
 .boletim-table th,.boletim-table td{text-align:right;white-space:nowrap;padding:4px 4px;font-size:10px}
-.boletim-table th:first-child,.boletim-table td:first-child{text-align:left;width:27%}
+.boletim-table th:first-child,.boletim-table td:first-child{text-align:left;width:13%}
 .boletim-table th{font-size:9px;line-height:1.15;vertical-align:middle}
 .boletim-table td{font-size:10px}
 .boletim-table tbody tr:nth-child(even){background:#f7faf8}
