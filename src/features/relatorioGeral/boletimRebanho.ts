@@ -129,8 +129,13 @@ function valorCelula(sheet: XLSX.WorkSheet, row: number, col: number): unknown {
   return sheet[address]?.v ?? null
 }
 
+function linhaOculta(sheet: XLSX.WorkSheet, row: number): boolean {
+  return Boolean(sheet['!rows']?.[row]?.hidden)
+}
+
 function nomeLocalAnterior(sheet: XLSX.WorkSheet, headerRow: number): string | null {
   for (let row = headerRow - 1; row >= 0; row -= 1) {
+    if (linhaOculta(sheet, row)) continue
     const value = normalizarTexto(valorCelula(sheet, row, 1))
     if (!value || value === 'Total do Rebanho') continue
     if (value === 'Descrição') return null
@@ -180,6 +185,7 @@ function extrairRegistrosDaAba(sheet: XLSX.WorkSheet, nomeAba: string): { regist
   const locais: string[] = []
 
   for (let row = range.s.r; row <= range.e.r; row += 1) {
+    if (linhaOculta(sheet, row)) continue
     if (normalizarTexto(valorCelula(sheet, row, 1)) !== 'Descrição') continue
     const local = nomeLocalAnterior(sheet, row) ?? 'Consolidado'
     const header = Array.from({ length: COLUNAS_HEADER.length }, (_, index) => normalizarTexto(valorCelula(sheet, row, 1 + index)))
@@ -187,16 +193,27 @@ function extrairRegistrosDaAba(sheet: XLSX.WorkSheet, nomeAba: string): { regist
 
     if (!locais.includes(local)) locais.push(local)
     for (let dataRow = row + 1; dataRow <= Math.min(row + 12, range.e.r); dataRow += 1) {
+      if (linhaOculta(sheet, dataRow)) continue
       const descricao = normalizarTexto(valorCelula(sheet, dataRow, 1))
       if (!descricao || descricao === 'Total do Rebanho') break
       registros.push(criarRegistro(sheet, dataRow, local, nomeAba, mesNumero))
     }
   }
+
+  const consolidado = locais.includes('Consolidado')
+    ? 'Consolidado'
+    : (nomeAba === 'GERAL' || locais.length > 1 ? locais[locais.length - 1] : undefined)
+  if (consolidado && consolidado !== 'Consolidado') {
+    for (const registro of registros) {
+      if (registro.fazenda === consolidado) registro.fazenda = 'Consolidado'
+    }
+    locais.splice(locais.indexOf(consolidado), 1, 'Consolidado')
+  }
   return { registros, locais }
 }
 
 export function normalizarPlanilhaBoletim(bytes: ArrayBuffer | Uint8Array): ResultadoNormalizacaoBoletim {
-  const workbook = XLSX.read(bytes, { cellDates: true, cellNF: false })
+  const workbook = XLSX.read(bytes, { cellDates: true, cellNF: false, cellStyles: true })
   const registros: RegistroBoletimRebanho[] = []
   const avisos: string[] = []
   const mesesDisponiveis: { nome: string; numero: number }[] = []
@@ -225,12 +242,22 @@ export function normalizarPlanilhaBoletim(bytes: ArrayBuffer | Uint8Array): Resu
   return { registros, mesesDisponiveis, avisos }
 }
 
+const CAMPOS_MOVIMENTO: CampoNumericoBoletim[] = [
+  'inic', 'com', 'vend', 'mort', 'cons', 'nasc', 'ent', 'sai',
+  'evolMais', 'evolMenos', 'final',
+]
+
+function blocoZerado(registros: RegistroBoletimRebanho[]): boolean {
+  return registros.every((registro) => CAMPOS_MOVIMENTO.every((campo) => registro[campo] == null || registro[campo] === 0))
+}
+
 function agruparPorFazenda(registros: RegistroBoletimRebanho[], mesNumero: number) {
   return [...new Set(registros
     .filter((registro) => registro.mesNumero === mesNumero && registro.fazenda !== 'Consolidado')
     .map((registro) => registro.fazenda))]
     .sort((a, b) => a.localeCompare(b, 'pt-BR'))
     .map((fazenda) => ({ fazenda, registros: registros.filter((registro) => registro.mesNumero === mesNumero && registro.fazenda === fazenda) }))
+    .filter((local) => !blocoZerado(local.registros))
 }
 
 export function agruparBoletim(registros: RegistroBoletimRebanho[], mesNumero: number) {

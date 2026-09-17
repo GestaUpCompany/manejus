@@ -29,6 +29,29 @@ function workbookBytes() {
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
 }
 
+function workbookComLinhasOcultas() {
+  const wb = XLSX.utils.book_new()
+  const geral = XLSX.utils.aoa_to_sheet([[''], ...bloco('Fazenda Chibata', 10), [''], ...bloco('LC 1', 99), [''], ...bloco('GRUPO AGRO GENTILIN', 30)])
+  const julho = XLSX.utils.aoa_to_sheet([[''], ...bloco('Fazenda Chibata', 10), [''], ...bloco('LC 1', 99), [''], ...bloco('GRUPO AGRO GENTILIN', 30)])
+  for (const sheet of [geral, julho]) {
+    const linhas: XLSX.RowInfo[] = []
+    for (let index = 14; index <= 25; index += 1) linhas[index] = { hidden: true }
+    sheet['!rows'] = linhas
+  }
+  XLSX.utils.book_append_sheet(wb, geral, 'GERAL')
+  XLSX.utils.book_append_sheet(wb, julho, 'Julho')
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+}
+
+function workbookComLocalZerado() {
+  const wb = XLSX.utils.book_new()
+  const geral = [[''], ...bloco('Consolidado', 42)]
+  const julho = [[''], ...bloco('Fazenda Sede', 21), [''], ...bloco('0', 0)]
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(geral), 'GERAL')
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(julho), 'Julho')
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+}
+
 describe('normalizador do Boletim de Rebanho', () => {
   it('lê consolidado anual, meses e categorias sem depender de posições fixas', () => {
     const resultado = normalizarPlanilhaBoletim(workbookBytes())
@@ -44,6 +67,22 @@ describe('normalizador do Boletim de Rebanho', () => {
     expect(agrupado.locais).toHaveLength(1)
     expect(agrupado.locais[0]?.fazenda).toBe('Fazenda Sede')
     expect(agrupado.locais[0]?.registros[0]?.final).toBe(21)
+  })
+
+  it('ignora blocos em linhas ocultas e usa o último bloco como consolidado', () => {
+    const resultado = normalizarPlanilhaBoletim(workbookComLinhasOcultas())
+    expect(resultado.registros.every((registro) => registro.fazenda !== 'LC 1')).toBe(true)
+    const agrupado = agruparBoletim(resultado.registros, 7)
+    expect(agrupado.geral).toHaveLength(10)
+    expect(agrupado.geral[0]?.final).toBe(30)
+    expect(agrupado.locais.map((local) => local.fazenda)).toEqual(['Fazenda Chibata'])
+    expect(agrupado.locaisGeral.map((local) => local.fazenda)).toEqual(['Fazenda Chibata'])
+  })
+
+  it('omite locais com todas as movimentações zeradas', () => {
+    const resultado = normalizarPlanilhaBoletim(workbookComLocalZerado())
+    const agrupado = agruparBoletim(resultado.registros, 7)
+    expect(agrupado.locais.map((local) => local.fazenda)).toEqual(['Fazenda Sede'])
   })
 
   it('renderiza uma tabela para o consolidado e outra para cada local', async () => {
