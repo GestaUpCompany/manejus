@@ -160,6 +160,8 @@ interface SnapshotTransicao {
 
 interface TransicaoHistorico {
   id: string
+  lote_categoria_origem_id: string | null
+  lote_categoria_destino_id: string | null
   categoria_origem: string
   categoria_destino: string
   peso_na_transicao_kg: number | null
@@ -168,7 +170,18 @@ interface TransicaoHistorico {
   snapshot_jsonb?: SnapshotTransicao | null
 }
 
+interface Pendencia {
+  loteCategoria: LoteCategoriaCronologia
+  faixa: FaixaCategoria
+  pesoAtual: number
+  direcao: 'acima' | 'abaixo'
+  diffKg: number
+}
+
 const SEXO_LABEL: Record<string, string> = { M: 'Machos', F: 'Fêmeas' }
+
+const DESTINO_LABEL: Record<string, string> = { corte: 'Abate', 'reprodução': 'Reprodução', enfermaria: 'Enfermaria' }
+const destinoLabel = (d: string | null | undefined) => (d ? DESTINO_LABEL[d] ?? d : 'Sem destino')
 
 const capitalizeCategoria = (s: string) =>
   s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
@@ -306,7 +319,7 @@ export function FaixasCategorias() {
     }
     const { data, error } = await supabase
       .from('lote_categorias_transicoes')
-      .select('id, categoria_origem, categoria_destino, peso_na_transicao_kg, data_transicao, motivo, snapshot_jsonb')
+      .select('id, lote_categoria_origem_id, lote_categoria_destino_id, categoria_origem, categoria_destino, peso_na_transicao_kg, data_transicao, motivo, snapshot_jsonb')
       .eq('lote_id', loteSelecionadoId)
       .order('data_transicao', { ascending: false })
     if (error) {
@@ -324,7 +337,7 @@ export function FaixasCategorias() {
 
   const exportarTransicoes = () => {
     if (transicoes.length === 0) return
-    const loteNome = lotesDisponiveis.find(l => l.id === loteEfetivoId)?.nome || 'lote'
+    const loteNome = lotesPendentes.find(l => l.lote_id === loteEfetivoId)?.nome || 'lote'
 
     // Aba 1: Transições (dados da categoria + plano)
     const rowsTransicoes = transicoes.map(t => {
@@ -543,43 +556,83 @@ export function FaixasCategorias() {
     setSavingAll(false)
   }
 
-  const lotesDisponiveis = Array.from(new Set(lotesCategorias.map(lc => lc.lote_id)))
-    .filter(lid => {
-      const cat = lotesCategorias.find(lc => lc.lote_id === lid && lc.data_fim === null && lc.ativo)
-      if (!cat || cat.peso_vivo_atual_kg_cab == null) return false
-      const sexoNorm = cat.sexo === 'fêmea' || cat.sexo === 'F' ? 'F' : 'M'
-      const isEnfermaria = cat.lote_destino === 'enfermaria'
-      const faixa = faixas.find(f =>
-        f.ativo &&
-        f.sexo === sexoNorm &&
-        f.nome.toLowerCase() === cat.categoria.toLowerCase() &&
-        (isEnfermaria || f.destino === null || f.destino === cat.lote_destino)
-      )
-      if (!faixa) return false
-      return cat.peso_vivo_atual_kg_cab < faixa.peso_min || cat.peso_vivo_atual_kg_cab > faixa.peso_max
-    })
-    .map(lid => ({
-      id: lid,
-      nome: lotesCategorias.find(lc => lc.lote_id === lid)?.lote_nome || 'Lote',
-      destino: lotesCategorias.find(lc => lc.lote_id === lid)?.lote_destino ?? null,
-    }))
+  const encontrarFaixa = (cat: LoteCategoriaCronologia): FaixaCategoria | undefined => {
+    const sexoNorm = cat.sexo === 'fêmea' || cat.sexo === 'F' ? 'F' : 'M'
+    const isEnfermaria = cat.lote_destino === 'enfermaria'
+    return faixas.find(f =>
+      f.ativo &&
+      f.sexo === sexoNorm &&
+      f.nome.toLowerCase() === cat.categoria.toLowerCase() &&
+      (isEnfermaria || f.destino === null || f.destino === cat.lote_destino)
+    )
+  }
+
+  // Lotes pendentes: avalia TODAS as categorias ativas de cada lote contra a
+  // faixa correspondente (antes, só a primeira categoria ativa era checada).
+  const lotesPendentes = (() => {
+    const map = new Map<string, { lote_id: string; nome: string; destino: string | null; pendencias: Pendencia[] }>()
+    for (const lc of lotesCategorias) {
+      if (lc.data_fim !== null || !lc.ativo) continue
+      const peso = lc.peso_vivo_atual_kg_cab
+      if (peso == null) continue
+      const faixa = encontrarFaixa(lc)
+      if (!faixa) continue
+      const direcao: 'acima' | 'abaixo' | null = peso > faixa.peso_max ? 'acima' : peso < faixa.peso_min ? 'abaixo' : null
+      if (!direcao) continue
+      const entry = map.get(lc.lote_id) ?? {
+        lote_id: lc.lote_id,
+        nome: lc.lote_nome ?? 'Lote',
+        destino: lc.lote_destino ?? null,
+        pendencias: [],
+      }
+      entry.pendencias.push({
+        loteCategoria: lc,
+        faixa,
+        pesoAtual: peso,
+        direcao,
+        diffKg: direcao === 'acima' ? peso - faixa.peso_max : faixa.peso_min - peso,
+      })
+      map.set(lc.lote_id, entry)
+    }
+    return Array.from(map.values())
+  })()
 
   // Garantir que o lote selecionado está na lista de pendentes
-  const loteSelecionadoValido = lotesDisponiveis.some(l => l.id === loteSelecionadoId)
-  const loteEfetivoId = loteSelecionadoValido ? loteSelecionadoId : lotesDisponiveis[0]?.id ?? null
+  const loteSelecionadoValido = lotesPendentes.some(l => l.lote_id === loteSelecionadoId)
+  const loteEfetivoId = loteSelecionadoValido ? loteSelecionadoId : lotesPendentes[0]?.lote_id ?? null
 
   // Sincronizar lote selecionado com o primeiro lote pendente quando necessário
   useEffect(() => {
-    if (lotesCategorias.length > 0 && !loteSelecionadoValido && lotesDisponiveis.length > 0) {
-      setLoteSelecionadoId(lotesDisponiveis[0].id)
+    if (lotesCategorias.length > 0 && !loteSelecionadoValido && lotesPendentes.length > 0) {
+      setLoteSelecionadoId(lotesPendentes[0].lote_id)
     }
-  }, [lotesCategorias, loteSelecionadoValido, lotesDisponiveis])
+  }, [lotesCategorias, loteSelecionadoValido, lotesPendentes])
 
   const categoriasDoLoteSelecionado = lotesCategorias
     .filter(lc => lc.lote_id === loteEfetivoId)
     .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
 
-  const categoriaAtiva = categoriasDoLoteSelecionado.find(c => c.data_fim === null && c.ativo)
+  const categoriasAtivasDoLote = categoriasDoLoteSelecionado.filter(c => c.data_fim === null && c.ativo)
+
+  const loteCategoriasById = new Map(lotesCategorias.map(c => [c.id, c]))
+
+  // Monta a cadeia cronológica de uma lote_categoria caminhando para trás pelos
+  // links destino -> origem das transições. Cobre os dois formatos: transição
+  // in-place (origem_id = destino_id = mesma linha) e transição antiga que
+  // criava uma linha nova (destino_id = linha criada).
+  const buildCadeia = (rowId: string): TransicaoHistorico[] => {
+    const chain: TransicaoHistorico[] = []
+    const visited = new Set<string>()
+    let cursor: string | null = rowId
+    while (cursor) {
+      const t = transicoes.find(tr => tr.lote_categoria_destino_id === cursor && !visited.has(tr.id))
+      if (!t) break
+      visited.add(t.id)
+      chain.unshift(t)
+      cursor = t.lote_categoria_origem_id
+    }
+    return chain
+  }
 
   // Sugerir próxima categoria baseado nas faixas, sexo e destino do lote
   const sugerirProximaCategoria = (categoriaAtual: string, sexo: string | null, destino: string | null): string => {
@@ -731,202 +784,261 @@ export function FaixasCategorias() {
 
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-content-strong">Faixas de Categorias</h2>
+        <h2 className="text-2xl font-bold text-content-strong">Faixas de Categorias e Recategorização</h2>
         <p className="text-sm text-content-muted mt-1">
-          Defina as faixas de peso por categoria e acompanhe a cronologia evolutiva do rebanho.
+          Lotes que estouraram a faixa de peso da categoria, cronologia de cada lote e configuração das faixas.
         </p>
       </div>
 
-      {/* Seção 1: Edição de faixas */}
+      {/* Seção 1: Lotes com recategorização pendente */}
       <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
-          <h3 className="text-lg font-semibold text-content-strong">Faixas de Peso por Categoria</h3>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSexoFiltro('M')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sexoFiltro === 'M' ? 'bg-blue-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
-            >
-              Machos
-            </button>
-            <button
-              onClick={() => setSexoFiltro('F')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sexoFiltro === 'F' ? 'bg-pink-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
-            >
-              Fêmeas
-            </button>
-            {sexoFiltro === 'M' && (
-              <>
-                <span className="w-px bg-surface-3 mx-1" />
-                <button
-                  onClick={() => setDestinoFiltro('corte')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'corte' ? 'bg-green-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
-                >
-                  Abate
-                </button>
-                <button
-                  onClick={() => setDestinoFiltro('reprodução')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'reprodução' ? 'bg-purple-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
-                >
-                  Reprodução
-                </button>
-              </>
-            )}
-            <span className="w-px bg-surface-3 mx-1" />
-            <button
-              onClick={() => setDestinoFiltro('enfermaria')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'enfermaria' ? 'bg-amber-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
-            >
-              Enfermaria
-            </button>
-          </div>
-        </div>
-
-        {loadingFaixas ? (
-          <CardSkeleton />
-        ) : faixasDoSexo.length === 0 ? (
-          <p className="text-content-muted text-sm py-6 text-center">Nenhuma faixa cadastrada para {SEXO_LABEL[sexoFiltro]}.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border-base text-left text-content-muted">
-                  <th className="py-2 pr-3 font-medium">Ordem</th>
-                  <th className="py-2 pr-3 font-medium">Categoria</th>
-                  <th className="py-2 pr-3 font-medium">Peso Mín (kg)</th>
-                  <th className="py-2 pr-3 font-medium">Peso Máx (kg)</th>
-                  <th className="py-2 pr-3 font-medium">Cor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {faixasDoSexo.map((faixa, idx) => (
-                  <tr key={faixa.id} className="border-b border-border-subtle">
-                    <td className="py-2 pr-3">
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-2 text-content-muted text-xs font-semibold">
-                        {idx + 1}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3 font-medium text-content-strong">
-                      <span className="inline-flex items-center gap-2">
-                        {faixa.cor && <span className="w-3 h-3 rounded-full" style={{ backgroundColor: faixa.cor }} />}
-                        {faixa.nome}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3">
-                      <Input
-                        type="number"
-                        value={faixa.peso_min}
-                        onChange={(e) => handleFaixaChange(faixa.id, 'peso_min', e.target.value)}
-                        className="w-24 px-2 py-1 text-sm border-border-base"
-                      />
-                    </td>
-                    <td className="py-2 pr-3">
-                      <Input
-                        type="number"
-                        value={faixa.peso_max}
-                        onChange={(e) => handleFaixaChange(faixa.id, 'peso_max', e.target.value)}
-                        className="w-24 px-2 py-1 text-sm border-border-base"
-                      />
-                    </td>
-                    <td className="py-2 pr-3">
-                      <input
-                        type="color"
-                        value={faixa.cor || '#cccccc'}
-                        onChange={(e) => handleFaixaChange(faixa.id, 'cor', e.target.value)}
-                        className="w-10 h-8 rounded border border-border-base cursor-pointer"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="flex justify-end mt-3">
-          <Button
-            onClick={salvarTodasFaixas}
-            disabled={savingAll || faixas.length === 0}
-          >
-            {savingAll ? 'Salvando...' : 'Salvar todas as faixas'}
-          </Button>
-        </div>
-        <p className="text-xs text-content-faint mt-3">
-          As faixas são valores iniciais editáveis por fazenda. Mudanças aqui não retroagem lotes já cadastrados.
-        </p>
-      </Card>
-
-      {/* Seção 2: Cronologia dos lotes */}
-      <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
-          <h3 className="text-lg font-semibold text-content-strong">Cronologia dos Lotes</h3>
-          {lotesDisponiveis.length > 0 && (
-            <select
-              value={loteEfetivoId || ''}
-              onChange={(e) => setLoteSelecionadoId(e.target.value)}
-              className="px-3 py-2 border border-border-base rounded-lg text-sm bg-surface-1 focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {lotesDisponiveis.map(l => (
-                <option key={l.id} value={l.id}>{l.nome} ({l.destino === 'corte' ? 'Abate' : l.destino === 'reprodução' ? 'Reprodução' : l.destino === 'enfermaria' ? 'Enfermaria' : 'Sem destino'})</option>
-              ))}
-            </select>
-          )}
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-content-strong">Recategorizações pendentes</h3>
+          <p className="text-xs text-content-muted mt-1">
+            Somente lotes com ao menos uma categoria ativa fora da faixa de peso aparecem aqui.
+          </p>
         </div>
 
         {loadingCronologia ? (
           <CardSkeleton />
-        ) : lotesDisponiveis.length === 0 ? (
-          <p className="text-content-muted text-sm py-6 text-center">Nenhum lote com recategorização pendente. Todos os pesos estão dentro das faixas de suas categorias.</p>
-        ) : categoriasDoLoteSelecionado.length === 0 ? (
-          <p className="text-content-muted text-sm py-6 text-center">Nenhuma categoria cadastrada para este lote.</p>
+        ) : lotesPendentes.length === 0 ? (
+          <p className="text-content-muted text-sm py-6 text-center">
+            Nenhum lote com recategorização pendente. Todos os pesos estão dentro das faixas de suas categorias.
+          </p>
         ) : (
           <div className="space-y-3">
-            {/* Linha do tempo visual */}
-            <div className="flex items-stretch overflow-x-auto pt-3 pl-3 pr-2 pb-2 gap-2">
-              {categoriasDoLoteSelecionado.map((cat, idx) => {
-                const ativa = cat.data_fim === null && cat.ativo
-                const faixaCor = faixas.find(f => f.nome.toLowerCase() === cat.categoria.toLowerCase())?.cor
-                return (
-                  <div
-                    key={cat.id}
-                    className={`relative flex-shrink-0 px-3 pt-5 pb-2 rounded-lg text-xs font-medium border-2 ${ativa ? 'text-white' : 'bg-surface-2 text-content-muted border-border-base'}`}
-                    style={ativa ? { backgroundColor: faixaCor || '#3b82f6', borderColor: faixaCor || '#3b82f6' } : {}}
-                    title={ativa ? 'Categoria ativa' : `Encerrada em ${cat.data_fim ? new Date(cat.data_fim).toLocaleDateString('pt-BR') : '?'}`}
-                  >
-                    <span
-                      className={`absolute -top-2 -left-2 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${ativa ? 'bg-surface-1 text-content-strong border border-surface-3' : 'bg-surface-3 text-content-muted'}`}
-                      aria-label={`Etapa ${idx + 1}`}
-                    >
-                      {idx + 1}
-                    </span>
-                    <p className="font-semibold">{capitalizeCategoria(cat.categoria)}</p>
-                    <p className="text-[10px] opacity-80">
-                      {cat.peso_vivo_atual_kg_cab != null ? `${cat.peso_vivo_atual_kg_cab} kg` : 'sem peso'}
-                      {cat.quant_atual != null && ` • ${cat.quant_atual} cab`}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Detalhe da categoria ativa + botão recategorizar */}
-            {categoriaAtiva && (
-              <div className="bg-surface-2 border border-border-base rounded-lg p-4">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-content-strong">Categoria ativa: {capitalizeCategoria(categoriaAtiva.categoria)}</p>
-                    <p className="text-xs text-content mt-1">
-                      Peso atual: {categoriaAtiva.peso_vivo_atual_kg_cab != null ? `${categoriaAtiva.peso_vivo_atual_kg_cab} kg` : 'não informado'}
-                      {categoriaAtiva.quant_atual != null && ` • ${categoriaAtiva.quant_atual} cabeças`}
-                      {categoriaAtiva.sexo && ` • Sexo: ${categoriaAtiva.sexo}`}
-                      {categoriaAtiva.lote_destino && ` • Destino: ${categoriaAtiva.lote_destino === 'corte' ? 'Abate' : categoriaAtiva.lote_destino === 'reprodução' ? 'Reprodução' : categoriaAtiva.lote_destino === 'enfermaria' ? 'Enfermaria' : categoriaAtiva.lote_destino}`}
-                    </p>
-                  </div>
+            {lotesPendentes.map(lp => (
+              <div
+                key={lp.lote_id}
+                className={`border rounded-lg p-3 ${lp.lote_id === loteEfetivoId ? 'border-primary bg-primary/5' : 'border-border-base bg-surface-2'}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-content-strong">
+                    {lp.nome}
+                    <span className="ml-2 text-xs font-normal text-content-muted">{destinoLabel(lp.destino)}</span>
+                  </p>
                   <Button
-                    onClick={() => abrirRecategorizacao(categoriaAtiva)}
-                    className="bg-primary hover:bg-primary/80 text-white text-sm"
+                    variant="secondary"
+                    className="text-xs px-3 py-1"
+                    onClick={() => {
+                      setLoteSelecionadoId(lp.lote_id)
+                      document.getElementById('cronologia-lote')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }}
                   >
-                    Recategorizar
+                    Ver cronologia
                   </Button>
                 </div>
+                <div className="space-y-2">
+                  {lp.pendencias.map(p => (
+                    <div
+                      key={p.loteCategoria.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-surface-1 border border-border-subtle rounded px-3 py-2"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {p.faixa.cor && <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: p.faixa.cor }} />}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-content-strong">{capitalizeCategoria(p.loteCategoria.categoria)}</p>
+                          <p className="text-xs text-content-muted">
+                            {p.pesoAtual} kg · faixa {p.faixa.peso_max >= 9000 ? `${p.faixa.peso_min}+` : `${p.faixa.peso_min}–${p.faixa.peso_max}`} kg
+                          </p>
+                        </div>
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${p.direcao === 'acima' ? 'bg-red-500/10 text-red-700 dark:text-red-300' : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'}`}
+                        >
+                          {p.direcao === 'acima' ? `+${p.diffKg.toFixed(1)} kg acima` : `${p.diffKg.toFixed(1)} kg abaixo`}
+                        </span>
+                      </div>
+                      <Button
+                        onClick={() => abrirRecategorizacao(p.loteCategoria)}
+                        className="bg-primary hover:bg-primary/80 text-white text-xs px-3 py-1.5 flex-shrink-0"
+                      >
+                        Recategorizar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Seção 2: Cronologia do lote selecionado */}
+      {lotesPendentes.length > 0 && !loadingCronologia && (
+        <div id="cronologia-lote">
+          <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-content-strong">Cronologia do lote</h3>
+                <p className="text-xs text-content-muted mt-1">
+                  Sequência de categorias montada a partir das transições registradas. Disponível apenas para lotes pendentes.
+                </p>
+              </div>
+              <select
+                id="lote-cronologia"
+                name="lote-cronologia"
+                aria-label="Selecionar lote"
+                value={loteEfetivoId || ''}
+                onChange={(e) => setLoteSelecionadoId(e.target.value)}
+                className="px-3 py-2 border border-border-base rounded-lg text-sm bg-surface-1 focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {lotesPendentes.map(l => (
+                  <option key={l.lote_id} value={l.lote_id}>
+                    {l.nome} ({l.pendencias.length} {l.pendencias.length === 1 ? 'pendência' : 'pendências'})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {categoriasAtivasDoLote.length === 0 ? (
+              <p className="text-content-muted text-sm py-6 text-center">Nenhuma categoria ativa neste lote.</p>
+            ) : (
+              <div className="space-y-4">
+                {categoriasAtivasDoLote.map(row => {
+                  const chain = buildCadeia(row.id)
+                  const faixaRow = encontrarFaixa(row)
+                  const cor = faixaRow?.cor || '#3b82f6'
+                  const origemRow = chain.length > 0 && chain[0].lote_categoria_origem_id
+                    ? loteCategoriasById.get(chain[0].lote_categoria_origem_id)
+                    : undefined
+                  const nos: { categoria: string; data: string | null; peso: number | null }[] = [
+                    {
+                      categoria: chain.length > 0 ? chain[0].categoria_origem : row.categoria,
+                      data: origemRow
+                        ? origemRow.data_pesagem ?? origemRow.created_at ?? null
+                        : row.data_pesagem ?? row.created_at ?? null,
+                      peso: origemRow ? origemRow.peso_entrada_kg_cab : row.peso_entrada_kg_cab,
+                    },
+                    ...chain.map(t => ({
+                      categoria: t.categoria_destino,
+                      data: t.data_transicao,
+                      peso: t.peso_na_transicao_kg,
+                    })),
+                  ]
+                  const pesoAtualRow = row.peso_vivo_atual_kg_cab
+                  const pctFaixa = faixaRow && pesoAtualRow != null && faixaRow.peso_max > faixaRow.peso_min
+                    ? Math.round(((pesoAtualRow - faixaRow.peso_min) / (faixaRow.peso_max - faixaRow.peso_min)) * 100)
+                    : null
+                  const foraDaFaixa = !!(faixaRow && pesoAtualRow != null && (pesoAtualRow < faixaRow.peso_min || pesoAtualRow > faixaRow.peso_max))
+                  const semTeto = faixaRow != null && faixaRow.peso_max >= 9000
+                  const escalaMax = faixaRow && pesoAtualRow != null
+                    ? (semTeto ? Math.max(pesoAtualRow * 1.25, faixaRow.peso_min * 1.5) : faixaRow.peso_max)
+                    : 0
+                  const pctEscala = (v: number) => escalaMax > 0 ? Math.min(Math.max((v / escalaMax) * 100, 0), 100) : 0
+                  const ultimaTransicaoHoje = chain.length > 0 && nos[nos.length - 1].data != null
+                    && new Date(nos[nos.length - 1].data as string).toLocaleDateString('pt-BR') === new Date().toLocaleDateString('pt-BR')
+                  return (
+                    <div key={row.id} className="border border-border-base rounded-lg p-3 bg-surface-2">
+                      <div className="flex items-center justify-between mb-2 gap-2">
+                        <p className="text-xs font-semibold text-content-muted uppercase tracking-wide">
+                          {capitalizeCategoria(row.categoria)}
+                          {row.sexo ? ` · ${row.sexo}` : ''}
+                          {foraDaFaixa && <span className="text-red-600 dark:text-red-300 normal-case"> · fora da faixa</span>}
+                        </p>
+                        <Button
+                          onClick={() => abrirRecategorizacao(row)}
+                          className="bg-primary hover:bg-primary/80 text-white text-xs px-3 py-1.5 flex-shrink-0"
+                        >
+                          Recategorizar
+                        </Button>
+                      </div>
+
+                      {/* Linha do tempo: entrada -> transições -> hoje */}
+                      <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
+                        {nos.map((n, i) => {
+                          const isHoje = ultimaTransicaoHoje && i === nos.length - 1
+                          return (
+                            <Fragment key={i}>
+                              {i > 0 && <span className="self-center px-1 text-content-faint flex-shrink-0">→</span>}
+                              <div
+                                className={`flex-shrink-0 px-3 py-2 rounded-lg min-w-[110px] ${isHoje ? 'border-2 text-white' : 'bg-surface-1 border border-border-base'}`}
+                                style={isHoje ? { backgroundColor: cor, borderColor: cor } : undefined}
+                              >
+                                <p className={`text-xs font-semibold ${isHoje ? 'font-bold' : 'text-content-strong'}`}>
+                                  {capitalizeCategoria(n.categoria)}
+                                  {isHoje && <span className="text-[9px] font-medium"> (hoje)</span>}
+                                </p>
+                                {n.data && (
+                                  <p className={`text-[10px] ${isHoje ? 'opacity-90' : 'text-content-muted'}`}>
+                                    {i === 0 ? 'desde ' : ''}{new Date(n.data).toLocaleDateString('pt-BR')}
+                                  </p>
+                                )}
+                                {isHoje ? (
+                                  <p className="text-[10px] opacity-90">
+                                    {pesoAtualRow != null ? `${pesoAtualRow} kg` : 'sem peso'}
+                                    {row.quant_atual != null && ` · ${row.quant_atual} cab`}
+                                  </p>
+                                ) : (
+                                  n.peso != null && <p className="text-[10px] text-content-faint">{n.peso} kg</p>
+                                )}
+                              </div>
+                            </Fragment>
+                          )
+                        })}
+                        {!ultimaTransicaoHoje && (
+                          <>
+                            <span className="self-center px-1 text-content-faint flex-shrink-0">→</span>
+                            <div
+                              className="flex-shrink-0 px-3 py-2 rounded-lg border-2 min-w-[110px] text-white"
+                              style={{ backgroundColor: cor, borderColor: cor }}
+                            >
+                              <p className="text-xs font-bold">{capitalizeCategoria(row.categoria)} <span className="text-[9px] font-medium">(hoje)</span></p>
+                              <p className="text-[10px] opacity-90">
+                                {pesoAtualRow != null ? `${pesoAtualRow} kg` : 'sem peso'}
+                                {row.quant_atual != null && ` · ${row.quant_atual} cab`}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Posição do peso em relação à faixa */}
+                      {faixaRow && pesoAtualRow != null && escalaMax > faixaRow.peso_min && (
+                        <div className="mt-3">
+                          <p className={`text-center text-[11px] mb-1 ${foraDaFaixa ? 'text-red-600 dark:text-red-300 font-semibold' : 'text-content-muted'}`}>
+                            {pesoAtualRow} kg ({
+                              pesoAtualRow < faixaRow.peso_min
+                                ? `${(faixaRow.peso_min - pesoAtualRow).toFixed(1)} kg abaixo do mínimo`
+                                : pesoAtualRow > faixaRow.peso_max
+                                  ? `${(pesoAtualRow - faixaRow.peso_max).toFixed(1)} kg acima do máximo`
+                                  : semTeto ? 'dentro da faixa' : `${pctFaixa}% da faixa`
+                            })
+                          </p>
+                          <div className="relative pt-1 pb-4">
+                            <div className="relative h-2 bg-surface-3 rounded-full overflow-hidden">
+                              <div className="absolute top-0 h-full bg-red-500/10" style={{ left: 0, width: `${pctEscala(faixaRow.peso_min)}%` }} />
+                              <div
+                                className="absolute top-0 h-full bg-emerald-500/20"
+                                style={{
+                                  left: `${pctEscala(faixaRow.peso_min)}%`,
+                                  width: `${Math.max(pctEscala(semTeto ? escalaMax : faixaRow.peso_max) - pctEscala(faixaRow.peso_min), 0)}%`,
+                                }}
+                              />
+                              {!semTeto && (
+                                <div className="absolute top-0 h-full bg-red-500/10" style={{ left: `${pctEscala(faixaRow.peso_max)}%`, width: `${100 - pctEscala(faixaRow.peso_max)}%` }} />
+                              )}
+                            </div>
+                            <div
+                              className={`absolute top-[1px] h-[14px] w-[3px] rounded-full ${foraDaFaixa ? 'bg-red-500' : 'bg-green-500'}`}
+                              style={{ left: `calc(${pctEscala(pesoAtualRow)}% - 1px)` }}
+                            />
+                            <span
+                              className="absolute bottom-0 text-[10px] text-content-muted"
+                              style={pctEscala(faixaRow.peso_min) < 8
+                                ? { left: 0 }
+                                : { left: `${pctEscala(faixaRow.peso_min)}%`, transform: 'translateX(-50%)' }}
+                            >
+                              {faixaRow.peso_min} kg
+                            </span>
+                            <span className="absolute bottom-0 right-0 text-[10px] text-content-muted">
+                              {semTeto ? 'sem teto' : `${faixaRow.peso_max} kg`}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
 
@@ -1019,8 +1131,132 @@ export function FaixasCategorias() {
                 </div>
               </div>
             )}
+          </Card>
+        </div>
+      )}
+
+      {/* Seção 3: Configuração das faixas de peso */}
+      <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-content-strong">Configuração das faixas de peso</h3>
+            <p className="text-xs text-content-muted mt-1">
+              Limites de peso que definem cada categoria e disparam as pendências de recategorização.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSexoFiltro('M')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sexoFiltro === 'M' ? 'bg-blue-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
+            >
+              Machos
+            </button>
+            <button
+              onClick={() => setSexoFiltro('F')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sexoFiltro === 'F' ? 'bg-pink-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
+            >
+              Fêmeas
+            </button>
+            {sexoFiltro === 'M' && (
+              <>
+                <span className="w-px bg-surface-3 mx-1" />
+                <button
+                  onClick={() => setDestinoFiltro('corte')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'corte' ? 'bg-green-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
+                >
+                  Abate
+                </button>
+                <button
+                  onClick={() => setDestinoFiltro('reprodução')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'reprodução' ? 'bg-purple-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
+                >
+                  Reprodução
+                </button>
+              </>
+            )}
+            <span className="w-px bg-surface-3 mx-1" />
+            <button
+              onClick={() => setDestinoFiltro('enfermaria')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'enfermaria' ? 'bg-amber-600 text-white' : 'bg-surface-2 text-content hover:bg-surface-3'}`}
+            >
+              Enfermaria
+            </button>
+          </div>
+        </div>
+
+        {loadingFaixas ? (
+          <CardSkeleton />
+        ) : faixasDoSexo.length === 0 ? (
+          <p className="text-content-muted text-sm py-6 text-center">Nenhuma faixa cadastrada para {SEXO_LABEL[sexoFiltro]}.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border-base text-left text-content-muted">
+                  <th className="py-2 pr-3 font-medium">Ordem</th>
+                  <th className="py-2 pr-3 font-medium">Categoria</th>
+                  <th className="py-2 pr-3 font-medium">Peso Mín (kg)</th>
+                  <th className="py-2 pr-3 font-medium">Peso Máx (kg)</th>
+                  <th className="py-2 pr-3 font-medium">Cor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {faixasDoSexo.map((faixa, idx) => (
+                  <tr key={faixa.id} className="border-b border-border-subtle">
+                    <td className="py-2 pr-3">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-2 text-content-muted text-xs font-semibold">
+                        {idx + 1}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3 font-medium text-content-strong">
+                      <span className="inline-flex items-center gap-2">
+                        {faixa.cor && <span className="w-3 h-3 rounded-full" style={{ backgroundColor: faixa.cor }} />}
+                        {faixa.nome}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <Input
+                        type="number"
+                        value={faixa.peso_min}
+                        onChange={(e) => handleFaixaChange(faixa.id, 'peso_min', e.target.value)}
+                        className="w-24 px-2 py-1 text-sm border-border-base"
+                      />
+                    </td>
+                    <td className="py-2 pr-3">
+                      <Input
+                        type="number"
+                        value={faixa.peso_max}
+                        onChange={(e) => handleFaixaChange(faixa.id, 'peso_max', e.target.value)}
+                        className="w-24 px-2 py-1 text-sm border-border-base"
+                      />
+                    </td>
+                    <td className="py-2 pr-3">
+                      <input
+                        type="color"
+                        name={`cor-${faixa.id}`}
+                        aria-label={`Cor da faixa ${faixa.nome}`}
+                        value={faixa.cor || '#cccccc'}
+                        onChange={(e) => handleFaixaChange(faixa.id, 'cor', e.target.value)}
+                        className="w-10 h-8 rounded border border-border-base cursor-pointer"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
+        <div className="flex justify-end mt-3">
+          <Button
+            onClick={salvarTodasFaixas}
+            disabled={savingAll || faixas.length === 0}
+          >
+            {savingAll ? 'Salvando...' : 'Salvar todas as faixas'}
+          </Button>
+        </div>
+        <p className="text-xs text-content-faint mt-3">
+          As faixas são valores iniciais editáveis por fazenda. Mudanças aqui não retroagem lotes já cadastrados.
+        </p>
       </Card>
 
       {/* Modal de recategorização */}
@@ -1036,13 +1272,15 @@ export function FaixasCategorias() {
               <p><span className="text-content-muted">Peso atual:</span> <span className="font-medium">{recategorizando.peso_vivo_atual_kg_cab ?? 'não informado'} kg</span></p>
               <p><span className="text-content-muted">Cabeças:</span> <span className="font-medium">{recategorizando.quant_atual ?? 'não informado'}</span></p>
               {recategorizando.lote_destino && (
-                <p><span className="text-content-muted">Destino:</span> <span className="font-medium">{recategorizando.lote_destino === 'corte' ? 'Abate' : recategorizando.lote_destino === 'reprodução' ? 'Reprodução' : recategorizando.lote_destino === 'enfermaria' ? 'Enfermaria' : recategorizando.lote_destino}</span></p>
+                <p><span className="text-content-muted">Destino:</span> <span className="font-medium">{destinoLabel(recategorizando.lote_destino)}</span></p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-content mb-1">Nova categoria *</label>
+              <label htmlFor="nova-categoria" className="block text-sm font-medium text-content mb-1">Nova categoria *</label>
               <select
+                id="nova-categoria"
+                name="nova-categoria"
                 value={novaCategoria}
                 onChange={(e) => setNovaCategoria(e.target.value)}
                 className="w-full px-3 py-2 border border-border-base rounded-lg text-sm bg-surface-1 focus:outline-none focus:ring-2 focus:ring-primary"
@@ -1058,7 +1296,7 @@ export function FaixasCategorias() {
                   .sort((a, b) => a.ordem - b.ordem)
                   .map(f => (
                     <option key={f.id} value={f.nome}>
-                      {f.nome} ({f.peso_min}-{f.peso_max} kg)
+                      {f.nome} ({f.peso_max >= 9000 ? `${f.peso_min}+` : `${f.peso_min}-${f.peso_max}`} kg)
                     </option>
                   ))}
               </select>
@@ -1066,7 +1304,7 @@ export function FaixasCategorias() {
 
             {pesoForaDaFaixa && (
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-900 dark:text-amber-200">
-                Aviso: o peso atual ({pesoAtual} kg) está fora da faixa de {faixaDestino.nome} ({faixaDestino.peso_min}-{faixaDestino.peso_max} kg). Você pode prosseguir, mas revise se a recategorização é apropriada.
+                Aviso: o peso atual ({pesoAtual} kg) está fora da faixa de {faixaDestino.nome} ({faixaDestino.peso_max >= 9000 ? `${faixaDestino.peso_min}+` : `${faixaDestino.peso_min}-${faixaDestino.peso_max}`} kg). Você pode prosseguir, mas revise se a recategorização é apropriada.
               </div>
             )}
 
@@ -1086,6 +1324,7 @@ export function FaixasCategorias() {
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="radio"
+                    name="opcao-formulacao"
                     checked={manterFormulacao}
                     onChange={() => setManterFormulacao(true)}
                   />
@@ -1095,6 +1334,7 @@ export function FaixasCategorias() {
                   <label className="flex items-center gap-2 text-sm">
                     <input
                       type="radio"
+                      name="opcao-formulacao"
                       checked={!manterFormulacao}
                       onChange={() => setManterFormulacao(false)}
                     />
@@ -1111,7 +1351,7 @@ export function FaixasCategorias() {
 
             {!manterFormulacao && (
               <div>
-                <label className="block text-sm font-medium text-content mb-1">Selecionar nova formulação *</label>
+                <label htmlFor="nova-formulacao" className="block text-sm font-medium text-content mb-1">Selecionar nova formulação *</label>
                 {loadingFormulacoes ? (
                   <p className="text-xs text-content-muted">Carregando formulações...</p>
                 ) : formulacoesDisponiveis.length === 0 ? (
@@ -1119,6 +1359,8 @@ export function FaixasCategorias() {
                 ) : (
                   <>
                     <select
+                      id="nova-formulacao"
+                      name="nova-formulacao"
                       value={formulacaoSelecionada}
                       onChange={(e) => setFormulacaoSelecionada(e.target.value)}
                       className="w-full px-3 py-2 border border-border-base rounded-lg text-sm bg-surface-1 focus:outline-none focus:ring-2 focus:ring-primary"
@@ -1174,7 +1416,7 @@ export function FaixasCategorias() {
         title="Confirmar recategorização"
         message={
           recategorizando
-            ? `Confirmar a recategorização de "${capitalizeCategoria(recategorizando.categoria)}" para "${capitalizeCategoria(novaCategoria)}"? Esta ação encerra a categoria atual, cria uma nova e registra o histórico para auditoria. Não pode ser desfeita.`
+            ? `Confirmar a recategorização de "${capitalizeCategoria(recategorizando.categoria)}" para "${capitalizeCategoria(novaCategoria)}"? A categoria ativa do lote será atualizada e a transição registrada no histórico para auditoria. Não pode ser desfeita.`
             : ''
         }
         confirmText="Confirmar"
