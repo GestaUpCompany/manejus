@@ -181,8 +181,7 @@ function extrairRegistrosDaAba(sheet: XLSX.WorkSheet, nomeAba: string): { regist
   const mesNumero = numeroMes(nomeAba)
   if (mesNumero === null || !sheet['!ref']) return { registros: [], locais: [] }
   const range = XLSX.utils.decode_range(sheet['!ref'])
-  const registros: RegistroBoletimRebanho[] = []
-  const locais: string[] = []
+  const blocos: { local: string; registros: RegistroBoletimRebanho[] }[] = []
 
   for (let row = range.s.r; row <= range.e.r; row += 1) {
     if (linhaOculta(sheet, row)) continue
@@ -191,26 +190,24 @@ function extrairRegistrosDaAba(sheet: XLSX.WorkSheet, nomeAba: string): { regist
     const header = Array.from({ length: COLUNAS_HEADER.length }, (_, index) => normalizarTexto(valorCelula(sheet, row, 1 + index)))
     if (header[0] !== COLUNAS_HEADER[0]) continue
 
-    const antesDoBloco = registros.length
+    const bloco: { local: string; registros: RegistroBoletimRebanho[] } = { local, registros: [] }
     for (let dataRow = row + 1; dataRow <= Math.min(row + 12, range.e.r); dataRow += 1) {
       if (linhaOculta(sheet, dataRow)) continue
       const descricao = normalizarTexto(valorCelula(sheet, dataRow, 1))
       if (!descricao || descricao === 'Total do Rebanho') break
-      registros.push(criarRegistro(sheet, dataRow, local, nomeAba, mesNumero))
+      bloco.registros.push(criarRegistro(sheet, dataRow, local, nomeAba, mesNumero))
     }
-    if (registros.length > antesDoBloco && !locais.includes(local)) locais.push(local)
+    if (bloco.registros.length) blocos.push(bloco)
   }
 
-  const consolidado = locais.includes('Consolidado')
-    ? 'Consolidado'
-    : (nomeAba === 'GERAL' || locais.length > 1 ? locais[locais.length - 1] : undefined)
-  if (consolidado && consolidado !== 'Consolidado') {
-    for (const registro of registros) {
-      if (registro.fazenda === consolidado) registro.fazenda = 'Consolidado'
-    }
-    locais.splice(locais.indexOf(consolidado), 1, 'Consolidado')
+  const locais = [...new Set(blocos.map((bloco) => bloco.local))]
+  const ultimoBloco = blocos[blocos.length - 1]
+  if (ultimoBloco && !locais.includes('Consolidado') && (nomeAba === 'GERAL' || locais.length > 1)) {
+    for (const registro of ultimoBloco.registros) registro.fazenda = 'Consolidado'
+    if (blocos.some((bloco) => bloco !== ultimoBloco && bloco.local === ultimoBloco.local)) locais.push('Consolidado')
+    else locais.splice(locais.indexOf(ultimoBloco.local), 1, 'Consolidado')
   }
-  return { registros, locais }
+  return { registros: blocos.flatMap((bloco) => bloco.registros), locais }
 }
 
 export function normalizarPlanilhaBoletim(bytes: ArrayBuffer | Uint8Array): ResultadoNormalizacaoBoletim {

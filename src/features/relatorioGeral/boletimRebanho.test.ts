@@ -60,6 +60,25 @@ function workbookComCabecalhosVazios() {
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
 }
 
+function workbookComConsolidadoNomeRepetido() {
+  const wb = XLSX.utils.book_new()
+  const geral = [
+    [''],
+    ...bloco('Fazenda Brilhante', 328),
+    [''],
+    ...bloco('Fazenda 2', 0),
+    [''],
+    ['', ...header],
+    ['', 'Total do Rebanho'],
+    [''],
+    ...bloco('Fazenda Brilhante', 328),
+  ]
+  const julho = [[''], ...bloco('Fazenda Brilhante', 21)]
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(geral), 'GERAL')
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(julho), 'Julho')
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+}
+
 function workbookComLocalZerado() {
   const wb = XLSX.utils.book_new()
   const geral = [[''], ...bloco('Consolidado', 42)]
@@ -115,6 +134,15 @@ describe('normalizador do Boletim de Rebanho', () => {
     expect(resultado.registros.every((registro) => registro.fazenda !== 'GRUPO AGRO GENTILIN')).toBe(true)
     const agrupado = agruparBoletim(resultado.registros, 7)
     expect(agrupado.locais.map((local) => local.fazenda)).toEqual(['Fazenda Sede'])
+  })
+
+  it('usa o último bloco com dados como consolidado mesmo quando repete o nome de um local', () => {
+    const resultado = normalizarPlanilhaBoletim(workbookComConsolidadoNomeRepetido())
+    const agrupado = agruparBoletim(resultado.registros, 7)
+    expect(agrupado.geral).toHaveLength(10)
+    expect(agrupado.geral[0]?.final).toBe(328)
+    expect(agrupado.locaisGeral.map((local) => local.fazenda)).toEqual(['Fazenda Brilhante'])
+    expect(agrupado.locaisGeral[0]?.registros[0]?.final).toBe(328)
   })
 
   it('lista apenas locais que renderizam no PDF', () => {

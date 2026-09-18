@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Boletim de rebanho: consolidado zerado quando o último bloco repete nome de local (2026-09-18)
+
+O painel "resumo consolidado" do boletim de rebanho saía zerado para a planilha "Boletim Mensal Rebanho.xlsm" (Fazenda Brilhante). A estrutura era igual às demais, mas a célula `'Resumo Geral'!B11` (rótulo do bloco consolidado, último bloco de cada aba) continha `FAZENDA BRILHANTE`, mesmo nome do primeiro local; nas planilhas que funcionam, `B11` traz o nome do grupo (ex.: `GRUPO AGRO GENTILIN`).
+
+- `src/features/relatorioGeral/boletimRebanho.ts`: `extrairRegistrosDaAba` passou a escolher o consolidado pelo último bloco com dados da aba (posicional), renomeando apenas os registros daquele bloco. Antes escolhia o último nome único de local; quando o rótulo do consolidado colidia com um local já listado, o alvo da renomeação caía no bloco anterior (aqui `FAZENDA 2`, todo zerado). A preferência por um bloco explicitamente nomeado `Consolidado` foi mantida.
+- Teste de regressão `workbookComConsolidadoNomeRepetido` reproduz a forma do arquivo (bloco consolidado repetindo o nome do primeiro local, com mini-bloco órfão de total entre eles).
+- Verificado com a planilha real: `geral` passou a ter 10 registros com dados (consolidado 372 cabeças no saldo) e `FAZENDA BRILHANTE` segue listada como local.
+
 ## Pill Período Dieta Atual e novo Período Total no relatório de consumo (2026-09-18)
 
 O pill "Período" do relatório de consumo (página pública, PDF individual e seção do infográfico mensal) media apenas o tempo na dieta atual, o que era ambíguo para lotes com várias dietas. O pill existente foi renomeado para "Período Dieta Atual" e um novo pill "Período Total" mede o tempo desde a primeira dieta do lote.
