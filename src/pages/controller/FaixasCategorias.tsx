@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
@@ -198,6 +199,7 @@ function Campo({ label, valor }: { label: string; valor: unknown }) {
 
 export function FaixasCategorias() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [loadingFazenda, setLoadingFazenda] = useState(true)
   const [faixas, setFaixas] = useState<FaixaCategoria[]>([])
@@ -216,6 +218,8 @@ export function FaixasCategorias() {
   const [formulacaoLoteId, setFormulacaoLoteId] = useState<string | null>(null)
   const [categoriasFormulacaoLote, setCategoriasFormulacaoLote] = useState<string[]>([])
   const [totalCategoriasAtivasLote, setTotalCategoriasAtivasLote] = useState<number>(1)
+  const [outrasCategoriasLote, setOutrasCategoriasLote] = useState<{ id: string; categoria: string }[]>([])
+  const [categoriasFormulacaoSelecionada, setCategoriasFormulacaoSelecionada] = useState<string[]>([])
   // Modal de recategorização
   const [recategorizando, setRecategorizando] = useState<LoteCategoriaCronologia | null>(null)
   const [novaCategoria, setNovaCategoria] = useState<string>('')
@@ -673,13 +677,17 @@ export function FaixasCategorias() {
         .eq('formulacao_id', loteData.formulacao_id)
       setCategoriasFormulacaoLote((fcgData || []).map((r: any) => (r.categoria as string).toLowerCase()))
     }
-    // Contar categorias ativas do lote para decidir se troca de formulação é permitida
-    const { count } = await supabase
+    // Categorias ativas do lote: a formulação é por lote, então trocar afeta todas
+    const { data: catsLote } = await supabase
       .from('lote_categorias')
-      .select('id', { count: 'exact', head: true })
+      .select('id, categoria')
       .eq('lote_id', loteCategoria.lote_id)
       .eq('ativo', true)
-    setTotalCategoriasAtivasLote(count ?? 1)
+      .is('data_fim', null)
+    const ativas = (catsLote || []) as { id: string; categoria: string }[]
+    setTotalCategoriasAtivasLote(ativas.length || 1)
+    setOutrasCategoriasLote(ativas.filter(c => c.id !== loteCategoria.id))
+    setCategoriasFormulacaoSelecionada([])
     setSucessoRecategorizacao(null)
     setFormulacoesDisponiveis([])
     // Pré-carregar formulações só quando usuário escolher "trocar"
@@ -713,6 +721,21 @@ export function FaixasCategorias() {
     }
   }, [manterFormulacao, novaCategoria, recategorizando])
 
+  // Cobertura de categorias da formulação selecionada para troca
+  useEffect(() => {
+    if (!formulacaoSelecionada) {
+      setCategoriasFormulacaoSelecionada([])
+      return
+    }
+    supabase
+      .from('formulacao_categorias_gmd')
+      .select('categoria')
+      .eq('formulacao_id', formulacaoSelecionada)
+      .then(({ data }) => {
+        setCategoriasFormulacaoSelecionada((data || []).map((r: any) => (r.categoria as string).toLowerCase()))
+      })
+  }, [formulacaoSelecionada])
+
   // Validação: peso fora da faixa da categoria destino
   const isEnfermariaRecat = recategorizando?.lote_destino === 'enfermaria'
   const faixaDestino = faixas.find(f =>
@@ -722,6 +745,11 @@ export function FaixasCategorias() {
   )
   const pesoAtual = recategorizando?.peso_vivo_atual_kg_cab
   const pesoForaDaFaixa = faixaDestino && pesoAtual != null && (pesoAtual < faixaDestino.peso_min || pesoAtual > faixaDestino.peso_max)
+  // Cobertura da formulação escolhida para troca: destino e demais categorias ativas do lote
+  const destinoNaoCobertoNaSelecionada = !manterFormulacao && formulacaoSelecionada !== '' && !categoriasFormulacaoSelecionada.includes(novaCategoria.toLowerCase())
+  const outrasCategoriasNaoCobertas = formulacaoSelecionada === ''
+    ? []
+    : outrasCategoriasLote.filter(c => !categoriasFormulacaoSelecionada.includes(c.categoria.toLowerCase()))
 
   const confirmarRecategorizacao = async () => {
     if (!recategorizando || !novaCategoria) return
@@ -1313,7 +1341,15 @@ export function FaixasCategorias() {
                 <p className="font-semibold">A formulação vigente no lote não contempla essa nova categoria.</p>
                 <p className="mt-1">
                   Não há GMD para essa categoria na formulação vigente do lote. A evolução de peso será interrompida para esta categoria.
-                  Para manter a evolução, troque para uma formulação que contemple a categoria destino.
+                  Para manter a evolução, troque para uma formulação que contemple a categoria destino ou{' '}
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/controller/formulacoes?edit=${formulacaoLoteId}`)}
+                    className="underline font-medium hover:text-red-700 dark:hover:text-red-100"
+                  >
+                    edite a formulação atual
+                  </button>{' '}
+                  incluindo essa categoria.
                 </p>
               </div>
             )}
@@ -1330,21 +1366,19 @@ export function FaixasCategorias() {
                   />
                   Continuar com a formulação atual
                 </label>
-                {totalCategoriasAtivasLote <= 1 && (
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="opcao-formulacao"
-                      checked={!manterFormulacao}
-                      onChange={() => setManterFormulacao(false)}
-                    />
-                    Trocar formulação
-                  </label>
-                )}
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="opcao-formulacao"
+                    checked={!manterFormulacao}
+                    onChange={() => setManterFormulacao(false)}
+                  />
+                  Trocar formulação
+                </label>
               </div>
               {totalCategoriasAtivasLote > 1 && (
                 <p className="text-xs text-content-muted mt-1">
-                  Este lote tem {totalCategoriasAtivasLote} categorias ativas. A formulação não pode ser trocada para não afetar as outras categorias. Edite a formulação vigente para contemplar a nova categoria, se necessário.
+                  Este lote tem {totalCategoriasAtivasLote} categorias ativas e a formulação é definida por lote: a troca valerá para todas elas.
                 </p>
               )}
             </div>
@@ -1383,6 +1417,28 @@ export function FaixasCategorias() {
                       Formulações da categoria "{novaCategoria}" aparecem primeiro; as outras abaixo do separador.
                     </p>
                   </>
+                )}
+                {formulacaoSelecionada !== '' && (destinoNaoCobertoNaSelecionada || outrasCategoriasNaoCobertas.length > 0) && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-900 dark:text-amber-200 mt-2 space-y-1">
+                    {destinoNaoCobertoNaSelecionada && (
+                      <p>A formulação selecionada também não contempla "{novaCategoria}": a categoria ficará sem GMD e a evolução de peso será interrompida.</p>
+                    )}
+                    {outrasCategoriasNaoCobertas.length > 0 && (
+                      <p>
+                        {outrasCategoriasNaoCobertas.map(c => capitalizeCategoria(c.categoria)).join(', ')} também {outrasCategoriasNaoCobertas.length > 1 ? 'estão ativas' : 'está ativa'} neste lote e não {outrasCategoriasNaoCobertas.length > 1 ? 'são contempladas' : 'é contemplada'} pela nova formulação: ao serem recategorizadas ficarão sem GMD e deixarão de evoluir peso.
+                      </p>
+                    )}
+                    <p>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/controller/formulacoes?edit=${formulacaoSelecionada}`)}
+                        className="underline font-medium hover:text-amber-700 dark:hover:text-amber-100"
+                      >
+                        Editar formulação
+                      </button>{' '}
+                      para incluir as categorias faltantes.
+                    </p>
+                  </div>
                 )}
               </div>
             )}
