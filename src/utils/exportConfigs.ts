@@ -24,6 +24,10 @@ export const MATERNIDADE_EXPORT_CONFIG: TableExportConfig = {
     { source: 'individuo_mae', header: 'Brinco Mãe (Cadastro)', transform: (value) => value?.id_brinco || '' },
     { source: 'individuo_cria', header: 'Brinco Cria (Cadastro)', transform: (value) => value?.id_brinco || '' },
     { source: 'docilidade_matriz', header: 'Docilidade Matriz' },
+    { source: 'medicamentos', header: 'Medicamentos', transform: (value) => {
+      if (!Array.isArray(value)) return ''
+      return value.map((m: any) => `${m.nomeComercial || ''} (${m.tipo || ''}) ${m.doseAplicada || ''}`).join(' | ')
+    }},
     { source: 'observacao_parto', header: 'Observações' }
   ]
 }

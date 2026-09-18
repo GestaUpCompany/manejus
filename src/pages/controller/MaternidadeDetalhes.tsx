@@ -28,6 +28,7 @@ interface RegistroMaternidade {
   id_chip_cria?: string
   id_provisorio_cria?: string
   individuo_id_cria?: string
+  medicamentos?: Record<string, any>
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -158,6 +159,22 @@ export function MaternidadeDetalhes() {
               <DetailField label="Tratamento" value={formatValue(registro!.tratamento)} />
             </div>
           </DetailSection>
+
+          {/* Medicamentos */}
+          {Array.isArray(registro!.medicamentos) && (registro!.medicamentos as any[]).length > 0 && (
+            <DetailSection title="Medicamentos" highlighted>
+              <div className="space-y-3">
+                {(registro!.medicamentos as any[]).map((med: any, index: number) => (
+                  <div key={index} className="border-b border-border-base pb-2 last:border-0 last:pb-0">
+                    <DetailField label="Nome" value={formatValue(med.nomeComercial)} />
+                    <DetailField label="Tipo" value={formatValue(med.tipo)} />
+                    <DetailField label="Dose Aplicada" value={formatValue(med.doseAplicada)} />
+                    {med.doseRecomendada && <DetailField label="Dose Recomendada" value={formatValue(med.doseRecomendada)} />}
+                  </div>
+                ))}
+              </div>
+            </DetailSection>
+          )}
         </div>
       </Card>
       )}
