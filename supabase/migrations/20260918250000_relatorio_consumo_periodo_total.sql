@@ -3,7 +3,7 @@
 -- O pill "Período" existente mede há quanto tempo o lote está recebendo a dieta
 -- atual (dias desde o início do plano ativo). Um lote pode receber várias dietas
 -- ao longo do tempo, então o relatório passa a expor também:
---   - dias: renomeado na UI para "Período Dieta Total" (sem mudança de cálculo)
+--   - dias: renomeado na UI para "Período Dieta Atual" (sem mudança de cálculo)
 --   - dias_total: "Período Total", dias desde a PRIMEIRA dieta do lote, ou seja,
 --     o menor data_inicio entre todos os planos_nutricionais do lote (tanto os
 --     vinculados ao lote quanto os vinculados a lote_categorias do lote),

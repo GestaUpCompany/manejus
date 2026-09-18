@@ -1,8 +1,8 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
-## Pill Período Dieta Total e novo Período Total no relatório de consumo (2026-09-18)
+## Pill Período Dieta Atual e novo Período Total no relatório de consumo (2026-09-18)
 
-O pill "Período" do relatório de consumo (página pública, PDF individual e seção do infográfico mensal) media apenas o tempo na dieta atual, o que era ambíguo para lotes com várias dietas. O pill existente foi renomeado para "Período Dieta Total" e um novo pill "Período Total" mede o tempo desde a primeira dieta do lote.
+O pill "Período" do relatório de consumo (página pública, PDF individual e seção do infográfico mensal) media apenas o tempo na dieta atual, o que era ambíguo para lotes com várias dietas. O pill existente foi renomeado para "Período Dieta Atual" e um novo pill "Período Total" mede o tempo desde a primeira dieta do lote.
 
 - Migration `20260918250000_relatorio_consumo_periodo_total.sql`: a RPC `get_dados_relatorio_consumo` passa a retornar `dias_total` no objeto `info`, calculado como os dias desde o menor `data_inicio` entre todos os `planos_nutricionais` do lote (vinculados ao lote ou a `lote_categorias` do lote, ativos ou encerrados). A nova CTE `primeira_dieta_por_lote` faz essa agregação; `dias` permanece inalterado. A mudança cobre automaticamente o infográfico mensal, que consome a mesma RPC via `get_dados_relatorio_consumo_fazenda`.
 - Renders atualizados nos três pontos: `RelatorioConsumoPublico.tsx` (grid de KPIs passou a 7 colunas), `api/pdf/consumo.js` (coluna de KPIs, altura flexível) e `relatorioConsumoPDF.ts` (cards reduzidos de 19mm para 17mm para os 7 cards caberem na página A4). `InfoLote` ganhou `dias_total` e o payload do Puppeteer em `relatorioConsumoPDFPuppeteer.ts` passa a enviá-lo.

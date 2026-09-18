@@ -339,7 +339,7 @@ function kpisHtml(info, dados) {
     { value: cm != null ? `${numFmt(cm, 2)}%` : '—', label: 'Consumo %PV' },
     { value: custo != null ? `R$ ${numFmt(custo, 2)}` : '—', label: 'R$/cab/dia' },
     { value: numFmt(info.peso_atual_kg, 2), label: 'Peso Atual (kg)' },
-    { value: intFmt(info.dias), label: 'Período Dieta Total' },
+    { value: intFmt(info.dias), label: 'Período Dieta Atual' },
     { value: intFmt(info.dias_total), label: 'Período Total' },
     { value: dateFmt(info.data_prevista_final), label: 'Data Prevista Final' },
   ]

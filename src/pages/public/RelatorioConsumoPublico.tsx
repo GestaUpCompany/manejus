@@ -636,14 +636,14 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                     ))}
                   </div>
 
-                  {/* KPIs (Peso Entrada, Consumo %PV, R$/cab/dia, Peso Atual, Período Dieta, Período Total, Data Prevista) */}
+                  {/* KPIs (Peso Entrada, Consumo %PV, R$/cab/dia, Peso Atual, Período Dieta Atual, Período Total, Data Prevista) */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
                     {[
                       { label: 'Peso Entrada (kg)', value: formatarInteiro(info.peso_entrada_kg) },
                       { label: 'Consumo %PV', value: `${formatarNumero(consumoMedio, 2)}%` },
                       { label: 'R$/cab/dia', value: `R$ ${formatarNumero(custoMedio, 2)}` },
                       { label: 'Peso Atual (kg)', value: formatarNumero(info.peso_atual_kg, 2) },
-                      { label: 'Período Dieta Total', value: formatarInteiro(info.dias) },
+                      { label: 'Período Dieta Atual', value: formatarInteiro(info.dias) },
                       { label: 'Período Total', value: formatarInteiro(info.dias_total) },
                       { label: 'Data Prevista Final', value: formatarData(info.data_prevista_final) },
                     ].map((k) => (

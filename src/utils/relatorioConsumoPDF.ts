@@ -431,7 +431,7 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
     { label: 'Consumo %PV', value: `${formatarNumero(consumoMedio, 2)}%` },
     { label: 'R$/cab/dia', value: `R$ ${formatarNumero(custoMedio, 2)}` },
     { label: 'Peso Atual (kg)', value: formatarNumero(info.peso_atual_kg, 2) },
-    { label: 'Período Dieta Total', value: formatarInteiro(info.dias) },
+    { label: 'Período Dieta Atual', value: formatarInteiro(info.dias) },
     { label: 'Período Total', value: formatarInteiro(info.dias_total) },
     { label: 'Data Prevista Final', value: formatarDataNumerica(info.data_prevista_final) },
   ]
