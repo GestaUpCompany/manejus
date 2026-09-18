@@ -20,6 +20,7 @@ export interface InfoLote {
   peso_entrada_kg: number | null
   peso_atual_kg: number | null
   dias: number | null
+  dias_total: number | null
   data_prevista_final: string | null
   n_cabecas_atual: number | null
   raca: string | null
@@ -411,8 +412,8 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
   // KPIs laterais (coluna esquerda)
   const kpiX = 6
   const kpiW = 36
-  const kpiH = 19
-  const kpiGap = 3.5
+  const kpiH = 17
+  const kpiGap = 3
   let kpiY = 64.25
 
   const consumoMedio = dados.length
@@ -430,7 +431,8 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
     { label: 'Consumo %PV', value: `${formatarNumero(consumoMedio, 2)}%` },
     { label: 'R$/cab/dia', value: `R$ ${formatarNumero(custoMedio, 2)}` },
     { label: 'Peso Atual (kg)', value: formatarNumero(info.peso_atual_kg, 2) },
-    { label: 'Período (dias)', value: formatarInteiro(info.dias) },
+    { label: 'Período Dieta Total', value: formatarInteiro(info.dias) },
+    { label: 'Período Total', value: formatarInteiro(info.dias_total) },
     { label: 'Data Prevista Final', value: formatarDataNumerica(info.data_prevista_final) },
   ]
 
@@ -442,11 +444,11 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
     doc.setFontSize(11)
     setTextColor(doc, white)
     doc.setFont('helvetica', 'bold')
-    doc.text(k.value, kpiX + kpiW / 2, kpiY + 7.5, { align: 'center' })
+    doc.text(k.value, kpiX + kpiW / 2, kpiY + 7, { align: 'center' })
     doc.setFontSize(9)
     setTextColor(doc, white)
     doc.setFont('helvetica', 'normal')
-    doc.text(k.label, kpiX + kpiW / 2, kpiY + 15, { align: 'center' })
+    doc.text(k.label, kpiX + kpiW / 2, kpiY + 13.5, { align: 'center' })
     kpiY += kpiH + kpiGap
   })
 

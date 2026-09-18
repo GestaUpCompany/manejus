@@ -32,6 +32,7 @@ export async function gerarRelatorioConsumoPDFPuppeteer(
       peso_entrada_kg: l.info.peso_entrada_kg,
       peso_atual_kg: l.info.peso_atual_kg,
       dias: l.info.dias,
+      dias_total: l.info.dias_total,
       data_prevista_final: l.info.data_prevista_final,
       n_cabecas_atual: l.info.n_cabecas_atual,
       raca: l.info.raca,

@@ -1,5 +1,25 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Pill Período Dieta Total e novo Período Total no relatório de consumo (2026-09-18)
+
+O pill "Período" do relatório de consumo (página pública, PDF individual e seção do infográfico mensal) media apenas o tempo na dieta atual, o que era ambíguo para lotes com várias dietas. O pill existente foi renomeado para "Período Dieta Total" e um novo pill "Período Total" mede o tempo desde a primeira dieta do lote.
+
+- Migration `20260918250000_relatorio_consumo_periodo_total.sql`: a RPC `get_dados_relatorio_consumo` passa a retornar `dias_total` no objeto `info`, calculado como os dias desde o menor `data_inicio` entre todos os `planos_nutricionais` do lote (vinculados ao lote ou a `lote_categorias` do lote, ativos ou encerrados). A nova CTE `primeira_dieta_por_lote` faz essa agregação; `dias` permanece inalterado. A mudança cobre automaticamente o infográfico mensal, que consome a mesma RPC via `get_dados_relatorio_consumo_fazenda`.
+- Renders atualizados nos três pontos: `RelatorioConsumoPublico.tsx` (grid de KPIs passou a 7 colunas), `api/pdf/consumo.js` (coluna de KPIs, altura flexível) e `relatorioConsumoPDF.ts` (cards reduzidos de 19mm para 17mm para os 7 cards caberem na página A4). `InfoLote` ganhou `dias_total` e o payload do Puppeteer em `relatorioConsumoPDFPuppeteer.ts` passa a enviá-lo.
+- Lotes sem nenhum plano iniciado exibem `—` no Período Total; lotes com dados faltantes (`erro`) seguem mostrando o bloco de aviso em vez dos KPIs, como antes.
+- Verificação na fazenda de testes via MCP: `dias` e `dias_total` retornaram corretos para lote com plano único (109/109), e `null` para lotes sem plano ou com erro de dados.
+
+## Medicamentos em registros de maternidade (2026-09-18)
+
+O PWA passou a registrar medicamentos aplicados em cada cria de maternidade (1ª cria e, em gêmeos, 2ª cria viva), reutilizando a lógica da Enfermaria. Mudanças neste repo:
+
+- Migration `20260918230000_add_medicamentos_maternidade.sql`: coluna `medicamentos jsonb` em `public.registros_maternidade`, mesmo shape da coluna de `registros_enfermaria` (array de `{medicamentoId, tipo, nomeComercial, principioAtivo, doseRecomendada, doseAplicada}`). Cada cria gera um registro separado com sua própria lista.
+- Migration `20260918240000_add_foto_url_maternidade.sql`: coluna `foto_url text` em `registros_maternidade`; o PWA passou a capturar foto (secção "5. FOTO") e a sincronizá-la para o bucket `fotos-registros`, como a Enfermaria.
+- `src/pages/controller/MaternidadeDetalhes.tsx`: campo `medicamentos` na interface do registro e seção "Medicamentos" nos detalhes (nome, tipo, dose aplicada, dose recomendada), exibida apenas quando a lista não está vazia.
+- `src/utils/exportConfigs.ts`: coluna "Medicamentos" no `MATERNIDADE_EXPORT_CONFIG` do XLSX, serializada como `Nome (Tipo) Dose | Nome (Tipo) Dose`.
+
+No PWA a implementação extraiu o componente compartilhado `MedicamentosSection` (usado por Maternidade e Enfermaria); detalhes no `docs/HISTORICO.md` do repo do PWA.
+
 ## Currais TIP criados na Fazenda Jacamim (2026-09-17)
 
 - Os 43 pastos nomeados `TIP 01` a `TIP 43` da Fazenda Jacamim (`d8900758-1e41-4855-a55e-17f8e00fea7e`) foram replicados como currais na linha de confinamento `TIPS` (`bd07aaeb-fa0c-4083-b134-3f8a6894196b`), via migração pontual por MCP (sem arquivo de migration).
