@@ -1,5 +1,19 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Hardening das RPCs administrativas e auditoria do confinamento (2026-09-22)
+
+Migration `20260922150000_hardening_rpcs_confinamento_auditoria.sql`. Revisão de segurança/integridade do módulo de confinamento após a tela de edição/exclusão:
+
+- **Spoofing de usuário nas RPCs**: as seis funções (`editar_/excluir_registro_leitura_cocho`, `editar_/excluir_registro_oferta_trato`, `editar_/excluir_registro_suplementacao`) confiavam em `p_usuario_id`/`p_usuario_email` para autorização e auditoria — qualquer autenticado podia declarar o id de um controller e o log registrava o e-mail forjado. Agora todas resolvem o chamador real via `auth.uid()` → `usuarios.auth_id`, usam esse usuário para o check de papel e setam `app.current_user_id/email/nome` com os dados reais. Os parâmetros `p_usuario_*` permanecem na assinatura por compatibilidade, mas são ignorados. `editar_registro_suplementacao` também ganhou o check de papel `admin/controller` que não tinha.
+- **`lancar_tratos_folha` reativa registros excluídos**: o resolve de registro lógico filtrava `deleted_at IS NULL`; um relançamento cuja linha original estava excluída colidia com o `id` dela no `ON CONFLICT` e atualizava uma linha que continuava invisível. O resolve agora considera linhas excluídas (preferindo a ativa) e o `DO UPDATE` seta `deleted_at = NULL` explicitamente — relançar a folha restaura a mesma identidade em vez de criar um registro novo ou falhar em silêncio. A função também passa a setar contexto de auditoria (`app.current_user_*`, `source_app='painel'`).
+- **`fn_audit_trigger` com fallback de identidade**: quando não há contexto de sessão (`app.current_user_nome` vazio), o trigger passa a usar `nome_usuario` da própria linha. Cobre os writes diretos do PWA, cuja conta compartilhada `peao.*` não identifica o funcionário — antes entravam no `audit_log` sem nenhum nome. Aplicado a todas as tabelas auditadas.
+- **`editar_registro_leitura_cocho` re-resolve `nota_config_id`**: ao mudar `leitura_cocho`, o link para `notas_leitura_cocho_config` é recalculado para a nota nova (antes ficava apontando para o percentual da nota antiga). O `audit_log` registra as duas mudanças em `alteracoes`.
+- **Constraint redundante removida**: `registros_oferta_trato_curral_id_data_ordem_trato_key` (unique por timestamptz exato) foi dropada — substituída por `registros_oferta_trato_dia_operacional_uk` (curral, dia operacional em `America/Cuiaba`, ordem, só ativos), que é mais restrita. Nada usava essa constraint como alvo de `ON CONFLICT` (PWA usa `local_id`, a RPC usa `id`).
+- Verificado na fazenda de testes com JWT simulado (`request.jwt.claims`): usuário sem papel é rejeitado mesmo declarando `p_usuario_id` de controller; edição com `p_usuario_id` spoofado grava o e-mail real no `audit_log`; relançar trato excluído o reativa com auditoria; update sem contexto grava `usuario_nome` do `nome_usuario` da linha.
+- Limitações que ficam: writes diretos do PWA ainda passam por RLS (a conta `peao.*` pode atualizar/apagar linhas da fazenda, inclusive sobre registros excluídos — a fronteira real é o RLS, não a RPC); a unicidade de leitura de cocho por curral/dia segue só no app, pois `pasto_curral` é texto livre sem `curral_id`.
+
+**Disparador**: quando mencionar spoofing de `p_usuario_id`, `auth.uid()` em RPCs, reativação de trato excluído, `nota_config_id` inconsistente, ou auditoria de writes do PWA, ler esta seção.
+
 ## Tela de edição/exclusão de tratos e leituras de cocho (2026-09-21)
 
 Nova rota `/controller/registros-tratos-leituras` ("Registros de Tratos e Leituras", menu Confinamento e TIP, atrás de `ConfinamentoRoute`) para administrar registros operacionais que antes só podiam ser consultados. Duas abas (Tratos / Leituras de cocho) com filtro de período, lote, curral (tratos) e busca textual; edição via modal e exclusão com confirmação.
