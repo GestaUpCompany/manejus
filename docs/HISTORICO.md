@@ -1,5 +1,14 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Recategorização in-place zerava quant_atual (2026-09-21)
+
+Caso original: apartações LOTE 08P → TIP LOTE 27/28/29 (140 garrote cada) na fazenda Bom Jesus (`a6640dd6`). A categoria "garrote" foi criada corretamente no destino e recebeu as cabeças, mas controllers recategorizaram manualmente garrote → boi magro (e no 27 depois boi magro → boi gordo) via `recategorizar_lote_categoria`. A RPC só renomeava a linha de `lote_categorias`; como `calculate_quant_atual` casa `registros_movimentacao.categoria` por nome, os registros que continuavam dizendo "garrote" deixaram de contar e o cron noturno zerou o `quant_atual`.
+
+- Migration `20260921120000_recategorizar_propaga_categoria_registros.sql`: a RPC passa a reescrever `categoria` em `registros_movimentacao` (lote como origem ou destino) e `registros_morte` com o nome efetivamente gravado na linha (lido de volta após o UPDATE porque `trg_normalize_categoria_lowercase` normaliza), e recalcula `quant_atual` na hora, sem esperar o cron. O bound inferior espelha o cutoff do `calculate_quant_atual`: quando `quant_inicial IS NOT NULL` só registros com `data >= created_at` da linha são reescritos; quando NULL (categoria placeholder), todos.
+- Decisão consciente de trade-off: o registro perde a categoria vigente na época em nível de linha, mas `lote_categorias_transicoes` já guarda `categoria_origem`/`categoria_destino`/`data_transicao`, então a informação continua reconstruível. A alternativa mais robusta (FK `lote_categoria_id` + resolução temporal) ficou como débito no `docs/BACKLOG.md`.
+- Limitação residual aceita: registro sincronizado tarde (offline) com `data < data_transicao` e nome antigo ainda cria linha nova com o nome velho no destino (a trigger `update_quant_atual_movimentacao` não resolve aliases). Total de cabeças fica certo, a categoria fica separada; resolver exige a resolução temporal do débito.
+- Correção pontual aplicada na fazenda a6640dd6 (autorizada pelo usuário): os 3 registros de apartação tiveram `categoria` reescrita para o nome atual de cada lote ('boi magro' no 28/29, 'boi gordo' no 27) e `quant_atual` recalculado. Estado final: TIP 27 boi gordo 140, TIP 28 boi magro 140, TIP 29 boi magro 140.
+
 ## Boletim de rebanho: consolidado zerado quando o último bloco repete nome de local (2026-09-18)
 
 O painel "resumo consolidado" do boletim de rebanho saía zerado para a planilha "Boletim Mensal Rebanho.xlsm" (Fazenda Brilhante). A estrutura era igual às demais, mas a célula `'Resumo Geral'!B11` (rótulo do bloco consolidado, último bloco de cada aba) continha `FAZENDA BRILHANTE`, mesmo nome do primeiro local; nas planilhas que funcionam, `B11` traz o nome do grupo (ex.: `GRUPO AGRO GENTILIN`).
