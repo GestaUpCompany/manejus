@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de mortalidade: rebanho_total por lote_categorias e detalhamento sob diagnósticos (2026-09-21)
+
+Dois ajustes no relatório de mortalidade após feedback com o PDF da Fazenda Brilhante:
+
+- **Taxa de mortalidade não aparecia**: o `rebanho_total` da RPC `get_dados_relatorio_morte` era somado de `lotes.n_cabecas`/`numero_cabecas`, colunas NULL em fazendas de produção (efetivo vive em `lote_categorias`). A migration `20260911161139` já tinha corrigido isso para `SUM(lote_categorias.quant_atual) WHERE ativo`, mas as recriações completas da função a partir de `20260916120000` regrediram o denominador. A migration `20260921160000_fix_rebanho_total_lote_categorias_relatorio_morte.sql` restaura a soma por categorias ativas. Brilhante: rebanho 0 → 312, taxa passa a 1,28% (4 mortes).
+- **Detalhamento logo abaixo dos diagnósticos**: quando a tabela "Diagnósticos mais frequentes" cabe em uma página só, a tabela "Registros detalhados" passa a começar na mesma folha, logo abaixo, com quantas linhas couberem (estimativa de altura por linha); o restante segue em páginas próprias de 12 registros. Fusão só ocorre se couberem pelo menos 3 linhas. Smoke na fazenda de testes (12 mortes, 4 diagnósticos, mapa): 4 páginas totais.
+
 ## Relatório de mortalidade: compressão máxima de páginas (2026-09-21)
 
 O PDF de mortalidade (`api/pdf/morte.js`, usado pelo relatório individual do link público e pela seção de mortes do Infográfico Mensal) tinha muitas páginas com espaço vazio. A estrutura foi recompactada sem remover nenhum gráfico:

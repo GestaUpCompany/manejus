@@ -448,9 +448,20 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
   }
   const rankingPastos = [...pastoCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
 
-  // Paginação da tabela de detalhamento: chunks de DETAIL_ROWS_PER_PAGE
+  // Paginação da tabela de detalhamento. Quando os diagnósticos cabem em uma
+  // única página, o detalhamento começa logo abaixo da tabela de diagnósticos
+  // aproveitando o espaço livre da folha; o restante segue em páginas próprias
+  // de DETAIL_ROWS_PER_PAGE linhas. Estimativa de altura: cada linha de
+  // diagnóstico ~8mm, cada linha de detalhe ~7mm, títulos/cabeçalhos ~21mm e
+  // kicker ~8mm dentro dos ~146mm úteis da folha.
+  const mergedDetailRows =
+    diagPageCount === 1 && rows.length > 0
+      ? Math.min(rows.length, Math.floor((116 - 8 * diagnosticoLinhas.length) / 7))
+      : 0
+  const mergeDetail = mergedDetailRows >= 3
+  const detailStart = mergeDetail ? mergedDetailRows : 0
   const detailChunks = rows.length === 0 ? [[]] : []
-  for (let i = 0; i < rows.length; i += DETAIL_ROWS_PER_PAGE) {
+  for (let i = detailStart; i < rows.length; i += DETAIL_ROWS_PER_PAGE) {
     detailChunks.push(rows.slice(i, i + DETAIL_ROWS_PER_PAGE))
   }
   const totalPages = 2 + diagPageCount + (temPaginaMapa ? 1 : 0) + detailChunks.length
@@ -495,11 +506,24 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
     ${renderFooter({ ...period, page: 2, totalPages })}
   `)
 
+  const detailHeader = `<thead><tr><th>Data</th><th>Lote</th><th>Pasto</th><th>Sexo</th><th>Idade</th><th>Peso</th><th>Categoria</th><th>Causa</th><th>Diagnósticos</th></tr></thead>`
+  const renderDetailRow = (line, index) =>
+    `<tr class="${index % 2 ? '' : 'striped'}"><td>${dateFmt(line.data)}</td><td>${escapeHtml(line.lote_nome)}</td><td>${escapeHtml(line.pasto)}</td><td>${escapeHtml(line.sexo)}</td><td>${escapeHtml(line.idade)}</td><td class="numeric">${numFmt(line.peso_vivo, 0)}</td><td>${escapeHtml(titleCase(line.categoria))}</td><td>${escapeHtml(line.causa_morte)}</td><td><div class="morte-clamp">${escapeHtml(compactDiagnostics(line.diagnosticos))}</div></td></tr>`
+  // Bloco "Registros detalhados": usado na página fundida (abaixo dos
+  // diagnósticos) e nas páginas dedicadas de detalhamento. O span mostra a
+  // faixa exibida apenas quando a tabela não cobre todos os registros.
+  const detailBlock = (chunk, startRow) => {
+    const cobreTudo = startRow === 0 && chunk.length === rows.length
+    const faixa = cobreTudo ? '' : ` · exibindo ${startRow + 1}–${startRow + chunk.length}`
+    return `<div class="table-block"><h2 class="table-title">Registros detalhados <span>${rows.length} registro(s)${faixa}</span></h2><table class="morte-detail-table">${detailHeader}<tbody>${chunk.map((line, i) => renderDetailRow(line, startRow + i)).join('')}</tbody></table></div>`
+  }
+
   const diagPages = diagChunks
     .map((chunk, i) => pageSection(`
       ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: `Diagnósticos${diagPageCount > 1 ? ` (${i + 1}/${diagPageCount})` : ''}`, sectionLabel: 'Análise cruzada' })}
       <p class="section-kicker">Diagnósticos mais frequentes</p>
       <div class="table-block"><h2 class="table-title">${diagTitulo}</h2><table class="diag-freq">${diagHead}<tbody>${chunk.join('')}</tbody></table></div>
+      ${mergeDetail && i === 0 ? detailBlock(rows.slice(0, mergedDetailRows), 0) : ''}
       ${renderFooter({ ...period, page: 3 + i, totalPages })}
     `))
     .join('')
@@ -526,20 +550,13 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
     : ''
   const detailPageOffset = 2 + diagPageCount + (temPaginaMapa ? 1 : 0)
 
-  const detailHeader = `<thead><tr><th>Data</th><th>Lote</th><th>Pasto</th><th>Sexo</th><th>Idade</th><th>Peso</th><th>Categoria</th><th>Causa</th><th>Diagnósticos</th></tr></thead>`
-  const renderDetailRow = (line, index) =>
-    `<tr class="${index % 2 ? '' : 'striped'}"><td>${dateFmt(line.data)}</td><td>${escapeHtml(line.lote_nome)}</td><td>${escapeHtml(line.pasto)}</td><td>${escapeHtml(line.sexo)}</td><td>${escapeHtml(line.idade)}</td><td class="numeric">${numFmt(line.peso_vivo, 0)}</td><td>${escapeHtml(titleCase(line.categoria))}</td><td>${escapeHtml(line.causa_morte)}</td><td><div class="morte-clamp">${escapeHtml(compactDiagnostics(line.diagnosticos))}</div></td></tr>`
-
   const detailPages = detailChunks
     .map((chunk, chunkIndex) => {
-      const startRow = chunkIndex * DETAIL_ROWS_PER_PAGE
-      const bodyRows = chunk.map((line, i) => renderDetailRow(line, startRow + i)).join('')
-      const isFirstChunk = chunkIndex === 0
-      const isLastChunk = chunkIndex === detailChunks.length - 1
+      const startRow = detailStart + chunkIndex * DETAIL_ROWS_PER_PAGE
       const suffix = detailChunks.length > 1 ? ` (${chunkIndex + 1}/${detailChunks.length})` : ''
       const sectionName = `Detalhamento${suffix}`
-      const content = bodyRows
-        ? `<div class="table-block"><h2 class="table-title">Registros detalhados <span>${rows.length} registro(s)${isFirstChunk && !isLastChunk ? ` · exibindo ${startRow + 1}–${startRow + chunk.length}` : detailChunks.length > 1 ? ` · exibindo ${startRow + 1}–${startRow + chunk.length}` : ''}</span></h2><table class="morte-detail-table">${detailHeader}<tbody>${bodyRows}</tbody></table></div>`
+      const content = chunk.length
+        ? detailBlock(chunk, startRow)
         : '<div class="empty-chart" style="height:40mm">Nenhum registro detalhado no período</div>'
       return pageSection(`
         ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: sectionName, sectionLabel: 'Registros' })}
