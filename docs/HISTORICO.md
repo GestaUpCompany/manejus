@@ -1,5 +1,18 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de mortalidade: compressão máxima de páginas (2026-09-21)
+
+O PDF de mortalidade (`api/pdf/morte.js`, usado pelo relatório individual do link público e pela seção de mortes do Infográfico Mensal) tinha muitas páginas com espaço vazio. A estrutura foi recompactada sem remover nenhum gráfico:
+
+- **Página 1** passou a incluir, abaixo do resumo executivo, os gráficos "Mortes por lote" e "Mortes por causa" (cards de 50mm, `.page1-charts`).
+- **Página 2** virou uma grade 2×2 (`.page2-grid`, cards de 58mm) com categoria, sexo, pasto e o heatmap causa × categoria (que saiu da antiga página 4), seguida da "Leitura executiva". O rótulo de canto do heatmap foi encurtado para "Causa" para não colidir com a primeira coluna.
+- **Diagnósticos** ganharam página dedicada com até 12 linhas por página (antes cabiam 4 na página mista); limite total de exibição segue em 24 categorias.
+- **Detalhamento** passou de 7 para 12 registros por página (`DETAIL_ROWS_PER_PAGE = 12`), com fonte/padding menores e diagnósticos com clamp de 2 linhas (`morte-clamp`).
+- A página de mapa continua separada e só é emitida quando há mortes georreferenciadas.
+- `totalPages` agora é calculado como `2 + páginas de diagnóstico + (mapa ? 1 : 0) + páginas de detalhe`.
+- Smoke test na fazenda de testes (12 mortes, com mapa e 4 diagnósticos): caiu de 7 para 5 páginas. O ganho cresce com o volume, pois o detalhamento comporta 70% mais registros por folha.
+- O teste `reportComposer.test.ts` foi ajustado: a composição consumo + morte passou de 8 para 6 páginas totais.
+
 ## Relatório de mortalidade: taxa acumulada e novos KPIs na página 1 (2026-09-21)
 
 A primeira página do relatório de mortalidade (PDF individual do link público e seção de mortes do Infográfico Mensal, ambos renderizados por `api/pdf/morte.js`, e os cards web de `RelatorioMortePublico.tsx`) foi repensada: os cards "Mortes por dia" e "Período anterior" foram removidos (usuários quase nunca filtram período longo o suficiente para haver comparação), e a taxa de mortalidade passou a ser acumulada sobre todo o histórico, estável mesmo com filtros de data curtos.

@@ -27,15 +27,14 @@ const MAX_LINES = 20000
 const MAX_BODY_BYTES = 8_000_000
 
 // Quantas linhas do detalhamento cabem em uma página A4 landscape com o header
-// e o footer padrão. Linhas quebram para 2-3 linhas com frequência (Idade e
-// Diagnósticos), então o limite assume ~17mm por linha, não 30px.
-const DETAIL_ROWS_PER_PAGE = 7
+// e o footer padrão. Com padding/fonte reduzidos e diagnósticos em clamp de 2
+// linhas, 12 linhas por página sem risco de clipping.
+const DETAIL_ROWS_PER_PAGE = 12
 
-// Paginação da tabela de diagnósticos: a página 4 tem ~50mm livres abaixo do
-// grid de gráficos (cabe título + cabeçalho + 4 linhas). Páginas de
-// continuação dedicadas comportam 12 linhas cada.
-const DIAG_MAX_ROWS = 12
-const DIAG_FIRST_PAGE_ROWS = 4
+// Paginação da tabela de diagnósticos: página dedicada (o conteúdo antigo da
+// página de pastos foi absorvido pela grade 2x2 da página 2). Cada página
+// comporta ~12 linhas; o relatório exibe no máximo as 24 categorias top.
+const DIAG_MAX_ROWS = 24
 const DIAG_ROWS_PER_PAGE = 12
 
 function isPDFData(value) {
@@ -84,15 +83,23 @@ function heatmapHtml(matriz) {
       return `<tr><td style="text-align:left;padding:5px 8px;font-size:13px;font-weight:600;color:#26352e;border-bottom:1px solid #f0f4f2;white-space:nowrap;background:#fff">${escapeHtml(diagLabel(causa))}</td>${cells}</tr>`
     })
     .join('')
-  return `<div class="heatmap-block"><h2 class="table-title">Causa × Categoria <span>Intensidade por cruzamento</span></h2><table class="heatmap-table" style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:5px 8px;font-size:13px;color:#52635a;border-bottom:1px solid #d8e0db;font-weight:600;background:#fff;white-space:nowrap">Causa \\ Categoria</th>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`
+  return `<div class="heatmap-block"><h2 class="table-title">Causa × Categoria <span>Intensidade por cruzamento</span></h2><table class="heatmap-table" style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:5px 8px;font-size:13px;color:#52635a;border-bottom:1px solid #d8e0db;font-weight:600;background:#fff;white-space:nowrap">Causa</th>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`
 }
 
 // CSS específico do relatório de morte (larguras das colunas do detalhamento,
 // grids de página com layout duplo, tabelas auxiliares).
 const MORTE_CSS = `
-.page2-charts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6mm}
-.page2-charts .chart-card{height:92mm}
-.page4-grid{display:grid;grid-template-columns:1fr 1fr;gap:7mm;align-items:start;height:80mm}
+.kpi-card{min-height:20mm}
+.insight-box{max-height:34mm;overflow:hidden}
+.page1-charts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4mm}
+.page1-charts .chart-card{height:50mm}
+.page1-charts .chart-heading strong{font-size:14px}
+.page1-charts .chart-heading span{font-size:11px}
+.page2-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.page2-grid .chart-card{height:58mm}
+.page2-grid .chart-heading strong{font-size:14px}
+.page2-grid .chart-heading span{font-size:11px}
+.page2-grid .heatmap-block{height:58mm;overflow:hidden;border:1px solid #dce5df;border-radius:6px;padding:8px;background:#fff}
 .distribution-insight{border-left:3px solid #c28a27;background:#fffaf0;border-radius:0 5px 5px 0;padding:6px 10px;margin:0 0 3mm;color:#52635a;font-size:14px;line-height:1.35}
 .distribution-insight strong{color:#805d12}
 .diag-freq{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #dce5df;border-radius:6px;overflow:hidden}
@@ -114,9 +121,9 @@ const MORTE_CSS = `
 .morte-detail-table th:nth-child(7){width:10%}
 .morte-detail-table th:nth-child(8){width:11%}
 .morte-detail-table th:nth-child(9){width:25%}
-.morte-detail-table td{font-size:13px;padding:8px 6px;line-height:1.25}
-.morte-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.morte-detail-table th{font-size:13px;padding:9px 6px}
+.morte-detail-table td{font-size:12px;padding:5px 5px;line-height:1.2}
+.morte-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.morte-detail-table th{font-size:12px;padding:7px 5px}
 .morte-detail-table th, .morte-detail-table td{border-right:1px solid #d8e0db}
 .morte-detail-table th:last-child, .morte-detail-table td:last-child{border-right:none}
 .morte-detail-table tbody tr:nth-child(even){background:#f7faf8}
@@ -386,13 +393,10 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
       return `<tr class="${index % 2 ? '' : 'striped'}"><td>${escapeHtml(diagLabel(item.label))}</td><td class="numeric">${item.valor}</td><td class="numeric">${pct.toFixed(1).replace('.', ',')}%</td><td><div class="diag-bar"><i style="width:${Math.max(2, pct)}%"></i></div></td></tr>`
     })
   const diagChunks = []
-  if (diagnosticoLinhas.length) {
-    diagChunks.push(diagnosticoLinhas.slice(0, DIAG_FIRST_PAGE_ROWS))
-    for (let i = DIAG_FIRST_PAGE_ROWS; i < diagnosticoLinhas.length; i += DIAG_ROWS_PER_PAGE) {
-      diagChunks.push(diagnosticoLinhas.slice(i, i + DIAG_ROWS_PER_PAGE))
-    }
+  for (let i = 0; i < diagnosticoLinhas.length; i += DIAG_ROWS_PER_PAGE) {
+    diagChunks.push(diagnosticoLinhas.slice(i, i + DIAG_ROWS_PER_PAGE))
   }
-  const diagPaginasExtras = Math.max(diagChunks.length - 1, 0)
+  const diagPageCount = diagChunks.length
   const diagHead = `<thead><tr><th>Diagnóstico</th><th>Mortes</th><th>% do total</th><th>Distribuição</th></tr></thead>`
   const diagTitulo = `Diagnósticos mais frequentes <span>${diagnosticosVisiveis.length} de ${diagnosticos.length} categorias</span>`
 
@@ -449,7 +453,7 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
   for (let i = 0; i < rows.length; i += DETAIL_ROWS_PER_PAGE) {
     detailChunks.push(rows.slice(i, i + DETAIL_ROWS_PER_PAGE))
   }
-  const totalPages = 4 + diagPaginasExtras + (temPaginaMapa ? 1 : 0) + detailChunks.length
+  const totalPages = 2 + diagPageCount + (temPaginaMapa ? 1 : 0) + detailChunks.length
 
   const brand = { logoGestao: input.logoGestao, logoFazenda: input.logoFazenda, fazendaNome: input.fazendaNome }
   const period = { dataInicio: input.dataInicio, dataFim: input.dataFim }
@@ -459,7 +463,6 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
   const page1 = pageSection(`
     ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Resumo executivo', sectionLabel: 'Visão geral' })}
     <p class="section-kicker">Resumo do período</p>
-    <div class="period-badge">${dateFmt(input.dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(input.dataFim)}</div>
     <div class="insight-box"><span class="insight-label">Análise do período</span>${escapeHtml(insights)}</div>
     <div class="kpi-grid">
       ${kpi(intFmt(resumo.total_mortes), 'Total de mortes', 'No período selecionado')}
@@ -472,48 +475,32 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
       ${kpi(resumo.perda_estimada != null ? `R$ ${moneyFmt(resumo.perda_estimada)}` : '—', 'Perda estimada', resumo.peso_total_perdido != null ? `${numFmt(resumo.peso_total_perdido, 0)} kg perdidos` : '', 'red')}
       ${kpi(categoriaPrincipal ? titleCase(categoriaPrincipal.label) : '—', 'Categoria mais afetada', categoriaSub)}
     </div>
+    <div class="page1-charts">
+      ${chartCard({ canvasId: 'chart-lote', title: 'Mortes por lote', subtitle: 'Concentração por lote no período', hasData: input.linhas.length > 0 })}
+      ${chartCard({ canvasId: 'chart-causa', title: 'Mortes por causa', subtitle: 'Distribuição das causas registradas', hasData: hasPor(resumo.por_causa) })}
+    </div>
     ${renderFooter({ ...period, page: 1, totalPages })}
   `)
 
   const page2 = pageSection(`
-    ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Distribuição temporal', sectionLabel: 'Análise' })}
-    <p class="section-kicker">Evolução e causas</p>
-    <div class="page2-charts">
-      ${chartCard({ canvasId: 'chart-lote', title: 'Mortes por lote', subtitle: 'Concentração por lote no período', hasData: input.linhas.length > 0 })}
-      ${chartCard({ canvasId: 'chart-causa', title: 'Mortes por causa', subtitle: 'Distribuição das causas registradas', hasData: hasPor(resumo.por_causa) })}
+    ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Distribuições', sectionLabel: 'Análise' })}
+    <p class="section-kicker">Categoria, sexo e pasto</p>
+    <div class="page2-grid">
+      ${chartCard({ canvasId: 'chart-categoria', title: 'Mortes por categoria', subtitle: 'Quantidade e participação por categoria', hasData: hasPor(resumo.por_categoria) })}
+      ${chartCard({ canvasId: 'chart-sexo', title: 'Mortes por sexo', subtitle: 'Quantidade e participação por sexo', hasData: hasPor(resumo.por_sexo) })}
+      ${chartCard({ canvasId: 'chart-pasto', title: 'Mortes por pasto', subtitle: 'Distribuição por pasto', hasData: hasPor(resumo.por_pasto) })}
+      ${heatmapHtml(resumo.matriz_causa_categoria) || '<div class="chart-card"><div class="empty-chart">Sem dados de cruzamento causa × categoria</div></div>'}
     </div>
+    ${distribuicaoInsight ? `<div class="distribution-insight"><strong>Leitura executiva:</strong> ${escapeHtml(distribuicaoInsight)}</div>` : ''}
     ${renderFooter({ ...period, page: 2, totalPages })}
   `)
 
-  const page3 = pageSection(`
-    ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Distribuição demográfica', sectionLabel: 'Análise' })}
-    <p class="section-kicker">Categoria e sexo</p>
-    <div class="page2-charts">
-      ${chartCard({ canvasId: 'chart-categoria', title: 'Mortes por categoria', subtitle: 'Quantidade e participação por categoria', hasData: hasPor(resumo.por_categoria) })}
-      ${chartCard({ canvasId: 'chart-sexo', title: 'Mortes por sexo', subtitle: 'Quantidade e participação por sexo', hasData: hasPor(resumo.por_sexo) })}
-    </div>
-    ${distribuicaoInsight ? `<div class="distribution-insight"><strong>Leitura executiva:</strong> ${escapeHtml(distribuicaoInsight)}</div>` : ''}
-    ${renderFooter({ ...period, page: 3, totalPages })}
-  `)
-
-  const page4 = pageSection(`
-    ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: 'Pastos e cruzamentos', sectionLabel: 'Análise cruzada' })}
-    <p class="section-kicker">Concentração geográfica e causa-categoria</p>
-    <div class="page4-grid">
-      <div>${chartCard({ canvasId: 'chart-pasto', title: 'Mortes por pasto', subtitle: 'Distribuição por pasto', hasData: hasPor(resumo.por_pasto), height: '100%' })}</div>
-      <div>${heatmapHtml(resumo.matriz_causa_categoria)}</div>
-    </div>
-    ${diagChunks.length ? `<div class="table-block" style="margin-top:5mm"><h2 class="table-title">${diagTitulo}</h2><table class="diag-freq">${diagHead}<tbody>${diagChunks[0].join('')}</tbody></table></div>` : ''}
-    ${renderFooter({ ...period, page: 4, totalPages })}
-  `)
-
   const diagPages = diagChunks
-    .slice(1)
     .map((chunk, i) => pageSection(`
-      ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: `Diagnósticos (${i + 2}/${diagChunks.length})`, sectionLabel: 'Análise cruzada' })}
-      <p class="section-kicker">Diagnósticos mais frequentes · continuação</p>
+      ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: `Diagnósticos${diagPageCount > 1 ? ` (${i + 1}/${diagPageCount})` : ''}`, sectionLabel: 'Análise cruzada' })}
+      <p class="section-kicker">Diagnósticos mais frequentes</p>
       <div class="table-block"><h2 class="table-title">${diagTitulo}</h2><table class="diag-freq">${diagHead}<tbody>${chunk.join('')}</tbody></table></div>
-      ${renderFooter({ ...period, page: 5 + i, totalPages })}
+      ${renderFooter({ ...period, page: 3 + i, totalPages })}
     `))
     .join('')
 
@@ -534,10 +521,10 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
       </div>
     </div>
     ${rankingHtml}
-    ${renderFooter({ ...period, page: 5 + diagPaginasExtras, totalPages })}
+    ${renderFooter({ ...period, page: 3 + diagPageCount, totalPages })}
   `)
     : ''
-  const detailPageOffset = 4 + diagPaginasExtras + (temPaginaMapa ? 1 : 0)
+  const detailPageOffset = 2 + diagPageCount + (temPaginaMapa ? 1 : 0)
 
   const detailHeader = `<thead><tr><th>Data</th><th>Lote</th><th>Pasto</th><th>Sexo</th><th>Idade</th><th>Peso</th><th>Categoria</th><th>Causa</th><th>Diagnósticos</th></tr></thead>`
   const renderDetailRow = (line, index) =>
@@ -576,7 +563,7 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
     title: 'Relatório de Mortalidade',
     extraCss: MORTE_CSS + maplibre.css,
     extraScripts: maplibre.script ? [maplibre.script] : [],
-    body: `${page1}${page2}${page3}${page4}${diagPages}${mapaPage}${detailPages}`,
+    body: `${page1}${page2}${diagPages}${mapaPage}${detailPages}`,
     chartJsScript,
     chartsInit: CHARTS_INIT_JS + MAP_INIT_JS,
     dataJson: {
