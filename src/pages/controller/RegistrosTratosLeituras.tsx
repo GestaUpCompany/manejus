@@ -29,6 +29,7 @@ interface RegistroLeitura {
   id: string
   data: string
   pasto_curral: string | null
+  curral_id: string | null
   lote: string | null
   lote_id: string | null
   lote_nome: string | null
@@ -57,6 +58,7 @@ interface EditLeituraForm {
   data: string
   hora: string
   pasto_curral: string
+  curral_id: string
   lote_id: string
   leitura_cocho: string
   responsavel: string
@@ -250,7 +252,7 @@ export function RegistrosTratosLeituras() {
       } else {
         let query = supabase
           .from('registros_leitura_cocho')
-          .select('id, data, pasto_curral, lote, lote_id, leitura_cocho, responsavel, nome_usuario, lotes(nome)')
+          .select('id, data, pasto_curral, curral_id, lote, lote_id, leitura_cocho, responsavel, nome_usuario, lotes(nome)')
           .eq('fazenda_id', fazendaId)
           .is('deleted_at', null)
           .gte('data', inicioIso)
@@ -259,6 +261,7 @@ export function RegistrosTratosLeituras() {
           .limit(1000)
 
         if (loteFiltro) query = query.eq('lote_id', loteFiltro)
+        if (curralFiltro) query = query.eq('curral_id', curralFiltro)
 
         const { data, error: err } = await query
         if (err) throw err
@@ -266,6 +269,7 @@ export function RegistrosTratosLeituras() {
           id: r.id,
           data: r.data,
           pasto_curral: r.pasto_curral,
+          curral_id: r.curral_id,
           lote: r.lote,
           lote_id: r.lote_id,
           lote_nome: r.lotes?.nome ?? r.lote ?? null,
@@ -327,6 +331,7 @@ export function RegistrosTratosLeituras() {
       data: toFarmDateOnly(l.data) || '',
       hora: toFarmTimeOnly(l.data),
       pasto_curral: l.pasto_curral || '',
+      curral_id: l.curral_id || '',
       lote_id: l.lote_id || '',
       leitura_cocho: l.leitura_cocho != null ? String(l.leitura_cocho) : '',
       responsavel: l.responsavel || '',
@@ -390,6 +395,7 @@ export function RegistrosTratosLeituras() {
       const campos: Record<string, unknown> = {
         data: farmDateTimeToIso(formLeitura.data, formLeitura.hora),
         pasto_curral: formLeitura.pasto_curral || null,
+        curral_id: formLeitura.curral_id || null,
         lote_id: formLeitura.lote_id || null,
         lote: loteSelecionado?.nome || null,
         leitura_cocho: formLeitura.leitura_cocho !== '' ? parseInt(formLeitura.leitura_cocho, 10) : null,
@@ -403,7 +409,9 @@ export function RegistrosTratosLeituras() {
         p_campos: campos,
       })
       if (error) {
-        setFormError(error.message || 'Erro ao salvar edição')
+        setFormError(error.code === '23505'
+          ? 'Já existe uma leitura para este curral nesta data.'
+          : error.message || 'Erro ao salvar edição')
         return
       }
       toast.success('Leitura atualizada com sucesso.')
@@ -508,14 +516,12 @@ export function RegistrosTratosLeituras() {
             value={loteFiltro}
             onChange={setLoteFiltro}
           />
-          {aba === 'tratos' && (
-            <Select
-              label="Curral"
-              options={[{ value: '', label: 'Todos' }, ...currais.map(c => ({ value: c.id, label: c.nome }))]}
-              value={curralFiltro}
-              onChange={setCurralFiltro}
-            />
-          )}
+          <Select
+            label="Curral"
+            options={[{ value: '', label: 'Todos' }, ...currais.map(c => ({ value: c.id, label: c.nome }))]}
+            value={curralFiltro}
+            onChange={setCurralFiltro}
+          />
           <div>
             <label className="block text-sm font-medium text-content mb-1">Buscar</label>
             <SearchInput
@@ -744,11 +750,19 @@ export function RegistrosTratosLeituras() {
                 onChange={e => setFormLeitura({ ...formLeitura, hora: e.target.value })}
               />
             </div>
-            <Input
-              label="Pasto/Curral"
-              value={formLeitura.pasto_curral}
-              onChange={e => setFormLeitura({ ...formLeitura, pasto_curral: e.target.value })}
+            <Select
+              label="Curral (confinamento)"
+              options={[{ value: '', label: 'Nenhum (leitura de pasto)' }, ...currais.map(c => ({ value: c.id, label: c.nome }))]}
+              value={formLeitura.curral_id}
+              onChange={v => setFormLeitura({ ...formLeitura, curral_id: v })}
             />
+            {!formLeitura.curral_id && (
+              <Input
+                label="Pasto/Curral (texto livre)"
+                value={formLeitura.pasto_curral}
+                onChange={e => setFormLeitura({ ...formLeitura, pasto_curral: e.target.value })}
+              />
+            )}
             <Select
               label="Lote"
               options={[{ value: '', label: 'Sem lote' }, ...lotes.map(l => ({ value: l.id, label: l.nome }))]}
