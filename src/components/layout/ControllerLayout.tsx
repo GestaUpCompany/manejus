@@ -88,6 +88,7 @@ const menuStructure: MenuItem[] = [
       { label: 'Configuração de Tratos', path: '/controller/configuracao-tratos' },
       { label: 'Lançamento de Tratos', path: '/controller/lancamento-tratos' },
       { label: 'Acompanhamento de Tratos', path: '/controller/acompanhamento-tratos' },
+      { label: 'Registros de Tratos e Leituras', path: '/controller/registros-tratos-leituras' },
       { label: 'Histórico de Dietas', path: '/controller/historico-dietas' },
     ],
   },

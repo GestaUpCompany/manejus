@@ -101,3 +101,4 @@ Quando mencionar qualquer um destes tópicos, ler a seção correspondente em `d
 - "itens cantina", "itens supermercado", "catálogo da cantina" → `docs/HISTORICO.md` (Itens cantina)
 - "espécies de capim", "sugestões de capim", "datalist de capim" → `docs/HISTORICO.md` (Sugestões de espécies de capim)
 - "combustível", "tanque de combustível", "estoque de combustível", "WAC combustível", "custo médio por litro", `movimentacoes_combustivel`, `tanques_combustivel` → `docs/HISTORICO.md` (Controle de estoque de combustível)
+- "editar/excluir trato", "editar/excluir leitura de cocho", `editar_registro_oferta_trato`, `editar_registro_leitura_cocho`, "registros de tratos e leituras" → `docs/HISTORICO.md` (Tela de edição/exclusão de tratos e leituras de cocho)

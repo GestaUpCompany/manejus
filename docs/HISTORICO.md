@@ -1,5 +1,18 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Tela de edição/exclusão de tratos e leituras de cocho (2026-09-21)
+
+Nova rota `/controller/registros-tratos-leituras` ("Registros de Tratos e Leituras", menu Confinamento e TIP, atrás de `ConfinamentoRoute`) para administrar registros operacionais que antes só podiam ser consultados. Duas abas (Tratos / Leituras de cocho) com filtro de período, lote, curral (tratos) e busca textual; edição via modal e exclusão com confirmação.
+
+- Migration `20260921190000_editar_excluir_tratos_leituras.sql` (aplicada com `db push --include-all`, pois o remoto já tinha migrations com timestamp posterior). Cria quatro RPCs `SECURITY DEFINER` no padrão de `editar_/excluir_registro_suplementacao`: `editar_registro_leitura_cocho`, `excluir_registro_leitura_cocho`, `editar_registro_oferta_trato`, `excluir_registro_oferta_trato`. Todas setam `app.current_user_id`/`app.current_user_email`, exigem `usuario_fazenda.papel IN ('admin','controller')` (diferente de `editar_registro_suplementacao`, que não checa papel na edição), filtram `p_campos` por whitelist e fazem soft delete via `deleted_at`.
+- Whitelists: leitura aceita `data`, `responsavel`, `pasto_curral`, `pasto_id`, `lote`, `lote_id`, `leitura_cocho` (validada -1..3); trato aceita `data`, `ordem_trato`, `kg_planejado`, `kg_ofertado_real`, `leitura_cocho_nota`, `lote_id`, `curral_id`. Ambas validam que lote/curral/pasto pertencem à mesma fazenda. Editar data/ordem/curral de um trato pode colidir com `registros_oferta_trato_dia_operacional_uk` (23505) — a UI traduz para "Já existe um trato para este curral nesta data e ordem".
+- `registros_oferta_trato` ganhou `trg_audit_registros_oferta_trato` (INSERT/UPDATE/DELETE → `fn_audit_trigger`), que não existia; `registros_leitura_cocho` já tinha o seu. Exclusões aparecem no `audit_log` como UPDATE de `deleted_at`.
+- UI em `src/pages/controller/RegistrosTratosLeituras.tsx`: datas exibidas e editadas no fuso da fazenda (`America/Cuiaba` via `toFarmDateOnly`/`formatDateTime`); ao salvar, a hora original do registro é preservada (inputs separados de data e hora). Ações visíveis apenas para `papel admin/controller`.
+- Verificado via SQL na fazenda de testes: edição de nota de leitura (2→3) e de kg de trato (235→240) gravam `alteracoes` corretas no `audit_log` com `usuario_email`; exclusões marcam `deleted_at`; chamada com usuário sem papel é rejeitada ("Permissão negada").
+- Ressalva conhecida: um UPDATE pendente na fila de sync do PWA para um registro excluído pode recriar/atualizar a linha (upsert por `local_id`), mesmo comportamento já aceito em `registros_suplementacao`.
+
+**Disparador**: quando mencionar "editar/excluir trato", "editar/excluir leitura de cocho", `editar_registro_oferta_trato`, `editar_registro_leitura_cocho`, ou "registros de tratos e leituras", ler esta seção.
+
 ## Relatório de mortalidade: rebanho_total por lote_categorias e detalhamento sob diagnósticos (2026-09-21)
 
 Dois ajustes no relatório de mortalidade após feedback com o PDF da Fazenda Brilhante:
