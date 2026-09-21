@@ -4,11 +4,12 @@ Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar 
 
 ## Vínculo registro ↔ lote_categoria por FK (débito técnico)
 
-Hoje `registros_movimentacao.categoria` e `registros_morte.categoria` são snapshots de texto casados por nome em `calculate_quant_atual` e nas triggers `update_quant_atual_{movimentacao,morte,maternidade}`. Isso quebra quando `lote_categorias.categoria` é renomeada. A correção de 2026-09-21 reescreve o nome nos registros na recategorização (ver `docs/HISTORICO.md`), o que resolve o caso comum mas deixa resíduos:
+Hoje `registros_movimentacao.categoria` e `registros_morte.categoria` são snapshots de texto casados por nome em `calculate_quant_atual` e nas triggers `update_quant_atual_{movimentacao,morte,maternidade}`. Isso quebra quando `lote_categorias.categoria` é renomeada. A correção vigente (2026-09-21, ver `docs/HISTORICO.md`) congela o saldo em `lote_categorias.quant_base` na recategorização in-place, sem tocar registros; resolve o caso comum mas deixa resíduos:
 
 - Registro offline sincronizado depois do rename com `data < data_transicao`: a trigger não resolve nome antigo e cria linha duplicada com o nome velho no destino (total certo, categoria separada).
 - Saída/morte registrada com nome antigo após rename: `v_cat_exists` falha, loga `CATEGORIA_NOT_IN_LOTE` e a origem não é debitada (cabeças fantasma).
 - Renames sem transição (anteriores a 31/07/2026 ou UPDATE direto) não têm rastro e seguem quebrados.
+- Denominadores de mortalidade em `encerrar_plano_*`, `criar_snapshot_entrada` e `migrar_plano_nutricional` leem `quant_inicial` puro; para linha recategorizada que era placeholder (`quant_inicial` NULL, `quant_base` preenchido), `mortalidade%` sai 0. Ajustar para `COALESCE(quant_base, quant_inicial)` quando conveniente.
 
 Solução definitiva: colunas `lote_categoria_origem_id`/`lote_categoria_destino_id` em `registros_movimentacao` (e `lote_categoria_id` em `registros_morte`), resolvidas na inserção por uma função `resolve_lote_categoria(lote_id, nome, data)` que usa `lote_categorias_transicoes` para mapear "qual linha era dona desse nome naquele instante" (bound inferior `created_at` da linha, superior `data_transicao`). Contagem passa a ser por id; `categoria` no registro vira histórico puro. Requer backfill temporal dos registros existentes e índice em `lote_categorias_transicoes(lote_categoria_destino_id)`. Cuidado: só tratar como alias transições in-place (`origem_id = destino_id`); as 15 transições não-in-place existentes já semeiam `quant_inicial` na linha nova e aliasing nelas causaria dupla contagem.
 
