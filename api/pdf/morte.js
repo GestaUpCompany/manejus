@@ -396,16 +396,26 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
   const diagHead = `<thead><tr><th>Diagnóstico</th><th>Mortes</th><th>% do total</th><th>Distribuição</th></tr></thead>`
   const diagTitulo = `Diagnósticos mais frequentes <span>${diagnosticosVisiveis.length} de ${diagnosticos.length} categorias</span>`
 
-  const previous = resumo.periodo_anterior ? `${intFmt(resumo.periodo_anterior.total_mortes)} mortes` : '—'
-  const previousSub = resumo.periodo_anterior
-    ? `${dateFmt(resumo.periodo_anterior.data_inicio)} a ${dateFmt(resumo.periodo_anterior.data_fim)}`
-    : 'Sem comparação disponível'
   const insights =
     resumo.insights ||
     `Foram registradas ${intFmt(resumo.total_mortes)} mortes no período, com taxa de mortalidade de ${resumo.taxa_mortalidade != null ? `${numFmt(resumo.taxa_mortalidade)}%` : '—'}.`
   const totalCategorias = (resumo.por_categoria ?? []).reduce((sum, item) => sum + item.valor, 0)
   const categoriaPrincipal = [...(resumo.por_categoria ?? [])].sort((a, b) => b.valor - a.valor)[0]
   const sexoPrincipal = [...(resumo.por_sexo ?? [])].sort((a, b) => b.valor - a.valor)[0]
+  // Lote com mais mortes no recorte: agrega as linhas por lote_nome (o resumo
+  // não traz por_lote; as linhas já vêm filtradas pelo período do relatório).
+  const loteCount = new Map()
+  for (const l of input.linhas) {
+    const nome = l.lote_nome || 'Sem lote'
+    loteCount.set(nome, (loteCount.get(nome) || 0) + 1)
+  }
+  const lotePrincipal = [...loteCount.entries()].sort((a, b) => b[1] - a[1])[0]
+  const loteSub = lotePrincipal
+    ? `${intFmt(lotePrincipal[1])} ${lotePrincipal[1] === 1 ? 'morte' : 'mortes'} (${resumo.total_mortes ? Math.round((lotePrincipal[1] / resumo.total_mortes) * 100) : 0}%)`
+    : ''
+  const categoriaSub = categoriaPrincipal
+    ? `${intFmt(categoriaPrincipal.valor)} ${categoriaPrincipal.valor === 1 ? 'morte' : 'mortes'} (${resumo.total_mortes ? Math.round((categoriaPrincipal.valor / resumo.total_mortes) * 100) : 0}% do total)`
+    : ''
   const distribuicaoInsight =
     categoriaPrincipal && sexoPrincipal
       ? `${titleCase(categoriaPrincipal.label)} concentra ${totalCategorias ? ((categoriaPrincipal.valor / totalCategorias) * 100).toFixed(1).replace('.', ',') : '0,0'}% das mortes; ${sexoPrincipal.label.toLowerCase()} representa ${resumo.total_mortes ? ((sexoPrincipal.valor / resumo.total_mortes) * 100).toFixed(1).replace('.', ',') : '0,0'}% dos registros.`
@@ -452,15 +462,15 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
     <div class="period-badge">${dateFmt(input.dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(input.dataFim)}</div>
     <div class="insight-box"><span class="insight-label">Análise do período</span>${escapeHtml(insights)}</div>
     <div class="kpi-grid">
-      ${kpi(intFmt(resumo.total_mortes), 'Total de mortes')}
-      ${kpi(resumo.taxa_mortalidade != null ? `${numFmt(resumo.taxa_mortalidade)}%` : '—', 'Taxa de mortalidade', resumo.rebanho_total ? `Rebanho: ${intFmt(resumo.rebanho_total)} cabeças` : '', 'gold')}
-      ${kpi(numFmt(resumo.media_por_dia, 2), 'Mortes por dia', 'Média do período')}
+      ${kpi(intFmt(resumo.total_mortes), 'Total de mortes', 'No período selecionado')}
+      ${kpi(resumo.taxa_mortalidade != null ? `${numFmt(resumo.taxa_mortalidade)}%` : '—', 'Taxa de mortalidade', resumo.rebanho_total ? `Acumulada · rebanho: ${intFmt(resumo.rebanho_total)} cabeças` : 'Acumulada', 'gold')}
+      ${kpi(lotePrincipal ? lotePrincipal[0] : '—', 'Lote mais afetado', loteSub)}
       ${kpi(numFmt(resumo.peso_medio, 1), 'Peso médio', 'kg por animal')}
     </div>
     <div class="kpi-grid secondary">
       ${kpi(causa, 'Causa mais frequente')}
       ${kpi(resumo.perda_estimada != null ? `R$ ${moneyFmt(resumo.perda_estimada)}` : '—', 'Perda estimada', resumo.peso_total_perdido != null ? `${numFmt(resumo.peso_total_perdido, 0)} kg perdidos` : '', 'red')}
-      ${kpi(previous, 'Período anterior', previousSub, 'gold')}
+      ${kpi(categoriaPrincipal ? titleCase(categoriaPrincipal.label) : '—', 'Categoria mais afetada', categoriaSub)}
     </div>
     ${renderFooter({ ...period, page: 1, totalPages })}
   `)

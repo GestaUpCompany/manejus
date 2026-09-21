@@ -1,5 +1,15 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de mortalidade: taxa acumulada e novos KPIs na página 1 (2026-09-21)
+
+A primeira página do relatório de mortalidade (PDF individual do link público e seção de mortes do Infográfico Mensal, ambos renderizados por `api/pdf/morte.js`, e os cards web de `RelatorioMortePublico.tsx`) foi repensada: os cards "Mortes por dia" e "Período anterior" foram removidos (usuários quase nunca filtram período longo o suficiente para haver comparação), e a taxa de mortalidade passou a ser acumulada sobre todo o histórico, estável mesmo com filtros de data curtos.
+
+- Migration `20260921140000_add_taxa_mortalidade_geral_relatorio_morte.sql`: a RPC `get_dados_relatorio_morte` passa a retornar `total_mortes_geral` e `taxa_mortalidade_geral` em `dados` (contagem sem filtro de data ÷ rebanho atual). O `periodo_anterior` continua sendo calculado e retornado, apenas não é mais exibido.
+- Novos KPIs escolhidos pelo usuário: **Lote mais afetado** (linha 1, com contagem e % do período; agrega `lote_nome` das linhas) e **Categoria mais afetada** (linha 2, com contagem e % do total).
+- O texto de análise ("insights") não menciona mais período anterior nem variação; a frase de abertura virou "A taxa de mortalidade acumulada é de X% (N mortes registradas em um rebanho de M cabeças)" e ganhou uma sentença de lote mais afetado quando há mais de um lote.
+- Em `loaders.ts` (`carregarMortes`, caminho do infográfico) e na página pública, `resumo.taxa_mortalidade` passa a carregar a taxa geral; `periodo_anterior`/`variacao_mortes` deixaram de ser propagados para o PDF (campos opcionais do tipo `ResumoMorte` permanecem para os renders legados jsPDF/react-pdf, sem call sites ativos).
+- Validado na fazenda de testes: sem filtro, 19 mortes / taxa 3,18%; com filtro 01–21/set, período cai para 12 mortes e a taxa geral permanece 3,18%. Smoke test gerou `smoke-morte.pdf` com a página 1 conferida visualmente.
+
 ## Recategorização in-place zerava quant_atual (2026-09-21)
 
 Caso original: apartações LOTE 08P → TIP LOTE 27/28/29 (140 garrote cada) na fazenda Bom Jesus (`a6640dd6`). A categoria "garrote" foi criada corretamente no destino e recebeu as cabeças, mas controllers recategorizaram manualmente garrote → boi magro (e no 27 depois boi magro → boi gordo) via `recategorizar_lote_categoria`. A RPC só renomeava a linha de `lote_categorias`; como `calculate_quant_atual` casa `registros_movimentacao.categoria` por nome, os registros que continuavam dizendo "garrote" deixaram de contar e o cron noturno zerou o `quant_atual`.

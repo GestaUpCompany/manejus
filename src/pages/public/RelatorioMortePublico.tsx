@@ -84,20 +84,13 @@ interface LoteDisponivel {
   lote_nome: string
 }
 
-interface PeriodoAnterior {
-  total_mortes: number
-  taxa_mortalidade: number | null
-  peso_medio: number | null
-  media_por_dia: number | null
-  data_inicio: string
-  data_fim: string
-}
-
 interface DadosRelatorioMorte {
   fazenda_nome?: string
   fazenda_logo_url?: string | null
   timezone?: string
   rebanho_total?: number
+  total_mortes_geral?: number
+  taxa_mortalidade_geral?: number | null
   lotes_disponiveis: LoteDisponivel[]
   causas_disponiveis: string[]
   categorias_disponiveis: string[]
@@ -105,7 +98,6 @@ interface DadosRelatorioMorte {
   pastos_disponiveis?: string[]
   linhas: LinhaMorte[]
   resumo: ResumoMorte
-  periodo_anterior?: PeriodoAnterior
   pastos_geo?: { nome: string; geometry: { type: string; coordinates: unknown } }[]
 }
 
@@ -266,25 +258,20 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
 
   // === KPIs calculados das linhas filtradas ===
   const totalMortes = linhasFiltradas.length
-  const diasDistintos = useMemo(() => new Set(linhasFiltradas.map((l) => l.data)).size, [linhasFiltradas])
-  const mediaPorDia = diasDistintos > 0 ? totalMortes / diasDistintos : null
   const pesoMedio = useMemo(() => {
     const pesos = linhasFiltradas.map((l) => l.peso_vivo).filter((p): p is number => p != null)
     return pesos.length > 0 ? pesos.reduce((s, p) => s + p, 0) / pesos.length : null
   }, [linhasFiltradas])
   const causaMaisFrequente = porCausa[0]?.label ?? null
   const causaMaisFrequenteCount = porCausa[0]?.valor ?? null
+  const loteMaisAfetado = porLote[0] ?? null
+  const categoriaMaisAfetada = porCategoria[0] ?? null
 
-  // === KPIs derivados: taxa de mortalidade, impacto financeiro, variação ===
+  // === KPIs derivados: taxa de mortalidade histórica (todo o rebanho/ período,
+  // independente dos filtros de data) e impacto financeiro ===
   const rebanhoTotal = dados?.rebanho_total ?? 0
-  const taxaMortalidade = rebanhoTotal > 0 ? (totalMortes / rebanhoTotal) * 100 : null
-  const periodoAnterior = dados?.periodo_anterior
-  const variacaoMortes = periodoAnterior && periodoAnterior.total_mortes > 0
-    ? ((totalMortes - periodoAnterior.total_mortes) / periodoAnterior.total_mortes) * 100
-    : null
-  const variacaoTaxa = periodoAnterior && periodoAnterior.taxa_mortalidade != null && taxaMortalidade != null
-    ? taxaMortalidade - periodoAnterior.taxa_mortalidade
-    : null
+  const totalMortesGeral = dados?.total_mortes_geral ?? dados?.linhas?.length ?? totalMortes
+  const taxaMortalidade = dados?.taxa_mortalidade_geral ?? (rebanhoTotal > 0 ? (totalMortesGeral / rebanhoTotal) * 100 : null)
 
   // === Impacto financeiro calculado no frontend com preços por categoria ===
   const impactoFinanceiro = useMemo(() => {
@@ -354,18 +341,9 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
     const partes: string[] = []
     if (totalMortes === 0) return 'Nenhuma morte registrada no período selecionado.'
 
-    // Taxa de mortalidade
+    // Taxa de mortalidade histórica (todo o período, não o recorte dos filtros)
     if (taxaMortalidade != null) {
-      partes.push(`A taxa de mortalidade no período foi ${formatarNumero(taxaMortalidade, 2)}% (${formatarInteiro(totalMortes)} ${totalMortes === 1 ? 'morte' : 'mortes'} em um rebanho de ${formatarInteiro(rebanhoTotal)} cabeças).`)
-    }
-
-    // Comparação com período anterior
-    if (variacaoMortes != null) {
-      const direcao = variacaoMortes > 0 ? 'aumento' : 'redução'
-      const absVal = Math.abs(variacaoMortes)
-      partes.push(`Houve ${direcao} de ${formatarNumero(absVal, 1)}% nas mortes em relação ao período anterior (${periodoAnterior?.total_mortes ?? 0} mortes).`)
-    } else if (periodoAnterior && periodoAnterior.total_mortes === 0) {
-      partes.push(`Nenhuma morte foi registrada no período anterior (${formatarData(periodoAnterior.data_inicio)} a ${formatarData(periodoAnterior.data_fim)}).`)
+      partes.push(`A taxa de mortalidade acumulada é de ${formatarNumero(taxaMortalidade, 2)}% (${formatarInteiro(totalMortesGeral)} ${totalMortesGeral === 1 ? 'morte registrada' : 'mortes registradas'} em um rebanho de ${formatarInteiro(rebanhoTotal)} cabeças).`)
     }
 
     // Causa principal
@@ -378,6 +356,11 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
     const catMaisAfetada = porCategoria[0]
     if (catMaisAfetada) {
       partes.push(`A categoria mais afetada foi ${catMaisAfetada.label} com ${formatarInteiro(catMaisAfetada.valor)} ${catMaisAfetada.valor === 1 ? 'morte' : 'mortes'}.`)
+    }
+
+    // Lote mais afetado
+    if (loteMaisAfetado && porLote.length > 1) {
+      partes.push(`O lote mais afetado foi ${loteMaisAfetado.label} com ${formatarInteiro(loteMaisAfetado.valor)} ${loteMaisAfetado.valor === 1 ? 'morte' : 'mortes'}.`)
     }
 
     // Pasto mais crítico
@@ -395,7 +378,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
     }
 
     return partes.join(' ')
-  }, [totalMortes, taxaMortalidade, rebanhoTotal, variacaoMortes, periodoAnterior, causaMaisFrequente, causaMaisFrequenteCount, porCategoria, porPasto, perdaEstimada, pesoTotalPerdido])
+  }, [totalMortes, totalMortesGeral, taxaMortalidade, rebanhoTotal, causaMaisFrequente, causaMaisFrequenteCount, porCategoria, porLote, loteMaisAfetado, porPasto, perdaEstimada, pesoTotalPerdido])
 
   // === Gráfico de mortes por lote ===
   const dadosGraficoLote = useMemo(() => porLote.slice(0, 12), [porLote])
@@ -469,7 +452,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
 
       const resumoParaPDF: ResumoMorte = {
         total_mortes: totalMortes,
-        media_por_dia: mediaPorDia,
+        media_por_dia: null,
         peso_medio: pesoMedio,
         causa_mais_frequente: causaMaisFrequente,
         causa_mais_frequente_count: causaMaisFrequenteCount,
@@ -489,13 +472,6 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
         peso_total_perdido: pesoTotalPerdido,
         perda_por_categoria: impactoFinanceiro.porCategoria,
         insights,
-        periodo_anterior: periodoAnterior ? {
-          total_mortes: periodoAnterior.total_mortes,
-          taxa_mortalidade: periodoAnterior.taxa_mortalidade,
-          data_inicio: periodoAnterior.data_inicio,
-          data_fim: periodoAnterior.data_fim,
-        } : null,
-        variacao_mortes: variacaoMortes,
       }
 
       const periodoInicio = dataInicio || (linhasFiltradas[linhasFiltradas.length - 1]?.data ?? '')
@@ -746,31 +722,27 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <p className="text-2xl font-bold" style={{ color: GREEN_DARK }}>{formatarInteiro(totalMortes)}</p>
                 <p className="text-xs text-gray-600 mt-1">Total de mortes</p>
-                {variacaoMortes != null && (
-                  <p className="text-[10px] mt-1" style={{ color: variacaoMortes > 0 ? '#EF4444' : '#10B981' }}>
-                    {variacaoMortes > 0 ? '↑' : '↓'} {formatarNumero(Math.abs(variacaoMortes), 1)}% vs período anterior
-                  </p>
-                )}
+                <p className="text-[10px] text-gray-400 mt-1">No período/filtros selecionados</p>
               </div>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <p className="text-2xl font-bold" style={{ color: GREEN_DARK }}>
                   {taxaMortalidade != null ? `${formatarNumero(taxaMortalidade, 2)}%` : '—'}
                 </p>
                 <p className="text-xs text-gray-600 mt-1">Taxa de mortalidade</p>
-                {rebanhoTotal > 0 && (
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    Rebanho: {formatarInteiro(rebanhoTotal)} cabeças
-                    {variacaoTaxa != null && (
-                      <span className="ml-1" style={{ color: variacaoTaxa > 0 ? '#EF4444' : '#10B981' }}>
-                        ({variacaoTaxa > 0 ? '+' : ''}{formatarNumero(variacaoTaxa, 2)} p.p.)
-                      </span>
-                    )}
-                  </p>
-                )}
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Acumulada{rebanhoTotal > 0 ? ` · rebanho: ${formatarInteiro(rebanhoTotal)} cabeças` : ''}
+                </p>
               </div>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <p className="text-2xl font-bold" style={{ color: GREEN_DARK }}>{formatarNumero(mediaPorDia, 2)}</p>
-                <p className="text-xs text-gray-600 mt-1">Mortes/dia (média)</p>
+                <p className="text-lg font-bold leading-tight truncate" style={{ color: GREEN_DARK }} title={loteMaisAfetado?.label ?? ''}>
+                  {loteMaisAfetado?.label ?? '—'}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">Lote mais afetado</p>
+                {loteMaisAfetado && (
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    {formatarInteiro(loteMaisAfetado.valor)} {loteMaisAfetado.valor === 1 ? 'morte' : 'mortes'} ({formatarNumero((loteMaisAfetado.valor / totalMortes) * 100, 0)}%)
+                  </p>
+                )}
               </div>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <p className="text-2xl font-bold" style={{ color: GREEN_DARK }}>{formatarNumero(pesoMedio, 1)}</p>
@@ -823,31 +795,14 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
                 )}
               </div>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-medium text-gray-600">Comparativo com período anterior</p>
-                  <div className="relative group">
-                    <svg className="w-3.5 h-3.5 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 leading-relaxed">
-                      O período anterior tem a mesma duração do período selecionado, imediatamente antes dele. Ex: se o período atual &eacute; 01/07 a 31/08 (61 dias), o anterior &eacute; 01/05 a 31/05 (61 dias antes do in&iacute;cio). Permite comparar se a mortalidade est&aacute; aumentando ou diminuindo.
-                    </div>
-                  </div>
-                </div>
-                {periodoAnterior ? (
-                  <>
-                    <p className="text-sm font-bold mt-1" style={{ color: GREEN_DARK }}>
-                      {formatarInteiro(periodoAnterior.total_mortes)} mortes
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      {formatarData(periodoAnterior.data_inicio)} a {formatarData(periodoAnterior.data_fim)}
-                    </p>
-                    {periodoAnterior.taxa_mortalidade != null && (
-                      <p className="text-[10px] text-gray-400 mt-1">Taxa anterior: {formatarNumero(periodoAnterior.taxa_mortalidade, 2)}%</p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-400 mt-1">Sem período anterior para comparação.</p>
+                <p className="text-lg font-bold leading-tight" style={{ color: GREEN_DARK }}>
+                  {categoriaMaisAfetada?.label ?? '—'}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">Categoria mais afetada</p>
+                {categoriaMaisAfetada && (
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    {formatarInteiro(categoriaMaisAfetada.valor)} {categoriaMaisAfetada.valor === 1 ? 'morte' : 'mortes'} ({formatarNumero((categoriaMaisAfetada.valor / totalMortes) * 100, 0)}% do total)
+                  </p>
                 )}
               </div>
             </div>

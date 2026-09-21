@@ -52,13 +52,9 @@ interface DadosMorteRpc {
   linhas: LinhaMorte[]
   resumo: ResumoMorte
   rebanho_total?: number
+  total_mortes_geral?: number
+  taxa_mortalidade_geral?: number | null
   pastos_geo?: PastoGeo[]
-  periodo_anterior?: {
-    total_mortes: number
-    taxa_mortalidade: number | null
-    data_inicio: string
-    data_fim: string
-  }
 }
 
 export type PayloadRelatorioGeral =
@@ -375,6 +371,7 @@ async function carregarMortes(
   const porCategoria = agregarMortes(linhas, (linha) => linha.categoria)
   const porSexo = agregarMortes(linhas, (linha) => linha.sexo)
   const porPasto = agregarMortes(linhas, (linha) => linha.pasto)
+  const porLote = agregarMortes(linhas, (linha) => linha.lote_nome)
   const pesos = linhas.map((linha) => linha.peso_vivo).filter((peso): peso is number => peso != null)
   const pesoTotal = pesos.reduce((soma, peso) => soma + peso, 0)
   const perdaEstimada = linhas.reduce((soma, linha) => {
@@ -391,18 +388,16 @@ async function carregarMortes(
       if (item.valor === 'S') diagnosticos.set(chave, (diagnosticos.get(chave) ?? 0) + 1)
     }
   }
-  const taxaMortalidade = dados.rebanho_total ? (linhas.length / dados.rebanho_total) * 100 : null
-  const anterior = dados.periodo_anterior
-  const variacaoMortes = anterior?.total_mortes ? ((linhas.length - anterior.total_mortes) / anterior.total_mortes) * 100 : null
+  const totalMortesGeral = dados.total_mortes_geral ?? linhas.length
+  const taxaMortalidade = dados.taxa_mortalidade_geral ?? (dados.rebanho_total ? (totalMortesGeral / dados.rebanho_total) * 100 : null)
   const insights: string[] = []
   if (!linhas.length) {
     insights.push('Nenhuma morte registrada no período selecionado.')
   } else {
-    if (taxaMortalidade != null) insights.push(`A taxa de mortalidade no período foi ${formatarNumero(taxaMortalidade, 2)}% (${linhas.length} ${linhas.length === 1 ? 'morte' : 'mortes'} em um rebanho de ${dados.rebanho_total} cabeças).`)
-    if (variacaoMortes != null) insights.push(`Houve ${variacaoMortes > 0 ? 'aumento' : 'redução'} de ${formatarNumero(Math.abs(variacaoMortes), 1)}% nas mortes em relação ao período anterior (${anterior?.total_mortes ?? 0} mortes).`)
-    else if (anterior?.total_mortes === 0) insights.push(`Nenhuma morte foi registrada no período anterior (${anterior.data_inicio} a ${anterior.data_fim}).`)
+    if (taxaMortalidade != null) insights.push(`A taxa de mortalidade acumulada é de ${formatarNumero(taxaMortalidade, 2)}% (${totalMortesGeral} ${totalMortesGeral === 1 ? 'morte registrada' : 'mortes registradas'} em um rebanho de ${dados.rebanho_total} cabeças).`)
     if (porCausa[0]) insights.push(`A causa principal foi ${porCausa[0].label} (${porCausa[0].valor} ${porCausa[0].valor === 1 ? 'caso' : 'casos'}, ${formatarNumero((porCausa[0].valor / linhas.length) * 100, 0)}% do total).`)
     if (porCategoria[0]) insights.push(`A categoria mais afetada foi ${porCategoria[0].label} com ${porCategoria[0].valor} ${porCategoria[0].valor === 1 ? 'morte' : 'mortes'}.`)
+    if (porLote[0] && porLote.length > 1) insights.push(`O lote mais afetado foi ${porLote[0].label} com ${porLote[0].valor} ${porLote[0].valor === 1 ? 'morte' : 'mortes'}.`)
     if (porPasto[0] && porPasto.length > 1 && (porPasto[0].valor / linhas.length) * 100 >= 30) insights.push(`O pasto ${porPasto[0].label} concentrou ${formatarNumero((porPasto[0].valor / linhas.length) * 100, 0)}% das mortes (${porPasto[0].valor}), merecendo atenção prioritária.`)
     if (perdaEstimada > 0) insights.push(`A perda estimada é de R$ ${perdaEstimada.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${formatarNumero(pesoTotal, 0)} kg perdidos, precificados por categoria).`)
   }
@@ -423,8 +418,6 @@ async function carregarMortes(
     rebanho_total: dados.rebanho_total ?? 0,
     perda_estimada: perdaEstimada,
     peso_total_perdido: pesoTotal,
-    periodo_anterior: anterior ?? null,
-    variacao_mortes: variacaoMortes,
     insights: insights.join(' '),
   }
   return {
