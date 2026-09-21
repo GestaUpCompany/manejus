@@ -285,10 +285,10 @@ export function RevisarNovoLoteModal({
               <span className="font-semibold text-content-muted">Motivo:</span>{' '}
               {solicitacao.dados_movimentacao?.motivo} / {solicitacao.dados_movimentacao?.subtipo}
             </div>
-            {solicitacao.dados_movimentacao?.causa_observacao && (
+            {(solicitacao.dados_movimentacao?.observacao || solicitacao.dados_movimentacao?.causa_observacao) && (
               <div className="col-span-2">
                 <span className="font-semibold text-content-muted">Observação:</span>{' '}
-                {solicitacao.dados_movimentacao.causa_observacao}
+                {solicitacao.dados_movimentacao.observacao || solicitacao.dados_movimentacao.causa_observacao}
               </div>
             )}
             <div className="col-span-2">

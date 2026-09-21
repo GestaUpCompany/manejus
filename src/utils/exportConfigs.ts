@@ -243,6 +243,7 @@ export const MOVIMENTACAO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'subtipo', header: 'Subtipo' },
     { source: 'motivo_movimentacao', header: 'Motivo da Movimentação' },
     { source: 'causa_observacao', header: 'Causa/Observação' },
+    { source: 'observacao', header: 'Observação' },
     { source: 'lote_origem_nome', header: 'Lote Origem (Cadastro)', transform: (value) => value?.nome || '' },
     { source: 'lote_destino_nome', header: 'Lote Destino (Cadastro)', transform: (value) => value?.nome || '' },
     { source: 'individuo', header: 'Brinco (Cadastro)', transform: (value) => value?.id_brinco || '' },

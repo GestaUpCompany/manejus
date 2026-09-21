@@ -20,6 +20,7 @@ interface RegistroMovimentacao {
   peso_vivo_atual_kg?: number
   motivo_movimentacao?: string
   causa_observacao?: string
+  observacao?: string
   brinco?: string
   chip?: string
   categoria?: string

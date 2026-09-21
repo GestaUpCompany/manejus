@@ -1620,7 +1620,7 @@ export function Lotes() {
           isEntrada && r.sexo ? r.sexo : null,
           isEntrada && r.idade ? `${r.idade} meses` : null,
           r.responsavel ? `Resp: ${r.responsavel}` : null,
-          r.causa_observacao ? r.causa_observacao : null,
+          r.observacao || r.causa_observacao ? (r.observacao || r.causa_observacao) : null,
         ].filter(Boolean).join(' • '),
       }
     })
@@ -1640,7 +1640,7 @@ export function Lotes() {
           r.motivo_movimentacao ? `Motivo: ${r.motivo_movimentacao}` : null,
           r.destino ? `Destino: ${r.destino}` : null,
           r.responsavel ? `Resp: ${r.responsavel}` : null,
-          r.causa_observacao ? r.causa_observacao : null,
+          r.observacao || r.causa_observacao ? (r.observacao || r.causa_observacao) : null,
           'Correspondência por nome (sem ID)',
         ].filter(Boolean).join(' • '),
       }))

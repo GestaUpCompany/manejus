@@ -18,6 +18,7 @@ interface RegistroMovimentacao {
   peso_vivo_atual_kg?: number
   motivo_movimentacao?: string
   causa_observacao?: string
+  observacao?: string
   brinco?: string
   chip?: string
   tipo_saida?: string
@@ -126,8 +127,8 @@ export function MovimentacaoDetalhes() {
                   <DetailField label="Tipo Destino" value={formatValue(registro!.tipo_destino)} />
                   <DetailField label="Fazenda Destino" value={formatValue(registro!.fazenda_destino_nome?.nome)} />
                 </div>
-                {registro!.causa_observacao && (
-                  <DetailField label="Observação" value={formatValue(registro!.causa_observacao)} />
+                {(registro!.observacao || registro!.causa_observacao) && (
+                  <DetailField label="Observação" value={formatValue(registro!.observacao || registro!.causa_observacao)} />
                 )}
               </div>
             </DetailSection>
