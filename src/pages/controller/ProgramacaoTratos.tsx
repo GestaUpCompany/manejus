@@ -23,6 +23,7 @@ interface CurralComKg {
   lote_id: string | null
   lote_nome: string | null
   kg_mn_dia: string
+  valor_salvo: boolean
 }
 
 interface NotaLeituraConfig {
@@ -132,6 +133,7 @@ export function ConfiguracaoTratos() {
         lote_id: c.lote_id,
         lote_nome: c.lote_nome,
         kg_mn_dia: kgPorCurral[c.id] ?? '',
+        valor_salvo: kgPorCurral[c.id] !== undefined,
       }))
 
       if (prog.programacao) {
@@ -258,6 +260,10 @@ export function ConfiguracaoTratos() {
 
   const somaPercentuais = useMemo(() => {
     return (configAtual.percentuais || []).reduce((sum, p) => sum + (parseFloat(p.percentual) || 0), 0)
+  }, [configAtual])
+
+  const curraisExibidos = useMemo(() => {
+    return (configAtual.currais || []).filter((c) => c.lote_id !== null || c.valor_salvo)
   }, [configAtual])
 
   const percentuaisValidos = Math.abs(somaPercentuais - 100) < 0.01
@@ -585,9 +591,9 @@ export function ConfiguracaoTratos() {
                 Informe o total diário de matéria natural (kg) que será trato em cada curral no primeiro dia.
                 O aplicativo usará esses valores como previsão inicial, ajustada depois pelas leituras de cocho.
               </p>
-              {(configAtual.currais || []).length === 0 ? (
+              {curraisExibidos.length === 0 ? (
                 <div className="p-4 bg-surface-2 border border-border-base rounded-lg text-sm text-content-muted text-center">
-                  Nenhum curral ativo cadastrado para esta fazenda.
+                  Nenhum curral com lote ocupando nesta fazenda.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -600,7 +606,7 @@ export function ConfiguracaoTratos() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {(configAtual.currais || []).map((c) => (
+                      {curraisExibidos.map((c) => (
                         <tr key={c.curral_id}>
                           <td className="px-4 py-2 font-medium text-content-strong">{c.curral_nome}</td>
                           <td className="px-4 py-2 text-content-muted">{c.lote_nome || <span className="text-content-faint italic">Sem lote</span>}</td>
@@ -623,7 +629,7 @@ export function ConfiguracaoTratos() {
                         <td className="px-4 py-2 text-content" colSpan={2}>Total geral</td>
                         <td className="px-4 py-2">
                           <span className="text-content-strong">
-                            {(configAtual.currais || []).reduce((sum, c) => sum + (parseFloat(c.kg_mn_dia) || 0), 0).toFixed(1)} kg
+                            {curraisExibidos.reduce((sum, c) => sum + (parseFloat(c.kg_mn_dia) || 0), 0).toFixed(1)} kg
                           </span>
                         </td>
                       </tr>
