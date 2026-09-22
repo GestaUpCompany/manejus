@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useId } from 'react'
 import { createPortal } from 'react-dom'
 
 interface SelectOption {
@@ -29,6 +29,7 @@ export function Select({
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  const generatedId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -96,7 +97,7 @@ export function Select({
   return (
     <div className="mb-4">
       {label && (
-        <label className="block text-xs sm:text-sm font-semibold text-content mb-2">
+        <label htmlFor={generatedId} className="block text-xs sm:text-sm font-semibold text-content mb-2">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
@@ -105,6 +106,7 @@ export function Select({
         {/* Trigger button */}
         <button
           ref={triggerRef}
+          id={generatedId}
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left bg-surface-1 text-content-strong ${

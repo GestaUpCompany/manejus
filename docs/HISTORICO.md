@@ -1,5 +1,16 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## RegistrosTratosLeituras: paginação e busca server-side + fixes de console (2026-09-22)
+
+Revisão de frontend da tela `/controller/registros-tratos-leituras`:
+
+- **Paginação server-side**: a tela puxava até 1000 linhas e paginava/filtrava no cliente. Agora usa `count: 'exact'` + `.range()` (25 por página) nas duas abas, e a busca textual virou filtro `or(...)` no PostgREST — nomes de lote/curral são resolvidos para ids com as listas já carregadas e entram como `lote_id.in.(...)`/`curral_id.in.(...)` junto aos `ilike` em colunas de texto (evita join `!inner`, que excluiria tratos sem lote). `SearchInput` usa `debounceMs={400}` e a mudança de qualquer filtro reseta para a página 1 via `lastFiltrosRef` (a mudança de `page` dispara o mesmo `loadData`).
+- **`Select` com label acessível**: o `<label>` não estava associado ao controle (warning de acessibilidade); agora usa `useId` + `htmlFor`/`id` no botão.
+- **Future flags do React Router**: `BrowserRouter` recebeu `future={{ v7_startTransition: true, v7_relativeSplatPath: true }}` (router 6.30.x), silenciando os warnings de v7. O `path="*"` usa link absoluto, sem impacto.
+- Verificado no Chrome na fazenda de testes: tabela das duas abas, busca "curral b1" filtra server-side (4 tratos; 1 leitura), console sem warnings de router nem acessibilidade.
+
+**Disparador**: quando mencionar paginação da tela de tratos/leituras, busca que não acha registro fora da página, ou warnings de React Router/label no painel, ler esta seção.
+
 ## curral_id em registros_leitura_cocho e unicidade por curral/dia (2026-09-22)
 
 Migration `20260922170000_leitura_cocho_curral_id.sql`. A leitura de cocho identificava o local só por `pasto_curral` (texto livre), então "uma leitura por curral por dia" existia só no app e dois dispositivos offline podiam duplicar leitura no sync (local_id distinto).

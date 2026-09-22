@@ -174,7 +174,7 @@ function NotFound() {
 
 function App() {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route path="/login" element={<Login />} />

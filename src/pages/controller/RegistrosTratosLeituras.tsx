@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import {
@@ -153,6 +153,7 @@ export function RegistrosTratosLeituras() {
   const [curralFiltro, setCurralFiltro] = useState('')
   const [busca, setBusca] = useState('')
   const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
 
   const [lotes, setLotes] = useState<Opcao[]>([])
   const [currais, setCurrais] = useState<Opcao[]>([])
@@ -210,31 +211,46 @@ export function RegistrosTratosLeituras() {
     }
     setLoading(true)
     setError(null)
-    setPage(1)
 
     try {
       const inicioIso = farmDayStartIso(dataInicio)
       const fimDate = new Date(`${dataFim}T00:00:00`)
       fimDate.setDate(fimDate.getDate() + 1)
       const fimIso = farmDayStartIso(formatDateInput(fimDate))
+      const from = (page - 1) * PER_PAGE
+      const to = from + PER_PAGE - 1
+
+      // Busca textual server-side: nomes de lote/curral são resolvidos para ids
+      // via listas já carregadas (evita join !inner que excluiria tratos sem lote)
+      const termo = busca.trim().replace(/[(),.*%\\]/g, '')
+      const loteIds = termo ? lotes.filter(l => l.nome.toLowerCase().includes(termo.toLowerCase())).map(l => l.id) : []
+      const curralIds = termo ? currais.filter(c => c.nome.toLowerCase().includes(termo.toLowerCase())).map(c => c.id) : []
+      const orPart = (cols: string[]) => {
+        const parts = cols.map(c => `${c}.ilike.*${termo}*`)
+        if (loteIds.length) parts.push(`lote_id.in.(${loteIds.join(',')})`)
+        if (curralIds.length) parts.push(`curral_id.in.(${curralIds.join(',')})`)
+        return parts.join(',')
+      }
 
       if (aba === 'tratos') {
         let query = supabase
           .from('registros_oferta_trato')
-          .select('id, data, curral_id, lote_id, ordem_trato, kg_planejado, kg_ofertado_real, leitura_cocho_nota, nome_usuario, origem, lotes(nome), currais(nome)')
+          .select('id, data, curral_id, lote_id, ordem_trato, kg_planejado, kg_ofertado_real, leitura_cocho_nota, nome_usuario, origem, lotes(nome), currais(nome)', { count: 'exact' })
           .eq('fazenda_id', fazendaId)
           .is('deleted_at', null)
           .gte('data', inicioIso)
           .lt('data', fimIso)
           .order('data', { ascending: false })
           .order('ordem_trato', { ascending: true })
-          .limit(1000)
+          .range(from, to)
 
         if (loteFiltro) query = query.eq('lote_id', loteFiltro)
         if (curralFiltro) query = query.eq('curral_id', curralFiltro)
+        if (termo) query = query.or(orPart(['nome_usuario', 'origem']))
 
-        const { data, error: err } = await query
+        const { data, count, error: err } = await query
         if (err) throw err
+        setTotalCount(count ?? 0)
         setTratos((data || []).map((r: any) => ({
           id: r.id,
           data: r.data,
@@ -252,19 +268,21 @@ export function RegistrosTratosLeituras() {
       } else {
         let query = supabase
           .from('registros_leitura_cocho')
-          .select('id, data, pasto_curral, curral_id, lote, lote_id, leitura_cocho, responsavel, nome_usuario, lotes(nome)')
+          .select('id, data, pasto_curral, curral_id, lote, lote_id, leitura_cocho, responsavel, nome_usuario, lotes(nome)', { count: 'exact' })
           .eq('fazenda_id', fazendaId)
           .is('deleted_at', null)
           .gte('data', inicioIso)
           .lt('data', fimIso)
           .order('data', { ascending: false })
-          .limit(1000)
+          .range(from, to)
 
         if (loteFiltro) query = query.eq('lote_id', loteFiltro)
         if (curralFiltro) query = query.eq('curral_id', curralFiltro)
+        if (termo) query = query.or(orPart(['pasto_curral', 'lote', 'responsavel', 'nome_usuario']))
 
-        const { data, error: err } = await query
+        const { data, count, error: err } = await query
         if (err) throw err
+        setTotalCount(count ?? 0)
         setLeituras((data || []).map((r: any) => ({
           id: r.id,
           data: r.data,
@@ -284,32 +302,23 @@ export function RegistrosTratosLeituras() {
     } finally {
       setLoading(false)
     }
-  }, [fazendaId, aba, dataInicio, dataFim, loteFiltro, curralFiltro])
+  }, [fazendaId, aba, dataInicio, dataFim, loteFiltro, curralFiltro, busca, page, lotes, currais])
 
+  // Reseta para a página 1 quando qualquer filtro muda; o loadData é
+  // disparado pelo efeito abaixo (mudança de page reentra aqui com key igual).
+  const lastFiltrosRef = useRef('')
   useEffect(() => {
-    if (fazendaId) loadData()
-  }, [fazendaId, aba, loadData])
-
-  const tratosFiltrados = useMemo(() => {
-    const termo = busca.toLowerCase().trim()
-    if (!termo) return tratos
-    return tratos.filter(t =>
-      t.curral_nome?.toLowerCase().includes(termo) ||
-      t.lote_nome?.toLowerCase().includes(termo) ||
-      t.nome_usuario?.toLowerCase().includes(termo)
-    )
-  }, [tratos, busca])
-
-  const leiturasFiltradas = useMemo(() => {
-    const termo = busca.toLowerCase().trim()
-    if (!termo) return leituras
-    return leituras.filter(l =>
-      l.pasto_curral?.toLowerCase().includes(termo) ||
-      l.lote_nome?.toLowerCase().includes(termo) ||
-      l.responsavel?.toLowerCase().includes(termo) ||
-      l.nome_usuario?.toLowerCase().includes(termo)
-    )
-  }, [leituras, busca])
+    if (!fazendaId) return
+    const filtrosKey = JSON.stringify([aba, dataInicio, dataFim, loteFiltro, curralFiltro, busca])
+    if (lastFiltrosRef.current !== filtrosKey) {
+      lastFiltrosRef.current = filtrosKey
+      if (page !== 1) {
+        setPage(1)
+        return
+      }
+    }
+    loadData()
+  }, [fazendaId, aba, dataInicio, dataFim, loteFiltro, curralFiltro, busca, page, loadData])
 
   const openEditTrato = (t: RegistroTrato) => {
     setFormTrato({
@@ -465,8 +474,7 @@ export function RegistrosTratosLeituras() {
     )
   }
 
-  const registrosAtivos = aba === 'tratos' ? tratosFiltrados : leiturasFiltradas
-  const pageItems = registrosAtivos.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+  const registrosAtivos = aba === 'tratos' ? tratos : leituras
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
@@ -527,6 +535,7 @@ export function RegistrosTratosLeituras() {
             <SearchInput
               value={busca}
               onChange={setBusca}
+              debounceMs={400}
               placeholder={aba === 'tratos' ? 'Curral, lote ou usuário' : 'Curral, lote ou responsável'}
             />
           </div>
@@ -577,7 +586,7 @@ export function RegistrosTratosLeituras() {
             </thead>
             <tbody>
               {aba === 'tratos'
-                ? (pageItems as RegistroTrato[]).map(t => (
+                ? (registrosAtivos as RegistroTrato[]).map(t => (
                     <tr key={t.id} className="border-b border-border-subtle hover:bg-surface-2">
                       <td className="p-3 text-content whitespace-nowrap">{formatDateTime(t.data)}</td>
                       <td className="p-3 text-content">{t.curral_nome || '—'}</td>
@@ -602,7 +611,7 @@ export function RegistrosTratosLeituras() {
                       )}
                     </tr>
                   ))
-                : (pageItems as RegistroLeitura[]).map(l => (
+                : (registrosAtivos as RegistroLeitura[]).map(l => (
                     <tr key={l.id} className="border-b border-border-subtle hover:bg-surface-2">
                       <td className="p-3 text-content whitespace-nowrap">{formatDateTime(l.data)}</td>
                       <td className="p-3 text-content">{l.pasto_curral || '—'}</td>
@@ -634,7 +643,7 @@ export function RegistrosTratosLeituras() {
 
       <Pagination
         page={page}
-        totalItems={registrosAtivos.length}
+        totalItems={totalCount}
         perPage={PER_PAGE}
         onPageChange={setPage}
       />
