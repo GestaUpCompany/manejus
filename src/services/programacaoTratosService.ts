@@ -117,7 +117,7 @@ export async function getTiposExistentes(fazendaId: string): Promise<TipoProgram
     .gte('data_fim', dataReferencia)
 
   if (error || !data) return []
-  return data.map((d) => d.tipo as TipoProgramacao)
+  return [...new Set(data.map((d) => d.tipo as TipoProgramacao))]
 }
 
 /**
