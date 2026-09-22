@@ -1,5 +1,11 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Fechamento de OS exige dados do acerto (2026-09-22)
+
+O teste E2E de venda abate mostrou que a OS podia ser fechada sem `valor_acerto`/`data_credito`: a UI enviava `null` e o RPC aceitava. Corrigido nas duas pontas: `OrdemServicoDetalhes.tsx` valida valor > 0 e data antes de chamar o RPC, e a migration `20260923000002_fechar_os_exige_acerto.sql` recria `fechar_os_venda` rejeitando fechamento sem os dois campos (defesa em profundidade).
+
+**Disparador**: quando mencionar fechamento de OS sem acerto, `fechar_os_venda` ou validação do modal "Fechar OS", ler esta seção.
+
 ## Módulo de Venda via Ordem de Serviço (OS) — banco + painel (2026-09-22)
 
 Módulo novo que cobre o fluxo de venda (e já nasce genérico para compra e transferência): o comunicado de venda criado no PWA vira uma OS (`VEN-ano-00000`), a pesagem vinculada à OS gera movimentações de saída que descontam cabeças dos lotes, e o fechamento é manual no painel depois que o acerto cai na conta.

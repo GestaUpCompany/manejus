@@ -173,10 +173,19 @@ export function OrdemServicoDetalhes() {
 
   const handleFechar = async () => {
     if (!os || !user) return
+    const valor = valorAcerto ? Number(valorAcerto.replace(',', '.')) : NaN
+    if (!valorAcerto || isNaN(valor) || valor <= 0) {
+      toast.error('Informe o valor do acerto recebido')
+      return
+    }
+    if (!dataCredito) {
+      toast.error('Informe a data em que o valor caiu na conta')
+      return
+    }
     setAcaoEmAndamento(true)
     const { data, error } = await supabase.rpc('fechar_os_venda', {
       p_os_id: os.id,
-      p_valor_acerto: valorAcerto ? Number(valorAcerto.replace(',', '.')) : null,
+      p_valor_acerto: valor,
       p_data_credito: dataCredito || null,
       p_usuario_id: user.id,
     })
