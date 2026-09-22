@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient'
 
-export type TipoProgramacao = 'engorda' | 'sequestro' | 'tip'
+export type TipoProgramacao = 'confinamento' | 'sequestro' | 'tip'
 
 export interface ProgramacaoTratos {
   id: string
@@ -104,7 +104,7 @@ export async function getProgramacaoTratos(
 }
 
 /**
- * Carrega quais tipos de programação (engorda, sequestro ou TIP) já existem para a fazenda.
+ * Carrega quais tipos de programação (confinamento, sequestro ou TIP) já existem para a fazenda.
  */
 export async function getTiposExistentes(fazendaId: string): Promise<TipoProgramacao[]> {
   const dataReferencia = dataHojeISO()

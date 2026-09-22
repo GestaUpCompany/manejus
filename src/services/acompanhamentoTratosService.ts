@@ -43,7 +43,7 @@ export interface LinhaDesvio {
   leitura_media: number | null
   tratador: string | null
   status: 'ok' | 'alerta' | 'critico' | 'sem_execucao'
-  tipo: TipoProgramacao | null // engorda, sequestro, TIP ou null (sem planejamento)
+  tipo: TipoProgramacao | null // confinamento, sequestro, TIP ou null (sem planejamento)
 }
 
 export interface ResumoLote {

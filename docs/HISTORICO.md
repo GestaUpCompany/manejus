@@ -1,5 +1,17 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Rename do tipo de programação 'engorda' → 'confinamento' (2026-09-22)
+
+Migration `20260922250000_rename_tipo_engorda_confinamento.sql`. O tipo de programação de tratos `'engorda'` foi renomeado para `'confinamento'`, alinhando o vocabulário ao tipo de lote já usado no sistema. O rename foi aplicado em todas as pontas porque o valor é compartilhado entre painel, PWA e edge function.
+
+- **Banco**: `programacao_tratos_tipo_check` recriada com `('confinamento','sequestro','tip')` — o UPDATE de backfill roda entre o DROP e o ADD do CHECK porque o ADD valida as linhas existentes. DEFAULT da coluna passou a `'confinamento'`. `registros_fabrica_confinamento.tipo` (snapshot do mesmo domínio, sem CHECK) também foi backfilled e teve o DEFAULT alterado, mantendo o filtro de tipo do Acompanhamento consistente com o histórico.
+- **Painel**: `TipoProgramacao`, `ProgramacaoTratos.tsx`, `LancamentoTratos.tsx` e `AcompanhamentoTratos.tsx` (filtro de tipo) atualizados.
+- **PWA**: `TratoConfinamentoPage`, `FabricaConfinamentoPage`, `ProgramacaoHojePage` (prioridade), `cadastroCache` (fallback) e `syncService` (fallback de `registros_fabrica_confinamento.tipo`) atualizados. Listas de tipos em cache com 'engorda' se autocorrigem: o valor desconhecido é filtrado por `TIPOS_PROGRAMACAO` e cai no fallback.
+- **Edge function** `lembrete-tratos-diario`: prioriza `'confinamento'` (com fallback para qualquer tipo ativo) — redeploy feito via `supabase functions deploy`.
+- **Ressaca**: PWAs não atualizados continuam consultando `tipo='engorda'` e não encontram programação até atualizar o app; registros `fabrica-confinamento` pendentes no IndexedDB com `tipo='engorda'` ainda sincronizam (a coluna não tem CHECK) mas ficam com o valor antigo — re-rodar o UPDATE se necessário.
+
+**Disparador**: quando mencionar tipo de programação, rename engorda/confinamento, `programacao_tratos.tipo` ou `registros_fabrica_confinamento.tipo`, ler esta seção.
+
 ## Filtro de currais na tabela de MN Dia 1 em Configuração de Tratos (2026-09-22)
 
 A tabela "Quantidade total de MN (kg) por curral, Dia 1" em `ProgramacaoTratos.tsx` listava todos os currais ativos da fazenda, incluindo os vazios.

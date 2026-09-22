@@ -14,7 +14,7 @@ import { baixarPlanilhaTratosCampo } from '../../utils/planilhaTratosCampo'
 import type { TipoProgramacao } from '../../services/programacaoTratosService'
 
 const TIPOS: { value: TipoProgramacao; label: string }[] = [
-  { value: 'engorda', label: 'Engorda' },
+  { value: 'confinamento', label: 'Confinamento' },
   { value: 'sequestro', label: 'Sequestro' },
   { value: 'tip', label: 'TIP' },
 ]
@@ -65,7 +65,7 @@ export function LancamentoTratos() {
   const { data: fazenda } = useFazenda(user?.id)
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [data, setData] = useState(hojeISO)
-  const [tipo, setTipo] = useState<TipoProgramacao>('engorda')
+  const [tipo, setTipo] = useState<TipoProgramacao>('confinamento')
   const [linhas, setLinhas] = useState<LancamentoTratoLinha[]>([])
   const [editando, setEditando] = useState<Record<string, string>>({})
   const [programacaoId, setProgramacaoId] = useState<string | null>(null)

@@ -36,7 +36,7 @@ interface NotaLeituraConfig {
 const DISTRIBUICAO_PADRAO_4: Record<number, string> = { 1: '30', 2: '20', 3: '20', 4: '30' }
 
 const TIPOS: { value: TipoProgramacao; label: string }[] = [
-  { value: 'engorda', label: 'Engorda' },
+  { value: 'confinamento', label: 'Confinamento' },
   { value: 'sequestro', label: 'Sequestro' },
   { value: 'tip', label: 'TIP' },
 ]
@@ -65,10 +65,10 @@ export function ConfiguracaoTratos() {
   const [salvo, setSalvo] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
-  // Tipos ativos (engorda, sequestro, TIP, ou múltiplos)
+  // Tipos ativos (confinamento, sequestro, TIP, ou múltiplos)
   const [tiposAtivos, setTiposAtivos] = useState<TipoProgramacao[]>([])
   // Tipo atualmente selecionado para edição
-  const [tipoSelecionado, setTipoSelecionado] = useState<TipoProgramacao>('engorda')
+  const [tipoSelecionado, setTipoSelecionado] = useState<TipoProgramacao>('confinamento')
 
   // Configuração por tipo
   const [configs, setConfigs] = useState<Record<string, {
@@ -102,9 +102,9 @@ export function ConfiguracaoTratos() {
     setLoading(true)
     setErro(null)
 
-    const [tiposExistentes, progEngorda, progSequestro, progTip, curraisFazenda, notasData] = await Promise.all([
+    const [tiposExistentes, progConfinamento, progSequestro, progTip, curraisFazenda, notasData] = await Promise.all([
       getTiposExistentes(fazendaId),
-      getProgramacaoTratos(fazendaId, 'engorda'),
+      getProgramacaoTratos(fazendaId, 'confinamento'),
       getProgramacaoTratos(fazendaId, 'sequestro'),
       getProgramacaoTratos(fazendaId, 'tip'),
       getCurraisFazenda(fazendaId),
@@ -115,11 +115,11 @@ export function ConfiguracaoTratos() {
         .order('nota', { ascending: true }),
     ])
 
-    setTiposAtivos(tiposExistentes.length > 0 ? tiposExistentes : ['engorda'])
+    setTiposAtivos(tiposExistentes.length > 0 ? tiposExistentes : ['confinamento'])
 
     const newConfigs: Record<string, { quantidadeTratos: string; dataInicio: string; dataFim: string; percentuais: PercentualTrato[]; currais: CurralComKg[] }> = {}
 
-    for (const [tipo, prog] of [['engorda', progEngorda], ['sequestro', progSequestro], ['tip', progTip]] as const) {
+    for (const [tipo, prog] of [['confinamento', progConfinamento], ['sequestro', progSequestro], ['tip', progTip]] as const) {
       // Mapa de kg MN salvos por curral
       const kgPorCurral: Record<string, string> = {}
       for (const c of prog.currais || []) {
