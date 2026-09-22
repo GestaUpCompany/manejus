@@ -117,6 +117,10 @@ interface Lote {
   data_embarque_prevista?: string | null
 }
 
+function usaCurral(sistema: string | null | undefined): boolean {
+  return sistema === 'Confinamento' || sistema === 'TIP'
+}
+
 export function Lotes() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -1097,10 +1101,10 @@ export function Lotes() {
       return
     }
 
-    // Validar: lote de confinamento precisa de curral, lote de pasto precisa de pasto
-    const isConfinamento = formData.sistema_producao === 'Confinamento'
+    // Validar: lote em curral (confinamento/TIP) precisa de curral, lote de pasto precisa de pasto
+    const isConfinamento = usaCurral(formData.sistema_producao)
     if (isConfinamento && !formData.curral_id) {
-      setErrors({ curral_id: 'Selecione um curral para o lote de confinamento.' })
+      setErrors({ curral_id: `Selecione um curral para o lote de ${formData.sistema_producao}.` })
       setSubmitting(false)
       return
     }
@@ -2289,8 +2293,8 @@ export function Lotes() {
   // Counts para os filtros (só mudam quando lotes/showInactive/searchTerm mudam, não no form)
   const filterCounts = useMemo(() => ({
     todos: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l)).length,
-    pasto: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao !== 'Confinamento').length,
-    confinamento: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao === 'Confinamento').length,
+    pasto: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && !usaCurral(l.sistema_producao)).length,
+    confinamento: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && usaCurral(l.sistema_producao)).length,
   }), [lotes, showInactive, searchTerm])
 
   // Lista filtrada (só muda quando lotes/filtros/search mudam, não no form)
@@ -2298,8 +2302,8 @@ export function Lotes() {
     .filter((lote) => (showInactive || lote.ativo) && matchesSearch(lote))
     .filter((lote) =>
       filtroLocal === 'todos' ? true :
-      filtroLocal === 'pasto' ? lote.sistema_producao !== 'Confinamento' :
-      lote.sistema_producao === 'Confinamento'
+      filtroLocal === 'pasto' ? !usaCurral(lote.sistema_producao) :
+      usaCurral(lote.sistema_producao)
     ), [lotes, showInactive, searchTerm, filtroLocal])
 
   if (loading) {
@@ -2392,9 +2396,9 @@ export function Lotes() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
-                    {formData.sistema_producao === 'Confinamento' ? 'Curral' : 'Pasto'} <span className="text-red-500">*</span>
+                    {usaCurral(formData.sistema_producao) ? 'Curral' : 'Pasto'} <span className="text-red-500">*</span>
                   </label>
-                  {formData.sistema_producao === 'Confinamento' ? (
+                  {usaCurral(formData.sistema_producao) ? (
                     <select
                       value={formData.curral_id}
                       onChange={(e) => { setFormData({ ...formData, curral_id: e.target.value, pasto_id: '' }); if (errors.curral_id) setErrors((p) => ({ ...p, curral_id: '' })) }}
