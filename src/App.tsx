@@ -103,6 +103,8 @@ const ManutencaoMaquinas = laz(() => import('./pages/controller/ManutencaoMaquin
 const ManutencaoMaquinasDetalhes = laz(() => import('./pages/controller/ManutencaoMaquinasDetalhes'), 'ManutencaoMaquinasDetalhes')
 const Problemas = laz(() => import('./pages/controller/Problemas'), 'Problemas')
 const ProblemasDetalhes = laz(() => import('./pages/controller/ProblemasDetalhes'), 'ProblemasDetalhes')
+const OrdensServico = laz(() => import('./pages/controller/OrdensServico'), 'OrdensServico')
+const OrdemServicoDetalhes = laz(() => import('./pages/controller/OrdemServicoDetalhes'), 'OrdemServicoDetalhes')
 
 // Controller - outros
 const RelatorioGado = laz(() => import('./pages/controller/RelatorioGado'), 'RelatorioGado')
@@ -1053,6 +1055,26 @@ function App() {
               <ControllerRoute>
                 <ControllerLayout>
                   <ProblemasDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/ordens-servico"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <OrdensServico />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/ordens-servico/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <OrdemServicoDetalhes />
                 </ControllerLayout>
               </ControllerRoute>
             }

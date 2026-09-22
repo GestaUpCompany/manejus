@@ -1,5 +1,19 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Módulo de Venda via Ordem de Serviço (OS) — banco + painel (2026-09-22)
+
+Módulo novo que cobre o fluxo de venda (e já nasce genérico para compra e transferência): o comunicado de venda criado no PWA vira uma OS (`VEN-ano-00000`), a pesagem vinculada à OS gera movimentações de saída que descontam cabeças dos lotes, e o fechamento é manual no painel depois que o acerto cai na conta.
+
+- **Migration `20260922260000_modulo_venda_os.sql`**: tabelas `ordens_servico` (tipo venda/compra/transferencia, status aberta→embarcada→fechada/cancelada, campos do comunicado e do acerto), `os_contadores` (sequencial por fazenda/tipo/ano com `INSERT ... ON CONFLICT` que serializa a numeração) e `os_documentos` (romaneio/acerto/outro). `registros_pesagem` ganhou `os_id` + `individuo_status_anterior`; `registros_movimentacao` ganhou `os_id` + `sessao_id` com CHECK que exige `sessao_id` quando `os_id` está presente.
+- **Triggers**: `gerar_numero_os` (VEN/COM/TRA por tipo); `trg_registros_pesagem_upsert_individuo` alterado — com `os_id` nunca cria indivíduo, marca o existente como `Abatido`/`Venda Vivo` conforme `tipo_venda` e guarda o status anterior para o estorno; sem cadastro loga `OS_ANIMAL_SEM_CADASTRO` em `logs_sync_errors`; `trg_movimentacao_os_guard` (BEFORE INSERT) rejeita movimentação em OS fechada/cancelada e rejeita segunda sessão de pesagem na mesma OS (duplo embarque offline); `trg_movimentacao_os_status` (AFTER INSERT/UPDATE OF deleted_at) recalcula `quantidade_embarcada` e transiciona aberta↔embarcada.
+- **RPCs `SECURITY DEFINER`**: `fechar_os_venda` (exige embarque, grava `valor_acerto`/`data_credito`/`closed_by`), `cancelar_os_venda` (só OS aberta, com motivo) e `estornar_baixa_os` (soft-delete das movimentações da OS, reverte `individuos` ao status anterior, recalcula `quant_atual` dos pares lote+categoria). As três validam `user_has_fazenda_access`.
+- **Storage**: bucket privado `documentos-os` (JPEG/PNG/WebP/PDF, limite 15 MB) com policies `authenticated` por bucket. Caminho dos arquivos: `{fazenda_id}/{os_id}/{timestamp}-{nome}`; leitura via signed URL de 1h.
+- **Notificações**: `notify_os_criada` e `notify_os_embarcada` avisam controllers/admins da fazenda (mesmo padrão de `solicitacoes_novo_lote`), com `acao_url` apontando para `/controller/ordens-servico/:id`.
+- **Painel**: páginas `OrdensServico.tsx` (lista com filtro por tipo/status/busca, badges de status) e `OrdemServicoDetalhes.tsx` (seções Informações Gerais, Comunicado, Embarque com movimentações e contagem de animais pesados, Documentos com upload, Acerto/Fechamento). Ações por status: cancelar (aberta, com motivo), estornar baixa e fechar (embarcada/aguardando_pagamento). Rotas `/controller/ordens-servico[/:id]` e novo grupo "Comercial" no menu do `ControllerLayout`.
+- **Compressão de documentos**: `src/utils/comprimirDocumento.ts` comprime imagens via canvas (máx. 1920px, JPEG q0.8, fundo branco para PNG/WebP com transparência) antes do upload; PDF sobe direto. `osDocumentosService.ts` faz upload + insert em `os_documentos` e remove o arquivo do bucket se o insert falhar.
+
+**Disparador**: quando mencionar OS, ordem de serviço, comunicado de venda, romaneio, acerto, embarque, `ordens_servico`, `os_documentos`, `fechar_os_venda`, `estornar_baixa_os` ou `documentos-os`, ler esta seção.
+
 ## Classificação de sistema do lote unificada + filtro TIP na lista (2026-09-22)
 
 O badge do `LoteCard` e o `RevisarNovoLoteModal` usavam `sistema_producao === 'Confinamento'` literal, enquanto o filtro, o formulário e a validação de `Lotes.tsx` já usavam a regra ampla (Confinamento ou TIP usam curral). Resultado: lote TIP em curral aparecia no filtro Confinamento mas com badge "Pasto", e a aprovação de solicitação de lote TIP exigia pasto em vez de curral.
