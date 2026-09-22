@@ -11,6 +11,9 @@ interface RegistroCantina {
   fazenda_id: string
   dispositivo_id?: string
   data: string
+  modo?: string
+  quem_recebeu?: string
+  itens_detalhe?: any[]
   numero_cozinheiras?: number
   quem_cozinhou?: string
   quem_ajudou?: string
@@ -91,24 +94,52 @@ export function RegistrosCantinaDetalhes() {
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <DetailField label="Data" value={formatDateTime(registro!.data)} />
                 <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
-                <DetailField label="Nº Cozinheiras" value={formatValue(registro!.numero_cozinheiras)} />
-                <DetailField label="Quem Cozinhou" value={formatValue(registro!.quem_cozinhou)} />
-                <DetailField label="Quem Ajudou" value={formatValue(registro!.quem_ajudou)} />
+                {registro!.modo === 'entrada' ? (
+                  <DetailField label="Quem Recebeu" value={formatValue(registro!.quem_recebeu)} />
+                ) : (
+                  <>
+                    <DetailField label="Nº Cozinheiras" value={formatValue(registro!.numero_cozinheiras)} />
+                    <DetailField label="Quem Cozinhou" value={formatValue(registro!.quem_cozinhou)} />
+                    <DetailField label="Quem Ajudou" value={formatValue(registro!.quem_ajudou)} />
+                  </>
+                )}
               </div>
             </DetailSection>
 
             {/* Quantidades */}
-            <DetailSection title="Quantidades" highlighted>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <DetailField label="Café Manhã" value={formatValue(registro!.numero_cafe_manha)} />
-                <DetailField label="Lanches" value={formatValue(registro!.numero_lanches)} />
-                <DetailField label="Almoço" value={formatValue(registro!.numero_refeicoes_almoco)} />
-                <DetailField label="Jantar" value={formatValue(registro!.numero_refeicoes_jantar)} />
-              </div>
-            </DetailSection>
+            {registro!.modo !== 'entrada' && (
+              <DetailSection title="Quantidades" highlighted>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <DetailField label="Café Manhã" value={formatValue(registro!.numero_cafe_manha)} />
+                  <DetailField label="Lanches" value={formatValue(registro!.numero_lanches)} />
+                  <DetailField label="Almoço" value={formatValue(registro!.numero_refeicoes_almoco)} />
+                  <DetailField label="Jantar" value={formatValue(registro!.numero_refeicoes_jantar)} />
+                </div>
+              </DetailSection>
+            )}
 
             {/* Itens */}
-            {registro!.itens && registro!.itens.length > 0 && (
+            {registro!.itens_detalhe && registro!.itens_detalhe.length > 0 ? (
+              <DetailSection title="Itens" highlighted>
+                <div className="space-y-2">
+                  {registro!.itens_detalhe.map((item: any, index: number) => (
+                    <p key={index} className="text-sm">
+                      <span className="font-medium text-content">{item.nome || 'Item'}:</span> {item.quantidade || '-'} {item.unidade_medida || item.unidade || ''}
+                    </p>
+                  ))}
+                </div>
+              </DetailSection>
+            ) : registro!.itens && typeof registro!.itens === 'object' && !Array.isArray(registro!.itens) && Object.keys(registro!.itens).length > 0 ? (
+              <DetailSection title="Itens" highlighted>
+                <div className="space-y-2">
+                  {Object.entries(registro!.itens as Record<string, unknown>).map(([nome, qtd], index) => (
+                    <p key={index} className="text-sm">
+                      <span className="font-medium text-content">{nome}:</span> {String(qtd)}
+                    </p>
+                  ))}
+                </div>
+              </DetailSection>
+            ) : Array.isArray(registro!.itens) && registro!.itens.length > 0 ? (
               <DetailSection title="Itens" highlighted>
                 <div className="space-y-2">
                   {registro!.itens.map((item: any, index: number) => (
@@ -118,7 +149,7 @@ export function RegistrosCantinaDetalhes() {
                   ))}
                 </div>
               </DetailSection>
-            )}
+            ) : null}
 
             {/* Observação */}
             {registro!.observacao && (

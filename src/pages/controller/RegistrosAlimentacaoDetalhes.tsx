@@ -12,6 +12,8 @@ interface RegistroAlimentacao {
   dispositivo_id?: string
   data: string
   modo?: string
+  quem_recebeu?: string
+  itens_detalhe?: any[]
   numero_cozinheiras?: number
   quem_cozinhou?: string
   quem_ajudou?: string
@@ -97,14 +99,24 @@ export function RegistrosAlimentacaoDetalhes() {
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                   registro!.modo === 'marmita'
                     ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                    : registro!.modo === 'entrada'
+                    ? 'bg-emerald-500/10 text-emerald-700'
                     : 'bg-primary/10 text-primary dark:text-primary-light'
                 }`}>
-                  {registro!.modo === 'marmita' ? 'Marmita' : 'Cantina'}
+                  {registro!.modo === 'marmita' ? 'Marmita' : registro!.modo === 'entrada' ? 'Entrada' : 'Cantina'}
                 </span>
               </div>
             )}
 
-            {registro!.modo === 'marmita' ? (
+            {registro!.modo === 'entrada' ? (
+              <DetailSection title="Informações Gerais">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <DetailField label="Data" value={formatDateTime(registro!.data)} />
+                  <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                  <DetailField label="Quem Recebeu" value={formatValue(registro!.quem_recebeu)} />
+                </div>
+              </DetailSection>
+            ) : registro!.modo === 'marmita' ? (
               <>
                 {/* Informações da Marmita */}
                 <DetailSection title="Informações Gerais">
@@ -151,7 +163,27 @@ export function RegistrosAlimentacaoDetalhes() {
             )}
 
             {/* Itens */}
-            {registro!.itens && registro!.itens.length > 0 && (
+            {registro!.itens_detalhe && registro!.itens_detalhe.length > 0 ? (
+              <DetailSection title="Itens" highlighted>
+                <div className="space-y-2">
+                  {registro!.itens_detalhe.map((item: any, index: number) => (
+                    <p key={index} className="text-sm">
+                      <span className="font-medium text-content">{item.nome || 'Item'}:</span> {item.quantidade || '-'} {item.unidade_medida || item.unidade || ''}
+                    </p>
+                  ))}
+                </div>
+              </DetailSection>
+            ) : registro!.itens && typeof registro!.itens === 'object' && !Array.isArray(registro!.itens) && Object.keys(registro!.itens).length > 0 ? (
+              <DetailSection title="Itens" highlighted>
+                <div className="space-y-2">
+                  {Object.entries(registro!.itens as Record<string, unknown>).map(([nome, qtd], index) => (
+                    <p key={index} className="text-sm">
+                      <span className="font-medium text-content">{nome}:</span> {String(qtd)}
+                    </p>
+                  ))}
+                </div>
+              </DetailSection>
+            ) : Array.isArray(registro!.itens) && registro!.itens.length > 0 ? (
               <DetailSection title="Itens" highlighted>
                 <div className="space-y-2">
                   {registro!.itens.map((item: any, index: number) => (
@@ -161,7 +193,7 @@ export function RegistrosAlimentacaoDetalhes() {
                   ))}
                 </div>
               </DetailSection>
-            )}
+            ) : null}
 
             {/* Observação */}
             {registro!.observacao && (

@@ -14,6 +14,7 @@ interface RegistroAlmoxarifado {
   data: string
   quem_entregou?: string
   quem_pegou?: string
+  quem_recebeu?: string
   setor?: string
   observacao?: string
   itens?: any
@@ -144,6 +145,7 @@ export function AlmoxarifadoDetalhes() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <DetailField label="Quem Entregou" value={formatValue(registro!.quem_entregou)} />
                 <DetailField label="Quem Pegou" value={formatValue(registro!.quem_pegou)} />
+                <DetailField label="Quem Recebeu" value={formatValue(registro!.quem_recebeu)} />
               </div>
             </DetailSection>
 

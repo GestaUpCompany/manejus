@@ -1,5 +1,18 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Entrada de estoque no PWA: almoxarifado e cantina (2026-09-22)
+
+Migrations `20260922180000_entrada_almoxarifado.sql` e `20260922190000_estoque_cantina.sql`. Duas cadernetas novas no PWA (`entrada-almoxarifado`, `entrada-cantina`), visíveis só na fazenda de testes (`d649c65e-16ab-4b77-a84b-df937aa41cc3`) via `CADERNETAS_EXCLUSIVAS`, dão entrada ao estoque sob o grupo "Entrada de Estoque". As telas de saída existentes não mudaram de rota nem de semântica.
+
+- **Almoxarifado**: `registros_almoxarifado.tipo` passa a aceitar `'entrada'` e ganhou `quem_recebeu`. O trigger `trg_retirada_almoxarifado_mov` ganhou branch que insere `movimentacoes_almoxarifado` com `tipo_movimentacao='entrada'`, `origem='pwa_entrada'`, `custo_unitario` NULL (o recálculo preserva o WAC vigente). Entradas não reprocessam pendências de devolução.
+- **Cantina ganhou estoque**: `itens_cantina` recebeu `estoque_atual`, `estoque_minimo`, `custo_unitario`, `custo_total_estoque`, `controla_estoque` (default false). Novo ledger `movimentacoes_cantina` (espelho do almoxarifado, com snapshot de unidade, `local_id` único, RLS admin/controller) + `recalcular_estoque_cantina` (WAC) + `update_estoque_cantina`. View `itens_cantina_pwa` expõe o catálogo sem custo para o PWA; as policies da tabela ficaram restritas a admin/controller (mesma correção do almoxarifado).
+- **`registros_alimentacao`** ganhou `quem_recebeu` e `itens_detalhe` (jsonb array com `itemId`/`quantidade`); `modo` passa a aceitar `'entrada'`. Trigger `trg_alimentacao_mov`: `modo='cantina'` gera `baixa`, `modo='entrada'` gera `entrada`, `marmita` não movimenta. A coluna `itens` (mapa nome→qtd) continua gravada para exibição. Registros antigos sem `itens_detalhe` não geram movimentação retroativa.
+- **Painel**: `utils/cadernetas.ts` recebeu os dois ids (RBAC por funcionário); `Almoxarifado.tsx` ganhou filtro/badge "Entrada" e exibe `quem_recebeu`; `RegistrosCantina.tsx`/Detalhes exibem badge "Entrada", `quem_recebeu` e `itens_detalhe`; cadastro de `itens-cantina` em CadastrosAuxiliares ganhou `controla_estoque` (select Sim/Não) e `estoque_minimo`.
+- **PWA** (`Caderneta-Digital-Gesta-Up`): páginas `EntradaAlmoxarifadoPage`/`EntradaCantinaPage` (+ listas), stores IndexedDB novas (versão 30), conversores em `syncService`, validadores, display configs, labels, share e `updateItemCantinaSaldoCache` em `cadastroCache`. `CantinaPage` passa a enviar `itensDetalhe` (item_id por item) para o modo cantina baixar estoque; `supabaseService` agora lê `itens_cantina_pwa`. Seletores de entrada só listam itens com `controla_estoque=true`.
+- **Pendência operacional**: itens da cantina nascem com `controla_estoque=false`; sem marcar no painel, o seletor da entrada de cantina fica vazio. Versões antigas do PWA postam cantina sem `itens_detalhe` e não baixam estoque; o saldo da cantina só é confiável a partir da atualização do app.
+
+**Disparador**: quando mencionar entrada de estoque, `movimentacoes_cantina`, `itens_detalhe`, `controla_estoque` na cantina, ou `itens_cantina_pwa`, ler esta seção.
+
 ## RegistrosTratosLeituras: paginação e busca server-side + fixes de console (2026-09-22)
 
 Revisão de frontend da tela `/controller/registros-tratos-leituras`:

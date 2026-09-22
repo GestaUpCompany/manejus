@@ -170,6 +170,11 @@ const tabs: TabConfig[] = [
         { value: 'Unidade', label: 'Unidade' },
         { value: 'Pacote', label: 'Pacote' },
       ]},
+      { name: 'controla_estoque', label: 'Controla Estoque?', options: [
+        { value: 'true', label: 'Sim' },
+        { value: 'false', label: 'Não' },
+      ]},
+      { name: 'estoque_minimo', label: 'Estoque Mínimo', placeholder: 'Ex: 5' },
     ],
     searchPlaceholder: 'Buscar item...',
     category: 'Operacional',
@@ -770,6 +775,13 @@ export function CadastrosAuxiliares() {
       data[f.name] = value || null
     })
 
+    // itens_cantina: boolean/numérico com NOT NULL, converter explicitamente
+    if (activeTab === 'itens-cantina') {
+      data.controla_estoque = state.formData.controla_estoque === 'true'
+      const minimo = String(state.formData.estoque_minimo || '').replace(',', '.')
+      data.estoque_minimo = minimo && !isNaN(Number(minimo)) ? Number(minimo) : 0
+    }
+
     // Converter capacidade_kg de formatado para número puro
     if (activeTab === 'vagoes' && data.capacidade_kg) {
       const digits = parseFormattedInt(data.capacidade_kg)
@@ -882,7 +894,8 @@ export function CadastrosAuxiliares() {
     const tab = tabs.find((t) => t.key === activeTab)!
     const formData: Record<string, string> = {}
     tab.fields.forEach((f) => {
-      formData[f.name] = item[f.name] || ''
+      const v = item[f.name]
+      formData[f.name] = v !== null && v !== undefined ? String(v) : ''
     })
 
     // Formatar capacidade_kg com separadores de milhar ao editar

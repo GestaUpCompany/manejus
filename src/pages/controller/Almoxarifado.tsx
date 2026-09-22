@@ -14,9 +14,10 @@ interface RegistroAlmoxarifado {
   dispositivo_id?: string
   nome_usuario?: string
   data: string
-  tipo?: 'retirada' | 'devolucao'
+  tipo?: 'retirada' | 'devolucao' | 'entrada'
   quem_entregou?: string
   quem_pegou?: string
+  quem_recebeu?: string
   setor?: string
   observacao?: string
   itens?: any
@@ -34,7 +35,7 @@ export function Almoxarifado() {
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'retirada' | 'devolucao'>('todos')
+  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'retirada' | 'devolucao' | 'entrada'>('todos')
 
   useEffect(() => {
     loadRegistros()
@@ -74,6 +75,7 @@ export function Almoxarifado() {
     const matchesSearch =
       (registro.quem_entregou && registro.quem_entregou.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.quem_pegou && registro.quem_pegou.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.quem_recebeu && registro.quem_recebeu.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.setor && registro.setor.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -149,7 +151,7 @@ export function Almoxarifado() {
           <div>
             <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight">Tipo</label>
             <select value={tipoFiltro} onChange={(e) => setTipoFiltro(e.target.value as typeof tipoFiltro)} className="w-full rounded-lg border border-border-base bg-surface-1 px-3 py-2 text-sm text-content">
-              <option value="todos">Todos</option><option value="retirada">Retiradas</option><option value="devolucao">Devoluções</option>
+              <option value="todos">Todos</option><option value="retirada">Retiradas</option><option value="devolucao">Devoluções</option><option value="entrada">Entradas</option>
             </select>
           </div>
           <div className="sm:col-span-2">
@@ -186,8 +188,8 @@ export function Almoxarifado() {
                     <span className="text-xs sm:text-sm font-semibold text-content-strong">
                       {formatDateTime(registro.data)}
                     </span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${registro.tipo === 'devolucao' ? 'bg-blue-500/10 text-blue-700' : 'bg-primary/10 text-primary'}`}>
-                      {registro.tipo === 'devolucao' ? 'Devolução' : 'Retirada'}
+                    <span className={`text-xs px-2 py-1 rounded-full ${registro.tipo === 'devolucao' ? 'bg-blue-500/10 text-blue-700' : registro.tipo === 'entrada' ? 'bg-emerald-500/10 text-emerald-700' : 'bg-primary/10 text-primary'}`}>
+                      {registro.tipo === 'devolucao' ? 'Devolução' : registro.tipo === 'entrada' ? 'Entrada' : 'Retirada'}
                     </span>
                   </div>
                   <span
@@ -205,14 +207,23 @@ export function Almoxarifado() {
                     <span className="text-content-muted">Usuário:</span>
                     <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-content-muted">Quem Entregou:</span>
-                    <span className="text-content-strong font-medium">{registro.quem_entregou || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-content-muted">Quem Pegou:</span>
-                    <span className="text-content-strong font-medium">{registro.quem_pegou || '-'}</span>
-                  </div>
+                  {registro.tipo === 'entrada' ? (
+                    <div className="flex justify-between">
+                      <span className="text-content-muted">Quem Recebeu:</span>
+                      <span className="text-content-strong font-medium">{registro.quem_recebeu || '-'}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-content-muted">Quem Entregou:</span>
+                        <span className="text-content-strong font-medium">{registro.quem_entregou || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-content-muted">Quem Pegou:</span>
+                        <span className="text-content-strong font-medium">{registro.quem_pegou || '-'}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-content-muted">Setor:</span>
                     <span className="text-content-strong font-medium">{registro.setor || '-'}</span>
@@ -266,10 +277,10 @@ export function Almoxarifado() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {formatDateTime(registro.data)}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong"><span className={`rounded-full px-2 py-1 text-xs ${registro.tipo === 'devolucao' ? 'bg-blue-500/10 text-blue-700' : 'bg-primary/10 text-primary'}`}>{registro.tipo === 'devolucao' ? 'Devolução' : 'Retirada'}</span></td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong"><span className={`rounded-full px-2 py-1 text-xs ${registro.tipo === 'devolucao' ? 'bg-blue-500/10 text-blue-700' : registro.tipo === 'entrada' ? 'bg-emerald-500/10 text-emerald-700' : 'bg-primary/10 text-primary'}`}>{registro.tipo === 'devolucao' ? 'Devolução' : registro.tipo === 'entrada' ? 'Entrada' : 'Retirada'}</span></td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
-                      {registro.quem_entregou || '-'}
+                      {registro.tipo === 'entrada' ? (registro.quem_recebeu || '-') : (registro.quem_entregou || '-')}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.quem_pegou || '-'}

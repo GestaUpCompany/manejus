@@ -20,6 +20,8 @@ export const CADERNETAS: CadernetaOption[] = [
   { id: 'manutencao-maquinas', label: 'Manutenção de Máquinas' },
   { id: 'problemas', label: 'Problemas' },
   { id: 'almoxarifado', label: 'Almoxarifado' },
+  { id: 'entrada-almoxarifado', label: 'Almoxarifado' },
+  { id: 'entrada-cantina', label: 'Cantina' },
   { id: 'entrada-insumos', label: 'Entrada de Insumos' },
   { id: 'saida-insumos', label: 'Produção Fábrica' },
   { id: 'leitura-cocho', label: 'Leitura de Cocho' },

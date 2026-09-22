@@ -14,6 +14,7 @@ interface RegistroCantina {
   dispositivo_id?: string
   data: string
   modo?: string
+  quem_recebeu?: string
   numero_cozinheiras?: number
   quem_cozinhou?: string
   quem_ajudou?: string
@@ -85,6 +86,7 @@ export function RegistrosCantina() {
   const filteredRegistros = registros.filter((registro) => {
     const matchesSearch =
       (registro.quem_cozinhou && registro.quem_cozinhou.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.quem_recebeu && registro.quem_recebeu.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.quem_ajudou && registro.quem_ajudou.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.numero_cozinheiras && registro.numero_cozinheiras.toString().includes(searchTerm.toLowerCase())) ||
       (registro.numero_cafe_manha && registro.numero_cafe_manha.toString().includes(searchTerm.toLowerCase())) ||
@@ -198,6 +200,9 @@ export function RegistrosCantina() {
                     <span className="text-xs sm:text-sm font-semibold text-content-strong">
                       {formatDateTime(registro.data)}
                     </span>
+                    {registro.modo === 'entrada' && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700">Entrada</span>
+                    )}
                   </div>
                   <span
                     className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light"
@@ -214,6 +219,12 @@ export function RegistrosCantina() {
                     <span className="text-content-muted">Usuário:</span>
                     <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                   </div>
+                  {registro.modo === 'entrada' && (
+                    <div className="flex justify-between">
+                      <span className="text-content-muted">Quem Recebeu:</span>
+                      <span className="text-content-strong font-medium">{registro.quem_recebeu || '-'}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-content-muted">Quem Cozinhou:</span>
                     <span className="text-content-strong font-medium">{registro.quem_cozinhou || '-'}</span>
@@ -258,6 +269,7 @@ export function RegistrosCantina() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Modo</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Quem Cozinhou</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Quem Ajudou</th>
@@ -278,9 +290,14 @@ export function RegistrosCantina() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {formatDateTime(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      <span className={`rounded-full px-2 py-1 text-xs ${registro.modo === 'entrada' ? 'bg-emerald-500/10 text-emerald-700' : registro.modo === 'marmita' ? 'bg-blue-500/10 text-blue-700' : 'bg-primary/10 text-primary'}`}>
+                        {registro.modo === 'entrada' ? 'Entrada' : registro.modo === 'marmita' ? 'Marmita' : 'Cantina'}
+                      </span>
+                    </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
-                      {registro.quem_cozinhou || '-'}
+                      {registro.modo === 'entrada' ? (registro.quem_recebeu || '-') : (registro.quem_cozinhou || '-')}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.quem_ajudou || '-'}

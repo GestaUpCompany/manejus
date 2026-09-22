@@ -14,6 +14,8 @@ interface RegistroAlimentacao {
   dispositivo_id?: string
   data: string
   modo?: string
+  quem_recebeu?: string
+  itens_detalhe?: any[]
   numero_cozinheiras?: number
   quem_cozinhou?: string
   quem_ajudou?: string
@@ -179,9 +181,11 @@ export function RegistrosAlimentacao() {
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         registro.modo === 'marmita'
                           ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                          : registro.modo === 'entrada'
+                          ? 'bg-emerald-500/10 text-emerald-700'
                           : 'bg-primary/10 text-primary dark:text-primary-light'
                       }`}>
-                        {registro.modo === 'marmita' ? 'Marmita' : 'Cantina'}
+                        {registro.modo === 'marmita' ? 'Marmita' : registro.modo === 'entrada' ? 'Entrada' : 'Cantina'}
                       </span>
                     )}
                     <span
@@ -199,7 +203,20 @@ export function RegistrosAlimentacao() {
                   <span className="text-content-muted">Usuário:</span>
                   <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                 </div>
-                {registro.modo === 'marmita' ? (
+                {registro.modo === 'entrada' ? (
+                  <div className="space-y-2 text-xs sm:text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-content-muted">Quem Recebeu:</span>
+                      <span className="text-content-strong font-medium">{registro.quem_recebeu || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-content-muted">Itens:</span>
+                      <span className="text-content-strong font-medium">
+                        {Array.isArray(registro.itens_detalhe) ? `${registro.itens_detalhe.length} item(s)` : '-'}
+                      </span>
+                    </div>
+                  </div>
+                ) : registro.modo === 'marmita' ? (
                   <div className="space-y-2 text-xs sm:text-sm">
                     <div className="flex justify-between">
                       <span className="text-content-muted">Fornecedor:</span>
@@ -289,18 +306,26 @@ export function RegistrosAlimentacao() {
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         registro.modo === 'marmita'
                           ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                          : registro.modo === 'entrada'
+                          ? 'bg-emerald-500/10 text-emerald-700'
                           : 'bg-primary/10 text-primary dark:text-primary-light'
                       }`}>
-                        {registro.modo === 'marmita' ? 'Marmita' : 'Cantina'}
+                        {registro.modo === 'marmita' ? 'Marmita' : registro.modo === 'entrada' ? 'Entrada' : 'Cantina'}
                       </span>
                     </Td>
                     <Td>
                       {registro.modo === 'marmita'
                         ? (registro.fornecedor || '-')
+                        : registro.modo === 'entrada'
+                        ? (registro.quem_recebeu || '-')
                         : (registro.quem_cozinhou || '-')}
                     </Td>
                     <Td>
-                      {registro.modo === 'marmita' ? (
+                      {registro.modo === 'entrada' ? (
+                        <span className="whitespace-nowrap">
+                          {Array.isArray(registro.itens_detalhe) ? `${registro.itens_detalhe.length} item(s)` : '-'}
+                        </span>
+                      ) : registro.modo === 'marmita' ? (
                         <span className="whitespace-nowrap">
                           {registro.quantidade_marmitas || 0} marmitas
                           {registro.preco_unitario ? ` × R$ ${Number(registro.preco_unitario).toFixed(2).replace('.', ',')}` : ''}
