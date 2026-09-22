@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import { signUp } from './authService'
+import type { PostgrestError } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 
@@ -96,7 +97,7 @@ export async function getFazendaById(id: string): Promise<Fazenda | null> {
   return data
 }
 
-export async function createFazenda(fazenda: Omit<Fazenda, 'id' | 'created_at' | 'updated_at'>): Promise<Fazenda | null> {
+export async function createFazenda(fazenda: Omit<Fazenda, 'id' | 'created_at' | 'updated_at'>): Promise<{ fazenda: Fazenda | null; error: PostgrestError | null }> {
   const { data, error } = await supabase
     .from('fazendas')
     .insert(fazenda)
@@ -105,10 +106,10 @@ export async function createFazenda(fazenda: Omit<Fazenda, 'id' | 'created_at' |
 
   if (error) {
     console.error('Erro ao criar fazenda:', error)
-    return null
+    return { fazenda: null, error }
   }
 
-  return data
+  return { fazenda: data, error: null }
 }
 
 export async function updateFazenda(id: string, fazenda: Partial<Fazenda>): Promise<Fazenda | null> {
@@ -168,7 +169,7 @@ export async function createFazendaWithController(
   const { controller_email, controller_nome } = params
 
   // Passo 1: Criar fazenda primeiro
-  const fazenda = await createFazenda({
+  const { fazenda, error: fazendaError } = await createFazenda({
     acesso_id: params.acesso_id,
     nome: params.nome,
     cnpj: params.cnpj,
@@ -183,10 +184,18 @@ export async function createFazendaWithController(
   })
 
   if (!fazenda) {
+    // 23505 = unique violation. A constraint no nome identifica o campo em conflito
+    // (fazendas_acesso_id_key ou fazendas_cnpj_key).
+    let errorMessage = 'Erro ao criar fazenda'
+    if (fazendaError?.code === '23505') {
+      errorMessage = fazendaError.message.includes('acesso_id')
+        ? `ID de acesso "${params.acesso_id}" já está em uso por outra fazenda (mesmo desativada, o ID fica reservado)`
+        : 'CNPJ já cadastrado em outra fazenda'
+    }
     return {
       fazenda: null,
       controller: null,
-      error: 'Erro ao criar fazenda'
+      error: errorMessage
     }
   }
 
