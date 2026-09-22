@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Filtro de currais na tabela de MN Dia 1 em Configuração de Tratos (2026-09-22)
+
+A tabela "Quantidade total de MN (kg) por curral, Dia 1" em `ProgramacaoTratos.tsx` listava todos os currais ativos da fazenda, incluindo os vazios.
+
+- **`ProgramacaoTratos.tsx`**: novo memo `curraisExibidos` filtra a exibição para currais com `lote_id` ocupado OU com kg de MN salvo (`valor_salvo`, flag congelada no `loadData` via `kgPorCurral[c.id] !== undefined`). Linhas, total geral e estado vazio usam a lista filtrada.
+- `valor_salvo` é congelado no carregamento (não deriva do campo editável), então a linha de um curral sem lote não some ao limpar o input; ela desaparece só no próximo carregamento após salvar vazio.
+- O `handleSalvar` continua persistindo apenas linhas com `kg_mn_dia > 0`, então limpar um valor órfão e salvar remove o registro do banco.
+
 ## Fusão dinâmica das tabelas de detalhamento nos relatórios de Abastecimento e Mortalidade (2026-09-22)
 
 No infográfico mensal (e no relatório avulso), o Detalhamento Operacional sempre abria página própria mesmo quando a última página do Detalhamento por Máquina/Veículo ficava quase vazia, deixando as duas tabelas visualmente distantes.
