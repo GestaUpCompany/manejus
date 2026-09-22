@@ -1,5 +1,17 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Apresentação de formulação (granel/sacaria) e suplementação em sacos (2026-09-22)
+
+Migrations `20260922220000_formulacao_apresentacao_sacaria.sql` e `20260922230000_rename_apresentacao_forma_fornecimento.sql` (rename de `apresentacao` para `forma_fornecimento`). Formulações passam a declarar a forma de fornecimento do produto para que a suplementação no PWA possa ser lançada em número de sacos em vez de kg.
+
+- **`formulacoes`**: novas colunas `forma_fornecimento` (`'granel'`/`'sacaria'`, NOT NULL default `'granel'`) e `kg_por_saco` (numeric). CHECKs: `forma_fornecimento` restrita aos dois valores e `kg_por_saco` obrigatório e positivo quando `sacaria`.
+- **`registros_suplementacao`**: novas colunas `forma_fornecimento` e `qtd_sacos` (ambas nullable, snapshot do lançamento). `kg_cocho` continua gravando kg convertido (sacos × kg_por_saco).
+- **Painel** (`Formulacoes.tsx`): form ganhou select "Forma de Fornecimento" (A granel/Sacaria) e campo "Kg por saco" obrigatório quando sacaria; card da formulação exibe "Sacaria (N kg/saco)".
+- **PWA** (`SuplementacaoPage`): quando a formulação do plano ativo é sacaria, o input "Total Suplementado no Cocho (kg)" vira "Quantidade de Sacos" com faixa de conversão ("Sacaria de X kg = Y kg no cocho"); o payload grava `kgCocho` convertido + `formaFornecimento` + `qtdSacos`, e `syncService` mapeia `forma_fornecimento`/`qtd_sacos`. Share text e card da lista exibem "SACOS"/"N° SACOS". Formulações a granel não mudam nada; sacaria sem `kg_por_saco` cai no fluxo de kg (defesa).
+- Rollout: migration aplicada antes do código (colunas aditivas, retrocompatível); PWA antigo ignora as colunas novas.
+
+**Disparador**: quando mencionar sacaria, apresentação de formulação, kg por saco, suplementação em sacos ou `qtd_sacos`, ler esta seção.
+
 ## CHECK de classificação de itens + criação de itens pelo PWA (2026-09-22)
 
 Migrations `20260922210000_classificacao_check_e_criar_item_pwa.sql` e `20260922240000_criar_item_pwa_dedupe_controla_estoque.sql`.

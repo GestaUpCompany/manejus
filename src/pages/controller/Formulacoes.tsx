@@ -35,6 +35,8 @@ interface Dieta {
   consumo_ms_kg_cab_dia?: number
   ativo: boolean
   e_premix?: boolean
+  forma_fornecimento?: string
+  kg_por_saco?: number | null
   categoria_inferida_automaticamente?: boolean
   categoria_inferida_observacao?: string
   created_at: string
@@ -150,6 +152,8 @@ export function Formulacoes() {
     sistema_producao: '',
     ativo: true,
     e_premix: false,
+    forma_fornecimento: 'granel',
+    kg_por_saco: '',
   })
   const [selectedInsumos, setSelectedInsumos] = useState<DietaInsumoCalc[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -355,6 +359,13 @@ export function Formulacoes() {
     const metaPV = parseFloat(parseFloat(formData.consumo_ms_percent_pv || '0').toFixed(2))
     const gmd = null
 
+    const kgPorSaco = parseFloat(String(formData.kg_por_saco).replace(',', '.'))
+    if (formData.forma_fornecimento === 'sacaria' && (!kgPorSaco || kgPorSaco <= 0)) {
+      toast.error('Informe quantos kg tem o saco para formulações em sacaria.')
+      setSubmitting(false)
+      return
+    }
+
     // Validação bloqueante: colisão de nome com insumo atômico ativo
     if (formData.e_premix) {
       const { data: colisao } = await supabase
@@ -401,6 +412,8 @@ export function Formulacoes() {
       ativo: formData.ativo,
       e_premix: formData.e_premix,
       sistema_producao: formData.sistema_producao || null,
+      forma_fornecimento: formData.forma_fornecimento,
+      kg_por_saco: formData.forma_fornecimento === 'sacaria' ? kgPorSaco : null,
       categoria_inferida_automaticamente: false,
       categoria_inferida_observacao: null,
     }
@@ -519,6 +532,8 @@ export function Formulacoes() {
         sistema_producao: '',
         ativo: true,
         e_premix: false,
+        forma_fornecimento: 'granel',
+        kg_por_saco: '',
       })
       setSelectedInsumos([])
       setCategoriasGmd([])
@@ -552,6 +567,8 @@ export function Formulacoes() {
       sistema_producao: dieta.sistema_producao || '',
       ativo: dieta.ativo,
       e_premix: dieta.e_premix ?? false,
+      forma_fornecimento: dieta.forma_fornecimento || 'granel',
+      kg_por_saco: dieta.kg_por_saco != null ? String(dieta.kg_por_saco).replace('.', ',') : '',
     })
 
     // Buscar insumos da tabela de junção com JOIN em insumos
@@ -645,6 +662,8 @@ export function Formulacoes() {
       sistema_producao: '',
       ativo: true,
       e_premix: false,
+      forma_fornecimento: 'granel',
+      kg_por_saco: '',
     })
     setSelectedInsumos([])
     setCategoriasGmd([])
@@ -884,7 +903,37 @@ export function Formulacoes() {
                   <option value="Confinamento">Confinamento</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Forma de Fornecimento</label>
+                <select
+                  value={formData.forma_fornecimento}
+                  onChange={(e) => setFormData({ ...formData, forma_fornecimento: e.target.value, kg_por_saco: e.target.value === 'sacaria' ? formData.kg_por_saco : '' })}
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-border-base focus:border-accent bg-surface-1"
+                >
+                  <option value="granel">A granel</option>
+                  <option value="sacaria">Sacaria</option>
+                </select>
+              </div>
             </div>
+
+            {formData.forma_fornecimento === 'sacaria' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Kg por saco *</label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={formData.kg_por_saco}
+                    onChange={(e) => setFormData({ ...formData, kg_por_saco: e.target.value.replace(/[^\d.,]/g, '') })}
+                    placeholder="Ex: 25"
+                    className="border-border-base focus:border-accent"
+                  />
+                </div>
+                <p className="text-xs text-content-muted self-end pb-2 sm:col-span-2">
+                  No PWA, a suplementação dessa formulação será lançada em número de sacos e convertida para kg automaticamente.
+                </p>
+              </div>
+            )}
 
             {/* Categorias GMD por formulação (TMR only) */}
             {!formData.e_premix && (
@@ -1184,6 +1233,9 @@ export function Formulacoes() {
                   )}
                   {dieta.custo_ms_tonelada != null && (
                     <p><span className="font-medium">Custo MS:</span> R$ {(dieta.custo_ms_tonelada / 1000).toFixed(4)}/kg</p>
+                  )}
+                  {dieta.forma_fornecimento === 'sacaria' && (
+                    <p><span className="font-medium">Forma de Fornecimento:</span> Sacaria{dieta.kg_por_saco ? ` (${fmt(dieta.kg_por_saco, 1)} kg/saco)` : ''}</p>
                   )}
                   {dieta.insumos && dieta.insumos.length > 0 && (
                     <p><span className="font-medium">Insumos:</span> {dieta.insumos.length}</p>
