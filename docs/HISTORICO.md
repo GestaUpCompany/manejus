@@ -1,5 +1,16 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## CHECK de classificação de itens + criação de itens pelo PWA (2026-09-22)
+
+Migrations `20260922210000_classificacao_check_e_criar_item_pwa.sql` e `20260922240000_criar_item_pwa_dedupe_controla_estoque.sql`.
+
+- **`itens_almoxarifado.classificacao`**: CHECK com 19 valores (a lista que o painel já usava em CadastrosAuxiliares: Ferramentas, Peças, Hidráulica, Elétrica, Insumos, Fertilizantes, Corretivos, Defensivos, Herbicidas, Fungicidas, Inseticidas, Adjuvantes, Sementes, Medicamentos, Equipamentos, Combustíveis, Lubrificantes, EPI, Materiais de Construção).
+- **`itens_cantina.classificacao`**: CHECK com os 6 valores do painel (Perecíveis, Não Perecíveis, Bebidas, Limpeza/Higiene, Hortifruti, Carnes). Dados existentes (incluindo soft-deletados) já estavam conformes nas duas tabelas.
+- **RPCs `criar_item_almoxarifado_pwa` / `criar_item_cantina_pwa`** (`SECURITY DEFINER`): o peão não tem INSERT em `itens_*` (RLS admin/controller), então a criação passa por RPC que valida vínculo `usuarios.auth_id = auth.uid()` + `usuario_fazenda.ativo`, valida classificação/unidade, é idempotente por `p_id` e deduplica por `lower(btrim(nome))` na fazenda. No dedupe, se o item existente tinha `controla_estoque=false`, o flag é ligado (senão o trigger de entrada ignoraria o item sem gerar movimentação).
+- **Atenção**: classificação nova exige migration de CHECK + update nas constantes do PWA (`CLASSIFICACOES_*` em `constants.ts`) + opções em CadastrosAuxiliares — três pontas.
+
+**Disparador**: quando mencionar CHECK de classificação, `criar_item_*_pwa`, item criado pelo PWA ou lista de classificações, ler esta seção.
+
 ## Entrada de estoque no PWA: almoxarifado e cantina (2026-09-22)
 
 Migrations `20260922180000_entrada_almoxarifado.sql` e `20260922190000_estoque_cantina.sql`. Duas cadernetas novas no PWA (`entrada-almoxarifado`, `entrada-cantina`), visíveis só na fazenda de testes (`d649c65e-16ab-4b77-a84b-df937aa41cc3`) via `CADERNETAS_EXCLUSIVAS`, dão entrada ao estoque sob o grupo "Entrada de Estoque". As telas de saída existentes não mudaram de rota nem de semântica.
