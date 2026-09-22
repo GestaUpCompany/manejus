@@ -121,7 +121,7 @@ const tabs: TabConfig[] = [
     table: 'itens_almoxarifado',
     fields: [
       { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do item' },
-      { name: 'classificacao', label: 'Classificação', placeholder: 'Selecione uma classificação', options: [
+      { name: 'classificacao', label: 'Classificação', required: true, placeholder: 'Selecione uma classificação', options: [
         { value: 'Ferramentas', label: 'Ferramentas' },
         { value: 'Peças', label: 'Peças' },
         { value: 'Hidráulica', label: 'Hidráulica' },
@@ -187,7 +187,7 @@ const tabs: TabConfig[] = [
     table: 'pluviometros',
     fields: [
       { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do pluviômetro' },
-      { name: 'localizacao', label: 'Localização', placeholder: 'Localização do pluviômetro' },
+      { name: 'localizacao', label: 'Localização', required: true, placeholder: 'Localização do pluviômetro' },
     ],
     searchPlaceholder: 'Buscar pluviômetro...',
     category: 'Infraestrutura',
