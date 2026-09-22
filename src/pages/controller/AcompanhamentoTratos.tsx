@@ -1224,6 +1224,7 @@ export function AcompanhamentoTratos() {
                         <th className="px-3 py-2 text-left text-xs font-medium text-content-muted uppercase">Lote</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-content-muted uppercase">Curral</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-content-muted uppercase">Trato</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-content-muted uppercase">Real (kg)</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-content-muted uppercase">Horário sugerido</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-content-muted uppercase">Horário real</th>
                         <th className="px-3 py-2 text-right text-xs font-medium text-content-muted uppercase">Desvio</th>
@@ -1239,6 +1240,7 @@ export function AcompanhamentoTratos() {
                             <td className="px-3 py-2 text-sm font-medium text-content-strong">{l.lote_nome}</td>
                             <td className="px-3 py-2 text-sm text-content-muted">{l.curral_nome || '—'}</td>
                             <td className="px-3 py-2 text-sm text-center text-content-muted">#{l.ordem_trato}</td>
+                            <td className="px-3 py-2 text-sm text-right text-content">{formatKg(l.kg_real)} kg</td>
                             <td className="px-3 py-2 text-sm text-center text-content font-mono">{l.horario_sugerido || '—'}</td>
                             <td className="px-3 py-2 text-sm text-center text-content font-mono">{l.horario_real || '—'}</td>
                             <td className={`px-3 py-2 text-sm text-right font-medium ${

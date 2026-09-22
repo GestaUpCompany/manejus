@@ -435,6 +435,7 @@ export interface LinhaHorario {
   lote_nome: string
   curral_nome: string | null
   ordem_trato: number
+  kg_real: number // kg ofertado real naquele trato
   horario_sugerido: string | null // HH:MM
   horario_real: string | null // HH:MM (timezone da fazenda)
   desvio_min: number | null // minutos de desvio (positivo = atraso, negativo = adianto)
@@ -614,6 +615,7 @@ export async function fetchHorariosTratos(
       ordem_trato,
       lote_id,
       curral_id,
+      kg_ofertado_real,
       programacao_id,
       lotes (nome),
       currais (nome)
@@ -733,6 +735,7 @@ export async function fetchHorariosTratos(
       lote_nome: loteNome,
       curral_nome: curralNome,
       ordem_trato: ordemTrato,
+      kg_real: Number(r.kg_ofertado_real) || 0,
       horario_sugerido: horarioSugerido ? horarioSugerido.substring(0, 5) : null,
       horario_real: horarioReal,
       desvio_min: desvioMin,

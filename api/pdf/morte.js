@@ -448,15 +448,19 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
   }
   const rankingPastos = [...pastoCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
 
-  // Paginação da tabela de detalhamento. Quando os diagnósticos cabem em uma
-  // única página, o detalhamento começa logo abaixo da tabela de diagnósticos
-  // aproveitando o espaço livre da folha; o restante segue em páginas próprias
-  // de DETAIL_ROWS_PER_PAGE linhas. Estimativa de altura: cada linha de
-  // diagnóstico ~8mm, cada linha de detalhe ~7mm, títulos/cabeçalhos ~21mm e
-  // kicker ~8mm dentro dos ~146mm úteis da folha.
+  // Paginação da tabela de detalhamento. Quando a última página de
+  // diagnósticos sobra espaço, o detalhamento começa logo abaixo da tabela
+  // de diagnósticos aproveitando o espaço livre da folha; o restante segue
+  // em páginas próprias de DETAIL_ROWS_PER_PAGE linhas. A estimativa usa o
+  // tamanho do último chunk (não o total): com 2 páginas de diagnósticos a
+  // segunda quase sempre tem folga. Cada linha de diagnóstico ~8mm, cada
+  // linha de detalhe ~7mm, títulos/cabeçalhos ~21mm e kicker ~8mm dentro
+  // dos ~146mm úteis da folha.
+  const lastDiagLen =
+    diagPageCount > 0 ? diagnosticoLinhas.length - (diagPageCount - 1) * DIAG_ROWS_PER_PAGE : 0
   const mergedDetailRows =
-    diagPageCount === 1 && rows.length > 0
-      ? Math.min(rows.length, Math.floor((116 - 8 * diagnosticoLinhas.length) / 7))
+    diagPageCount > 0 && rows.length > 0
+      ? Math.min(rows.length, Math.floor((116 - 8 * lastDiagLen) / 7))
       : 0
   const mergeDetail = mergedDetailRows >= 3
   const detailStart = mergeDetail ? mergedDetailRows : 0
@@ -523,7 +527,7 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
       ${renderHeader({ ...brand, reportTitle: 'Relatório de Mortalidade', section: `Diagnósticos${diagPageCount > 1 ? ` (${i + 1}/${diagPageCount})` : ''}`, sectionLabel: 'Análise cruzada' })}
       <p class="section-kicker">Diagnósticos mais frequentes</p>
       <div class="table-block"><h2 class="table-title">${diagTitulo}</h2><table class="diag-freq">${diagHead}<tbody>${chunk.join('')}</tbody></table></div>
-      ${mergeDetail && i === 0 ? detailBlock(rows.slice(0, mergedDetailRows), 0) : ''}
+      ${mergeDetail && i === diagPageCount - 1 ? detailBlock(rows.slice(0, mergedDetailRows), 0) : ''}
       ${renderFooter({ ...period, page: 3 + i, totalPages })}
     `))
     .join('')

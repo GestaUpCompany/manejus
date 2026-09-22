@@ -12,7 +12,9 @@
 //    barras horizontais lado a lado (Combustível, Operação).
 //  - 2 tabelas: Detalhamento por Máquina (8 colunas + linha de total) e
 //    Detalhamento Operacional (3 colunas). Ambas pre-chunked em
-//    DETAIL_ROWS_PER_PAGE linhas por página.
+//    DETAIL_ROWS_PER_PAGE linhas por página, com fusão dinâmica: quando a
+//    última página da tabela 1 sobra espaço, a tabela 2 começa nela (mesmo
+//    critério do mergeDetail do morte.js).
 //  - Pills de filtro condicionais (0 a 3) com fallback "Sem filtros".
 
 import { escapeHtml, dateFmt, numFmt, titleCase } from './_shared/formatters.js'
@@ -39,6 +41,21 @@ const MAX_BODY_BYTES = 8_000_000
 // altura cabe ~18 linhas em A4 landscape com header/footer. Mesmo cálculo do
 // morte.js (20), arredondado para 18 por causa das 8 colunas da tabela 1.
 const DETAIL_ROWS_PER_PAGE = 14
+
+// === Dimensões para a fusão dinâmica das tabelas de detalhamento ===
+// Mesmo critério do mergeDetail do morte.js e do semRegistroNaUltimaPagina
+// do bebedouros.js: quando a última página do detalhamento por máquina
+// sobra espaço, o detalhamento operacional começa nela em vez de abrir
+// página nova. Estimativas em mm dentro da folha A4 landscape: ~146mm
+// úteis após padding + header, kicker ~6mm (140mm livres), título de
+// tabela ~8mm, thead ~8mm, cada <tr> ~9mm (linhas com combustíveis/
+// operadores podem quebrar em 2 linhas, então a estimativa é conservadora).
+const TABLE_CONTENT_H = 140
+const TABLE_TITLE_H = 8
+const TABLE_HEAD_H = 8
+const TABLE_GAP_H = 6 // margin-bottom do .table-block
+const DETAIL_ROW_H = 9
+const OPER_MERGE_MIN_ROWS = 3
 
 function isPDFData(value) {
   if (!value || typeof value !== 'object') return false
@@ -449,7 +466,29 @@ export async function renderAbastecimentoHtml(input) {
   // Layout: página 1 = gráfico principal + KPIs; página 2 = gráficos
   // combustível e operação; páginas 3+ = tabelas de detalhamento.
   const chunks1 = detalhesPorMaquinaFmt.length === 0 ? [[]] : chunkArray(detalhesPorMaquinaFmt, DETAIL_ROWS_PER_PAGE)
-  const chunks2 = detalhesPorMaquinaFmt.length === 0 ? [[]] : chunkArray(detalhesPorMaquinaFmt, DETAIL_ROWS_PER_PAGE)
+
+  // Fusão dinâmica: quantas linhas da tabela operacional cabem na última
+  // página do detalhamento por máquina. A linha de total da tabela 1 conta
+  // como +1 linha; sem linhas, o bloco vazio ocupa ~48mm (empty-chart 40mm).
+  const lastChunk1Len = chunks1[chunks1.length - 1].length
+  const table1LastH =
+    lastChunk1Len === 0
+      ? 48
+      : TABLE_TITLE_H + TABLE_HEAD_H + (lastChunk1Len + 1) * DETAIL_ROW_H
+  const operFitRows = Math.floor(
+    (TABLE_CONTENT_H - table1LastH - TABLE_GAP_H - TABLE_TITLE_H - TABLE_HEAD_H - 3) / DETAIL_ROW_H,
+  )
+  const operMergedCount =
+    detalhesPorMaquinaFmt.length === 0 || operFitRows < OPER_MERGE_MIN_ROWS
+      ? 0
+      : Math.min(operFitRows, detalhesPorMaquinaFmt.length)
+
+  const chunks2 =
+    detalhesPorMaquinaFmt.length === 0
+      ? [[]]
+      : operMergedCount >= detalhesPorMaquinaFmt.length
+        ? []
+        : chunkArray(detalhesPorMaquinaFmt.slice(operMergedCount), DETAIL_ROWS_PER_PAGE)
   const totalPages = 2 + chunks1.length + chunks2.length
 
   const chartsData = [
@@ -484,7 +523,17 @@ export async function renderAbastecimentoHtml(input) {
     ${renderFooter({ ...period, page: 2, totalPages })}
   `)
 
-  // Páginas de Detalhamento por Máquina (tabela 1)
+  // Bloco "Detalhamento Operacional": usado na página fundida (abaixo da
+  // tabela 1) e nas páginas dedicadas. O span mostra a faixa exibida sempre
+  // que o chunk não cobre todas as máquinas (mesmo critério do morte).
+  const operTableBlock = (chunk, startRow) => {
+    const cobreTudo = startRow === 0 && chunk.length === detalhesPorMaquinaFmt.length
+    const faixa = cobreTudo ? '' : ` · exibindo ${startRow + 1}–${startRow + chunk.length}`
+    return `<div class="table-block"><h2 class="table-title">Detalhamento Operacional <span>${detalhesPorMaquinaFmt.length} máquina(s)${faixa}</span></h2>${detailTable2Html(chunk)}</div>`
+  }
+
+  // Páginas de Detalhamento por Máquina (tabela 1). Na última página, as
+  // primeiras operMergedCount linhas da tabela operacional são fundidas.
   const detail1Pages = chunks1
     .map((chunk, chunkIndex) => {
       const startRow = chunkIndex * DETAIL_ROWS_PER_PAGE
@@ -493,22 +542,27 @@ export async function renderAbastecimentoHtml(input) {
       const content = chunk.length
         ? `<div class="table-block"><h2 class="table-title">Detalhamento por Máquina/Veículo <span>${detalhesPorMaquinaFmt.length} máquina(s)${chunks1.length > 1 ? ` · exibindo ${startRow + 1}–${startRow + chunk.length}` : ''}</span></h2>${detailTable1Html(chunk, isLast ? totalLitros : 0, isLast ? totalRegistros : 0)}</div>`
         : '<div class="empty-chart" style="height:40mm">Nenhum registro de abastecimento no período</div>'
+      const operMerged = isLast && operMergedCount > 0
+        ? operTableBlock(detalhesPorMaquinaFmt.slice(0, operMergedCount), 0)
+        : ''
       return pageSection(`
         ${renderHeader({ ...brand, reportTitle: titulo, section: `Detalhamento${suffix}`, sectionLabel: 'Tabela' })}
         <p class="section-kicker">Detalhamento por máquina</p>
         ${content}
+        ${operMerged}
         ${renderFooter({ ...period, page: 3 + chunkIndex, totalPages })}
       `)
     })
     .join('')
 
-  // Páginas de Detalhamento Operacional (tabela 2)
+  // Páginas de Detalhamento Operacional (tabela 2): só as linhas que não
+  // couberam na página fundida da tabela 1.
   const detail2Pages = chunks2
     .map((chunk, chunkIndex) => {
-      const startRow = chunkIndex * DETAIL_ROWS_PER_PAGE
+      const startRow = operMergedCount + chunkIndex * DETAIL_ROWS_PER_PAGE
       const suffix = chunks2.length > 1 ? ` (${chunkIndex + 1}/${chunks2.length})` : ''
       const content = chunk.length
-        ? `<div class="table-block"><h2 class="table-title">Detalhamento Operacional <span>${detalhesPorMaquinaFmt.length} máquina(s)${chunks2.length > 1 ? ` · exibindo ${startRow + 1}–${startRow + chunk.length}` : ''}</span></h2>${detailTable2Html(chunk)}</div>`
+        ? operTableBlock(chunk, startRow)
         : '<div class="empty-chart" style="height:40mm">Nenhum registro de abastecimento no período</div>'
       return pageSection(`
         ${renderHeader({ ...brand, reportTitle: titulo, section: `Operacional${suffix}`, sectionLabel: 'Tabela' })}

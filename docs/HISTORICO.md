@@ -1,5 +1,31 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Fusão dinâmica das tabelas de detalhamento nos relatórios de Abastecimento e Mortalidade (2026-09-22)
+
+No infográfico mensal (e no relatório avulso), o Detalhamento Operacional sempre abria página própria mesmo quando a última página do Detalhamento por Máquina/Veículo ficava quase vazia, deixando as duas tabelas visualmente distantes.
+
+- **`api/pdf/abastecimento.js`**: portado o mesmo mecanismo de fusão do `morte.js` (`mergeDetail`) e do `bebedouros.js` (`semRegistroNaUltimaPagina`). Estimativas de altura em mm (novas constantes `TABLE_CONTENT_H`, `TABLE_TITLE_H`, `TABLE_HEAD_H`, `TABLE_GAP_H`, `DETAIL_ROW_H`, `OPER_MERGE_MIN_ROWS`): calcula-se quantas linhas operacionais cabem após a última página da tabela 1 e elas são fundidas nela; o restante segue em páginas próprias com a faixa "exibindo X–Y" correta. Fusão só acontece quando cabem ao menos 3 linhas.
+- `detailTable2Html` passou a ser invocada pelo helper `operTableBlock(chunk, startRow)`, compartilhado entre a página fundida e as dedicadas.
+- **`api/pdf/morte.js`**: o `mergeDetail` existente só disparava com `diagPageCount === 1`; com 13–24 diagnósticos (duas páginas) a segunda ficava quase vazia e o detalhamento abria página nova. A estimativa passou a usar o tamanho do último chunk de diagnósticos (`lastDiagLen`) e a fusão acontece na última página de diagnósticos qualquer que seja o número de páginas.
+- Auditoria dos demais relatórios: `relatorioAtividadesPDF`/`relatorioPlanosPDF` (jsPDF) já fluem com cursor y + `addPage` condicional; `relatorioTratosPDF` enche a página 1 com dois gráficos; `consumo.js`/`boletimRebanho.js` são uma página por lote/local por design; os geradores jsPDF legados de abastecimento/morte/consumo/bebedouros não têm chamadores (só tipos e `carregarLogoComoBase64` são importados).
+- Comportamento verificado com payloads sintéticos: abastecimento com 5 máquinas → 3 páginas (antes 4), tabelas na mesma folha; 20/30 máquinas → fusão parcial com ranges corretos; morte com 13 diagnósticos + 20 registros → 5 páginas (antes 6) com "exibindo 1–15" fundido e continuação "16–20".
+
+**Disparador**: quando mencionar tabelas de detalhamento do abastecimento, fusão de páginas no PDF, "detalhamento operacional longe da tabela de máquinas", `operMergedCount` ou `mergeDetail`, ler esta seção.
+
+## Logo da fazenda ampliada nos relatórios PDF (2026-09-22)
+
+A logo da fazenda no cabeçalho dos relatórios ficava visualmente menor que a da GestaUp (`.brand-logo`, 60×60 fixo): `.farm-logo` limitava a 120×60px, então logos retangulares encolhiam na altura.
+
+- **`api/pdf/_shared/template.js`** (`BASE_CSS`): `.farm-logo` passou a `max-width:150px; max-height:75px` (levemente maior que a da gestão, como pedido; `object-fit:contain` preserva proporção). Vale para todas as páginas de todos os relatórios e para a página "Sem registros" do infográfico, que usa as mesmas classes.
+- **`api/pdf/_shared/reportComposer.js`**: boxes da logo da fazenda na capa e na página final igualados ao da empresa (32mm → 36mm).
+
+## Coluna "Real (kg)" na aba Pontualidade do Acompanhamento de Tratos (2026-09-22)
+
+A tabela "Detalhamento por trato" da aba Pontualidade (`AcompanhamentoTratos.tsx`) mostrava horários e desvio mas não a quantidade efetivamente tratada.
+
+- **`acompanhamentoTratosService.ts`**: `fetchHorariosTratos` passou a selecionar `kg_ofertado_real` e `LinhaHorario` ganhou o campo `kg_real`.
+- **`AcompanhamentoTratos.tsx`**: nova coluna "Real (kg)" entre "Trato" e "Horário sugerido", alinhada à direita.
+
 ## Apresentação de formulação (granel/sacaria) e suplementação em sacos (2026-09-22)
 
 Migrations `20260922220000_formulacao_apresentacao_sacaria.sql` e `20260922230000_rename_apresentacao_forma_fornecimento.sql` (rename de `apresentacao` para `forma_fornecimento`). Formulações passam a declarar a forma de fornecimento do produto para que a suplementação no PWA possa ser lançada em número de sacos em vez de kg.

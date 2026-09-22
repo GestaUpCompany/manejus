@@ -102,3 +102,4 @@ Quando mencionar qualquer um destes tópicos, ler a seção correspondente em `d
 - "espécies de capim", "sugestões de capim", "datalist de capim" → `docs/HISTORICO.md` (Sugestões de espécies de capim)
 - "combustível", "tanque de combustível", "estoque de combustível", "WAC combustível", "custo médio por litro", `movimentacoes_combustivel`, `tanques_combustivel` → `docs/HISTORICO.md` (Controle de estoque de combustível)
 - "editar/excluir trato", "editar/excluir leitura de cocho", `editar_registro_oferta_trato`, `editar_registro_leitura_cocho`, "registros de tratos e leituras" → `docs/HISTORICO.md` (Tela de edição/exclusão de tratos e leituras de cocho)
+- "detalhamento operacional", "tabelas do abastecimento distantes", "fusão de páginas PDF", `operMergedCount`, `mergeDetail` → `docs/HISTORICO.md` (Fusão dinâmica das tabelas de detalhamento nos relatórios de Abastecimento e Mortalidade)
