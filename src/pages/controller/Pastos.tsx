@@ -90,7 +90,7 @@ export function Pastos() {
     const fazendaId = vinculos[0].fazenda_id
 
     const [pastosData, setoresData, bebedourosData] = await Promise.all([
-      supabase.from('pastos').select('*, modulos_pastos!left(nome, ativo)').eq('fazenda_id', fazendaId).is('deleted_at', null).order('created_at', { ascending: false }),
+      supabase.from('pastos').select('*, modulos_pastos!left(nome, ativo)').eq('fazenda_id', fazendaId).is('deleted_at', null).order('nome'),
       supabase.from('setores').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
       supabase.from('bebedouros').select('id, nome, capacidade').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
     ])
