@@ -1225,3 +1225,14 @@ Histórico do item (`EstoqueSuplementacao.tsx`) agora mostra por movimentação:
 Verificado na fazenda de testes: insumo com baixas simuladas (-17.000) teve ajustes absoluto e delta via UI; a cadeia persistida ficou 0 → -10.000 → -17.000 → 20.000 → -17.000 → 13.000 → 15.000, e o ajuste delta feito pelo painel registrou `por Controller GestaUp`.
 
 Disparador: quando mencionar "auditoria de estoque", "quem fez o ajuste", "saldo anterior/posterior", "rastreabilidade de movimentação", `saldo_anterior`, `saldo_posterior`, `usuario_id` em movimentacoes, ler esta seção.
+
+### Custo unitário em ajuste de estoque + bloqueio de scroll em inputs numéricos (2026-09-23)
+
+Contexto: um ajuste de estoque na Fazenda Chibata foi digitado errado porque a roda do mouse alterou o valor do input focado durante o scroll da página. E todos os ajustes de inventário feitos gravavam custo NULL, deixando "Valor em estoque" zerado.
+
+- **`src/main.tsx`**: listener global de `wheel` faz `blur()` quando o alvo é `input[type=number]`. Com o foco removido, o browser não executa o step nativo e o scroll segue na página. Cobre todos os inputs numéricos do painel (85+ ocorrências); `NumericInput` usa `type=text` e não era afetado.
+- **Migration `20260923000001_ajuste_com_custo.sql`** (db push): `ajuste` com `custo_unitario` informado redefine o custo médio do item para o valor informado, tanto no caminho incremental (INSERT) quanto no replay (`recalcular_custo_medio_item`). Sem custo (NULL), comportamento anterior: custo médio não muda. Como a guarda anti-recursão do UPDATE já observa `custo_unitario`, um `UPDATE custo_unitario` em ajuste antigo revaloriza o estoque automaticamente via replay.
+- **`EstoqueSuplementacao.tsx`**: modal de ajuste ganhou campo "Custo unitário (R$/kg)" opcional, preenchido com o custo atual do item quando > 0, com prévia "Valor em estoque resultante". Em branco, mantém o custo atual.
+- **Backfill Chibata (migração pontual via MCP)**: custo_unitario preenchido nos 6 ajustes de inventário (Farelo 0,85; Capulho 0,28; Milho 0,75; Sorgo 0,675; Uréia 5,98; Fós Recria 4,06 R$/kg) com nota na observação "custo R$/kg incluído retroativamente".
+
+Disparador: quando mencionar "custo no ajuste", "valor em estoque zerado", "scroll muda valor do input", "editar custo de ajuste antigo", ler esta seção.

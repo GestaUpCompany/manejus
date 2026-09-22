@@ -134,6 +134,7 @@ export function NumericInput({
       {label && (
         <label className="block text-xs sm:text-sm font-semibold text-content mb-2">
           {label}
+          {props.required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
       {prefix ? (

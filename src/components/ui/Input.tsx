@@ -13,6 +13,7 @@ export function Input({ label, error, className = '', id, ...props }: InputProps
       {label && (
         <label htmlFor={inputId} className="block text-sm font-medium text-content mb-1">
           {label}
+          {props.required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
       <input

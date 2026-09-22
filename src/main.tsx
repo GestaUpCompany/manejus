@@ -29,6 +29,20 @@ if (supabaseUrl) {
   }
 }
 
+// Desabilita mudança de valor de input[type=number] pela roda do mouse:
+// com foco no campo, scroll alterava o valor silenciosamente (causa de erro
+// de digitação no ajuste de estoque). O blur deixa o scroll seguir na página.
+document.addEventListener(
+  'wheel',
+  (e) => {
+    const el = e.target
+    if (el instanceof HTMLInputElement && el.type === 'number') {
+      el.blur()
+    }
+  },
+  { passive: true },
+)
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

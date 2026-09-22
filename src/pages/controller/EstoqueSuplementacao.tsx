@@ -110,6 +110,7 @@ export function EstoqueSuplementacao() {
     item_id: '',
     modo: 'absoluto' as 'absoluto' | 'delta',
     novo_saldo: '',
+    custo_unitario: '',
     observacao: '',
   })
 
@@ -260,13 +261,14 @@ export function EstoqueSuplementacao() {
       item_id: itemId ?? '',
       modo: 'absoluto',
       novo_saldo: item ? String(Number(item.estoque_atual)) : '',
+      custo_unitario: item && Number(item.custo_unitario) > 0 ? String(Number(item.custo_unitario)) : '',
       observacao: '',
     })
     setModalAjuste(true)
   }
 
   const salvarAjuste = async () => {
-    if (!fazendaId || !ajusteForm.item_id || !ajusteForm.novo_saldo) return
+    if (!fazendaId || !ajusteForm.item_id || !ajusteForm.novo_saldo || ajusteForm.custo_unitario === '') return
     setSubmitting(true)
     setError(null)
     try {
@@ -275,9 +277,10 @@ export function EstoqueSuplementacao() {
         .find((i) => i.id === ajusteForm.item_id)
       const saldoAtual = itemAjuste ? Number(itemAjuste.estoque_atual) : 0
       const novoSaldo = ajusteForm.modo === 'delta' ? saldoAtual + valorInformado : valorInformado
+      const custoInformado = ajusteForm.custo_unitario !== '' ? parseFloat(ajusteForm.custo_unitario) : null
 
       const observacao = ajusteForm.modo === 'delta'
-        ? `Inventário: bruto ${valorInformado.toLocaleString('pt-BR')} kg + saldo ${saldoAtual.toLocaleString('pt-BR')} kg = ${novoSaldo.toLocaleString('pt-BR')} kg${ajusteForm.observacao ? `; ${ajusteForm.observacao}` : ''}`
+        ? `Levantamento bruto: ${valorInformado.toLocaleString('pt-BR')} kg${ajusteForm.observacao ? `; ${ajusteForm.observacao}` : ''}`
         : ajusteForm.observacao || 'Ajuste manual de saldo'
 
       const { error: movError } = await supabase.from('movimentacoes_estoque_suplementos').insert({
@@ -286,6 +289,7 @@ export function EstoqueSuplementacao() {
         item_id: ajusteForm.item_id,
         tipo_movimentacao: 'ajuste',
         quantidade: novoSaldo,
+        custo_unitario: custoInformado,
         origem: 'painel_ajuste',
         data: new Date().toISOString().split('T')[0],
         observacao,
@@ -702,6 +706,7 @@ export function EstoqueSuplementacao() {
                 ...ajusteForm,
                 item_id: val,
                 novo_saldo: ajusteForm.modo === 'absoluto' && item ? String(Number(item.estoque_atual)) : ajusteForm.novo_saldo,
+                custo_unitario: item && Number(item.custo_unitario) > 0 ? String(Number(item.custo_unitario)) : '',
               })
             }}
             placeholder="Selecione o item..."
@@ -724,8 +729,8 @@ export function EstoqueSuplementacao() {
           <Select
             label="Modo de ajuste"
             options={[
-              { value: 'absoluto', label: 'Saldo contado (substitui o atual)' },
-              { value: 'delta', label: 'Saldo bruto / inicial (soma ao atual)' },
+              { value: 'absoluto', label: 'Contagem física (substitui o atual)' },
+              { value: 'delta', label: 'Levantamento bruto (soma ao atual)' },
             ]}
             value={ajusteForm.modo}
             onChange={(val) => {
@@ -741,7 +746,7 @@ export function EstoqueSuplementacao() {
             required
           />
           <Input
-            label={ajusteForm.modo === 'delta' ? 'Saldo Bruto / Inicial (kg)' : 'Novo Saldo (kg)'}
+            label={ajusteForm.modo === 'delta' ? 'Levantamento bruto (kg)' : 'Novo Saldo (kg)'}
             type="number"
             placeholder="Ex: 850"
             value={ajusteForm.novo_saldo}
@@ -764,10 +769,40 @@ export function EstoqueSuplementacao() {
               </div>
             )
           })()}
+          <Input
+            label="Custo unitário (R$/kg)"
+            type="number"
+            step="0.0001"
+            min="0"
+            placeholder="Ex: 0,85"
+            value={ajusteForm.custo_unitario}
+            onChange={(e) => setAjusteForm({ ...ajusteForm, custo_unitario: e.target.value })}
+            required
+          />
+          {ajusteForm.custo_unitario !== '' && ajusteForm.item_id && ajusteForm.novo_saldo && (() => {
+            const custo = parseFloat(ajusteForm.custo_unitario)
+            if (isNaN(custo)) return null
+            const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
+              .find((i) => i.id === ajusteForm.item_id)
+            const saldoAtual = item ? Number(item.estoque_atual) : 0
+            const resultante = ajusteForm.modo === 'delta'
+              ? saldoAtual + parseFloat(ajusteForm.novo_saldo)
+              : parseFloat(ajusteForm.novo_saldo)
+            if (isNaN(resultante)) return null
+            return (
+              <p className="text-xs text-content-muted">
+                Valor em estoque resultante:{' '}
+                <span className="font-semibold text-content-strong">
+                  R$ {(resultante * custo).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                {' '}(o custo médio do item passa a ser R$ {custo.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg)
+              </p>
+            )
+          })()}
           <p className="text-xs text-content-muted">
             {ajusteForm.modo === 'delta'
-              ? 'O valor informado é somado ao saldo atual: use para declarar o estoque bruto/inicial quando já existem saídas registradas. O custo médio não é alterado.'
-              : 'O ajuste define o saldo absoluto. O custo médio não é alterado. Use para correções de inventário.'}
+              ? 'Informe o estoque total existente antes das saídas: o valor é somado ao saldo atual. O custo informado passa a ser o custo médio do item.'
+              : 'O ajuste define o saldo absoluto e o custo informado passa a ser o custo médio do item. Use para correções de inventário.'}
           </p>
           <Input
             label="Observação"
@@ -777,7 +812,7 @@ export function EstoqueSuplementacao() {
           />
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="secondary" onClick={() => setModalAjuste(false)}>Cancelar</Button>
-            <Button onClick={salvarAjuste} disabled={submitting || !ajusteForm.item_id || !ajusteForm.novo_saldo}>
+            <Button onClick={salvarAjuste} disabled={submitting || !ajusteForm.item_id || !ajusteForm.novo_saldo || ajusteForm.custo_unitario === ''}>
               {submitting ? 'Salvando...' : 'Aplicar Ajuste'}
             </Button>
           </div>
@@ -843,7 +878,9 @@ export function EstoqueSuplementacao() {
                             <div className="flex justify-between items-start">
                               <div>
                                 <p className="text-sm font-semibold text-content-strong">
-                                  {TIPO_MOV_LABEL[mov.tipo_movimentacao] || mov.tipo_movimentacao} — {Number(mov.quantidade).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
+                                  {isAjuste
+                                    ? 'Ajuste de estoque'
+                                    : `${TIPO_MOV_LABEL[mov.tipo_movimentacao] || mov.tipo_movimentacao} — ${Number(mov.quantidade).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg`}
                                 </p>
                                 <p className="text-xs text-content-muted">
                                   {mov.data ? formatDate(mov.data) : '-'} {new Date(mov.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · {ORIGEM_LABEL[mov.origem || ''] || mov.origem || '-'}{mov.autor_nome ? ` · por ${mov.autor_nome}` : ''}
@@ -854,17 +891,30 @@ export function EstoqueSuplementacao() {
                                   </p>
                                 )}
                               </div>
-                              {valor > 0 && (
-                                <div className="text-right">
-                                  <p className="text-sm font-semibold text-content-strong">
-                                    R$ {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  </p>
-                                  {mov.custo_unitario && (
+                              {isAjuste ? (
+                                mov.custo_unitario != null && (
+                                  <div className="text-right">
                                     <p className="text-xs text-content-muted">
-                                      R$ {Number(mov.custo_unitario).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg
+                                      Custo médio: <span className="font-semibold text-content-strong">R$ {Number(mov.custo_unitario).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg</span>
                                     </p>
-                                  )}
-                                </div>
+                                    <p className="text-xs text-content-muted">
+                                      Estoque: <span className="font-semibold text-content-strong">R$ {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </p>
+                                  </div>
+                                )
+                              ) : (
+                                valor > 0 && (
+                                  <div className="text-right">
+                                    <p className="text-sm font-semibold text-content-strong">
+                                      R$ {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
+                                    {mov.custo_unitario && (
+                                      <p className="text-xs text-content-muted">
+                                        R$ {Number(mov.custo_unitario).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg
+                                      </p>
+                                    )}
+                                  </div>
+                                )
                               )}
                             </div>
                             {mov.observacao && (
