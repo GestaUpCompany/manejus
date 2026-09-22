@@ -1,5 +1,16 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Classificação de sistema do lote unificada + filtro TIP na lista (2026-09-22)
+
+O badge do `LoteCard` e o `RevisarNovoLoteModal` usavam `sistema_producao === 'Confinamento'` literal, enquanto o filtro, o formulário e a validação de `Lotes.tsx` já usavam a regra ampla (Confinamento ou TIP usam curral). Resultado: lote TIP em curral aparecia no filtro Confinamento mas com badge "Pasto", e a aprovação de solicitação de lote TIP exigia pasto em vez de curral.
+
+- **`src/utils/lotes.ts`**: novo util com `usaCurral(sistema)` (`'Confinamento' || 'TIP'`), fonte única da regra, importado por `Lotes.tsx`, `LoteCard.tsx` e `RevisarNovoLoteModal.tsx`.
+- **`LoteFilters.tsx` + `Lotes.tsx`**: novo filtro "TIP" ao lado de Confinamento. O filtro "Confinamento" foi estreitado para `sistema = 'Confinamento'` (antes agrupava TIP via `usaCurral`), então Todos/Pasto/Confinamento/TIP particionam a lista sem sobreposição.
+- **`LoteCard.tsx`**: badge passa a exibir o rótulo específico (TIP/Confinamento/Pasto) com cores distintas: âmbar = Confinamento, sky = TIP, verde = Pasto.
+- **Dados (migração pontual via MCP, sem arquivo)**: na fazenda Jacamim, 34 lotes TIP em pasto viraram `Recria` e 2 lotes com "rip" no nome viraram `RIP`; Lote 01 e Lote 02 permanecem TIP nos currais TIP 41/42.
+
+**Disparador**: quando mencionar badge do card de lote, filtro TIP, `usaCurral` ou sistema de produção do lote, ler esta seção.
+
 ## Rename do tipo de programação 'engorda' → 'confinamento' (2026-09-22)
 
 Migration `20260922250000_rename_tipo_engorda_confinamento.sql`. O tipo de programação de tratos `'engorda'` foi renomeado para `'confinamento'`, alinhando o vocabulário ao tipo de lote já usado no sistema. O rename foi aplicado em todas as pontas porque o valor é compartilhado entre painel, PWA e edge function.

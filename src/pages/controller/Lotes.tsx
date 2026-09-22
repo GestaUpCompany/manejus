@@ -14,6 +14,7 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import { usePastos, useCurrais } from '../../hooks/useFazendaQueries'
 import { exportToXLSXMultiSheet, type ColumnConfig } from '../../utils/exportXLSX'
+import { usaCurral } from '../../utils/lotes'
 
 interface LoteCategoria {
   id?: string
@@ -117,10 +118,6 @@ interface Lote {
   data_embarque_prevista?: string | null
 }
 
-function usaCurral(sistema: string | null | undefined): boolean {
-  return sistema === 'Confinamento' || sistema === 'TIP'
-}
-
 export function Lotes() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -201,7 +198,7 @@ export function Lotes() {
   const [ocupacaoPorLote, setOcupacaoPorLote] = useState<Record<string, any>>({})
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [showInactive, setShowInactive] = useState(false)
-  const [filtroLocal, setFiltroLocal] = useState<'todos' | 'pasto' | 'confinamento'>('todos')
+  const [filtroLocal, setFiltroLocal] = useState<'todos' | 'pasto' | 'confinamento' | 'tip'>('todos')
   const [isPlanoLoteModalOpen, setIsPlanoLoteModalOpen] = useState(false)
   const [avisoEnfermariaFechado, setAvisoEnfermariaFechado] = useState(false)
   const [isPlanoDraftModalOpen, setIsPlanoDraftModalOpen] = useState(false)
@@ -2294,7 +2291,8 @@ export function Lotes() {
   const filterCounts = useMemo(() => ({
     todos: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l)).length,
     pasto: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && !usaCurral(l.sistema_producao)).length,
-    confinamento: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && usaCurral(l.sistema_producao)).length,
+    confinamento: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao === 'Confinamento').length,
+    tip: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao === 'TIP').length,
   }), [lotes, showInactive, searchTerm])
 
   // Lista filtrada (só muda quando lotes/filtros/search mudam, não no form)
@@ -2303,7 +2301,8 @@ export function Lotes() {
     .filter((lote) =>
       filtroLocal === 'todos' ? true :
       filtroLocal === 'pasto' ? !usaCurral(lote.sistema_producao) :
-      usaCurral(lote.sistema_producao)
+      filtroLocal === 'tip' ? lote.sistema_producao === 'TIP' :
+      lote.sistema_producao === 'Confinamento'
     ), [lotes, showInactive, searchTerm, filtroLocal])
 
   if (loading) {

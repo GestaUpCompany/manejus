@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { CardItem, Button } from '../ui'
+import { usaCurral } from '../../utils/lotes'
 
 interface LoteCategoria {
   categoria: string
@@ -45,8 +46,8 @@ function LoteCardComponent({ lote, ocupacao, onEdit, onToggleActive, onDelete }:
         {lote.sistema_producao && (
           <p className="text-sm text-content-muted">
             <span className="font-medium">Sistema:</span>{' '}
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lote.sistema_producao === 'Confinamento' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200' : 'bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-200'}`}>
-              {lote.sistema_producao === 'Confinamento' ? 'Confinamento' : 'Pasto'}
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lote.sistema_producao === 'TIP' ? 'bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-200' : usaCurral(lote.sistema_producao) ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200' : 'bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-200'}`}>
+              {lote.sistema_producao === 'TIP' ? 'TIP' : usaCurral(lote.sistema_producao) ? 'Confinamento' : 'Pasto'}
             </span>
           </p>
         )}

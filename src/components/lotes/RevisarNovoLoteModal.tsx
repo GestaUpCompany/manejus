@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui'
 import { supabase } from '../../services/supabaseClient'
+import { usaCurral } from '../../utils/lotes'
 
 interface CategoriaSnapshot {
   categoria: string
@@ -165,7 +166,7 @@ export function RevisarNovoLoteModal({
 
   if (!solicitacao) return null
 
-  const isConfinamento = dadosLote.sistema_producao === 'Confinamento'
+  const isConfinamento = usaCurral(dadosLote.sistema_producao)
 
   const handleAprovar = async () => {
     if (!solicitacao) return
@@ -333,8 +334,8 @@ export function RevisarNovoLoteModal({
                   setDadosLote({
                     ...dadosLote,
                     sistema_producao: novoSistema,
-                    pasto_id: novoSistema === 'Confinamento' ? '' : dadosLote.pasto_id,
-                    curral_id: novoSistema === 'Confinamento' ? dadosLote.curral_id : '',
+                    pasto_id: usaCurral(novoSistema) ? '' : dadosLote.pasto_id,
+                    curral_id: usaCurral(novoSistema) ? dadosLote.curral_id : '',
                   })
                 }}
                 className="w-full px-3 py-2 border border-surface-3 rounded-md text-sm"

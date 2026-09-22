@@ -6,9 +6,9 @@ interface LoteFiltersProps {
   onSearchChange: (value: string) => void
   showInactive: boolean
   onToggleInactive: () => void
-  filtroLocal: 'todos' | 'pasto' | 'confinamento'
-  onFiltroChange: (filtro: 'todos' | 'pasto' | 'confinamento') => void
-  counts: { todos: number; pasto: number; confinamento: number }
+  filtroLocal: 'todos' | 'pasto' | 'confinamento' | 'tip'
+  onFiltroChange: (filtro: 'todos' | 'pasto' | 'confinamento' | 'tip') => void
+  counts: { todos: number; pasto: number; confinamento: number; tip: number }
   onNewLote: () => void
   onExport: () => void
   exportDisabled: boolean
@@ -89,6 +89,12 @@ function LoteFiltersComponent({
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border min-h-[44px] ${filtroLocal === 'confinamento' ? 'bg-amber-700 dark:bg-amber-600 text-white border-amber-700 dark:border-amber-600' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
         >
           Confinamento <span className="opacity-60 ml-1">{counts.confinamento}</span>
+        </button>
+        <button
+          onClick={() => onFiltroChange('tip')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border min-h-[44px] ${filtroLocal === 'tip' ? 'bg-sky-700 dark:bg-sky-600 text-white border-sky-700 dark:border-sky-600' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
+        >
+          TIP <span className="opacity-60 ml-1">{counts.tip}</span>
         </button>
       </div>
     </>
