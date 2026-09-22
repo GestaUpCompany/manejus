@@ -42,6 +42,10 @@ interface Movimentacao {
   origem: string | null
   observacao: string | null
   created_at: string
+  usuario_id: string | null
+  saldo_anterior: number | null
+  saldo_posterior: number | null
+  autor_nome?: string | null
 }
 
 const ORIGEM_LABEL: Record<string, string> = {
@@ -104,6 +108,7 @@ export function EstoqueSuplementacao() {
   const [ajusteForm, setAjusteForm] = useState({
     item_tipo: 'insumo' as ItemTipo,
     item_id: '',
+    modo: 'absoluto' as 'absoluto' | 'delta',
     novo_saldo: '',
     observacao: '',
   })
@@ -232,6 +237,7 @@ export function EstoqueSuplementacao() {
         origem: 'painel_entrada',
         data: new Date().toISOString().split('T')[0],
         observacao: entradaForm.observacao || null,
+        usuario_id: user?.id ?? null,
       })
       if (movError) throw movError
 
@@ -244,8 +250,18 @@ export function EstoqueSuplementacao() {
     }
   }
 
-  const abrirModalAjuste = () => {
-    setAjusteForm({ item_tipo: tab === 'insumos' ? 'insumo' : 'formulacao', item_id: '', novo_saldo: '', observacao: '' })
+  const abrirModalAjuste = (tipo?: ItemTipo, itemId?: string) => {
+    const itemTipo = tipo ?? (tab === 'insumos' ? 'insumo' : 'formulacao')
+    const item = itemId
+      ? (itemTipo === 'insumo' ? insumos : formulacoes).find((i) => i.id === itemId)
+      : undefined
+    setAjusteForm({
+      item_tipo: itemTipo,
+      item_id: itemId ?? '',
+      modo: 'absoluto',
+      novo_saldo: item ? String(Number(item.estoque_atual)) : '',
+      observacao: '',
+    })
     setModalAjuste(true)
   }
 
@@ -254,7 +270,15 @@ export function EstoqueSuplementacao() {
     setSubmitting(true)
     setError(null)
     try {
-      const novoSaldo = parseFloat(ajusteForm.novo_saldo)
+      const valorInformado = parseFloat(ajusteForm.novo_saldo)
+      const itemAjuste = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
+        .find((i) => i.id === ajusteForm.item_id)
+      const saldoAtual = itemAjuste ? Number(itemAjuste.estoque_atual) : 0
+      const novoSaldo = ajusteForm.modo === 'delta' ? saldoAtual + valorInformado : valorInformado
+
+      const observacao = ajusteForm.modo === 'delta'
+        ? `Inventário: bruto ${valorInformado.toLocaleString('pt-BR')} kg + saldo ${saldoAtual.toLocaleString('pt-BR')} kg = ${novoSaldo.toLocaleString('pt-BR')} kg${ajusteForm.observacao ? `; ${ajusteForm.observacao}` : ''}`
+        : ajusteForm.observacao || 'Ajuste manual de saldo'
 
       const { error: movError } = await supabase.from('movimentacoes_estoque_suplementos').insert({
         fazenda_id: fazendaId,
@@ -264,7 +288,8 @@ export function EstoqueSuplementacao() {
         quantidade: novoSaldo,
         origem: 'painel_ajuste',
         data: new Date().toISOString().split('T')[0],
-        observacao: ajusteForm.observacao || 'Ajuste manual de saldo',
+        observacao,
+        usuario_id: user?.id ?? null,
       })
       if (movError) throw movError
 
@@ -283,7 +308,7 @@ export function EstoqueSuplementacao() {
     try {
       const { data, error } = await supabase
         .from('movimentacoes_estoque_suplementos')
-        .select('id, tipo_movimentacao, quantidade, custo_unitario, valor_total, data, origem, observacao, created_at')
+        .select('id, tipo_movimentacao, quantidade, custo_unitario, valor_total, data, origem, observacao, created_at, usuario_id, saldo_anterior, saldo_posterior')
         .eq('item_tipo', tipo)
         .eq('item_id', id)
         .eq('fazenda_id', fazendaId!)
@@ -291,7 +316,17 @@ export function EstoqueSuplementacao() {
         .order('data', { ascending: false })
         .order('created_at', { ascending: false })
       if (error) throw error
-      setHistoricoMovs((data as Movimentacao[]) || [])
+      const movs = (data as Movimentacao[]) || []
+      const autorIds = [...new Set(movs.map((m) => m.usuario_id).filter((id): id is string => !!id))]
+      if (autorIds.length > 0) {
+        const { data: autores } = await supabase
+          .from('usuarios')
+          .select('id, nome')
+          .in('id', autorIds)
+        const mapa = new Map((autores || []).map((a: { id: string; nome: string }) => [a.id, a.nome]))
+        movs.forEach((m) => { m.autor_nome = m.usuario_id ? mapa.get(m.usuario_id) ?? null : null })
+      }
+      setHistoricoMovs(movs)
     } catch (err: any) {
       console.error('Erro ao carregar histórico:', err)
       setHistoricoMovs([])
@@ -357,6 +392,13 @@ export function EstoqueSuplementacao() {
               title="Editar estoque mínimo"
             >
               Editar
+            </button>
+            <button
+              onClick={() => abrirModalAjuste(tipo, item.id)}
+              className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300 transition-colors hover:bg-amber-500/20"
+              title="Ajustar saldo atual"
+            >
+              Ajustar
             </button>
             <button
               onClick={() => abrirModalHistorico(tipo, item.id, item.nome)}
@@ -453,7 +495,7 @@ export function EstoqueSuplementacao() {
           {fazendaNome && <p className="text-sm text-content-muted mt-1">{fazendaNome}</p>}
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="secondary" onClick={abrirModalAjuste}>Ajuste</Button>
+          <Button variant="secondary" onClick={() => abrirModalAjuste()}>Ajuste</Button>
           <Button onClick={abrirModalEntrada}>Registrar Entrada</Button>
         </div>
       </div>
@@ -653,20 +695,79 @@ export function EstoqueSuplementacao() {
             label="Item"
             options={ajusteForm.item_tipo === 'insumo' ? insumosOptions : formulacoesOptions}
             value={ajusteForm.item_id}
-            onChange={(val) => setAjusteForm({ ...ajusteForm, item_id: val })}
+            onChange={(val) => {
+              const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
+                .find((i) => i.id === val)
+              setAjusteForm({
+                ...ajusteForm,
+                item_id: val,
+                novo_saldo: ajusteForm.modo === 'absoluto' && item ? String(Number(item.estoque_atual)) : ajusteForm.novo_saldo,
+              })
+            }}
             placeholder="Selecione o item..."
             required
           />
+          {ajusteForm.item_id && (() => {
+            const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
+              .find((i) => i.id === ajusteForm.item_id)
+            if (!item) return null
+            const saldoAtual = Number(item.estoque_atual)
+            return (
+              <p className="text-xs text-content-muted">
+                Saldo atual:{' '}
+                <span className={`font-semibold ${saldoAtual < 0 ? 'text-red-500' : 'text-content-strong'}`}>
+                  {saldoAtual.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
+                </span>
+              </p>
+            )
+          })()}
+          <Select
+            label="Modo de ajuste"
+            options={[
+              { value: 'absoluto', label: 'Saldo contado (substitui o atual)' },
+              { value: 'delta', label: 'Saldo bruto / inicial (soma ao atual)' },
+            ]}
+            value={ajusteForm.modo}
+            onChange={(val) => {
+              const modo = val as 'absoluto' | 'delta'
+              const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
+                .find((i) => i.id === ajusteForm.item_id)
+              setAjusteForm({
+                ...ajusteForm,
+                modo,
+                novo_saldo: modo === 'absoluto' && item ? String(Number(item.estoque_atual)) : '',
+              })
+            }}
+            required
+          />
           <Input
-            label="Novo Saldo (kg)"
+            label={ajusteForm.modo === 'delta' ? 'Saldo Bruto / Inicial (kg)' : 'Novo Saldo (kg)'}
             type="number"
             placeholder="Ex: 850"
             value={ajusteForm.novo_saldo}
             onChange={(e) => setAjusteForm({ ...ajusteForm, novo_saldo: e.target.value })}
             required
           />
+          {ajusteForm.modo === 'delta' && ajusteForm.item_id && ajusteForm.novo_saldo && (() => {
+            const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
+              .find((i) => i.id === ajusteForm.item_id)
+            if (!item) return null
+            const resultante = Number(item.estoque_atual) + parseFloat(ajusteForm.novo_saldo)
+            return (
+              <div className="bg-primary/10 border border-primary/30 rounded-lg p-3">
+                <p className="text-sm text-primary dark:text-primary-light">
+                  Saldo resultante:{' '}
+                  <span className={`font-bold ${resultante < 0 ? 'text-red-500' : ''}`}>
+                    {resultante.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
+                  </span>
+                </p>
+              </div>
+            )
+          })()}
           <p className="text-xs text-content-muted">
-            O ajuste define o saldo absoluto. O custo médio não é alterado. Use para correções de inventário.
+            {ajusteForm.modo === 'delta'
+              ? 'O valor informado é somado ao saldo atual: use para declarar o estoque bruto/inicial quando já existem saídas registradas. O custo médio não é alterado.'
+              : 'O ajuste define o saldo absoluto. O custo médio não é alterado. Use para correções de inventário.'}
           </p>
           <Input
             label="Observação"
@@ -745,8 +846,13 @@ export function EstoqueSuplementacao() {
                                   {TIPO_MOV_LABEL[mov.tipo_movimentacao] || mov.tipo_movimentacao} — {Number(mov.quantidade).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
                                 </p>
                                 <p className="text-xs text-content-muted">
-                                  {mov.data ? formatDate(mov.data) : '-'} · {ORIGEM_LABEL[mov.origem || ''] || mov.origem || '-'}
+                                  {mov.data ? formatDate(mov.data) : '-'} {new Date(mov.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · {ORIGEM_LABEL[mov.origem || ''] || mov.origem || '-'}{mov.autor_nome ? ` · por ${mov.autor_nome}` : ''}
                                 </p>
+                                {mov.saldo_anterior != null && mov.saldo_posterior != null && (
+                                  <p className="text-xs text-content-muted">
+                                    Saldo: {Number(mov.saldo_anterior).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} → {Number(mov.saldo_posterior).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
+                                  </p>
+                                )}
                               </div>
                               {valor > 0 && (
                                 <div className="text-right">

@@ -1203,3 +1203,25 @@ Decisões de produto (perguntadas ao usuário): cronologia visível apenas para 
 **Correção aplicada (migration `20260918220000_fix_recategorizar_trocar_formulacao.sql`):** a RPC agora resolve a formulação efetiva: se `p_manter_formulacao=false` e `p_nova_formulacao_id` informado, valida que a formulação existe/está ativa/pertence à mesma fazenda (exception caso contrário), usa-a no lookup de GMD e atualiza `lotes.formulacao_id`. Snapshot registra `manter_formulacao`, `nova_formulacao_id` e `formulacao_anterior_id`. Testado na fazenda de testes: (1) SQL garrote->boi gordo trocando para "Terminação Boi" resultou gmd=1.1 e formulacao trocada; (2) UI boi gordo->boi magro trocando para "Terminação Novilha" trocou a formulacao e manteve gmd NULL (sem cobertura, correto); (3) formulação inativa rejeitada com exception; (4) fixture do Lote B restaurado.
 
 **Aviso de cobertura por lote na troca de formulacao (2026-09-18):** "Trocar formulacao" deixou de ser escondido para lotes multi-categoria. O modal agora busca as outras categorias ativas do lote e a cobertura (`formulacao_categorias_gmd`) da formulacao selecionada, exibindo aviso ambar quando ela nao contempla o destino ou outras categorias ativas (que ficariam sem GMD na proxima recategorizacao). Botao "Editar formulacao" navega para `/controller/formulacoes?edit=<id>` (deep-link ja existente) e o aviso vermelho da formulacao vigente ganhou link "edite a formulação atual". Testado na fazenda de testes com Lote C (2 categorias ativas): ambos os avisos exibidos e o deep-link abriu o modal de edicao da formulacao correta.
+
+### Ajuste de saldo no estoque de suplementação: dois modos e acesso por card (2026-09-22)
+
+Contexto: saldo negativo em `insumos`/`formulacoes` é aceito por design (fazendas sem inventário inicial registravam só saídas). Para o levantamento de estoque, o modal "Ajuste" de `EstoqueSuplementacao.tsx` ganhou dois modos: "Saldo contado" (absoluto, comportamento anterior: grava `quantidade` como saldo final) e "Saldo bruto / inicial" (delta: o painel calcula `estoque_atual + valor` e grava o mesmo `tipo_movimentacao='ajuste'` com o resultado; a observação registra o detalhe "bruto X + saldo Y = Z"). Nenhuma mudança de schema: a trigger WAC continua tratando `ajuste` como saldo absoluto, sem alterar custo médio.
+
+Cada card de insumo/produto final ganhou botão "Ajustar" que abre o modal com item e saldo pré-preenchidos, e o modal exibe o saldo atual do item selecionado (vermelho quando negativo) e, no modo delta, prévia do saldo resultante.
+
+Nota de comportamento para suporte: ajuste absoluto substitui o saldo (-17.000 ajustado para 20.000 vira 20.000); modo delta soma (-17.000 + bruto 30.000 = 13.000). O cálculo do delta usa o saldo carregado na tela; se uma saída sincronizar entre a abertura da página e o salvamento, o resultado reflete o saldo lido, não o mais recente.
+
+Disparador: quando mencionar "ajuste de saldo", "editar saldo do estoque", "saldo negativo insumo", "correção de inventário", "estoque inicial", ler esta seção.
+
+### Auditoria de movimentações de estoque de suplementos (2026-09-22)
+
+Migration `20260923000000_auditoria_movimentacoes_suplementos.sql` (db push). `movimentacoes_estoque_suplementos` ganhou `usuario_id` (uuid sem FK, preenchido por trigger BEFORE INSERT com `auth.uid()` ou pelo insert do painel), `saldo_anterior` e `saldo_posterior`, preenchidos por `trg_mov_supl_auditoria` (BEFORE INSERT). `recalcular_custo_medio_item` agora regrava a cadeia de saldos em cada movimentação durante o replay, e `update_estoque_suplemento` retorna cedo em UPDATEs que só tocam colunas de auditoria (guarda anti-recursão). Backfill incluído na própria migration reprocessou todos os itens.
+
+Sem FK em `usuario_id` de propósito: inserts de triggers com autores ausentes em `usuarios` não podem falhar; o painel resolve o nome via segundo fetch (`usuarios.id -> nome`).
+
+Histórico do item (`EstoqueSuplementacao.tsx`) agora mostra por movimentação: data + hora, origem, "por {nome}" quando há autor, "Saldo: X → Y kg" e a observação. Movimentações antigas têm `usuario_id` NULL (sem "por").
+
+Verificado na fazenda de testes: insumo com baixas simuladas (-17.000) teve ajustes absoluto e delta via UI; a cadeia persistida ficou 0 → -10.000 → -17.000 → 20.000 → -17.000 → 13.000 → 15.000, e o ajuste delta feito pelo painel registrou `por Controller GestaUp`.
+
+Disparador: quando mencionar "auditoria de estoque", "quem fez o ajuste", "saldo anterior/posterior", "rastreabilidade de movimentação", `saldo_anterior`, `saldo_posterior`, `usuario_id` em movimentacoes, ler esta seção.
