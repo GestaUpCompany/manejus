@@ -39,6 +39,27 @@ function classeReal(valor: number | null): string {
   return 'border-green-500 bg-green-50 text-green-800 focus:border-green-600'
 }
 
+function totalRealizadoLinha(linha: LancamentoTratoLinha): number | null {
+  const preenchidos = linha.tratos.filter((trato) => trato.kgReal != null)
+  if (preenchidos.length === 0) return null
+  return preenchidos.reduce((sum, trato) => sum + (trato.kgReal ?? 0), 0)
+}
+
+function focarTratoAbaixo(linhaIndex: number, ordemTrato: number) {
+  const proximo = document.querySelector<HTMLInputElement>(
+    `input[data-linha-index="${linhaIndex + 1}"][data-ordem-trato="${ordemTrato}"]`
+  )
+  if (!proximo) return
+  proximo.focus()
+  proximo.select()
+}
+
+const REGEX_REAL = /^-?\d{0,4}([.,]\d{0,2})?$/
+
+function chaveTrato(curralId: string, ordemTrato: number): string {
+  return `${curralId}:${ordemTrato}`
+}
+
 export function LancamentoTratos() {
   const { user } = useAuth()
   const { data: fazenda } = useFazenda(user?.id)
@@ -46,6 +67,7 @@ export function LancamentoTratos() {
   const [data, setData] = useState(hojeISO)
   const [tipo, setTipo] = useState<TipoProgramacao>('engorda')
   const [linhas, setLinhas] = useState<LancamentoTratoLinha[]>([])
+  const [editando, setEditando] = useState<Record<string, string>>({})
   const [programacaoId, setProgramacaoId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -61,6 +83,7 @@ export function LancamentoTratos() {
       const resultado = await carregarLancamentoTratos(fazendaId, data, tipo)
       setProgramacaoId(resultado?.programacaoId || null)
       setLinhas(resultado?.linhas || [])
+      setEditando({})
     } catch (err) {
       console.error('Erro ao carregar lançamento de tratos:', err)
       setProgramacaoId(null)
@@ -86,7 +109,9 @@ export function LancamentoTratos() {
   )
 
   const atualizarReal = (curralId: string, ordemTrato: number, valor: string) => {
+    if (!REGEX_REAL.test(valor)) return
     const kgReal = parseKgLancamento(valor)
+    setEditando((atuais) => ({ ...atuais, [chaveTrato(curralId, ordemTrato)]: valor }))
     setLinhas((atuais) => atuais.map((linha) => {
       if (linha.curralId !== curralId) return linha
       return {
@@ -94,6 +119,44 @@ export function LancamentoTratos() {
         tratos: linha.tratos.map((trato) => trato.ordemTrato === ordemTrato ? { ...trato, kgReal } : trato),
       }
     }))
+    setSuccess(null)
+  }
+
+  const finalizarEdicao = (curralId: string, ordemTrato: number) => {
+    setEditando((atuais) => {
+      const copia = { ...atuais }
+      delete copia[chaveTrato(curralId, ordemTrato)]
+      return copia
+    })
+  }
+
+  const preencherRealComPrevisto = (curralId: string) => {
+    setLinhas((atuais) => atuais.map((linha) => {
+      if (linha.curralId !== curralId) return linha
+      return {
+        ...linha,
+        tratos: linha.tratos.map((trato) => ({
+          ...trato,
+          kgReal: trato.kgPlanejado == null ? null : Math.round(trato.kgPlanejado * 100) / 100,
+        })),
+      }
+    }))
+    setSuccess(null)
+  }
+
+  const limparRealLinha = (curralId: string) => {
+    setLinhas((atuais) => atuais.map((linha) => {
+      if (linha.curralId !== curralId) return linha
+      return {
+        ...linha,
+        tratos: linha.tratos.map((trato) => ({ ...trato, kgReal: null })),
+      }
+    }))
+    setSuccess(null)
+  }
+
+  const limparTodosReais = () => {
+    setLinhas((atuais) => limparReaisLancamento(atuais))
     setSuccess(null)
   }
 
@@ -189,26 +252,33 @@ export function LancamentoTratos() {
       {linhas.length > 0 && (
         <Card className="overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <table className="min-w-[1250px] w-full border-collapse text-sm">
+            <table className="min-w-[1350px] w-full border-collapse text-sm">
               <thead>
                 <tr className="bg-surface-2 text-content-muted">
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-left">Lote</th>
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-left">Curral</th>
-                  <th rowSpan={2} className="border border-border-base px-3 py-2 text-left">Dieta em uso</th>
+                  <th rowSpan={2} className="border border-border-base px-3 py-2 text-left">Dieta</th>
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Cab.</th>
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Trato anterior</th>
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-center">Leitura</th>
-                  <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Previsto dia</th>
+                  <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Previsto</th>
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">kg/cab/dia</th>
                   {Array.from({ length: quantidadeTratos }, (_, index) => <th key={index} colSpan={2} className="border border-border-base px-3 py-2 text-center">{index + 1}º Trato</th>)}
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Total projetado</th>
+                  <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Total realizado</th>
+                  <th rowSpan={2} className="border border-border-base px-3 py-2 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <span>Ações</span>
+                      <button type="button" title="Limpar todos os tratos realizados" onClick={limparTodosReais} disabled={tratosPreenchidos === 0} className="rounded-md border border-border-base bg-surface-1 px-2 py-1 text-xs font-medium text-content-muted hover:bg-red-50 hover:text-red-700 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed">Limpar tudo</button>
+                    </div>
+                  </th>
                 </tr>
                 <tr className="bg-surface-2 text-xs text-content-muted">
                   {Array.from({ length: quantidadeTratos }, (_, index) => <Fragment key={index}><th className="border border-border-base px-3 py-1 text-right">Previsto</th><th className="border border-border-base px-3 py-1 text-right">Real</th></Fragment>)}
                 </tr>
               </thead>
               <tbody>
-                {linhas.map((linha) => (
+                {linhas.map((linha, linhaIndex) => (
                   <tr key={linha.curralId} className="odd:bg-surface-1 even:bg-surface-2/40">
                     <td className="border border-border-base px-3 py-3 font-semibold text-content-strong">{linha.loteNome}</td>
                     <td className="border border-border-base px-3 py-3 text-content">{linha.curralNome}</td>
@@ -222,11 +292,18 @@ export function LancamentoTratos() {
                       <Fragment key={trato.ordemTrato}>
                         <td className="border border-border-base px-3 py-3 text-right font-semibold">{formatarNumero(trato.kgPlanejado)}</td>
                         <td className="border border-border-base px-2 py-2 text-right">
-                          <input aria-label={`Real ${linha.loteNome}, trato ${trato.ordemTrato}`} className={`w-24 rounded-md border-2 px-2 py-2 text-right font-semibold outline-none ${classeReal(trato.kgReal)}`} inputMode="decimal" value={trato.kgReal == null ? '' : String(trato.kgReal).replace('.', ',')} onChange={(event) => atualizarReal(linha.curralId, trato.ordemTrato, event.target.value)} />
+                          <input aria-label={`Real ${linha.loteNome}, trato ${trato.ordemTrato}`} data-linha-index={linhaIndex} data-ordem-trato={trato.ordemTrato} className={`w-20 rounded-md border-2 px-2 py-2 text-right font-semibold outline-none ${classeReal(trato.kgReal)}`} inputMode="decimal" value={editando[chaveTrato(linha.curralId, trato.ordemTrato)] ?? (trato.kgReal == null ? '' : String(trato.kgReal).replace('.', ','))} onChange={(event) => atualizarReal(linha.curralId, trato.ordemTrato, event.target.value)} onBlur={() => finalizarEdicao(linha.curralId, trato.ordemTrato)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); focarTratoAbaixo(linhaIndex, trato.ordemTrato) } }} />
                         </td>
                       </Fragment>
                     ))}
                     <td className="border border-border-base px-3 py-3 text-right font-semibold">{formatarNumero(linha.tratos.reduce((sum, trato) => sum + (trato.kgPlanejado || 0), 0))}</td>
+                    <td className="border border-border-base px-3 py-3 text-right font-semibold text-content-strong">{formatarNumero(totalRealizadoLinha(linha))}</td>
+                    <td className="border border-border-base px-2 py-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button type="button" title="Preencher realizado com o previsto" onClick={() => preencherRealComPrevisto(linha.curralId)} className="rounded-md border border-border-base bg-surface-2 px-2 py-1 text-xs font-medium text-content-muted hover:bg-surface-1 hover:text-content">= previsto</button>
+                        <button type="button" title="Limpar tratos realizados desta linha" onClick={() => limparRealLinha(linha.curralId)} className="rounded-md border border-border-base bg-surface-2 px-2 py-1 text-xs font-medium text-content-muted hover:bg-red-50 hover:text-red-700 hover:border-red-300">Limpar</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
