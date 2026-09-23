@@ -1,5 +1,14 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Acabamentos do módulo de OS no painel (2026-09-23)
+
+Itens de borda pendentes do plano do módulo de venda:
+
+- `src/utils/cadernetas.ts` passa a listar `comunicado-venda` ("Comunicado de Venda"), liberando a caderneta no RBAC de funcionários.
+- `MovimentacaoDetalhes.tsx` faz join `ordens_servico!os_id(numero_os)` e mostra o número da OS como link para o detalhe da OS quando a movimentação está vinculada.
+- `routePrefetch.ts` ganhou prefetch de `/controller/ordens-servico`.
+- `Breadcrumbs.tsx` mapeia `ordens-servico` → "Ordens de Serviço" e segmentos UUID → "Detalhes" (o detalhe da OS mostrava o UUID cru no breadcrumb).
+
 ## Fechamento de OS exige dados do acerto (2026-09-22)
 
 O teste E2E de venda abate mostrou que a OS podia ser fechada sem `valor_acerto`/`data_credito`: a UI enviava `null` e o RPC aceitava. Corrigido nas duas pontas: `OrdemServicoDetalhes.tsx` valida valor > 0 e data antes de chamar o RPC, e a migration `20260923000002_fechar_os_exige_acerto.sql` recria `fechar_os_venda` rejeitando fechamento sem os dois campos (defesa em profundidade).

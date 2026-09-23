@@ -45,7 +45,10 @@ export function Breadcrumbs({ maxItems = 3 }: BreadcrumbsProps) {
       }
       
       // Converter rota para label amigável
-      let label = path
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(path)
+      let label = isUuid
+        ? 'Detalhes'
+        : path
         .replace(/-/g, ' ')
         .replace(/caderneta/g, 'Caderneta')
         .replace(/detalhes/g, 'Detalhes')
@@ -83,6 +86,7 @@ export function Breadcrumbs({ maxItems = 3 }: BreadcrumbsProps) {
         .split(' ')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ')
+        .replace(/Ordens Servico/g, 'Ordens de Serviço')
 
       breadcrumbs.push({ label, path: routePath })
     })

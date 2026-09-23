@@ -28,6 +28,8 @@ interface RegistroMovimentacao {
   subtipo?: string
   fazenda_destino_id?: string
   fazenda_destino_nome?: { nome: string } | null
+  os_id?: string
+  ordem_servico?: { numero_os: string } | null
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -58,7 +60,7 @@ export function MovimentacaoDetalhes() {
 
     const { data, error } = await supabase
       .from('registros_movimentacao')
-      .select('*, fazenda_destino_nome:fazendas!fazenda_destino_id(nome)')
+      .select('*, fazenda_destino_nome:fazendas!fazenda_destino_id(nome), ordem_servico:ordens_servico!os_id(numero_os)')
       .eq('id', id)
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
@@ -126,6 +128,20 @@ export function MovimentacaoDetalhes() {
                   <DetailField label="Tipo Entrada" value={formatValue(registro!.tipo_entrada)} />
                   <DetailField label="Tipo Destino" value={formatValue(registro!.tipo_destino)} />
                   <DetailField label="Fazenda Destino" value={formatValue(registro!.fazenda_destino_nome?.nome)} />
+                  {registro!.os_id && (
+                    <DetailField
+                      label="Ordem de Serviço"
+                      value={
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/controller/ordens-servico/${registro!.os_id}`)}
+                          className="link-hover font-medium text-primary underline"
+                        >
+                          {registro!.ordem_servico?.numero_os || registro!.os_id}
+                        </button>
+                      }
+                    />
+                  )}
                 </div>
                 {(registro!.observacao || registro!.causa_observacao) && (
                   <DetailField label="Observação" value={formatValue(registro!.observacao || registro!.causa_observacao)} />

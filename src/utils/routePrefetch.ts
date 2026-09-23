@@ -29,6 +29,9 @@ const routeImporters: Record<string, () => Promise<unknown>> = {
   '/controller/formulacoes': () => import('../pages/controller/Formulacoes'),
   '/controller/historico-planos': () => import('../pages/controller/HistoricoPlanos'),
 
+  // Comercial
+  '/controller/ordens-servico': () => import('../pages/controller/OrdensServico'),
+
   // Parceiros
   '/controller/fornecedores': () => import('../pages/controller/Fornecedores'),
   '/controller/frigorificos': () => import('../pages/controller/Frigorificos'),
