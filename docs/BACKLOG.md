@@ -2,6 +2,31 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
+## Drop das colunas legadas de bezerros (auditoria completa, não executado)
+
+`lotes.qtd_bezerros`, `lotes.quantidade_bezerros` e `lote_categorias.qtd_bezerros` são colunas mortas: o input que as alimentava não existe mais e toda leitura de app foi aposentada (23/09/2026, ver `docs/HISTORICO.md` — "Campo legado aposentado"). A contagem real de bezerros é a soma de `quant_atual` das categorias ao pé. `registros_suplementacao.qtd_bezerros` é coluna diferente, viva (operando do denominador `n_cabecas - qtd_bezerros`) e NÃO entra no drop.
+
+**NÃO dropar sem reescrever funções antes** — estas três escrevem as colunas em caminhos de produção e quebrariam na hora:
+
+- `fn_ensure_categoria_bezerro_ao_pe`: `INSERT INTO lote_categorias` inclui `qtd_bezerros` na lista de colunas (toda maternidade falharia).
+- `aprovar_solicitacao_novo_lote`: `INSERT INTO lotes` com `qtd_bezerros` + `quantidade_bezerros`; `INSERT INTO lote_categorias` com `qtd_bezerros` (lê `v_cat_item->>'qtd_bezerros'` do JSON da solicitação).
+- `transferir_lote_entre_fazendas`: `INSERT INTO lotes` com `qtd_bezerros`/`quantidade_bezerros` e `INSERT INTO lote_categorias` com `qtd_bezerros`.
+
+**Migration única e atômica** (mesmo `db push`, sem janela — `fn_ensure` dispara em cada maternidade):
+
+1. `CREATE OR REPLACE` das 3 funções removendo as colunas dos INSERTs.
+2. `ALTER TABLE lote_categorias DROP COLUMN qtd_bezerros;`
+3. `ALTER TABLE lotes DROP COLUMN qtd_bezerros, DROP COLUMN quantidade_bezerros;`
+
+**Verificado como não-bloqueante** (auditoria 23/09/2026): nenhuma view, policy RLS, índice ou trigger referencia as colunas; apps leem via `select('*')`; snapshots JSON de solicitações carregam a chave mas não dependem da coluna; tabelas `backup_*` são independentes; edge functions (`chat-fazenda`, `cotacao-dolar`, `impersonate-user`) e `backend/` do PWA não tocam o campo.
+
+**Acompanhamento de código (pode ir junto ou depois):**
+
+- PWA: `mcp-server/index.js` (`criar_lote` insere `lotes.qtd_bezerros` — remover o arg), regenerar `types/supabase.ts`, remover `qtd_bezerlos`/`quantidade_bezerros` de `types/relatorioLote.ts`, atualizar `mcp-server/schema.sql`.
+- Painel: remover os campos opcionais `qtd_bezerros?: number | null` das interfaces de `Lotes.tsx` (linhas ~62/86), `LoteCard.tsx` e `RevisarNovoLoteModal.tsx`.
+
+Disparador: quando mencionar "dropar qtd_bezerros", "colunas legadas de bezerro", `quantidade_bezerros`, ou limpeza de schema de bezerros ao pé, ler esta seção.
+
 ## Vínculo registro ↔ lote_categoria por FK (débito técnico)
 
 Hoje `registros_movimentacao.categoria` e `registros_morte.categoria` são snapshots de texto casados por nome em `calculate_quant_atual` e nas triggers `update_quant_atual_{movimentacao,morte,maternidade}`. Isso quebra quando `lote_categorias.categoria` é renomeada. A correção vigente (2026-09-21, ver `docs/HISTORICO.md`) congela o saldo em `lote_categorias.quant_base` na recategorização in-place, sem tocar registros; resolve o caso comum mas deixa resíduos:
