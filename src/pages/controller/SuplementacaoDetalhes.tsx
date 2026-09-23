@@ -30,6 +30,8 @@ interface RegistroSuplementacao {
   consumo_medio_geral_kg_ms?: number
   consumo_medio_geral_percent_pv?: number
   custo_medio_reais_cab_dia?: number
+  escopo?: string
+  grupo_operacao?: string
   escore_fezes?: string
   checklist?: {
     limpeza_cocho?: { valor: boolean; observacao: string }
@@ -80,7 +82,7 @@ export function SuplementacaoDetalhes() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditForm | null>(null)
-  const [formulacoes, setFormulacoes] = useState<{ nome: string }[]>([])
+  const [formulacoes, setFormulacoes] = useState<{ nome: string; e_creep: boolean }[]>([])
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [totalKgCochoLote, setTotalKgCochoLote] = useState<number | null>(null)
   const [kgPorInsumo, setKgPorInsumo] = useState<Record<string, number> | null>(null)
@@ -174,6 +176,7 @@ export function SuplementacaoDetalhes() {
           .select('kg_cocho, data, formulacao')
           .eq('fazenda_id', _fazendaId)
           .eq('lote_id', reg.lote_id)
+          .eq('escopo', reg.escopo || 'lote')
           .is('deleted_at', null)
           .lte('data', reg.data)
         if (!lotesError && lotesData) {
@@ -294,7 +297,7 @@ export function SuplementacaoDetalhes() {
 
     const { data: formulacoesData } = await supabase
       .from('formulacoes')
-      .select('nome')
+      .select('nome, e_creep')
       .eq('fazenda_id', _fazendaId)
       .eq('ativo', true)
       .order('nome')
@@ -449,6 +452,11 @@ export function SuplementacaoDetalhes() {
                   <DetailField label="Tratador" value={formatValue(registro!.tratador)} />
                   <DetailField label="Pasto" value={formatValue(registro!.pasto)} />
                   <DetailField label="Lote" value={formatValue(registro!.lote)} />
+                  {registro!.escopo === 'creep' && (
+                    <div className="flex items-center">
+                      <span className="px-2 py-1 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-xs font-semibold">Creep Feeding</span>
+                    </div>
+                  )}
                 </div>
               </DetailSection>
 
@@ -614,7 +622,7 @@ export function SuplementacaoDetalhes() {
                   className="w-full px-3 py-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                 >
                   <option value="">Sem formulação</option>
-                  {formulacoes.map(f => (
+                  {formulacoes.filter(f => f.e_creep === (registro?.escopo === 'creep')).map(f => (
                     <option key={f.nome} value={f.nome}>{f.nome}</option>
                   ))}
                 </select>

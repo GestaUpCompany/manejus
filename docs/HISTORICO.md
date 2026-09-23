@@ -1,5 +1,22 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Creep feeding: formulações exclusivas + suplementação por escopo (2026-09-23)
+
+Bezerro(a) ao pé passou a ter dieta e suplementação próprias, separadas das categorias adultas do mesmo lote. O usuário pode suplementar só o lote, só o creep, ou ambos no mesmo lançamento; cada alvo gera uma linha própria em `registros_suplementacao` e aparece separado no relatório público de consumo.
+
+- **Schema** (`20260923140000_creep_feeding.sql`): `formulacoes.e_creep` marca formulações exclusivas para creep; `registros_suplementacao.escopo` ('lote'/'creep', default 'lote') particiona a série e `grupo_operacao` (text) liga as duas linhas de um lançamento combinado. `lote_categorias.formulacao_id` passa a carregar a dieta creep da categoria ao pé (as RPCs de plano já excluíam essas categorias dos updates, então a coluna estava livre).
+- **Guards**: `fn_valida_creep_categoria_gmd` (fcg creep só aceita bezerro/bezerra ao pé, e formulação normal nunca aceita ao pé), `fn_valida_plano_nao_creep` (creep não entra em `planos_nutricionais`), `fn_lote_categoria_creep_integrity` (BEFORE INSERT/UPDATE em `lote_categorias`: ao pé com formulação não-creep limpa o vínculo, não-ao-pé com creep reponta para a formulação do lote, vínculo creep materializa GMD da fcg + `estrategia_nutricional`).
+- **GMD**: `repropagar_gmd_para_lotes` ganhou ramo que propaga GMD de fcg via `lote_categorias.formulacao_id` direto (creep não passa por plano), sem desconto de enfermaria (política Z7). `20260923160000` corrige `fn_set_gmd_bezerro_ao_pe` para só aplicar o default 0.600/0.500 quando `gmd IS NULL` (o trigger disparava depois do de integridade em INSERT e sobrescrevia o GMD da creep).
+- **Cálculos escopo-aware**: `calcular_consumo_registro_anterior`, `recalc_consumo_on_cabecas_update`, `recalc_consumo_series` (`20260923170000`, escopo derivado do `e_creep` da formulação), `recalcular_peso_vivo_lote` e `recalcular_pesos_suplementacao_historico` — escopo 'lote' exclui categorias ao pé; escopo 'creep' usa só as ao pé com o GMD próprio delas.
+- **Unique index**: `20260923150000` recriou o índice de `registros_suplementacao` incluindo `escopo`, permitindo lote + creep no mesmo dia mesmo com nomes de formulação iguais.
+- **Relatório público**: `get_dados_relatorio_consumo` emite uma entrada por `(lote_id, escopo)` — o card creep resolve dieta via `lote_categorias.formulacao_id`, com início = primeiro registro creep, pesos/cabeças/categorias/consumo independentes.
+- **Dieta única por lote**: quando o lote tem bezerro **e** bezerra ao pé, ambos recebem a mesma dieta creep. A configuração mora no `PlanoNutricionalLoteModal` (seção "Creep Feeding — Bezerro(a) ao pé" no fim da aba Planos): select único das formulações `e_creep` + opção "Sem creep", gravando `formulacao_id`/`estrategia_nutricional` direto em todas as `lote_categorias` ao pé — sem plano, sem fila, sem tocar a lógica adulta. `Lotes.tsx` mostra a dieta vigente só como info no card da categoria (sem select). A migration `20260923180000_propaga_creep_ao_pe.sql` mantém o invariante em qualquer caminho de escrita: UPDATE numa categoria ao pé propaga `formulacao_id` para as irmãs e INSERT de categoria ao pé nova herda a dieta vigente do lote.
+- **Painel**: `Formulacoes.tsx` (toggle creep, categorias restritas, badge+filtro), modais de plano filtrando `e_creep`, `Suplementacao.tsx`/`SuplementacaoDetalhes.tsx`/`exportConfigs.ts` com escopo, `RelatorioConsumoPublico.tsx`/`relatorioConsumoPDF.ts` com card creep.
+- **PWA**: ver entrada correspondente no repo `Caderneta-Digital-Gesta-Up` (formulário dual na `SuplementacaoPage` + fan-out no sync por `local_id` derivado `<id>:creep`).
+- **Nota de exclusão**: excluir um registro no painel apaga só a linha daquele escopo (a perna pareada do `grupo_operacao` permanece, pois as duas aparecem como registros separados na lista).
+
+**Disparador**: quando mencionar creep feeding, bezerro ao pé com dieta própria, `e_creep`, `escopo`, `grupo_operacao`, cocho do bezerro, ou card creep no relatório, ler esta seção.
+
 ## Acabamentos do módulo de OS no painel (2026-09-23)
 
 Itens de borda pendentes do plano do módulo de venda:

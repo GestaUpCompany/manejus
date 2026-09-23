@@ -14,6 +14,7 @@ export interface DadoRelatorioConsumo {
 export interface InfoLote {
   lote_id: string
   lote_nome: string
+  escopo?: string
   fazenda_id: string
   fazenda_nome?: string
   fazenda_logo_url?: string | null

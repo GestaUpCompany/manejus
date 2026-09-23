@@ -545,6 +545,7 @@ export const SUPLEMENTACAO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'pasto', header: 'Pasto' },
     { source: 'lote', header: 'Lote' },
     { source: 'formulacao', header: 'Formulação' },
+    { source: 'escopo', header: 'Escopo', transform: (value) => value === 'creep' ? 'Creep' : 'Lote' },
     { source: 'leitura', header: 'Leitura', format: 'number' },
     { source: 'kg_cocho', header: 'Kg Cocho', format: 'number' },
     { source: 'total_acumulado_lote', header: 'Acumulado Lote (kg)', format: 'number' },

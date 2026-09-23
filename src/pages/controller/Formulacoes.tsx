@@ -35,6 +35,7 @@ interface Dieta {
   consumo_ms_kg_cab_dia?: number
   ativo: boolean
   e_premix?: boolean
+  e_creep?: boolean
   forma_fornecimento?: string
   kg_por_saco?: number | null
   categoria_inferida_automaticamente?: boolean
@@ -63,6 +64,8 @@ const CATEGORIAS_DISPONIVEIS = [
   'vaca', 'touro', 'boi gordo', 'boi magro', 'garrote',
   'bezerro', 'bezerra', 'novilha',
 ]
+
+const CATEGORIAS_CREEP = ['bezerro ao pé', 'bezerra ao pé']
 
 interface DietaInsumoCalc {
   insumo_id: string
@@ -152,6 +155,7 @@ export function Formulacoes() {
     sistema_producao: '',
     ativo: true,
     e_premix: false,
+    e_creep: false,
     forma_fornecimento: 'granel',
     kg_por_saco: '',
   })
@@ -159,7 +163,7 @@ export function Formulacoes() {
   const [submitting, setSubmitting] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
   const [premixFilter, setPremixFilter] = useState<'todos' | 'tmr' | 'premix'>('todos')
-  const [sistemaFilter, setSistemaFilter] = useState<'todos' | 'pasto' | 'confinamento'>('todos')
+  const [sistemaFilter, setSistemaFilter] = useState<'todos' | 'pasto' | 'confinamento' | 'creep'>('todos')
   const [categoriasGmd, setCategoriasGmd] = useState<FormulacaoCategoriaGmd[]>([])
   const [blockedCategorias, setBlockedCategorias] = useState<Record<string, { nome: string; categorias: string[] }[]>>({})
   const [saveWarning, setSaveWarning] = useState<{
@@ -411,6 +415,7 @@ export function Formulacoes() {
       gmd: formData.e_premix ? null : (gmd || null),
       ativo: formData.ativo,
       e_premix: formData.e_premix,
+      e_creep: formData.e_creep,
       sistema_producao: formData.sistema_producao || null,
       forma_fornecimento: formData.forma_fornecimento,
       kg_por_saco: formData.forma_fornecimento === 'sacaria' ? kgPorSaco : null,
@@ -532,6 +537,7 @@ export function Formulacoes() {
         sistema_producao: '',
         ativo: true,
         e_premix: false,
+        e_creep: false,
         forma_fornecimento: 'granel',
         kg_por_saco: '',
       })
@@ -567,6 +573,7 @@ export function Formulacoes() {
       sistema_producao: dieta.sistema_producao || '',
       ativo: dieta.ativo,
       e_premix: dieta.e_premix ?? false,
+      e_creep: dieta.e_creep ?? false,
       forma_fornecimento: dieta.forma_fornecimento || 'granel',
       kg_por_saco: dieta.kg_por_saco != null ? String(dieta.kg_por_saco).replace('.', ',') : '',
     })
@@ -608,9 +615,29 @@ export function Formulacoes() {
       .eq('formulacao_id', dieta.id)
       .eq('ativo', true)
 
-    if (lotesAfetados && lotesAfetados.length > 0) {
+    // Formulações creep são vinculadas diretamente às categorias ao pé
+    // (lote_categorias.formulacao_id), não a lotes.formulacao_id
+    let lotesAfetadosCreep: { id: string; nome: string }[] = []
+    if (dieta.e_creep) {
+      const { data: catsCreep } = await supabase
+        .from('lote_categorias')
+        .select('lote_id, lotes!inner(id, nome)')
+        .eq('formulacao_id', dieta.id)
+        .eq('ativo', true)
+        .is('data_fim', null)
+      const seen = new Set<string>()
+      for (const c of (catsCreep || []) as any[]) {
+        if (c.lotes && !seen.has(c.lotes.id)) {
+          seen.add(c.lotes.id)
+          lotesAfetadosCreep.push({ id: c.lotes.id, nome: c.lotes.nome })
+        }
+      }
+    }
+    const todosLotesAfetados = [...(lotesAfetados || []), ...lotesAfetadosCreep]
+
+    if (todosLotesAfetados.length > 0) {
       // Buscar todas as categorias ativas de todos os lotes afetados em uma query
-      const loteIds = lotesAfetados.map(l => l.id)
+      const loteIds = todosLotesAfetados.map(l => l.id)
       const { data: allCats } = await supabase
         .from('lote_categorias')
         .select('lote_id, categoria')
@@ -630,7 +657,7 @@ export function Formulacoes() {
       for (const cat of (fcgData || [])) {
         const catName = cat.categoria.toLowerCase().trim()
         const lotesCom: { nome: string; categorias: string[] }[] = []
-        for (const lote of lotesAfetados) {
+        for (const lote of todosLotesAfetados) {
           const loteCats = catsByLote[lote.id] || []
           if (loteCats.includes(catName)) {
             lotesCom.push({ nome: lote.nome, categorias: [cat.categoria] })
@@ -662,6 +689,7 @@ export function Formulacoes() {
       sistema_producao: '',
       ativo: true,
       e_premix: false,
+      e_creep: false,
       forma_fornecimento: 'granel',
       kg_por_saco: '',
     })
@@ -674,14 +702,26 @@ export function Formulacoes() {
 
   const handleToggleActive = async (dieta: Dieta) => {
     // Se está desativando, verificar se a formulação está em uso por lotes ativos
+    // (creep também é verificada via lote_categorias.formulacao_id)
     if (dieta.ativo) {
       const { data: lotesUsando } = await supabase
         .from('lotes')
         .select('id, nome')
         .eq('formulacao_id', dieta.id)
         .eq('ativo', true)
-      if (lotesUsando && lotesUsando.length > 0) {
-        toast.error(`Não é possível desativar a formulação "${dieta.nome}" porque está em uso por ${lotesUsando.length} ${lotesUsando.length === 1 ? 'lote ativo' : 'lotes ativos'}: ${lotesUsando.map(l => l.nome).join(', ')}. Remova a formulação dos lotes antes de desativar.`)
+      let nomesCreep: string[] = []
+      if (dieta.e_creep) {
+        const { data: catsUsando } = await supabase
+          .from('lote_categorias')
+          .select('lotes!inner(nome)')
+          .eq('formulacao_id', dieta.id)
+          .eq('ativo', true)
+          .is('data_fim', null)
+        nomesCreep = [...new Set(((catsUsando || []) as any[]).map(c => c.lotes?.nome).filter(Boolean))]
+      }
+      const nomesUsando = [...new Set([...(lotesUsando || []).map(l => l.nome), ...nomesCreep])]
+      if (nomesUsando.length > 0) {
+        toast.error(`Não é possível desativar a formulação "${dieta.nome}" porque está em uso por ${nomesUsando.length} ${nomesUsando.length === 1 ? 'lote ativo' : 'lotes ativos'}: ${nomesUsando.join(', ')}. Remova a formulação dos lotes antes de desativar.`)
         return
       }
     }
@@ -805,13 +845,19 @@ export function Formulacoes() {
             onClick={() => setSistemaFilter('pasto')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'pasto' ? 'bg-primary text-white border-primary' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
           >
-            Pasto <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && d.sistema_producao !== 'Confinamento' && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
+            Pasto <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && !d.e_creep && d.sistema_producao !== 'Confinamento' && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
           </button>
           <button
             onClick={() => setSistemaFilter('confinamento')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'confinamento' ? 'bg-primary text-white border-primary' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
           >
-            Confinamento <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && d.sistema_producao === 'Confinamento' && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
+            Confinamento <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && !d.e_creep && d.sistema_producao === 'Confinamento' && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
+          </button>
+          <button
+            onClick={() => setSistemaFilter('creep')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'creep' ? 'bg-primary text-white border-primary' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
+          >
+            Creep <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && d.e_creep && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
           </button>
         </div>
       )}
@@ -1013,7 +1059,7 @@ export function Formulacoes() {
                 className="w-full sm:max-w-md px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-surface-1 text-sm"
               >
                 <option value="">Adicionar categoria...</option>
-                {CATEGORIAS_DISPONIVEIS.map(cat => (
+                {(formData.e_creep ? CATEGORIAS_CREEP : CATEGORIAS_DISPONIVEIS).map(cat => (
                   <option key={cat} value={cat}>{capitalizeWords(cat)}</option>
                 ))}
               </select>
@@ -1023,10 +1069,10 @@ export function Formulacoes() {
             {/* Premix toggle (always visible) */}
             {/* Premix toggle (hidden when a premix is selected as ingredient, to prevent nested premix) */}
             {!temPremixSelecionado && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <button
                 type="button"
-                onClick={() => setFormData({ ...formData, e_premix: !formData.e_premix })}
+                onClick={() => setFormData({ ...formData, e_premix: !formData.e_premix, e_creep: false })}
                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 ${
                   formData.e_premix
                     ? 'bg-indigo-100 text-indigo-800 border-indigo-300 hover:bg-indigo-200'
@@ -1035,9 +1081,30 @@ export function Formulacoes() {
               >
                 {formData.e_premix ? '✓ Premix' : 'Premix'}
               </button>
+              {!formData.e_premix && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !formData.e_creep
+                    setFormData({ ...formData, e_creep: next })
+                    if (next) {
+                      // Creep só aceita bezerro(a) ao pé: remove categorias inválidas
+                      setCategoriasGmd(prev => prev.filter(c => CATEGORIAS_CREEP.includes(c.categoria.toLowerCase().trim())))
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 ${
+                    formData.e_creep
+                      ? 'bg-sky-100 text-sky-800 border-sky-300 hover:bg-sky-200'
+                      : 'bg-surface-2 text-content-strong border-surface-3 hover:bg-surface-3'
+                  }`}
+                >
+                  {formData.e_creep ? '✓ Creep Feeding' : 'Creep Feeding'}
+                </button>
+              )}
               <span className="text-xs text-content-muted leading-tight">
-                Marque se esta formulação é um premix. Ela gerará automaticamente um insumo
-                para uso em outras formulações (TMR do vagão).
+                {formData.e_creep
+                  ? 'Formulação de creep feeding: só pode ser vinculada às categorias bezerro(a) ao pé, diretamente na categoria do lote.'
+                  : 'Marque se esta formulação é um premix. Ela gerará automaticamente um insumo para uso em outras formulações (TMR do vagão).'}
               </span>
             </div>
             )}
@@ -1196,8 +1263,9 @@ export function Formulacoes() {
                (premixFilter === 'premix' && dieta.e_premix) ||
                (premixFilter === 'tmr' && !dieta.e_premix)) &&
               (sistemaFilter === 'todos' ||
-               (sistemaFilter === 'pasto' && dieta.sistema_producao !== 'Confinamento') ||
-               (sistemaFilter === 'confinamento' && dieta.sistema_producao === 'Confinamento')) &&
+               (sistemaFilter === 'pasto' && !dieta.e_creep && dieta.sistema_producao !== 'Confinamento') ||
+               (sistemaFilter === 'confinamento' && !dieta.e_creep && dieta.sistema_producao === 'Confinamento') ||
+               (sistemaFilter === 'creep' && dieta.e_creep)) &&
               (dieta.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
               (dieta.tipo && dieta.tipo.toLowerCase().includes(searchTerm.toLowerCase())))
             )
@@ -1208,12 +1276,21 @@ export function Formulacoes() {
                 subtitle={
                   dieta.e_premix
                     ? `Premix • ${capitalizeWords(dieta.tipo || 'Sem tipo')}`
-                    : (dieta.tipo ? capitalizeWords(dieta.tipo) : undefined)
+                    : dieta.e_creep
+                      ? `Creep • ${capitalizeWords(dieta.tipo || 'Sem tipo')}`
+                      : (dieta.tipo ? capitalizeWords(dieta.tipo) : undefined)
                 }
                 status={dieta.ativo}
                 onClick={() => handleEdit(dieta)}
               >
                 <div className="space-y-1 mb-4 text-sm text-content-muted">
+                  {dieta.e_creep && (
+                    <p>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/10 text-sky-800 dark:text-sky-200">
+                        Creep Feeding
+                      </span>
+                    </p>
+                  )}
                   {dieta.sistema_producao && (
                     <p>
                       <span className="font-medium">Sistema:</span>{' '}

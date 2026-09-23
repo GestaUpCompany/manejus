@@ -135,7 +135,7 @@ export function Lotes() {
   const pastos = useMemo(() => pastosData.filter(p => p.ativo), [pastosData])
   const currais = useMemo(() => curraisData.filter(c => c.ativo), [curraisData])
   const [racas, setRacas] = useState<{id: string, nome: string}[]>([])
-  const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, categoria?: string, consumo_meta?: number, gmd?: number}[]>([])
+  const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, categoria?: string, consumo_meta?: number, gmd?: number, e_creep?: boolean}[]>([])
   const [formulacaoCategoriasGmd, setFormulacaoCategoriasGmd] = useState<Record<string, Record<string, number>>>({})
   const [movimentacaoData, setMovimentacaoData] = useState<any[]>([])
   const [maternidadeData, setMaternidadeData] = useState<any[]>([])
@@ -267,7 +267,7 @@ export function Lotes() {
 
       const [racasData, formulacoesData] = await Promise.all([
         supabase.from('racas').select('id, nome').eq('fazenda_id', fid).eq('ativo', true).is('deleted_at', null).order('nome'),
-        supabase.from('formulacoes').select('id, nome, tipo, categoria, consumo_ms_percent_pv, gmd, e_premix').eq('fazenda_id', fid).eq('ativo', true).eq('e_premix', false).is('deleted_at', null).order('nome'),
+        supabase.from('formulacoes').select('id, nome, tipo, categoria, consumo_ms_percent_pv, gmd, e_premix, e_creep').eq('fazenda_id', fid).eq('ativo', true).eq('e_premix', false).is('deleted_at', null).order('nome'),
       ])
 
       if (racasData.data) setRacas(racasData.data)
@@ -281,6 +281,7 @@ export function Lotes() {
             categoria: item.categoria || undefined,
             consumo_meta: item.consumo_ms_percent_pv != null ? Number(item.consumo_ms_percent_pv) : undefined,
             gmd: item.gmd != null ? Number(item.gmd) : undefined,
+            e_creep: item.e_creep === true,
           }))
         )
 
@@ -2810,15 +2811,34 @@ export function Lotes() {
                                   v ? v.replace('.', ',').replace(/,+/g, ',').replace(/0+$/, '').replace(/,$/, '') : ''
                                 const gmdMudou = cat.id && cat.gmd !== '' &&
                                   normalizeGmd(cat.gmd) !== normalizeGmd(gmdOriginal)
+                                const creepOptions = nutritionalOptions.filter(o => o.e_creep)
+                                const creepAtual = cat.formulacao_id ? creepOptions.find(o => o.id === cat.formulacao_id) : undefined
                                 return (
-                                  <div className="rounded-lg p-3 bg-amber-500/10 border border-amber-500/30">
+                                  <div className="rounded-lg p-3 bg-amber-500/10 border border-amber-500/30 space-y-3">
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                       <div className="text-sm">
-                                        <p className="font-medium text-amber-900 dark:text-amber-200">GMD de {cat.categoria}</p>
+                                        <p className="font-medium text-amber-900 dark:text-amber-200">Creep Feeding de {cat.categoria}</p>
                                         <p className="text-amber-700 dark:text-amber-300 text-xs mt-1">
-                                          Bezerros/bezerras ao pé usam GMD próprio (padrão: 0,600 / 0,500). Não há plano nutricional para esta categoria.
+                                          Bezerros/bezerras ao pé são suplementados à parte (cocho e dieta próprios). A dieta creep é única por lote e é gerenciada no modal de planos do lote.
                                         </p>
                                       </div>
+                                      {creepAtual && (
+                                        <span className="px-3 py-1.5 bg-amber-500/20 border border-amber-500/40 rounded-md text-sm font-semibold text-amber-900 dark:text-amber-200 whitespace-nowrap">
+                                          {creepAtual.name}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {cat.formulacao_id && !creepAtual && (
+                                      <p className="text-xs text-red-600 dark:text-red-300">
+                                        Formulação vinculada não é creep ou está inativa. Corrija o vínculo no modal de planos do lote.
+                                      </p>
+                                    )}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                      <p className="text-amber-700 dark:text-amber-300 text-xs">
+                                        {creepAtual
+                                          ? `GMD definido pela formulação "${creepAtual.name}"${formulacaoCategoriasGmd[creepAtual.id]?.[cat.categoria.toLowerCase().trim()] == null ? ' (sem GMD para esta categoria na formulação)' : ''}`
+                                          : 'Sem formulação creep vinculada: o GMD abaixo é manual (padrão: 0,600 / 0,500).'}
+                                      </p>
                                       <div className="flex items-center gap-2">
                                         <label className="text-xs font-medium text-amber-900 dark:text-amber-200">GMD (kg/dia)</label>
                                         <Input
@@ -3823,7 +3843,7 @@ export function Lotes() {
             setSelectedDraftCategoriaIndex(null)
           }}
           categoria={formData.categorias[selectedDraftCategoriaIndex]?.categoria || ''}
-          formulacoes={nutritionalOptions.map((opt) => ({
+          formulacoes={nutritionalOptions.filter(opt => !opt.e_creep).map((opt) => ({
             id: opt.id,
             nome: opt.name,
             categoria: opt.categoria,
