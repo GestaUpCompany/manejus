@@ -14,11 +14,13 @@ export interface TableExportConfig {
   tableName: string
   sheetName: string
   columns: ColumnConfig[]
+  exclude?: string[]
 }
 
 export interface SheetConfig {
   sheetName: string
   columns: ColumnConfig[]
+  exclude?: string[]
 }
 
 export interface MultiSheetExportConfig {
@@ -100,11 +102,12 @@ function formatDataField(value: any): string {
 
 // Build the full column list: configured columns + any extra data columns not in config
 // Config columns that don't exist in the data are skipped (avoids phantom empty columns)
-function buildColumnList(data: any[], configColumns: ColumnConfig[]): {
+function buildColumnList(data: any[], configColumns: ColumnConfig[], exclude?: string[]): {
   configCols: ColumnConfig[]
   extraKeys: string[]
 } {
   const configSources = new Set(configColumns.map(c => c.source))
+  const excluded = exclude ? new Set([...EXCLUDED_COLUMNS, ...exclude]) : EXCLUDED_COLUMNS
 
   // Collect all keys that actually exist in the data
   const dataKeys = new Set<string>()
@@ -128,7 +131,7 @@ function buildColumnList(data: any[], configColumns: ColumnConfig[]): {
   for (const row of data) {
     if (!row || typeof row !== 'object') continue
     for (const key of Object.keys(row)) {
-      if (EXCLUDED_COLUMNS.has(key) || configSources.has(key) || seen.has(key)) continue
+      if (excluded.has(key) || configSources.has(key) || seen.has(key)) continue
       seen.add(key)
       extraKeys.push(key)
     }
@@ -223,7 +226,7 @@ export async function exportToXLSX(data: any[], config: TableExportConfig, fazen
     return
   }
 
-  const { configCols, extraKeys } = buildColumnList(data, config.columns)
+  const { configCols, extraKeys } = buildColumnList(data, config.columns, config.exclude)
 
   const ExcelJSMod = await import('exceljs')
   const workbook = new ExcelJSMod.default.Workbook()
@@ -258,7 +261,7 @@ export async function exportToXLSXMultiSheet(config: MultiSheetExportConfig, faz
   for (const sheet of config.sheets) {
     if (!sheet.data || sheet.data.length === 0) continue
 
-    const { configCols, extraKeys } = buildColumnList(sheet.data, sheet.config.columns)
+    const { configCols, extraKeys } = buildColumnList(sheet.data, sheet.config.columns, sheet.config.exclude)
     const resolvedRows = sheet.data.map(row => resolveRow(row, configCols, extraKeys))
     const headers = resolvedRows.length > 0 ? resolvedRows[0].map(c => c.header) : configCols.map(c => c.header)
 

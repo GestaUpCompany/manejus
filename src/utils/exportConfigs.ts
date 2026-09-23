@@ -534,6 +534,7 @@ export const OPERACOES_MAQUINAS_EXPORT_CONFIG: TableExportConfig = {
 export const SUPLEMENTACAO_EXPORT_CONFIG: TableExportConfig = {
   tableName: 'registros_suplementacao',
   sheetName: 'Suplementação',
+  exclude: ['local_id', 'formulacao_id', 'grupo_operacao'],
   columns: [
     { source: 'data', header: 'Data Atual', format: 'date' },
     { source: 'nome_usuario', header: 'Usuário' },
@@ -545,7 +546,7 @@ export const SUPLEMENTACAO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'pasto', header: 'Pasto' },
     { source: 'lote', header: 'Lote' },
     { source: 'formulacao', header: 'Formulação' },
-    { source: 'escopo', header: 'Escopo', transform: (value) => value === 'creep' ? 'Creep' : 'Lote' },
+    { source: 'escopo', header: 'Escopo', transform: (value) => value === 'creep' ? 'Creep' : 'Adulto' },
     { source: 'leitura', header: 'Leitura', format: 'number' },
     { source: 'kg_cocho', header: 'Kg Cocho', format: 'number' },
     { source: 'total_acumulado_lote', header: 'Acumulado Lote (kg)', format: 'number' },

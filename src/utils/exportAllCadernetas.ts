@@ -1,5 +1,5 @@
 import { supabase } from '../services/supabaseClient'
-import { exportToXLSXMultiSheet, TableExportConfig, MultiSheetExportConfig } from './exportXLSX'
+import { exportToXLSXMultiSheet, TableExportConfig, SheetConfig, MultiSheetExportConfig } from './exportXLSX'
 import { getFazendaNome } from './fazendaContext'
 import {
   MATERNIDADE_EXPORT_CONFIG,
@@ -53,7 +53,7 @@ const CADERNETA_EXPORTS: CadernetaExportEntry[] = [
 ]
 
 export async function exportAllCadernetas(fazendaId: string): Promise<void> {
-  const sheets: { data: any[]; config: { sheetName: string; columns: TableExportConfig['columns'] } }[] = []
+  const sheets: { data: any[]; config: SheetConfig }[] = []
 
   for (const entry of CADERNETA_EXPORTS) {
     const query = supabase
@@ -76,6 +76,7 @@ export async function exportAllCadernetas(fazendaId: string): Promise<void> {
         config: {
           sheetName: entry.config.sheetName,
           columns: entry.config.columns,
+          exclude: entry.config.exclude,
         },
       })
     }
