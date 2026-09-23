@@ -14,6 +14,7 @@ Bezerro(a) ao pé passou a ter dieta e suplementação próprias, separadas das 
 - **Painel**: `Formulacoes.tsx` (toggle creep, categorias restritas, badge+filtro), modais de plano filtrando `e_creep`, `Suplementacao.tsx`/`SuplementacaoDetalhes.tsx`/`exportConfigs.ts` com escopo, `RelatorioConsumoPublico.tsx`/`relatorioConsumoPDF.ts` com card creep.
 - **PWA**: ver entrada correspondente no repo `Caderneta-Digital-Gesta-Up` (formulário dual na `SuplementacaoPage` + fan-out no sync por `local_id` derivado `<id>:creep`).
 - **Nota de exclusão**: excluir um registro no painel apaga só a linha daquele escopo (a perna pareada do `grupo_operacao` permanece, pois as duas aparecem como registros separados na lista).
+- **Fazendas sem creep**: `20260923190000_peso_lote_legado_sem_creep.sql` faz `recalcular_peso_vivo_lote` só excluir categorias ao pé da média do escopo 'lote' quando o lote tem dieta creep vinculada (ao pé ativo + `formulacao_id` para `e_creep`); sem dieta, itera todas as categorias como a versão pré-creep, preservando a série de `peso_vivo_kg` de fazendas com ao pé que não usam creep. No PWA, o payload sem dieta também é idêntico ao anterior (n_cabecas total, qtd_bezerros legado, categorias completas).
 
 **Disparador**: quando mencionar creep feeding, bezerro ao pé com dieta própria, `e_creep`, `escopo`, `grupo_operacao`, cocho do bezerro, ou card creep no relatório, ler esta seção.
 
