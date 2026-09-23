@@ -139,6 +139,7 @@ export function PlanoNutricionalModal({
           .eq('fazenda_id', fId)
           .eq('ativo', true)
           .eq('e_premix', false)
+          .eq('e_creep', false)
           .order('nome', { ascending: true })
 
         if (formError) throw formError

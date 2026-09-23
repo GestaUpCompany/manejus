@@ -135,7 +135,7 @@ export function Lotes() {
   const pastos = useMemo(() => pastosData.filter(p => p.ativo), [pastosData])
   const currais = useMemo(() => curraisData.filter(c => c.ativo), [curraisData])
   const [racas, setRacas] = useState<{id: string, nome: string}[]>([])
-  const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, categoria?: string, consumo_meta?: number, gmd?: number}[]>([])
+  const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, categoria?: string, consumo_meta?: number, gmd?: number, e_creep?: boolean}[]>([])
   const [formulacaoCategoriasGmd, setFormulacaoCategoriasGmd] = useState<Record<string, Record<string, number>>>({})
   const [movimentacaoData, setMovimentacaoData] = useState<any[]>([])
   const [maternidadeData, setMaternidadeData] = useState<any[]>([])
@@ -147,7 +147,6 @@ export function Lotes() {
     peso_vivo_atual_kg_cab: '',
     peso_vivo_meta_kg_cab: '',
     data_meta_projetada: '',
-    quantidade_bezerros: '',
     quant_inicial: '',
     data: '',
     peso_entrada_kg_cab: '',
@@ -267,7 +266,7 @@ export function Lotes() {
 
       const [racasData, formulacoesData] = await Promise.all([
         supabase.from('racas').select('id, nome').eq('fazenda_id', fid).eq('ativo', true).is('deleted_at', null).order('nome'),
-        supabase.from('formulacoes').select('id, nome, tipo, categoria, consumo_ms_percent_pv, gmd, e_premix').eq('fazenda_id', fid).eq('ativo', true).eq('e_premix', false).is('deleted_at', null).order('nome'),
+        supabase.from('formulacoes').select('id, nome, tipo, categoria, consumo_ms_percent_pv, gmd, e_premix, e_creep').eq('fazenda_id', fid).eq('ativo', true).eq('e_premix', false).is('deleted_at', null).order('nome'),
       ])
 
       if (racasData.data) setRacas(racasData.data)
@@ -281,6 +280,7 @@ export function Lotes() {
             categoria: item.categoria || undefined,
             consumo_meta: item.consumo_ms_percent_pv != null ? Number(item.consumo_ms_percent_pv) : undefined,
             gmd: item.gmd != null ? Number(item.gmd) : undefined,
+            e_creep: item.e_creep === true,
           }))
         )
 
@@ -368,7 +368,6 @@ export function Lotes() {
         abate: undefined,
         transf_entrada: undefined,
         transf_saida: undefined,
-        qtd_bezerros: undefined,
         consumo_meta_porcentagem_pesovivo: undefined,
         ativo: true,
       }
@@ -1122,7 +1121,6 @@ export function Lotes() {
       fazenda_id: fazendaId,
       nome: formData.nome.trim(),
       n_cabecas: formData.numero_cabecas ? parseInt(formData.numero_cabecas) : null,
-      qtd_bezerros: formData.quantidade_bezerros ? parseInt(formData.quantidade_bezerros) : null,
       ativo: formData.ativo,
       pasto_id: isConfinamento ? null : (formData.pasto_id || null),
       sistema_producao: formData.sistema_producao || null,
@@ -1352,7 +1350,6 @@ export function Lotes() {
         abate: cat.abate ? parseInt(cat.abate.toString()) : 0,
         transf_entrada: cat.transf_entrada ? parseInt(cat.transf_entrada.toString()) : 0,
         transf_saida: cat.transf_saida ? parseInt(cat.transf_saida.toString()) : 0,
-        qtd_bezerros: cat.qtd_bezerros ? parseInt(cat.qtd_bezerros.toString()) : null,
         consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ? parseFloat(cat.consumo_meta_porcentagem_pesovivo.toString()) : null,
         custo_frete_reais_cab: cat.custo_frete_reais_cab ? parseFloat(cat.custo_frete_reais_cab.toString()) : null,
         custo_comissao_reais_cab: cat.custo_comissao_reais_cab ? parseFloat(cat.custo_comissao_reais_cab.toString()) : null,
@@ -1503,7 +1500,6 @@ export function Lotes() {
         peso_vivo_atual_kg_cab: '',
         peso_vivo_meta_kg_cab: '',
         data_meta_projetada: '',
-        quantidade_bezerros: '',
         quant_inicial: '',
         data: '',
         peso_entrada_kg_cab: '',
@@ -1763,7 +1759,6 @@ export function Lotes() {
       peso_vivo_atual_kg_cab: lote.peso_vivo_atual_kg_cab?.toString() || '',
       peso_vivo_meta_kg_cab: lote.peso_vivo_meta_kg_cab?.toString() || '',
       data_meta_projetada: lote.data_meta_projetada || '',
-      quantidade_bezerros: lote.qtd_bezerros?.toString() || '',
       quant_inicial: lote.quant_inicial?.toString() || '',
       data: lote.data_pesagem || '',
       peso_entrada_kg_cab: lote.peso_entrada_kg_cab?.toString() || '',
@@ -1826,7 +1821,6 @@ export function Lotes() {
       peso_vivo_atual_kg_cab: '',
       peso_vivo_meta_kg_cab: '',
       data_meta_projetada: '',
-      quantidade_bezerros: '',
       quant_inicial: '',
       data: '',
       peso_entrada_kg_cab: '',
@@ -2057,7 +2051,6 @@ export function Lotes() {
     { source: 'abate', header: 'Abate', format: 'number' },
     { source: 'transf_entrada', header: 'Transf. entrada', format: 'number' },
     { source: 'transf_saida', header: 'Transf. saída', format: 'number' },
-    { source: 'qtd_bezerros', header: 'Qtd. bezerros', format: 'number' },
     { source: 'consumo_meta_porcentagem_pesovivo', header: 'Consumo meta (% PV)', format: 'number' },
     { source: 'custo_frete_reais_cab', header: 'Custo frete (R$/cab)', format: 'number' },
     { source: 'custo_comissao_reais_cab', header: 'Custo comissão (R$/cab)', format: 'number' },
@@ -2247,7 +2240,6 @@ export function Lotes() {
           abate: cat.abate ?? null,
           transf_entrada: cat.transf_entrada ?? null,
           transf_saida: cat.transf_saida ?? null,
-          qtd_bezerros: cat.qtd_bezerros ?? null,
           consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ?? null,
           custo_frete_reais_cab: cat.custo_frete_reais_cab ?? null,
           custo_comissao_reais_cab: cat.custo_comissao_reais_cab ?? null,
@@ -2810,15 +2802,34 @@ export function Lotes() {
                                   v ? v.replace('.', ',').replace(/,+/g, ',').replace(/0+$/, '').replace(/,$/, '') : ''
                                 const gmdMudou = cat.id && cat.gmd !== '' &&
                                   normalizeGmd(cat.gmd) !== normalizeGmd(gmdOriginal)
+                                const creepOptions = nutritionalOptions.filter(o => o.e_creep)
+                                const creepAtual = cat.formulacao_id ? creepOptions.find(o => o.id === cat.formulacao_id) : undefined
                                 return (
-                                  <div className="rounded-lg p-3 bg-amber-500/10 border border-amber-500/30">
+                                  <div className="rounded-lg p-3 bg-amber-500/10 border border-amber-500/30 space-y-3">
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                       <div className="text-sm">
-                                        <p className="font-medium text-amber-900 dark:text-amber-200">GMD de {cat.categoria}</p>
+                                        <p className="font-medium text-amber-900 dark:text-amber-200">Creep Feeding de {cat.categoria}</p>
                                         <p className="text-amber-700 dark:text-amber-300 text-xs mt-1">
-                                          Bezerros/bezerras ao pé usam GMD próprio (padrão: 0,600 / 0,500). Não há plano nutricional para esta categoria.
+                                          Bezerros/bezerras ao pé são suplementados à parte (cocho e dieta próprios). A dieta creep é única por lote e é gerenciada no modal de planos do lote.
                                         </p>
                                       </div>
+                                      {creepAtual && (
+                                        <span className="px-3 py-1.5 bg-amber-500/20 border border-amber-500/40 rounded-md text-sm font-semibold text-amber-900 dark:text-amber-200 whitespace-nowrap">
+                                          {creepAtual.name}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {cat.formulacao_id && !creepAtual && (
+                                      <p className="text-xs text-red-600 dark:text-red-300">
+                                        Formulação vinculada não é creep ou está inativa. Corrija o vínculo no modal de planos do lote.
+                                      </p>
+                                    )}
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                      <p className="text-amber-700 dark:text-amber-300 text-xs">
+                                        {creepAtual
+                                          ? `GMD definido pela formulação "${creepAtual.name}"${formulacaoCategoriasGmd[creepAtual.id]?.[cat.categoria.toLowerCase().trim()] == null ? ' (sem GMD para esta categoria na formulação)' : ''}`
+                                          : 'Sem formulação creep vinculada: o GMD abaixo é manual (padrão: 0,600 / 0,500).'}
+                                      </p>
                                       <div className="flex items-center gap-2">
                                         <label className="text-xs font-medium text-amber-900 dark:text-amber-200">GMD (kg/dia)</label>
                                         <Input
@@ -3823,7 +3834,7 @@ export function Lotes() {
             setSelectedDraftCategoriaIndex(null)
           }}
           categoria={formData.categorias[selectedDraftCategoriaIndex]?.categoria || ''}
-          formulacoes={nutritionalOptions.map((opt) => ({
+          formulacoes={nutritionalOptions.filter(opt => !opt.e_creep).map((opt) => ({
             id: opt.id,
             nome: opt.name,
             categoria: opt.categoria,

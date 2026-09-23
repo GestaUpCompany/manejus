@@ -52,6 +52,7 @@ interface LoteDisponivel {
 interface LoteDados {
   lote_id: string
   lote_nome: string
+  escopo?: string
   info: InfoLote
   dados: DadoRelatorioConsumo[]
 }
@@ -318,6 +319,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
         .map((l) => ({
         info: {
           ...l.info,
+          lote_nome: l.escopo === 'creep' ? `${l.info.lote_nome} — Creep Feeding` : l.info.lote_nome,
           fazenda_id: relatorioInfo.fazenda_id,
           fazenda_nome: relatorioInfo.fazenda_nome,
           fazenda_logo_url: relatorioInfo.fazenda_logo_url,
@@ -574,7 +576,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
             const primeiraDieta = index === 0
 
             return (
-              <div key={lote.lote_id}>
+              <div key={`${lote.lote_id}-${lote.escopo || 'lote'}`}>
               {(primeiraDieta || mudouDieta) && (
                 <div className="mb-4 mt-2 first:mt-0">
                   <div className="flex items-center gap-3">
@@ -589,7 +591,12 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 {/* Header do lote */}
                 <div className="px-5 py-3 flex items-center justify-between" style={{ backgroundColor: GREEN_DARK }}>
-                  <h2 className="text-base font-bold text-white">{lote.lote_nome}</h2>
+                  <h2 className="text-base font-bold text-white">
+                    {lote.lote_nome}
+                    {lote.escopo === 'creep' && (
+                      <span className="ml-2 px-2 py-0.5 rounded bg-amber-400 text-amber-900 text-[11px] font-semibold align-middle">Creep Feeding</span>
+                    )}
+                  </h2>
                   <span className="text-xs text-white opacity-80">
                     {lote.dados.length} registro(s)
                   </span>

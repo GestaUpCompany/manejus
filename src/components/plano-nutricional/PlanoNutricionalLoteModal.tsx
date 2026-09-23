@@ -36,6 +36,8 @@ interface LoteCategoriaInfo {
   periodo: number | null
   sexo: string | null
   ativo: boolean
+  quant_atual: number | null
+  formulacao_id: string | null
 }
 
 interface Formulacao {
@@ -90,7 +92,10 @@ export function PlanoNutricionalLoteModal({
   const [categorias, setCategorias] = useState<LoteCategoriaInfo[]>([])
   const [personalizacoes, setPersonalizacoes] = useState<Personalizacao[]>([])
   const [formulacoes, setFormulacoes] = useState<Formulacao[]>([])
+  const [formulacoesCreep, setFormulacoesCreep] = useState<Formulacao[]>([])
   const [formulacaoCategoriasGmd, setFormulacaoCategoriasGmd] = useState<FormulacaoCategoriaGmd[]>([])
+  const [creepFormId, setCreepFormId] = useState('')
+  const [salvandoCreep, setSalvandoCreep] = useState(false)
   const [loading, setLoading] = useState(false)
   const [fazendaId, setFazendaId] = useState<string | undefined>(fazendaIdProp)
   const [activeTab, setActiveTab] = useState<'planos' | 'categorias'>('planos')
@@ -186,12 +191,18 @@ export function PlanoNutricionalLoteModal({
       // Buscar categorias ativas do lote
       const { data: catsData } = await supabase
         .from('lote_categorias')
-        .select('id, categoria, gmd, peso_vivo_atual_kg_cab, peso_vivo_meta_kg_cab, periodo, sexo, ativo')
+        .select('id, categoria, gmd, peso_vivo_atual_kg_cab, peso_vivo_meta_kg_cab, periodo, sexo, ativo, quant_atual, formulacao_id')
         .eq('lote_id', loteId)
         .eq('ativo', true)
         .order('categoria', { ascending: true })
 
       setCategorias((catsData as LoteCategoriaInfo[]) || [])
+
+      // Dieta creep vigente: formulacao_id das categorias ao pé (dieta única por lote)
+      const creepAtual = ((catsData as LoteCategoriaInfo[]) || [])
+        .filter((c) => isBezerroAope(c.categoria) && c.formulacao_id)
+        .map((c) => c.formulacao_id!)[0] || ''
+      setCreepFormId(creepAtual)
 
       // Buscar personalizações
       const planoIds = ((planosData as PlanoNutricional[]) || []).map((p) => p.id)
@@ -213,8 +224,19 @@ export function PlanoNutricionalLoteModal({
           .eq('fazenda_id', fId)
           .eq('ativo', true)
           .eq('e_premix', false)
+          .eq('e_creep', false)
           .order('nome', { ascending: true })
         setFormulacoes((form_data as Formulacao[]) || [])
+
+        // Formulações creep (e_creep): dieta exclusiva de bezerro(a) ao pé
+        const { data: creepData } = await supabase
+          .from('formulacoes')
+          .select('id, nome, tipo, gmd, consumo_ms_percent_pv, e_premix')
+          .eq('fazenda_id', fId)
+          .eq('ativo', true)
+          .eq('e_creep', true)
+          .order('nome', { ascending: true })
+        setFormulacoesCreep((creepData as Formulacao[]) || [])
 
         // Buscar GMDs por categoria de todas as formulações da fazenda
         const formIds = ((form_data as Formulacao[]) || []).map((f) => f.id)
@@ -663,6 +685,33 @@ export function PlanoNutricionalLoteModal({
   const isBezerroAope = (cat: string) =>
     ['bezerro ao pé', 'bezerro ao pe', 'bezerra ao pé', 'bezerra ao pe'].includes(cat.toLowerCase())
 
+  // Creep feeding: dieta única para todas as categorias ao pé do lote.
+  // Vínculo direto em lote_categorias.formulacao_id — fora da fila de planos.
+  const categoriasAoPe = categorias.filter((c) => isBezerroAope(c.categoria) && (c.quant_atual ?? 0) > 0)
+  const creepFormIdAtual = categoriasAoPe.find((c) => c.formulacao_id)?.formulacao_id || ''
+
+  const handleSalvarCreep = async () => {
+    if (categoriasAoPe.length === 0) return
+    setSalvandoCreep(true)
+    try {
+      const nome = creepFormId ? (formulacoesCreep.find((f) => f.id === creepFormId)?.nome ?? null) : null
+      const { error } = await supabase
+        .from('lote_categorias')
+        .update({ formulacao_id: creepFormId || null, estrategia_nutricional: nome })
+        .in('id', categoriasAoPe.map((c) => c.id))
+      if (error) throw error
+      await loadData()
+      onPlanChanged?.()
+      setMessage(nome
+        ? `Dieta creep "${nome}" aplicada às categorias ao pé do lote.`
+        : 'Dieta creep removida das categorias ao pé do lote.')
+    } catch (error: any) {
+      setMessage(error.message || 'Erro ao salvar dieta creep')
+    } finally {
+      setSalvandoCreep(false)
+    }
+  }
+
   const getPersForCat = (catId: string) => {
     if (!planoVigente) return null
     return personalizacoes.find((p) => p.plano_id === planoVigente.id && p.lote_categoria_id === catId && p.ativo)
@@ -911,7 +960,42 @@ export function PlanoNutricionalLoteModal({
             )}
           </div>
 
-          {/* ========== ABA: CATEGORIAS ========== */}
+          {/* ========== SEÇÃO: CREEP FEEDING (bezerro(a) ao pé) ========== */}
+          {categoriasAoPe.length > 0 && (
+            <div className="border border-amber-500/30 bg-amber-500/5 rounded-xl p-4 space-y-3">
+              <div>
+                <h3 className="text-base font-semibold text-amber-800 dark:text-amber-200">
+                  Creep Feeding — Bezerro(a) ao pé
+                </h3>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                  Dieta única para {categoriasAoPe.map((c) => c.categoria).join(' e ')} ({categoriasAoPe.reduce((s, c) => s + (c.quant_atual ?? 0), 0)} cab). Fica fora da fila de planos e não afeta as dietas das demais categorias.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <select
+                  value={creepFormId}
+                  onChange={(e) => setCreepFormId(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-amber-500/30 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[40px] bg-surface-1 text-sm"
+                >
+                  <option value="">Sem creep (só GMD manual)</option>
+                  {formulacoesCreep.map((f) => (
+                    <option key={f.id} value={f.id}>{f.nome}</option>
+                  ))}
+                </select>
+                {creepFormId !== creepFormIdAtual && (
+                  <Button size="sm" onClick={handleSalvarCreep} disabled={salvandoCreep}>
+                    {salvandoCreep ? 'Salvando...' : 'Aplicar'}
+                  </Button>
+                )}
+              </div>
+              {formulacoesCreep.length === 0 && (
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Nenhuma formulação creep cadastrada. Crie uma em Formulações marcando "creep feeding".
+                </p>
+              )}
+            </div>
+          )}
+
           </>
           )}
           {activeTab === 'categorias' && (

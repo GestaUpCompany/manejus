@@ -37,6 +37,8 @@ interface RegistroSuplementacao {
   consumo_medio_geral_kg_ms?: number
   consumo_medio_geral_percent_pv?: number
   custo_medio_reais_cab_dia?: number
+  escopo?: string
+  grupo_operacao?: string
   sync_status?: string
   created_at: string
 }
@@ -200,6 +202,9 @@ export function Suplementacao() {
     totalKgCochoPorLote.set(key, (totalKgCochoPorLote.get(key) || 0) + (reg.kg_cocho || 0))
   }
 
+  // Chave da série de consumo: lote + escopo (creep é uma série separada do lote)
+  const serieKey = (reg: RegistroSuplementacao) => `${reg.lote_id || ''}::${reg.escopo || 'lote'}`
+
   // Kg por insumo: distribui kg_cocho de cada registro entre os insumos da sua formulação
   const kgPorInsumo = useMemo(() => {
     const acumulado: Record<string, number> = {}
@@ -216,12 +221,12 @@ export function Suplementacao() {
     return acumulado
   }, [filteredRegistros, composicoesFormulacoes])
 
-  // Acumulado cumulativo por lote: para cada registro, a soma de todos os registros
-  // do mesmo lote até aquela data (em ordem cronológica ascendente)
+  // Acumulado cumulativo por série (lote + escopo): para cada registro, a soma de
+  // todos os registros da mesma série até aquela data (ordem cronológica ascendente)
   const acumuladoPorRegistro = new Map<string, number>()
   const registrosPorLoteAsc = new Map<string, typeof filteredRegistros>()
   for (const reg of filteredRegistros) {
-    const key = reg.lote_id || ''
+    const key = serieKey(reg)
     if (!registrosPorLoteAsc.has(key)) registrosPorLoteAsc.set(key, [])
     registrosPorLoteAsc.get(key)!.push(reg)
   }
@@ -259,7 +264,7 @@ export function Suplementacao() {
             <Button
               onClick={() => {
               // Pre-computar data_anterior e intervalo_dias para cada registro
-              // baseado na serie por lote_id ordenada por data ( independente da formulação)
+              // baseado na serie por lote_id + escopo ordenada por data (independente da formulação)
               // Ordena pelo timestamp completo para que registros do mesmo dia fiquem em
               // ordem cronológica real, e normaliza para o dia de calendário no fuso da
               // fazenda (YYYY-MM-DD) para que o intervalo conte dias locais e o formatDate
@@ -271,12 +276,12 @@ export function Suplementacao() {
               })
               const seriesMap = new Map<string, typeof sorted>()
               for (const reg of sorted) {
-                const key = reg.lote_id || ''
+                const key = serieKey(reg)
                 if (!seriesMap.has(key)) seriesMap.set(key, [])
                 seriesMap.get(key)!.push(reg)
               }
               const enriched = sorted.map((reg) => {
-                const key = reg.lote_id || ''
+                const key = serieKey(reg)
                 const series = seriesMap.get(key)!
                 const idx = series.indexOf(reg)
                 const prev = idx > 0 ? series[idx - 1] : null
@@ -497,7 +502,12 @@ export function Suplementacao() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-content-muted">Formulação:</span>
-                    <span className="text-content-strong font-medium">{registro.formulacao || '-'}</span>
+                    <span className="text-content-strong font-medium">
+                      {registro.formulacao || '-'}
+                      {registro.escopo === 'creep' && (
+                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-semibold align-middle">Creep</span>
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-content-muted">Lote:</span>
@@ -572,6 +582,9 @@ export function Suplementacao() {
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.formulacao || '-'}
+                        {registro.escopo === 'creep' && (
+                          <span className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-semibold align-middle">Creep</span>
+                        )}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.lote || '-'}
