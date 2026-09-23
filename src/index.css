@@ -292,9 +292,6 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     object-fit: contain;
   }
 
-  .trato-print-brand-side b {
-    color: #facc15;
-  }
 
   .trato-print-root h1 {
     font-size: 16pt;
