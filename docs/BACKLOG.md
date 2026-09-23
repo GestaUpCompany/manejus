@@ -90,3 +90,19 @@ Limitação honesta: a curva real entre Entradas é aproximação linear pela GM
 Esforço estimado: ~60 linhas (1 query adicional no carregamento do lote + 1 função utilitária que monta os pontos + 1 componente recharts inline no card).
 
 Disparador: quando mencionar "camada 2 do peso", "mini-gráfico de peso", "gráfico de evolução do peso no card", "proveniência visual do peso", ou retomar a implementação visual da evolução de peso, ler esta seção.
+
+## GMD efetivo derivado do plano vigente (refactor arquitetural, não implementado)
+
+Hoje `lote_categorias.gmd` é um valor materializado escrito por cinco caminhos com precedências inconsistentes: `iniciar_plano_lote`, `encerrar_plano_lote`, `migrar_plano_lote`, trigger `sync_gmd_lote_categorias` e edição manual na tela de lote (Lotes.tsx ~2846, override legítimo com badge "GMD alterado"). Divergências concretas já observadas em produção: a escrita stale em `lotes.formulacao_id` (2026-08-28, ver `docs/HISTORICO.md` seção "lotes.formulacao_id divergente") repropagou GMD de formulação errada, e `iniciar_plano_lote` grava o GMD cheio sem o desconto de 50% de enfermaria que só a trigger aplica (Lote 147 Marcon ficou com 0.700 em vez de 0.350 até o backfill de 2026-09-23).
+
+Arquitetura correta a implementar quando autorizado:
+
+1. Separar override de derivação: `lote_categorias.gmd` vira `gmd_override` (ou nova coluna), escrito apenas pela edição manual. Default NULL.
+2. Centralizar a derivação numa função única `gmd_efetivo_categoria(lote_categoria_id)`: `COALESCE(gmd_override, gmd do plano vigente via formulacao_categorias_gmd, com desconto de 0.5 quando lotes.destino = 'enfermaria')`, replicando a precedência dos planos (`gmd_planejado`/`peso_inicio_kg_cab` de plano e `plano_categoria_personalizacao` quando aplicável).
+3. Migrar os consumidores para a função: cron `update_dados_lotes`, card da categoria no Lotes.tsx, exportação e exibição no PWA.
+4. Eliminar as escritas derivadas em `gmd` das RPCs de plano e da trigger, que passam a ser desnecessárias.
+5. Complemento defensivo (independente, baixo custo): trigger BEFORE UPDATE em `lotes` forçando `formulacao_id` = plano vigente quando existir, fechando o vetor de escrita direta fora dos fluxos de plano. Cuidar do caso "lote sem plano vigente" para não zerar a coluna em updates alheios.
+
+Cuidados: manter comportamento de lotes sem plano (hoje evoluem pelo gmd gravado; sem override e sem plano o `gmd_efetivo` seria NULL e a categoria pararia de projetar, o que pode ser indesejado; decidir fallback). Backfill dos overrides manuais existentes antes de virar a chave.
+
+Disparador: quando mencionar "gmd derivado", "gmd_override", "fonte única de GMD", "desconto de enfermaria no gmd", ou retomar a arquitetura de GMD efetivo, ler esta seção.
