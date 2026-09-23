@@ -66,10 +66,20 @@ function numeroFolha(valor: number | null, casas = 1): string {
   return valor.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })
 }
 
-function FolhaTratoImpressao({ dados, fazendaNome, tipoLabel }: { dados: LancamentoTratosData; fazendaNome: string; tipoLabel: string }) {
+function FolhaTratoImpressao({ dados, fazendaNome, fazendaLogoUrl, tipoLabel }: { dados: LancamentoTratosData; fazendaNome: string; fazendaLogoUrl?: string | null; tipoLabel: string }) {
   const quantidadeTratos = dados.linhas.reduce((maior, linha) => Math.max(maior, linha.quantidadeTratos), 0)
   return (
     <div className="trato-print-root" aria-hidden="true">
+      <div className="trato-print-brand">
+        <div className="trato-print-brand-side">
+          <img src="/images/manejus360.png" alt="Manej'Us 360" />
+          <span>Manej'Us <b>360</b></span>
+        </div>
+        <div className="trato-print-brand-side">
+          {fazendaLogoUrl && <img src={fazendaLogoUrl} alt={fazendaNome} />}
+          <span>{fazendaNome}</span>
+        </div>
+      </div>
       <h1>Trato Projetado {tipoLabel} - {fazendaNome}</h1>
       <div className="trato-print-meta">
         <span>Data do Trato: {formatarData(dados.data)}</span>
@@ -377,6 +387,7 @@ export function LancamentoTratos() {
         <FolhaTratoImpressao
           dados={dados}
           fazendaNome={fazenda?.nome || ''}
+          fazendaLogoUrl={fazenda?.logo_url}
           tipoLabel={TIPOS.find((item) => item.value === tipo)?.label ?? tipo}
         />,
         document.body

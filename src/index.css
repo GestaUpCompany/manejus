@@ -272,6 +272,26 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     print-color-adjust: exact;
   }
 
+  .trato-print-brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .trato-print-brand-side {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11pt;
+  }
+
+  .trato-print-brand img {
+    height: 12mm;
+    max-width: 45mm;
+    object-fit: contain;
+  }
+
   .trato-print-root h1 {
     font-size: 16pt;
     font-weight: bold;
