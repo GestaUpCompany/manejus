@@ -1265,3 +1265,17 @@ Contexto: um ajuste de estoque na Fazenda Chibata foi digitado errado porque a r
 - **Backfill Chibata (migração pontual via MCP)**: custo_unitario preenchido nos 6 ajustes de inventário (Farelo 0,85; Capulho 0,28; Milho 0,75; Sorgo 0,675; Uréia 5,98; Fós Recria 4,06 R$/kg) com nota na observação "custo R$/kg incluído retroativamente".
 
 Disparador: quando mencionar "custo no ajuste", "valor em estoque zerado", "scroll muda valor do input", "editar custo de ajuste antigo", ler esta seção.
+
+### lotes.formulacao_id divergente do plano vigente (2026-09-23)
+
+Bug reportado na Fazenda Doce Ilusao (Lote 1 - Thiago Menor): ao abrir Editar Lote, o card "Formulacao do lote" mostrava ENGORDA TIP 1,8% enquanto o plano vigente era PROTEINADO 0,3%. Causa: em 28/08, antes do commit 1273497, o salvar do form de lote ainda enviava formulacao_id e sobrescreveu o valor correto 7s apos iniciar_plano_lote. O commit de 02/09 removeu formulacao_id do payload e passou a recarregar o plano vigente ao fechar Gerenciar Planos, mas a abertura do form continuava lendo a coluna desnormalizada.
+
+Correcao (commit 7d24f41, Lotes.tsx handleEdit): formulacao_lote_id passa a ser derivado do plano vigente (ativo e sem data_fim, maior data_inicio), mesma regra de atualizarFormulacaoVigenteNoForm e da exportacao. planosData/planosLoteData ganharam formulacao_id no select.
+
+Efeito colateral descoberto: a escrita stale disparou sync_gmd_lote_categorias e repropagou GMD da formulacao errada para a categoria (garrote do Lote 1 ficou com gmd 1.450 em vez de 0.400 do PROTEINADO, inflando a projecao de peso em ~1,05 kg/dia desde 28/08). Alem disso, ~40 lotes em varias fazendas tinham lotes.formulacao_id divergente do vigente: com valor stale ou NULL, eles nao recebem atualizacoes de GMD da formulacao vigente (repropagar_gmd_para_lotes filtra por l.formulacao_id) e uma mudanca de destino zeraria o GMD das categorias.
+
+Trigger nova (migration 20260923120000_sync_lote_formulacao_vigente.sql, db push): trg_planos_sync_lote_formulacao em planos_nutricionais (AFTER INSERT/UPDATE/DELETE) recalcula o vigente do lote afetado e ajusta lotes.formulacao_id apenas quando diverge (IS DISTINCT FROM, evitando writes/audit/GMD-propagacao gratuitos). Validada em transacao na fazenda de testes: insert de plano ativo flippou a coluna.
+
+Backfill dos lotes divergentes ficou pendente de autorizacao (mutacao em fazendas de producao): ao alinhar lotes.formulacao_id, a propria sync_gmd_lote_categorias recorrige o gmd das categorias.
+
+Disparador: quando mencionar "formulacao do lote errada", "formulacao_id stale", "divergencia plano vigente", "GMD errado na categoria", trg_planos_sync_lote_formulacao, ler esta secao.
