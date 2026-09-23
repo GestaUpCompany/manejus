@@ -34,6 +34,11 @@ interface LoteCardProps {
 
 function LoteCardComponent({ lote, ocupacao, onEdit, onToggleActive, onDelete }: LoteCardProps) {
   const total = lote.categorias?.reduce((sum, cat) => sum + (cat.quant_atual ?? cat.quant_inicial ?? 0), 0) || lote.n_cabecas || 0
+  // lotes.qtd_bezerros é legado: bezerros ao pé são categorias próprias.
+  const bezerrosAoPe = lote.categorias?.reduce((sum, cat) => {
+    const nome = (cat.categoria || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return sum + (['bezerro ao pe', 'bezerra ao pe'].includes(nome) ? (cat.quant_atual ?? cat.quant_inicial ?? 0) : 0)
+  }, 0) || 0
 
   return (
     <CardItem
@@ -93,9 +98,9 @@ function LoteCardComponent({ lote, ocupacao, onEdit, onToggleActive, onDelete }:
             </div>
           </div>
         )}
-        {lote.qtd_bezerros && (
+        {bezerrosAoPe > 0 && (
           <p className="text-sm text-content-muted">
-            <span className="font-medium">Bezerros:</span> {lote.qtd_bezerros}
+            <span className="font-medium">Bezerros ao pé:</span> {bezerrosAoPe}
           </p>
         )}
       </div>
