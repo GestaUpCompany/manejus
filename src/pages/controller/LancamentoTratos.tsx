@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Button, Card, Input } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
@@ -9,8 +10,8 @@ import {
   parseKgLancamento,
   salvarLancamentosTratos,
   type LancamentoTratoLinha,
+  type LancamentoTratosData,
 } from '../../services/lancamentoTratosService'
-import { baixarPlanilhaTratosCampo } from '../../utils/planilhaTratosCampo'
 import type { TipoProgramacao } from '../../services/programacaoTratosService'
 
 const TIPOS: { value: TipoProgramacao; label: string }[] = [
@@ -58,6 +59,69 @@ const REGEX_REAL = /^-?\d{0,4}([.,]\d{0,2})?$/
 
 function chaveTrato(curralId: string, ordemTrato: number): string {
   return `${curralId}:${ordemTrato}`
+}
+
+function numeroFolha(valor: number | null, casas = 1): string {
+  if (valor == null || !Number.isFinite(valor)) return ''
+  return valor.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })
+}
+
+function FolhaTratoImpressao({ dados, fazendaNome, tipoLabel }: { dados: LancamentoTratosData; fazendaNome: string; tipoLabel: string }) {
+  const quantidadeTratos = dados.linhas.reduce((maior, linha) => Math.max(maior, linha.quantidadeTratos), 0)
+  return (
+    <div className="trato-print-root" aria-hidden="true">
+      <h1>Trato Projetado {tipoLabel} - {fazendaNome}</h1>
+      <div className="trato-print-meta">
+        <span>Data do Trato: {formatarData(dados.data)}</span>
+        <span>Tipo de programação: {tipoLabel}</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th rowSpan={2}>Lote</th>
+            <th rowSpan={2}>Curral</th>
+            <th rowSpan={2}>Dieta em Uso</th>
+            <th rowSpan={2}>Qtd. Cab.</th>
+            <th rowSpan={2}>Trato Anterior (kg)</th>
+            <th rowSpan={2}>Leitura do Dia</th>
+            <th rowSpan={2}>Trato Diário Previsto (kg)</th>
+            <th rowSpan={2}>Consumo Dia (kg/cab/dia)</th>
+            {Array.from({ length: quantidadeTratos }, (_, index) => <th key={index} colSpan={2}>{index + 1}º Trato</th>)}
+            <th rowSpan={2}>Total Projetado (kg)</th>
+          </tr>
+          <tr>
+            {Array.from({ length: quantidadeTratos }, (_, index) => (
+              <Fragment key={index}><th>Previsto</th><th>Real</th></Fragment>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {dados.linhas.map((linha) => (
+            <tr key={linha.curralId}>
+              <td>{linha.loteNome}</td>
+              <td>{linha.curralNome}</td>
+              <td>{linha.dietaNome || ''}</td>
+              <td>{linha.quantidadeCabecas ?? ''}</td>
+              <td>{numeroFolha(linha.tratoAnteriorKg)}</td>
+              <td>{linha.leituraDia ?? ''}</td>
+              <td>{numeroFolha(linha.kgBaseDia)}</td>
+              <td>{numeroFolha(linha.consumoKgCabDia, 2)}</td>
+              {linha.tratos.map((trato) => (
+                <Fragment key={trato.ordemTrato}>
+                  <td>{numeroFolha(trato.kgPlanejado)}</td>
+                  <td className="trato-print-real" />
+                </Fragment>
+              ))}
+              {Array.from({ length: quantidadeTratos - linha.tratos.length }, (_, index) => (
+                <Fragment key={index}><td /><td className="trato-print-real" /></Fragment>
+              ))}
+              <td>{numeroFolha(linha.tratos.reduce((sum, trato) => sum + (trato.kgPlanejado || 0), 0))}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
 }
 
 export function LancamentoTratos() {
@@ -186,10 +250,7 @@ export function LancamentoTratos() {
     }
   }
 
-  const baixar = async () => {
-    if (!dados || !fazenda?.nome) return
-    await baixarPlanilhaTratosCampo(dados, fazenda.nome)
-  }
+  const imprimir = () => window.print()
 
   const dados = fazendaId && programacaoId ? { fazendaId, data, tipo, programacaoId, linhas } : null
   const tratosPreenchidos = linhas.reduce((total, linha) => total + linha.tratos.filter((trato) => trato.kgReal !== null).length, 0)
@@ -209,7 +270,7 @@ export function LancamentoTratos() {
           <p className="text-sm text-content-muted mt-1">Digite os valores reais da folha de campo por curral.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={baixar} disabled={!dados || linhas.length === 0}>Baixar Folha de Trato</Button>
+          <Button variant="secondary" onClick={imprimir} disabled={!dados || linhas.length === 0}>Imprimir Folha de Trato</Button>
           <Button onClick={salvar} disabled={!dados || saving || tratosPreenchidos === 0}>{saving ? 'Salvando...' : 'Salvar lançamentos'}</Button>
         </div>
       </div>
@@ -310,6 +371,15 @@ export function LancamentoTratos() {
             </table>
           </div>
         </Card>
+      )}
+
+      {dados && linhas.length > 0 && createPortal(
+        <FolhaTratoImpressao
+          dados={dados}
+          fazendaNome={fazenda?.nome || ''}
+          tipoLabel={TIPOS.find((item) => item.value === tipo)?.label ?? tipo}
+        />,
+        document.body
       )}
     </div>
   )

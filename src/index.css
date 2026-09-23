@@ -253,3 +253,77 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Folha de Trato — impressão (Lançamento de Tratos) */
+.trato-print-root {
+  display: none;
+}
+
+@media print {
+  body > *:not(.trato-print-root) {
+    display: none !important;
+  }
+
+  .trato-print-root {
+    display: block;
+    font-family: Arial, sans-serif;
+    color: #1a1a1a;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .trato-print-root h1 {
+    font-size: 16pt;
+    font-weight: bold;
+    font-style: italic;
+    text-align: center;
+    margin: 0 0 8px;
+  }
+
+  .trato-print-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10pt;
+    font-weight: bold;
+    background: #d9e2f3;
+    padding: 4px 8px;
+    margin-bottom: 6px;
+  }
+
+  .trato-print-root table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+  }
+
+  .trato-print-root th,
+  .trato-print-root td {
+    border: 1px solid #a6a6a6;
+    padding: 4px 5px;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .trato-print-root thead > tr:first-child th {
+    background: #0f6437;
+    color: #ffffff;
+    font-weight: bold;
+  }
+
+  .trato-print-root thead > tr:nth-child(2) th {
+    background: #d9e2f3;
+    color: #1a1a1a;
+    font-weight: bold;
+  }
+
+  .trato-print-root td.trato-print-real {
+    background: #f2f2f2;
+    min-width: 14mm;
+    height: 9mm;
+  }
+}
+
+@page {
+  size: A4 landscape;
+  margin: 8mm;
+}
