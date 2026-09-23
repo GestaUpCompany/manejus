@@ -1654,7 +1654,7 @@ export function Lotes() {
     const categoriaIds = updatedCategorias.map((c: any) => c.id)
     const { data: planosData } = await supabase
       .from('planos_nutricionais')
-      .select('id, lote_categoria_id, nome, ativo, ordem, data_inicio, data_fim, peso_inicio_kg_cab')
+      .select('id, lote_categoria_id, nome, ativo, ordem, data_inicio, data_fim, peso_inicio_kg_cab, formulacao_id')
       .in('lote_categoria_id', categoriaIds)
       .order('ordem', { ascending: true })
 
@@ -1668,7 +1668,7 @@ export function Lotes() {
     // exceto bezerro/bezerra ao pé (seguem GMD próprio, não herdam plano do lote).
     const { data: planosLoteData } = await supabase
       .from('planos_nutricionais')
-      .select('id, lote_id, lote_categoria_id, nome, ativo, ordem, data_inicio, data_fim, peso_inicio_kg_cab')
+      .select('id, lote_id, lote_categoria_id, nome, ativo, ordem, data_inicio, data_fim, peso_inicio_kg_cab, formulacao_id')
       .eq('lote_id', lote.id)
       .is('lote_categoria_id', null)
       .order('ordem', { ascending: true })
@@ -1686,6 +1686,13 @@ export function Lotes() {
         }
       }
     }
+
+    // A formulação exibida no card vem do plano vigente (mesma regra de
+    // atualizarFormulacaoVigenteNoForm), não de lotes.formulacao_id, que é
+    // desnormalizado e pode estar desatualizado.
+    const formulacaoVigenteId = [...(planosData || []), ...(planosLoteData || [])]
+      .filter((p: any) => p.ativo && !p.data_fim)
+      .sort((a: any, b: any) => (b.data_inicio || '').localeCompare(a.data_inicio || ''))[0]?.formulacao_id
 
     // Buscar a última Entrada por categoria para anotação de proveniência do peso
     const { data: ultimasEntradasData } = await supabase
@@ -1791,7 +1798,7 @@ export function Lotes() {
       data_liberacao_sisbov: lote.data_liberacao_sisbov || '',
       periodo_liberacao_sisbov: lote.periodo_liberacao_sisbov?.toString() || '',
       data_embarque_prevista: lote.data_embarque_prevista || '',
-      formulacao_lote_id: (lote as any).formulacao_id || '',
+      formulacao_lote_id: formulacaoVigenteId || '',
     })
     setOriginalAtivo(lote.ativo ?? true)
     setShowForm(true)
