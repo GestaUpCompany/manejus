@@ -80,7 +80,7 @@ function FolhaTratoImpressao({ dados, fazendaNome, fazendaLogoUrl, tipoLabel }: 
           <span>{fazendaNome}</span>
         </div>
       </div>
-      <h1>Trato Projetado {tipoLabel} - {fazendaNome}</h1>
+      <h1>Folha de Trato {tipoLabel} - {fazendaNome}</h1>
       <div className="trato-print-meta">
         <span>Data do Trato: {formatarData(dados.data)}</span>
         <span>Tipo de programação: {tipoLabel}</span>
