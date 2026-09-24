@@ -198,6 +198,8 @@ export async function carregarLancamentoTratos(
     .from('currais')
     .select('id, nome, linha_id')
     .in('id', curralIds)
+    .eq('ativo', true)
+    .is('deleted_at', null)
   if (curraisResult2.error) throw curraisResult2.error
 
   const loteIds = ocupacoes.map((o) => o.lote_id).filter(Boolean)
