@@ -60,6 +60,22 @@ export function formatDateTime(dateStr: string | null | undefined): string {
  * Ex: para America/Cuiaba no inverno (UTC-04), se hoje em Cuiabá for
  * 2026-08-05, retorna { start: '2026-08-05T04:00:00Z', end: '2026-08-06T04:00:00Z' }.
  */
+/**
+ * Retorna o intervalo [inicio, fim) de um dia específico (YYYY-MM-DD) no fuso
+ * da fazenda, expresso em ISO UTC para uso em queries Supabase (.gte/.lt).
+ */
+export function getDayBoundsInTimezone(dataISO: string, timezone: string = FARM_TIMEZONE): { start: string; end: string } {
+  const offsetParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    timeZoneName: 'longOffset',
+  }).formatToParts(new Date(`${dataISO}T12:00:00Z`))
+  const offset = (offsetParts.find((p) => p.type === 'timeZoneName')?.value || 'GMT+00:00').replace('GMT', '') || '+00:00'
+  const start = new Date(`${dataISO}T00:00:00${offset}`)
+  const end = new Date(`${dataISO}T00:00:00${offset}`)
+  end.setUTCDate(end.getUTCDate() + 1)
+  return { start: start.toISOString(), end: end.toISOString() }
+}
+
 export function getTodayBoundsInTimezone(timezone: string = FARM_TIMEZONE): { start: string; end: string } {
   const now = new Date()
   const parts = getPartsInTimezone(now.toISOString())

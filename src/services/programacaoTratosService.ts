@@ -1,6 +1,13 @@
 import { supabase } from './supabaseClient'
+import { toFarmDateOnly } from '../utils/formatDate'
 
 export type TipoProgramacao = 'confinamento' | 'sequestro' | 'tip'
+
+export const SISTEMA_POR_TIPO: Record<TipoProgramacao, string> = {
+  confinamento: 'Confinamento',
+  sequestro: 'Sequestro',
+  tip: 'TIP',
+}
 
 export interface ProgramacaoTratos {
   id: string
@@ -52,7 +59,7 @@ export interface VigenciaProgramacao {
 }
 
 function dataHojeISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return toFarmDateOnly(new Date().toISOString()) || new Date().toISOString().slice(0, 10)
 }
 
 function deslocarDataISO(dataISO: string, dias: number): string {

@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import type { TipoProgramacao } from './programacaoTratosService'
+import { getDayBoundsInTimezone, toFarmDateOnly } from '../utils/formatDate'
 
 export interface PlanejadoLote {
   lote_id: string
@@ -70,6 +71,7 @@ export async function fetchPlanejadoPorLote(
     .from('programacao_tratos')
     .select('id, tipo, quantidade_tratos, data_inicio, data_fim')
     .eq('fazenda_id', fazendaId)
+    .eq('ativo', true)
 
   if (progError) throw progError
   if (!progs || progs.length === 0) return {}
@@ -128,11 +130,10 @@ export async function fetchRealPorLoteDia(
   dataInicio: string,
   dataFim: string
 ): Promise<RegistroTratoDia[]> {
-  // A coluna data é timestamptz, então .lte('data', '2026-08-05') exclui registros
-  // após meia-noite desse dia. Somar 1 dia ao filtro final e usar .lt para incluir o dia inteiro.
-  const dataFimNext = new Date(dataFim + 'T00:00:00')
-  dataFimNext.setDate(dataFimNext.getDate() + 1)
-  const dataFimExclusive = dataFimNext.toISOString().substring(0, 10)
+  // A coluna data é timestamptz; o dia do relatório é o dia no fuso da fazenda,
+  // não o dia UTC — um trato às 21h local já é o dia seguinte em UTC.
+  const inicioUtc = getDayBoundsInTimezone(dataInicio).start
+  const fimUtc = getDayBoundsInTimezone(dataFim).end
 
   const { data, error } = await supabase
     .from('registros_oferta_trato')
@@ -151,8 +152,8 @@ export async function fetchRealPorLoteDia(
     `)
     .eq('fazenda_id', fazendaId)
     .is('deleted_at', null)
-    .gte('data', dataInicio)
-    .lt('data', dataFimExclusive)
+    .gte('data', inicioUtc)
+    .lt('data', fimUtc)
     .order('data', { ascending: true })
 
   if (error) throw error
@@ -162,9 +163,9 @@ export async function fetchRealPorLoteDia(
   const mapa: Record<string, RegistroTratoDia> = {}
 
   for (const r of data) {
-    // A coluna data é timestamptz; normalizar para YYYY-MM-DD para casar com o lookup
+    // A coluna data é timestamptz; normalizar para YYYY-MM-DD no fuso da fazenda
     const dataRaw = r.data as string
-    const dataDia = dataRaw.includes('T') ? dataRaw.substring(0, 10) : dataRaw.substring(0, 10)
+    const dataDia = toFarmDateOnly(dataRaw) || dataRaw.substring(0, 10)
     const loteId = r.lote_id || '_sem_lote'
     const chave = `${loteId}|${dataDia}`
 
@@ -492,9 +493,8 @@ export async function fetchDetalheTratosPorLote(
   dataFim: string,
   lotesFiltro: string[] = []
 ): Promise<Record<string, DetalheTratoLote[]>> {
-  const dataFimNext = new Date(dataFim + 'T00:00:00')
-  dataFimNext.setDate(dataFimNext.getDate() + 1)
-  const dataFimExclusive = dataFimNext.toISOString().substring(0, 10)
+  const inicioUtc = getDayBoundsInTimezone(dataInicio).start
+  const fimUtc = getDayBoundsInTimezone(dataFim).end
 
   let query = supabase
     .from('registros_oferta_trato')
@@ -510,8 +510,8 @@ export async function fetchDetalheTratosPorLote(
     `)
     .eq('fazenda_id', fazendaId)
     .is('deleted_at', null)
-    .gte('data', dataInicio)
-    .lt('data', dataFimExclusive)
+    .gte('data', inicioUtc)
+    .lt('data', fimUtc)
     .order('data', { ascending: true })
     .order('ordem_trato', { ascending: true })
 
@@ -550,7 +550,7 @@ export async function fetchDetalheTratosPorLote(
     const loteId = r.lote_id
     if (!loteId) continue
     const dataRaw = String(r.data)
-    const dataDia = dataRaw.substring(0, 10)
+    const dataDia = toFarmDateOnly(dataRaw) || dataRaw.substring(0, 10)
     const planejado = Number(r.kg_planejado) || 0
     const real = Number(r.kg_ofertado_real) || 0
     const desvio = real - planejado
@@ -604,9 +604,8 @@ export async function fetchHorariosTratos(
   dataFim: string,
   lotesFiltro: string[] = []
 ): Promise<LinhaHorario[]> {
-  const dataFimNext = new Date(dataFim + 'T00:00:00')
-  dataFimNext.setDate(dataFimNext.getDate() + 1)
-  const dataFimExclusive = dataFimNext.toISOString().substring(0, 10)
+  const inicioUtc = getDayBoundsInTimezone(dataInicio).start
+  const fimUtc = getDayBoundsInTimezone(dataFim).end
 
   let query = supabase
     .from('registros_oferta_trato')
@@ -622,8 +621,8 @@ export async function fetchHorariosTratos(
     `)
     .eq('fazenda_id', fazendaId)
     .is('deleted_at', null)
-    .gte('data', dataInicio)
-    .lt('data', dataFimExclusive)
+    .gte('data', inicioUtc)
+    .lt('data', fimUtc)
     .order('data', { ascending: false })
 
   if (lotesFiltro.length > 0) {
@@ -795,12 +794,6 @@ export interface LinhaFabricaAcompanhamento {
   status: 'nao_produzido' | 'parcial' | 'concluido' | 'produzido_sem_distribuicao' | 'distribuido_sem_fabricacao'
 }
 
-function dataSeguinte(data: string): string {
-  const date = new Date(`${data}T00:00:00`)
-  date.setDate(date.getDate() + 1)
-  return date.toISOString().slice(0, 10)
-}
-
 /**
  * Concilia produção da Fábrica com distribuição por dieta e trato.
  * O planejamento é derivado da programação vigente; quando existe produção,
@@ -812,7 +805,8 @@ export async function fetchFabricaAcompanhamento(
   dataFim: string,
   lotesFiltro: string[] = []
 ): Promise<LinhaFabricaAcompanhamento[]> {
-  const dataFimExclusive = dataSeguinte(dataFim)
+  const inicioUtc = getDayBoundsInTimezone(dataInicio).start
+  const fimUtc = getDayBoundsInTimezone(dataFim).end
   const [progsRes, fabricaRes, distribuicaoRes] = await Promise.all([
     supabase
       .from('programacao_tratos')
@@ -824,15 +818,15 @@ export async function fetchFabricaAcompanhamento(
       .select('data, ordem_trato, tipo, formulacao_id, vagao_id, total_previsto, total_produzido, concluido, formulacoes(nome), vagoes(nome)')
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
-      .gte('data', dataInicio)
-      .lt('data', dataFimExclusive),
+      .gte('data', inicioUtc)
+      .lt('data', fimUtc),
     supabase
       .from('registros_oferta_trato')
       .select('data, ordem_trato, kg_ofertado_real, lote_id, programacao_id')
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
-      .gte('data', dataInicio)
-      .lt('data', dataFimExclusive),
+      .gte('data', inicioUtc)
+      .lt('data', fimUtc),
   ])
 
   if (progsRes.error) throw progsRes.error
@@ -940,7 +934,7 @@ export async function fetchFabricaAcompanhamento(
 
   const tipoPorProg = new Map(programas.map((p) => [p.id, p.tipo as TipoProgramacao]))
   for (const registro of (fabricaRes.data || []) as any[]) {
-    const data = String(registro.data).slice(0, 10)
+    const data = toFarmDateOnly(String(registro.data)) || String(registro.data).slice(0, 10)
     if (formulacoesPermitidas && !formulacoesPermitidas.has(registro.formulacao_id)) continue
     const formulacaoNome = registro.formulacoes?.nome || registro.formulacao_id
     const key = chave(data, registro.tipo, registro.formulacao_id, registro.ordem_trato)
@@ -967,7 +961,7 @@ export async function fetchFabricaAcompanhamento(
     const formulacao = categoriaPorLote.get(registro.lote_id)
     const tipo = tipoPorProg.get(registro.programacao_id)
     if (!formulacao || !tipo || (formulacoesPermitidas && !formulacoesPermitidas.has(formulacao.id))) continue
-    const key = chave(String(registro.data).slice(0, 10), tipo, formulacao.id, registro.ordem_trato)
+    const key = chave(toFarmDateOnly(String(registro.data)) || String(registro.data).slice(0, 10), tipo, formulacao.id, registro.ordem_trato)
     const atual = porChave.get(key)
     if (atual) atual.distribuido_kg += Number(registro.kg_ofertado_real) || 0
   }

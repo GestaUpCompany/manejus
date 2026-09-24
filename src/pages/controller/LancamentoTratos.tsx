@@ -13,6 +13,7 @@ import {
   type LancamentoTratosData,
 } from '../../services/lancamentoTratosService'
 import type { TipoProgramacao } from '../../services/programacaoTratosService'
+import { toFarmDateOnly } from '../../utils/formatDate'
 
 const TIPOS: { value: TipoProgramacao; label: string }[] = [
   { value: 'confinamento', label: 'Confinamento' },
@@ -21,7 +22,7 @@ const TIPOS: { value: TipoProgramacao; label: string }[] = [
 ]
 
 function hojeISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return toFarmDateOnly(new Date().toISOString()) || new Date().toISOString().slice(0, 10)
 }
 
 function formatarNumero(valor: number | null, casas = 1): string {

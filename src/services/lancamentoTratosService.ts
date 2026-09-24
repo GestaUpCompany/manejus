@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
-import type { TipoProgramacao } from './programacaoTratosService'
+import { SISTEMA_POR_TIPO, type TipoProgramacao } from './programacaoTratosService'
+import { getDayBoundsInTimezone, toFarmDateOnly } from '../utils/formatDate'
 
 export interface LancamentoTratoLinha {
   curralId: string
@@ -54,12 +55,6 @@ interface LeituraCocho {
   nota_config_id: string | null
 }
 
-function proximaData(data: string): string {
-  const date = new Date(`${data}T00:00:00`)
-  date.setDate(date.getDate() + 1)
-  return date.toISOString().slice(0, 10)
-}
-
 function numero(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null
   const parsed = Number(String(value).replace(',', '.'))
@@ -78,10 +73,10 @@ function agruparUltimoDiaPorCurral(registros: RegistroOferta[]): Map<string, num
   const resultado = new Map<string, number>()
   for (const [curralId, lista] of porCurral) {
     const diaMaisRecente = lista
-      .map((registro) => registro.data.slice(0, 10))
+      .map((registro) => toFarmDateOnly(registro.data) || registro.data.slice(0, 10))
       .sort((a, b) => b.localeCompare(a))[0]
     const total = lista
-      .filter((registro) => registro.data.slice(0, 10) === diaMaisRecente)
+      .filter((registro) => (toFarmDateOnly(registro.data) || registro.data.slice(0, 10)) === diaMaisRecente)
       .reduce((sum, registro) => sum + (Number(registro.kg_ofertado_real) || 0), 0)
     resultado.set(curralId, total)
   }
@@ -91,7 +86,8 @@ function agruparUltimoDiaPorCurral(registros: RegistroOferta[]): Map<string, num
 function ultimaLeituraPorLote(leituras: LeituraCocho[], data: string): Map<string, LeituraCocho> {
   const resultado = new Map<string, LeituraCocho>()
   for (const leitura of leituras) {
-    if (!leitura.lote_id || leitura.data.slice(0, 10) > data || resultado.has(leitura.lote_id)) continue
+    const dia = toFarmDateOnly(leitura.data) || leitura.data.slice(0, 10)
+    if (!leitura.lote_id || dia > data || resultado.has(leitura.lote_id)) continue
     resultado.set(leitura.lote_id, leitura)
   }
   return resultado
@@ -173,14 +169,20 @@ export async function carregarLancamentoTratos(
   if (curraisResult.error) throw curraisResult.error
 
   const curralIds = (curraisResult.data || []).map((item: any) => item.curral_id).filter(Boolean)
-  const loteIds = (curraisResult.data || []).map((item: any) => item.lote_id).filter(Boolean)
   if (curralIds.length === 0) {
     return { fazendaId, data, tipo, programacaoId: programacao.id, linhas: [] }
   }
 
-  const dataSeguinte = proximaData(data)
-  const [curraisResult2, categoriasResult, planosResult, leiturasResult, registrosDiaResult, registrosAnterioresResult] = await Promise.all([
-    supabase.from('currais').select('id, nome, linha_id, lote_id, lotes(id, nome)').in('id', curralIds),
+  const curraisResult2 = await supabase
+    .from('currais')
+    .select('id, nome, linha_id, lote_id, lotes(id, nome, sistema_producao)')
+    .in('id', curralIds)
+  if (curraisResult2.error) throw curraisResult2.error
+
+  // O lote efetivo é o que ocupa o curral agora, não o snapshot salvo na programação
+  const loteIds = (curraisResult2.data || []).map((curral: any) => curral.lote_id).filter(Boolean)
+  const boundsDia = getDayBoundsInTimezone(data)
+  const [categoriasResult, planosResult, leiturasResult, registrosDiaResult, registrosAnterioresResult] = await Promise.all([
     loteIds.length > 0
       ? supabase.from('lote_categorias').select('lote_id, categoria, quant_atual, peso_vivo_atual_kg_cab').in('lote_id', loteIds).eq('ativo', true).is('data_fim', null)
       : Promise.resolve({ data: [], error: null } as any),
@@ -190,10 +192,10 @@ export async function carregarLancamentoTratos(
     loteIds.length > 0
       ? supabase.from('registros_leitura_cocho').select('lote_id, data, leitura_cocho, nota_config_id').eq('fazenda_id', fazendaId).in('lote_id', loteIds).is('deleted_at', null).order('data', { ascending: false })
       : Promise.resolve({ data: [], error: null } as any),
-    supabase.from('registros_oferta_trato').select('id, curral_id, lote_id, data, ordem_trato, kg_planejado, kg_ofertado_real').eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', data).lt('data', dataSeguinte).order('ordem_trato'),
-    supabase.from('registros_oferta_trato').select('id, curral_id, lote_id, data, ordem_trato, kg_planejado, kg_ofertado_real').eq('fazenda_id', fazendaId).is('deleted_at', null).lt('data', data).order('data', { ascending: false }),
+    supabase.from('registros_oferta_trato').select('id, curral_id, lote_id, data, ordem_trato, kg_planejado, kg_ofertado_real').eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', boundsDia.start).lt('data', boundsDia.end).order('ordem_trato'),
+    supabase.from('registros_oferta_trato').select('id, curral_id, lote_id, data, ordem_trato, kg_planejado, kg_ofertado_real').eq('fazenda_id', fazendaId).is('deleted_at', null).lt('data', boundsDia.start).order('data', { ascending: false }),
   ])
-  for (const result of [curraisResult2, categoriasResult, planosResult, leiturasResult, registrosDiaResult, registrosAnterioresResult]) {
+  for (const result of [categoriasResult, planosResult, leiturasResult, registrosDiaResult, registrosAnterioresResult]) {
     if (result.error) throw result.error
   }
 
@@ -225,7 +227,9 @@ export async function carregarLancamentoTratos(
   for (const programacaoCurral of (curraisResult.data || []) as any[]) {
     const curral = currais.get(programacaoCurral.curral_id)
     if (!curral) continue
-    const loteId = programacaoCurral.lote_id || curral.lote_id || null
+    const loteSistema = (curral.lotes?.sistema_producao as string | null | undefined) ?? null
+    if (loteSistema && loteSistema !== SISTEMA_POR_TIPO[tipo]) continue
+    const loteId = curral.lote_id || null
     const lote = curral.lotes
     const categorias = categoriasPorLote.get(loteId || '') || []
     const quantidadeCabecas = categorias.reduce((sum, item) => sum + (Number(item.quant_atual) || 0), 0)

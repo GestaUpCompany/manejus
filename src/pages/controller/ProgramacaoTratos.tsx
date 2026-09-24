@@ -4,6 +4,7 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, CardSkeleton, Input } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import {
+  SISTEMA_POR_TIPO,
   TipoProgramacao,
   VigenciaProgramacao,
   getCurraisFazenda,
@@ -12,6 +13,7 @@ import {
   getVigenciasProgramacao,
   saveProgramacaoTratos,
 } from '../../services/programacaoTratosService'
+import { toFarmDateOnly } from '../../utils/formatDate'
 
 interface PercentualTrato {
   ordem_trato: number
@@ -44,12 +46,6 @@ const TIPOS: { value: TipoProgramacao; label: string }[] = [
   { value: 'tip', label: 'TIP' },
 ]
 
-const SISTEMA_POR_TIPO: Record<TipoProgramacao, string> = {
-  confinamento: 'Confinamento',
-  sequestro: 'Sequestro',
-  tip: 'TIP',
-}
-
 const DESCRICOES_FIXAS: Record<number, string> = {
   [-1]: 'Cocho vazio (lambido)',
   0: 'Cocho limpo (sem sobras)',
@@ -62,7 +58,7 @@ const NOTAS_ORDEM = [-1, 0, 1, 2, 3]
 const DATA_FIM_PADRAO = '9999-12-31'
 
 function hojeISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return toFarmDateOnly(new Date().toISOString()) || new Date().toISOString().slice(0, 10)
 }
 
 function formatarDataVigencia(iso: string): string {
