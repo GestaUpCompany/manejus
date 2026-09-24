@@ -1,5 +1,17 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Programação de tratos: currais filtrados por sistema do lote + vigências sem sobreposição (2026-09-24)
+
+Dois bugs reportados na Fazenda Jacamim, mesma raiz parcial: o modelo de vigências de `programacao_tratos` não tinha ciclo de vida.
+
+- **Currais de outro sistema na aba errada**: `getCurraisFazenda` (`programacaoTratosService.ts`) não trazia o `sistema_producao` do lote e `ProgramacaoTratos.tsx` exibia qualquer curral com `lote_id`. Agora o serviço retorna `lote_sistema`, a página filtra por `SISTEMA_POR_TIPO` (confinamento→Confinamento, sequestro→Sequestro, tip→TIP) e currais salvos com lote de sistema divergente continuam visíveis com badge vermelho do sistema real, para permitir limpeza.
+- **Vigências sobrepostas**: `saveProgramacaoTratos` só atualizava vigência idêntica e, caso contrário, inseria uma nova ativa com `data_fim` infinito sem fechar a anterior. A resolução "maior `data_inicio <= data` vence" (igual no PWA, `getProgramacaoTratosCompleta`) fazia a vigência nova sombrear a antiga com lista de currais parcial: foi o que fez o Lote 03 (TIP 33) sumir da folha a partir de 16/09. Agora o save resolve sobreposições antes de inserir: trunca `data_fim` das anteriores, adia `data_inicio` das posteriores, desativa as contidas e divide (clonando percentuais/currais) as que contêm o intervalo novo.
+- **UI**: a página lista as vigências ativas do tipo com badge "vigente"/"em edição" e avisa quando as datas vão criar vigência nova com ajuste automático das sobrepostas.
+- **Constraint** (`20260924150000_programacao_tratos_sem_sobreposicao.sql`): exclusion constraint `programacao_tratos_sem_sobreposicao` em `(fazenda_id, tipo, daterange(data_inicio, data_fim, '[]')) WHERE ativo`, via `btree_gist`. Garantia no banco de que vigências ativas do mesmo tipo nunca se sobrepõem.
+- **Dados Jacamim** (pontual, via MCP): confinamento tinha 4 vigências idênticas e sem currais (mantida só a de 10/09, demais desativadas); TIP remontado em cadeia contínua: 10–15/09 e 16–18/09 com TIP 41+42, 19/09→∞ com TIP 33/41/42 (Lote 03 entrou em 19/09). Detalhe encontrado: os lançamentos reais de 10–18/09 apontavam para programações de tipo confinamento com currais TIP, resquício do primeiro bug.
+
+**Disparador**: quando mencionar vigência de tratos, programação sobreposta, curral sumindo da folha de trato, `programacao_tratos_sem_sobreposicao` ou "lote não aparece no lançamento", ler esta seção.
+
 ## Soft-delete passa a gravar ativo=false + guarda de nome duplicado em pastos (2026-09-24)
 
 Bug reportado no PWA: "Pasto não encontrado" na caderneta de pastagens da Santa Vitória. Causa raiz: o delete deste repo setava só `deleted_at`, mantendo `ativo=true`; o PWA filtrava só `ativo` e ignorava `deleted_at`, então entidades excluídas aqui continuavam vivas lá, e o lookup por nome (`.single()`) estourava com duplicata.

@@ -5,9 +5,11 @@ import { Button, Card, CardSkeleton, Input } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import {
   TipoProgramacao,
+  VigenciaProgramacao,
   getCurraisFazenda,
   getProgramacaoTratos,
   getTiposExistentes,
+  getVigenciasProgramacao,
   saveProgramacaoTratos,
 } from '../../services/programacaoTratosService'
 
@@ -22,6 +24,7 @@ interface CurralComKg {
   curral_nome: string
   lote_id: string | null
   lote_nome: string | null
+  lote_sistema: string | null
   kg_mn_dia: string
   valor_salvo: boolean
 }
@@ -41,6 +44,12 @@ const TIPOS: { value: TipoProgramacao; label: string }[] = [
   { value: 'tip', label: 'TIP' },
 ]
 
+const SISTEMA_POR_TIPO: Record<TipoProgramacao, string> = {
+  confinamento: 'Confinamento',
+  sequestro: 'Sequestro',
+  tip: 'TIP',
+}
+
 const DESCRICOES_FIXAS: Record<number, string> = {
   [-1]: 'Cocho vazio (lambido)',
   0: 'Cocho limpo (sem sobras)',
@@ -56,6 +65,12 @@ function hojeISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+function formatarDataVigencia(iso: string): string {
+  if (iso === DATA_FIM_PADRAO) return 'sem fim'
+  const [ano, mes, dia] = iso.split('-')
+  return `${dia}/${mes}/${ano}`
+}
+
 export function ConfiguracaoTratos() {
   const { user } = useAuth()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
@@ -69,6 +84,9 @@ export function ConfiguracaoTratos() {
   const [tiposAtivos, setTiposAtivos] = useState<TipoProgramacao[]>([])
   // Tipo atualmente selecionado para edição
   const [tipoSelecionado, setTipoSelecionado] = useState<TipoProgramacao>('confinamento')
+
+  // Vigências ativas de todos os tipos (para exibição)
+  const [vigencias, setVigencias] = useState<VigenciaProgramacao[]>([])
 
   // Configuração por tipo
   const [configs, setConfigs] = useState<Record<string, {
@@ -102,12 +120,13 @@ export function ConfiguracaoTratos() {
     setLoading(true)
     setErro(null)
 
-    const [tiposExistentes, progConfinamento, progSequestro, progTip, curraisFazenda, notasData] = await Promise.all([
+    const [tiposExistentes, progConfinamento, progSequestro, progTip, curraisFazenda, vigenciasData, notasData] = await Promise.all([
       getTiposExistentes(fazendaId),
       getProgramacaoTratos(fazendaId, 'confinamento'),
       getProgramacaoTratos(fazendaId, 'sequestro'),
       getProgramacaoTratos(fazendaId, 'tip'),
       getCurraisFazenda(fazendaId),
+      getVigenciasProgramacao(fazendaId),
       supabase
         .from('notas_leitura_cocho_config')
         .select('*')
@@ -116,6 +135,7 @@ export function ConfiguracaoTratos() {
     ])
 
     setTiposAtivos(tiposExistentes.length > 0 ? tiposExistentes : ['confinamento'])
+    setVigencias(vigenciasData)
 
     const newConfigs: Record<string, { quantidadeTratos: string; dataInicio: string; dataFim: string; percentuais: PercentualTrato[]; currais: CurralComKg[] }> = {}
 
@@ -132,6 +152,7 @@ export function ConfiguracaoTratos() {
         curral_nome: c.nome,
         lote_id: c.lote_id,
         lote_nome: c.lote_nome,
+        lote_sistema: c.lote_sistema,
         kg_mn_dia: kgPorCurral[c.id] ?? '',
         valor_salvo: kgPorCurral[c.id] !== undefined,
       }))
@@ -263,8 +284,19 @@ export function ConfiguracaoTratos() {
   }, [configAtual])
 
   const curraisExibidos = useMemo(() => {
-    return (configAtual.currais || []).filter((c) => c.lote_id !== null || c.valor_salvo)
-  }, [configAtual])
+    const sistemaEsperado = SISTEMA_POR_TIPO[tipoSelecionado]
+    return (configAtual.currais || []).filter(
+      (c) => (c.lote_id !== null && c.lote_sistema === sistemaEsperado) || c.valor_salvo
+    )
+  }, [configAtual, tipoSelecionado])
+
+  const vigenciasDoTipo = useMemo(
+    () => vigencias.filter((v) => v.tipo === tipoSelecionado),
+    [vigencias, tipoSelecionado]
+  )
+  const vigenciaCorrespondente = vigenciasDoTipo.find(
+    (v) => v.data_inicio === configAtual.dataInicio && v.data_fim === configAtual.dataFim
+  )
 
   const percentuaisValidos = Math.abs(somaPercentuais - 100) < 0.01
   const horariosPreenchidos = (configAtual.percentuais || []).every((p) => p.horario_sugerido !== '')
@@ -308,6 +340,7 @@ export function ConfiguracaoTratos() {
       if (!tiposAtivos.includes(tipoSelecionado)) {
         setTiposAtivos([...tiposAtivos, tipoSelecionado])
       }
+      await loadData()
     } else {
       setErro(result.error)
     }
@@ -481,6 +514,31 @@ export function ConfiguracaoTratos() {
               Configuração: {TIPOS.find((t) => t.value === tipoSelecionado)?.label}
             </h2>
 
+            {vigenciasDoTipo.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="font-medium text-content-muted">Vigências:</span>
+                {vigenciasDoTipo.map((v) => {
+                  const vigenteHoje = v.data_inicio <= hojeISO() && v.data_fim >= hojeISO()
+                  const emEdicao = v.data_inicio === configAtual.dataInicio && v.data_fim === configAtual.dataFim
+                  return (
+                    <span
+                      key={v.id}
+                      className={`px-2 py-0.5 rounded-full border ${
+                        emEdicao
+                          ? 'border-primary bg-primary/10 text-primary font-medium'
+                          : vigenteHoje
+                            ? 'border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300'
+                            : 'border-border-base bg-surface-2 text-content-muted'
+                      }`}
+                    >
+                      {formatarDataVigencia(v.data_inicio)} → {formatarDataVigencia(v.data_fim)}
+                      {vigenteHoje ? ' (vigente)' : ''}
+                    </span>
+                  )
+                })}
+              </div>
+            )}
+
             <div className="mb-6">
               <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                 Quantidade de tratos por dia
@@ -523,6 +581,11 @@ export function ConfiguracaoTratos() {
             {configAtual.dataInicio && configAtual.dataFim && configAtual.dataFim < configAtual.dataInicio && (
               <p className="-mt-4 mb-4 text-sm font-medium text-red-500">
                 A data de fim deve ser igual ou posterior à data de início.
+              </p>
+            )}
+            {vigenciasDoTipo.length > 0 && !vigenciaCorrespondente && configAtual.dataInicio && configAtual.dataFim >= configAtual.dataInicio && (
+              <p className="-mt-4 mb-4 text-xs font-medium text-amber-600 dark:text-amber-400">
+                As datas não correspondem a uma vigência existente. Ao salvar, uma nova vigência será criada e as vigências sobrepostas serão ajustadas automaticamente.
               </p>
             )}
 
@@ -593,7 +656,7 @@ export function ConfiguracaoTratos() {
               </p>
               {curraisExibidos.length === 0 ? (
                 <div className="p-4 bg-surface-2 border border-border-base rounded-lg text-sm text-content-muted text-center">
-                  Nenhum curral com lote ocupando nesta fazenda.
+                  Nenhum curral com lote de {TIPOS.find((t) => t.value === tipoSelecionado)?.label} nesta fazenda.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -609,7 +672,14 @@ export function ConfiguracaoTratos() {
                       {curraisExibidos.map((c) => (
                         <tr key={c.curral_id}>
                           <td className="px-4 py-2 font-medium text-content-strong">{c.curral_nome}</td>
-                          <td className="px-4 py-2 text-content-muted">{c.lote_nome || <span className="text-content-faint italic">Sem lote</span>}</td>
+                          <td className="px-4 py-2 text-content-muted">
+                            {c.lote_nome || <span className="text-content-faint italic">Sem lote</span>}
+                            {c.lote_id !== null && c.lote_sistema !== SISTEMA_POR_TIPO[tipoSelecionado] && (
+                              <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-600 dark:text-red-300">
+                                {c.lote_sistema || 'Outro sistema'}
+                              </span>
+                            )}
+                          </td>
                           <td className="px-4 py-2">
                             <Input
                               type="number"

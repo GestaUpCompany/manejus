@@ -44,8 +44,36 @@ export interface ProgramacaoCompleta {
   currais: ProgramacaoCurral[]
 }
 
+export interface VigenciaProgramacao {
+  id: string
+  tipo: TipoProgramacao
+  data_inicio: string
+  data_fim: string
+}
+
 function dataHojeISO(): string {
   return new Date().toISOString().slice(0, 10)
+}
+
+function deslocarDataISO(dataISO: string, dias: number): string {
+  const [ano, mes, dia] = dataISO.split('-').map(Number)
+  return new Date(Date.UTC(ano, mes - 1, dia + dias)).toISOString().slice(0, 10)
+}
+
+/**
+ * Lista todas as vigências ativas de programação de tratos da fazenda,
+ * ordenadas por data de início. Usado para exibir as vigências na UI.
+ */
+export async function getVigenciasProgramacao(fazendaId: string): Promise<VigenciaProgramacao[]> {
+  const { data, error } = await supabase
+    .from('programacao_tratos')
+    .select('id, tipo, data_inicio, data_fim')
+    .eq('fazenda_id', fazendaId)
+    .eq('ativo', true)
+    .order('data_inicio', { ascending: true })
+
+  if (error || !data) return []
+  return data as VigenciaProgramacao[]
 }
 
 /**
@@ -125,10 +153,10 @@ export async function getTiposExistentes(fazendaId: string): Promise<TipoProgram
  */
 export async function getCurraisFazenda(
   fazendaId: string
-): Promise<{ id: string; nome: string; lote_id: string | null; lote_nome: string | null }[]> {
+): Promise<{ id: string; nome: string; lote_id: string | null; lote_nome: string | null; lote_sistema: string | null }[]> {
   const { data, error } = await supabase
     .from('currais')
-    .select('id, nome, lote_id, lotes(nome)')
+    .select('id, nome, lote_id, lotes(nome, sistema_producao)')
     .eq('fazenda_id', fazendaId)
     .is('deleted_at', null)
     .eq('ativo', true)
@@ -140,12 +168,103 @@ export async function getCurraisFazenda(
     nome: c.nome as string,
     lote_id: (c.lote_id as string | null) ?? null,
     lote_nome: (c.lotes?.nome as string | null) ?? null,
+    lote_sistema: (c.lotes?.sistema_producao as string | null) ?? null,
   }))
 }
 
 /**
+ * Clona uma programação (percentuais e currais) para uma nova vigência.
+ * Usado ao dividir uma vigência que contém o intervalo salvo.
+ */
+async function clonarVigencia(origemId: string, dataInicio: string, dataFim: string): Promise<void> {
+  const [{ data: origem }, { data: percentuais }, { data: currais }] = await Promise.all([
+    supabase.from('programacao_tratos').select('fazenda_id, tipo, quantidade_tratos').eq('id', origemId).single(),
+    supabase.from('programacao_tratos_percentuais').select('ordem_trato, percentual, horario_sugerido').eq('programacao_id', origemId),
+    supabase.from('programacao_tratos_currais').select('curral_id, lote_id, kg_mn_dia').eq('programacao_id', origemId),
+  ])
+  if (!origem) return
+
+  const { data: novo } = await supabase
+    .from('programacao_tratos')
+    .insert({
+      fazenda_id: origem.fazenda_id,
+      tipo: origem.tipo,
+      quantidade_tratos: origem.quantidade_tratos,
+      data_inicio: dataInicio,
+      data_fim: dataFim,
+      ativo: true,
+    })
+    .select('id')
+    .single()
+  if (!novo) return
+
+  if (percentuais?.length) {
+    await supabase.from('programacao_tratos_percentuais').insert(
+      percentuais.map((p) => ({ programacao_id: novo.id, ordem_trato: p.ordem_trato, percentual: p.percentual, horario_sugerido: p.horario_sugerido }))
+    )
+  }
+  if (currais?.length) {
+    await supabase.from('programacao_tratos_currais').insert(
+      currais.map((c) => ({ programacao_id: novo.id, curral_id: c.curral_id, lote_id: c.lote_id, kg_mn_dia: c.kg_mn_dia }))
+    )
+  }
+}
+
+/**
+ * Garante que nenhuma outra vigência ativa do mesmo tipo se sobreponha a
+ * [novaInicio, novaFim]. Vigências anteriores são truncadas, posteriores têm o
+ * início adiado, vigências contidas são desativadas e vigências que contêm o
+ * intervalo são divididas em duas.
+ */
+async function resolverSobreposicoes(
+  fazendaId: string,
+  tipo: TipoProgramacao,
+  novaInicio: string,
+  novaFim: string,
+  excluirId?: string
+): Promise<void> {
+  let query = supabase
+    .from('programacao_tratos')
+    .select('id, data_inicio, data_fim')
+    .eq('fazenda_id', fazendaId)
+    .eq('tipo', tipo)
+    .eq('ativo', true)
+    .lte('data_inicio', novaFim)
+    .gte('data_fim', novaInicio)
+  if (excluirId) query = query.neq('id', excluirId)
+
+  const { data: sobrepostas } = await query
+
+  for (const vig of sobrepostas || []) {
+    const temEsquerda = vig.data_inicio < novaInicio
+    const temDireita = vig.data_fim > novaFim
+
+    if (temEsquerda) {
+      await supabase
+        .from('programacao_tratos')
+        .update({ data_fim: deslocarDataISO(novaInicio, -1), updated_at: new Date().toISOString() })
+        .eq('id', vig.id)
+      if (temDireita) {
+        await clonarVigencia(vig.id, deslocarDataISO(novaFim, 1), vig.data_fim)
+      }
+    } else if (temDireita) {
+      await supabase
+        .from('programacao_tratos')
+        .update({ data_inicio: deslocarDataISO(novaFim, 1), updated_at: new Date().toISOString() })
+        .eq('id', vig.id)
+    } else {
+      await supabase
+        .from('programacao_tratos')
+        .update({ ativo: false, updated_at: new Date().toISOString() })
+        .eq('id', vig.id)
+    }
+  }
+}
+
+/**
  * Salva a programação de tratos de um tipo específico.
- * Se já existe uma programação ativa para o tipo, atualiza; senão, cria nova.
+ * Se já existe uma programação ativa com a mesma vigência, atualiza; senão, cria nova
+ * e ajusta as vigências sobrepostas do mesmo tipo (trunca, adia ou desativa).
  * Percentuais e currais são reescritos (delete + insert) a cada salvamento.
  */
 export async function saveProgramacaoTratos(
@@ -187,11 +306,15 @@ export async function saveProgramacaoTratos(
     }
     programacaoId = existing.id
 
+    await resolverSobreposicoes(fazendaId, tipo, config.data_inicio, config.data_fim, programacaoId)
+
     // Limpa percentuais antigos
     await supabase.from('programacao_tratos_percentuais').delete().eq('programacao_id', programacaoId)
     // Limpa currais antigos
     await supabase.from('programacao_tratos_currais').delete().eq('programacao_id', programacaoId)
   } else {
+    await resolverSobreposicoes(fazendaId, tipo, config.data_inicio, config.data_fim)
+
     const { data: newProg, error: insertError } = await supabase
       .from('programacao_tratos')
       .insert({
