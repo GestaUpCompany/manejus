@@ -97,7 +97,7 @@ function FolhaTratoImpressao({ dados, fazendaNome, fazendaLogoUrl, tipoLabel }: 
             <th rowSpan={2}>Trato Diário Previsto (kg)</th>
             <th rowSpan={2}>Consumo Dia (kg/cab/dia)</th>
             {Array.from({ length: quantidadeTratos }, (_, index) => <th key={index} colSpan={2}>{index + 1}º Trato</th>)}
-            <th rowSpan={2}>Total Projetado (kg)</th>
+            <th rowSpan={2}>Total Previsto (kg)</th>
           </tr>
           <tr>
             {Array.from({ length: quantidadeTratos }, (_, index) => (
@@ -335,7 +335,7 @@ export function LancamentoTratos() {
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Previsto</th>
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">kg/cab/dia</th>
                   {Array.from({ length: quantidadeTratos }, (_, index) => <th key={index} colSpan={2} className="border border-border-base px-3 py-2 text-center">{index + 1}º Trato</th>)}
-                  <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Total projetado</th>
+                  <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Total previsto</th>
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Total realizado</th>
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-center">
                     <div className="flex flex-col items-center gap-1">
