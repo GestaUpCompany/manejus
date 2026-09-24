@@ -61,7 +61,7 @@ function numero(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function agruparUltimoDiaPorCurral(registros: RegistroOferta[]): Map<string, number> {
+function agruparAnterioresPorCurral(registros: RegistroOferta[]): Map<string, RegistroOferta[]> {
   const porCurral = new Map<string, RegistroOferta[]>()
   for (const registro of registros) {
     if (!registro.curral_id || registro.kg_ofertado_real == null) continue
@@ -69,18 +69,25 @@ function agruparUltimoDiaPorCurral(registros: RegistroOferta[]): Map<string, num
     lista.push(registro)
     porCurral.set(registro.curral_id, lista)
   }
+  return porCurral
+}
 
-  const resultado = new Map<string, number>()
-  for (const [curralId, lista] of porCurral) {
-    const diaMaisRecente = lista
-      .map((registro) => toFarmDateOnly(registro.data) || registro.data.slice(0, 10))
-      .sort((a, b) => b.localeCompare(a))[0]
-    const total = lista
-      .filter((registro) => (toFarmDateOnly(registro.data) || registro.data.slice(0, 10)) === diaMaisRecente)
-      .reduce((sum, registro) => sum + (Number(registro.kg_ofertado_real) || 0), 0)
-    resultado.set(curralId, total)
-  }
-  return resultado
+/**
+ * Total real do último dia com registros dentro da ocupação atual (desde a
+ * data de entrada). Registros de ocupações anteriores do mesmo curral não
+ * contam: lote novo = dia 1, conforme semântica de feed target por ocupação.
+ */
+function totalUltimoDiaDaOcupacao(registros: RegistroOferta[], desdeData: string): number | null {
+  const elegiveis = registros.filter(
+    (registro) => (toFarmDateOnly(registro.data) || registro.data.slice(0, 10)) >= desdeData
+  )
+  if (elegiveis.length === 0) return null
+  const diaMaisRecente = elegiveis
+    .map((registro) => toFarmDateOnly(registro.data) || registro.data.slice(0, 10))
+    .sort((a, b) => b.localeCompare(a))[0]
+  return elegiveis
+    .filter((registro) => (toFarmDateOnly(registro.data) || registro.data.slice(0, 10)) === diaMaisRecente)
+    .reduce((sum, registro) => sum + (Number(registro.kg_ofertado_real) || 0), 0)
 }
 
 function ultimaLeituraPorLote(leituras: LeituraCocho[], data: string): Map<string, LeituraCocho> {
@@ -96,7 +103,7 @@ function ultimaLeituraPorLote(leituras: LeituraCocho[], data: string): Map<strin
 export function calcularTratosDoDia(params: {
   quantidadeTratos: number
   percentuais: { ordem_trato: number; percentual: number; horario_sugerido: string | null }[]
-  kgMnDia: number
+  kgMnDia: number | null
   totalRealDiaAnterior: number | null
   leituraDia: number | null
   ajusteLeituraPct: number | null
@@ -114,7 +121,7 @@ export function calcularTratosDoDia(params: {
     const percentual = Number(params.percentuais.find((item) => item.ordem_trato === ordem)?.percentual || 0)
     const percentualInfo = params.percentuais.find((item) => item.ordem_trato === ordem)
     const registro = registrosPorOrdem.get(ordem)
-    let kgPlanejado = kgBaseDia > 0 ? kgBaseDia * percentual / 100 : null
+    let kgPlanejado = kgBaseDia != null && kgBaseDia > 0 ? kgBaseDia * percentual / 100 : null
 
     if (ordem === params.quantidadeTratos && params.totalRealDiaAnterior != null && params.registrosDoDia.length > 0 && kgBaseDia !== null) {
       kgPlanejado = Math.max(0, kgBaseDia - totalRealAnteriorNoDia)
@@ -154,33 +161,46 @@ export async function carregarLancamentoTratos(
   if (!programacaoResult.data) return null
 
   const programacao = programacaoResult.data as { id: string; quantidade_tratos: number }
-  const [percentuaisResult, curraisResult] = await Promise.all([
+  const [percentuaisResult, ocupacoesResult] = await Promise.all([
     supabase
       .from('programacao_tratos_percentuais')
       .select('ordem_trato, percentual, horario_sugerido')
       .eq('programacao_id', programacao.id)
       .order('ordem_trato'),
     supabase
-      .from('programacao_tratos_currais')
-      .select('curral_id, lote_id, kg_mn_dia')
-      .eq('programacao_id', programacao.id),
+      .from('lote_curral_historico')
+      .select('id, curral_id, lote_id, data_inicial, kg_mn_dia_dia1, lotes(id, nome, sistema_producao)')
+      .eq('fazenda_id', fazendaId)
+      .lte('data_inicial', data)
+      .or(`data_final.is.null,data_final.gte.${data}`),
   ])
   if (percentuaisResult.error) throw percentuaisResult.error
-  if (curraisResult.error) throw curraisResult.error
+  if (ocupacoesResult.error) throw ocupacoesResult.error
 
-  const curralIds = (curraisResult.data || []).map((item: any) => item.curral_id).filter(Boolean)
-  if (curralIds.length === 0) {
+  // Participação vem da ocupação do curral na data, não do cronograma:
+  // para cada curral, a ocupação de maior data_inicial que cobre a data.
+  const ocupacaoPorCurral = new Map<string, any>()
+  for (const o of (ocupacoesResult.data || []) as any[]) {
+    const atual = ocupacaoPorCurral.get(o.curral_id)
+    if (!atual || o.data_inicial > atual.data_inicial) {
+      ocupacaoPorCurral.set(o.curral_id, o)
+    }
+  }
+  const ocupacoes = [...ocupacaoPorCurral.values()].filter(
+    (o) => o.lotes?.sistema_producao === SISTEMA_POR_TIPO[tipo]
+  )
+  if (ocupacoes.length === 0) {
     return { fazendaId, data, tipo, programacaoId: programacao.id, linhas: [] }
   }
 
+  const curralIds = ocupacoes.map((o) => o.curral_id)
   const curraisResult2 = await supabase
     .from('currais')
-    .select('id, nome, linha_id, lote_id, lotes(id, nome, sistema_producao)')
+    .select('id, nome, linha_id')
     .in('id', curralIds)
   if (curraisResult2.error) throw curraisResult2.error
 
-  // O lote efetivo é o que ocupa o curral agora, não o snapshot salvo na programação
-  const loteIds = (curraisResult2.data || []).map((curral: any) => curral.lote_id).filter(Boolean)
+  const loteIds = ocupacoes.map((o) => o.lote_id).filter(Boolean)
   const boundsDia = getDayBoundsInTimezone(data)
   const [categoriasResult, planosResult, leiturasResult, registrosDiaResult, registrosAnterioresResult] = await Promise.all([
     loteIds.length > 0
@@ -214,7 +234,7 @@ export async function carregarLancamentoTratos(
   const ajustesResult = await supabase.from('notas_leitura_cocho_config').select('nota, percentual_ajuste').eq('fazenda_id', fazendaId)
   if (ajustesResult.error) throw ajustesResult.error
   const ajustesPorNota = new Map((ajustesResult.data || []).map((item: any) => [Number(item.nota), Number(item.percentual_ajuste) || 0]))
-  const totalAnteriorPorCurral = agruparUltimoDiaPorCurral((registrosAnterioresResult.data || []) as RegistroOferta[])
+  const anterioresPorCurral = agruparAnterioresPorCurral((registrosAnterioresResult.data || []) as RegistroOferta[])
   const registrosPorCurral = new Map<string, RegistroOferta[]>()
   for (const registro of (registrosDiaResult.data || []) as RegistroOferta[]) {
     if (!registro.curral_id) continue
@@ -224,26 +244,28 @@ export async function carregarLancamentoTratos(
   }
 
   const linhas: LancamentoTratoLinha[] = []
-  for (const programacaoCurral of (curraisResult.data || []) as any[]) {
-    const curral = currais.get(programacaoCurral.curral_id)
+  for (const ocupacao of ocupacoes) {
+    const curral = currais.get(ocupacao.curral_id)
     if (!curral) continue
-    const loteSistema = (curral.lotes?.sistema_producao as string | null | undefined) ?? null
-    if (loteSistema && loteSistema !== SISTEMA_POR_TIPO[tipo]) continue
-    const loteId = curral.lote_id || null
-    const lote = curral.lotes
+    const loteId = ocupacao.lote_id
+    const lote = ocupacao.lotes
     const categorias = categoriasPorLote.get(loteId || '') || []
     const quantidadeCabecas = categorias.reduce((sum, item) => sum + (Number(item.quant_atual) || 0), 0)
     const pesoTotal = categorias.reduce((sum, item) => sum + (Number(item.quant_atual) || 0) * (Number(item.peso_vivo_atual_kg_cab) || 0), 0)
     const leitura = loteId ? leituras.get(loteId) : undefined
     const ajuste = leitura?.leitura_cocho == null ? null : ajustesPorNota.get(Number(leitura.leitura_cocho)) ?? 0
+    const totalAnterior = totalUltimoDiaDaOcupacao(
+      anterioresPorCurral.get(ocupacao.curral_id) || [],
+      ocupacao.data_inicial
+    )
     const calculo = calcularTratosDoDia({
       quantidadeTratos: Number(programacao.quantidade_tratos),
       percentuais: (percentuaisResult.data || []).map((item: any) => ({ ...item, percentual: Number(item.percentual) || 0 })),
-      kgMnDia: Number(programacaoCurral.kg_mn_dia) || 0,
-      totalRealDiaAnterior: totalAnteriorPorCurral.get(programacaoCurral.curral_id) ?? null,
+      kgMnDia: ocupacao.kg_mn_dia_dia1 != null ? Number(ocupacao.kg_mn_dia_dia1) : null,
+      totalRealDiaAnterior: totalAnterior,
       leituraDia: leitura?.leitura_cocho == null ? null : Number(leitura.leitura_cocho),
       ajusteLeituraPct: ajuste,
-      registrosDoDia: registrosPorCurral.get(programacaoCurral.curral_id) || [],
+      registrosDoDia: registrosPorCurral.get(ocupacao.curral_id) || [],
       programacaoId: programacao.id,
     })
     const consumo = quantidadeCabecas > 0 && calculo.kgBaseDia != null ? calculo.kgBaseDia / quantidadeCabecas : null
@@ -257,7 +279,7 @@ export async function carregarLancamentoTratos(
       quantidadeCabecas: quantidadeCabecas || null,
       pesoVivoKg: quantidadeCabecas > 0 ? pesoTotal / quantidadeCabecas : null,
       categorias: categorias.map((item) => item.categoria).filter(Boolean).join(', '),
-      tratoAnteriorKg: totalAnteriorPorCurral.get(programacaoCurral.curral_id) ?? null,
+      tratoAnteriorKg: totalAnterior,
       leituraDia: leitura?.leitura_cocho == null ? null : Number(leitura.leitura_cocho),
       ajusteLeituraPct: ajuste,
       kgBaseDia: calculo.kgBaseDia,

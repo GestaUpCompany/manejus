@@ -27,28 +27,21 @@ export interface ProgramacaoPercentual {
   horario_sugerido: string | null
 }
 
-export interface ProgramacaoCurral {
-  id: string
-  programacao_id: string
-  curral_id: string
-  lote_id: string | null
-  kg_mn_dia: number
-  n_cabecas_snapshot: number | null
-  peso_vivo_medio_snapshot: number | null
-}
-
-export interface CurralComKg {
+export interface OcupacaoEmTrato {
+  ocupacao_id: string
   curral_id: string
   curral_nome: string
-  lote_id: string | null
+  lote_id: string
   lote_nome: string | null
-  kg_mn_dia: string
+  lote_sistema: string | null
+  data_inicial: string
+  data_final: string | null
+  kg_mn_dia_dia1: number | null
 }
 
 export interface ProgramacaoCompleta {
   programacao: ProgramacaoTratos | null
   percentuais: ProgramacaoPercentual[]
-  currais: ProgramacaoCurral[]
 }
 
 export interface VigenciaProgramacao {
@@ -105,11 +98,11 @@ export async function getProgramacaoTratos(
 
   if (progError) {
     console.error('Erro ao buscar programação de tratos:', progError)
-    return { programacao: null, percentuais: [], currais: [] }
+    return { programacao: null, percentuais: [] }
   }
 
   if (!prog) {
-    return { programacao: null, percentuais: [], currais: [] }
+    return { programacao: null, percentuais: [] }
   }
 
   const { data: percentuais, error: percError } = await supabase
@@ -122,19 +115,9 @@ export async function getProgramacaoTratos(
     console.error('Erro ao buscar percentuais:', percError)
   }
 
-  const { data: currais, error: curraisError } = await supabase
-    .from('programacao_tratos_currais')
-    .select('*')
-    .eq('programacao_id', prog.id)
-
-  if (curraisError) {
-    console.error('Erro ao buscar currais da programação:', curraisError)
-  }
-
   return {
     programacao: prog as ProgramacaoTratos,
     percentuais: (percentuais || []) as ProgramacaoPercentual[],
-    currais: (currais || []) as ProgramacaoCurral[],
   }
 }
 
@@ -177,6 +160,105 @@ export async function getCurraisFazenda(
     lote_nome: (c.lotes?.nome as string | null) ?? null,
     lote_sistema: (c.lotes?.sistema_producao as string | null) ?? null,
   }))
+}
+
+/**
+ * Lista as ocupações abertas de currais da fazenda (lote_curral_historico sem
+ * data_final), com nome do curral e dados do lote. É a fonte da seção
+ * "Currais em trato" da configuração e da participação na folha.
+ */
+export async function getOcupacoesEmTrato(fazendaId: string): Promise<OcupacaoEmTrato[]> {
+  const { data, error } = await supabase
+    .from('lote_curral_historico')
+    .select('id, curral_id, lote_id, data_inicial, data_final, kg_mn_dia_dia1, currais(nome, ativo, deleted_at), lotes(nome, sistema_producao, deleted_at)')
+    .eq('fazenda_id', fazendaId)
+    .is('data_final', null)
+    .order('data_inicial', { ascending: true })
+
+  if (error || !data) return []
+  return (data as any[])
+    .filter((o) => o.currais && o.currais.ativo !== false && o.currais.deleted_at == null && o.lotes && o.lotes.deleted_at == null)
+    .map((o) => ({
+      ocupacao_id: o.id as string,
+      curral_id: o.curral_id as string,
+      curral_nome: o.currais.nome as string,
+      lote_id: o.lote_id as string,
+      lote_nome: (o.lotes?.nome as string | null) ?? null,
+      lote_sistema: (o.lotes?.sistema_producao as string | null) ?? null,
+      data_inicial: o.data_inicial as string,
+      data_final: (o.data_final as string | null) ?? null,
+      kg_mn_dia_dia1: o.kg_mn_dia_dia1 != null ? Number(o.kg_mn_dia_dia1) : null,
+    }))
+}
+
+/**
+ * Resolve as ocupações que cobrem uma data específica: para cada curral, a
+ * ocupação de maior data_inicial com data_inicial <= data e
+ * (data_final null ou >= data). Troca de lote no mesmo dia resolve para a mais
+ * recente.
+ */
+export async function getOcupacoesNaData(
+  fazendaId: string,
+  data: string
+): Promise<OcupacaoEmTrato[]> {
+  const { data: rows, error } = await supabase
+    .from('lote_curral_historico')
+    .select('id, curral_id, lote_id, data_inicial, data_final, kg_mn_dia_dia1, currais(nome), lotes(nome, sistema_producao)')
+    .eq('fazenda_id', fazendaId)
+    .lte('data_inicial', data)
+    .or(`data_final.is.null,data_final.gte.${data}`)
+
+  if (error || !rows) return []
+
+  const porCurral = new Map<string, any>()
+  for (const row of rows as any[]) {
+    const atual = porCurral.get(row.curral_id)
+    if (!atual || row.data_inicial > atual.data_inicial) {
+      porCurral.set(row.curral_id, row)
+    }
+  }
+
+  return [...porCurral.values()].map((o) => ({
+    ocupacao_id: o.id as string,
+    curral_id: o.curral_id as string,
+    curral_nome: (o.currais?.nome as string) ?? '—',
+    lote_id: o.lote_id as string,
+    lote_nome: (o.lotes?.nome as string | null) ?? null,
+    lote_sistema: (o.lotes?.sistema_producao as string | null) ?? null,
+    data_inicial: o.data_inicial as string,
+    data_final: (o.data_final as string | null) ?? null,
+    kg_mn_dia_dia1: o.kg_mn_dia_dia1 != null ? Number(o.kg_mn_dia_dia1) : null,
+  }))
+}
+
+/**
+ * Atualiza o feed target (kg MN do dia 1) de uma ocupação.
+ */
+export async function setOcupacaoKgDia1(
+  ocupacaoId: string,
+  kgMnDia1: number | null
+): Promise<{ success: boolean; error: string | null }> {
+  const { error } = await supabase
+    .from('lote_curral_historico')
+    .update({ kg_mn_dia_dia1: kgMnDia1, updated_at: new Date().toISOString() })
+    .eq('id', ocupacaoId)
+
+  return { success: !error, error: error?.message ?? null }
+}
+
+/**
+ * Atualiza a data de entrada de uma ocupação (correção de backfill/dado).
+ */
+export async function setOcupacaoDataInicial(
+  ocupacaoId: string,
+  dataInicial: string
+): Promise<{ success: boolean; error: string | null }> {
+  const { error } = await supabase
+    .from('lote_curral_historico')
+    .update({ data_inicial: dataInicial, updated_at: new Date().toISOString() })
+    .eq('id', ocupacaoId)
+
+  return { success: !error, error: error?.message ?? null }
 }
 
 /**
@@ -269,10 +351,13 @@ async function resolverSobreposicoes(
 }
 
 /**
- * Salva a programação de tratos de um tipo específico.
- * Se já existe uma programação ativa com a mesma vigência, atualiza; senão, cria nova
- * e ajusta as vigências sobrepostas do mesmo tipo (trunca, adia ou desativa).
- * Percentuais e currais são reescritos (delete + insert) a cada salvamento.
+ * Salva o cronograma de tratos de um tipo (quantidade de tratos, percentuais e
+ * horários). A vigência funciona como versionamento do cronograma:
+ * - se já existe vigência ativa com a mesma data_inicio, atualiza seu conteúdo;
+ * - senão, cria uma nova versão cuja data_fim é derivada (véspera da próxima
+ *   vigência, ou "sem fim") e ajusta as sobrepostas.
+ * Currais não fazem mais parte do save: a participação vem da ocupação
+ * (lote_curral_historico), mantida pelo trigger em currais.lote_id.
  */
 export async function saveProgramacaoTratos(
   fazendaId: string,
@@ -280,21 +365,18 @@ export async function saveProgramacaoTratos(
   config: {
     quantidade_tratos: number
     data_inicio: string
-    data_fim: string
     percentuais: { ordem_trato: number; percentual: number; horario_sugerido: string | null }[]
-    currais: { curral_id: string; lote_id: string | null; kg_mn_dia: number }[]
   }
 ): Promise<{ success: boolean; error: string | null }> {
-  // Atualiza somente a programação que tem exatamente esta vigência.
-  // Vigências diferentes são preservadas para histórico e futuro.
+  // A vigência é identificada pela data_inicio: a constraint de não-sobreposição
+  // garante que no máximo uma vigência ativa do tipo começa nessa data.
   const { data: existing } = await supabase
     .from('programacao_tratos')
-    .select('id')
+    .select('id, data_fim')
     .eq('fazenda_id', fazendaId)
     .eq('ativo', true)
     .eq('tipo', tipo)
     .eq('data_inicio', config.data_inicio)
-    .eq('data_fim', config.data_fim)
     .maybeSingle()
 
   let programacaoId: string
@@ -313,14 +395,24 @@ export async function saveProgramacaoTratos(
     }
     programacaoId = existing.id
 
-    await resolverSobreposicoes(fazendaId, tipo, config.data_inicio, config.data_fim, programacaoId)
-
     // Limpa percentuais antigos
     await supabase.from('programacao_tratos_percentuais').delete().eq('programacao_id', programacaoId)
-    // Limpa currais antigos
-    await supabase.from('programacao_tratos_currais').delete().eq('programacao_id', programacaoId)
   } else {
-    await resolverSobreposicoes(fazendaId, tipo, config.data_inicio, config.data_fim)
+    // data_fim derivada: véspera da próxima vigência, ou "sem fim".
+    const { data: proxima } = await supabase
+      .from('programacao_tratos')
+      .select('data_inicio')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .eq('tipo', tipo)
+      .gt('data_inicio', config.data_inicio)
+      .order('data_inicio', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    const dataFim = proxima ? deslocarDataISO(proxima.data_inicio, -1) : '9999-12-31'
+
+    await resolverSobreposicoes(fazendaId, tipo, config.data_inicio, dataFim)
 
     const { data: newProg, error: insertError } = await supabase
       .from('programacao_tratos')
@@ -329,7 +421,7 @@ export async function saveProgramacaoTratos(
         tipo,
         quantidade_tratos: config.quantidade_tratos,
         data_inicio: config.data_inicio,
-        data_fim: config.data_fim,
+        data_fim: dataFim,
         ativo: true,
       })
       .select()
@@ -356,24 +448,6 @@ export async function saveProgramacaoTratos(
 
     if (percError) {
       return { success: false, error: percError.message }
-    }
-  }
-
-  // Insere currais com kg MN do dia 1
-  if (config.currais.length > 0) {
-    const { error: curraisError } = await supabase
-      .from('programacao_tratos_currais')
-      .insert(
-        config.currais.map((c) => ({
-          programacao_id: programacaoId,
-          curral_id: c.curral_id,
-          lote_id: c.lote_id,
-          kg_mn_dia: c.kg_mn_dia,
-        }))
-      )
-
-    if (curraisError) {
-      return { success: false, error: curraisError.message }
     }
   }
 

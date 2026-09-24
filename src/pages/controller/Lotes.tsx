@@ -1195,14 +1195,25 @@ export function Lotes() {
       }
     }
 
-    // Gerenciar associação do lote com curral
-    // Desvincular curral anterior se existir
-    if (editingLote?.curral_id) {
-      await supabase.from('currais').update({ lote_id: null }).eq('id', editingLote.curral_id)
-    }
-    // Vincular novo curral se for confinamento
-    if (isConfinamento && formData.curral_id) {
-      await supabase.from('currais').update({ lote_id: loteId }).eq('id', formData.curral_id)
+    // Gerenciar associação do lote com curral. Só desvincula/vincula quando o
+    // curral realmente mudou: cada troca fecha e abre uma ocupação em
+    // lote_curral_historico (dia 1 reinicia por ocupação), então regravar o
+    // mesmo curral destruiria o histórico e o feed target do lote.
+    const curralAnterior = editingLote?.curral_id || null
+    const curralNovo = isConfinamento ? (formData.curral_id || null) : null
+    if (curralAnterior !== curralNovo) {
+      if (curralAnterior) {
+        await supabase.from('currais').update({ lote_id: null }).eq('id', curralAnterior)
+      }
+      if (curralNovo) {
+        const { data: alocRes, error: alocError } = await supabase.rpc('alocar_lote_curral', {
+          p_curral_id: curralNovo,
+          p_lote_id: loteId,
+        })
+        if (alocError || !alocRes?.success) {
+          toast.error(`Lote salvo, mas não foi possível alocá-lo no curral: ${alocRes?.error || alocError?.message}`)
+        }
+      }
     }
 
     // Recalculate all categories to ensure calculated fields are up-to-date before saving

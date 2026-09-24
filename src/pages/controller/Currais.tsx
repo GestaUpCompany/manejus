@@ -84,6 +84,7 @@ export function Currais() {
     nome: '',
     lote_id: '',
     linha_id: '',
+    kg_mn_dia_dia1: '',
   })
   const [loteInfo, setLoteInfo] = useState<LoteInfo | null>(null)
   const [fetchingLoteInfo, setFetchingLoteInfo] = useState(false)
@@ -381,26 +382,78 @@ export function Currais() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    const data = {
-      fazenda_id: fazendaId,
-      nome: curralFormData.nome,
-      lote_id: curralFormData.lote_id || null,
-      linha_id: curralFormData.linha_id || null,
+    const loteIdNovo = curralFormData.lote_id || null
+    const loteIdAtual = editingCurral?.lote_id || null
+    const kgInput = curralFormData.kg_mn_dia_dia1.trim()
+    const kgDia1 = kgInput !== '' ? parseFloat(kgInput) : null
+    if (kgInput !== '' && (kgDia1 == null || isNaN(kgDia1) || kgDia1 < 0)) {
+      toast.error('Alvo de MN do dia 1 inválido.')
+      setSubmittingCurral(false)
+      return
     }
 
-    let error
+    // Alocação em curral vazio usa a RPC atômica (valida sistema do lote,
+    // disponibilidade e grava o feed target). Troca ou remoção de lote segue
+    // pelo update direto: o trigger em currais.lote_id fecha/abre a ocupação.
+    const alocarViaRpc = Boolean(loteIdNovo) && !loteIdAtual
+
+    let error: any = null
+    let curralId = editingCurral?.id || ''
     if (editingCurral) {
-      const { error: updateError } = await supabase.from('currais').update(data).eq('id', editingCurral.id)
+      const { error: updateError } = await supabase
+        .from('currais')
+        .update({
+          nome: curralFormData.nome,
+          linha_id: curralFormData.linha_id || null,
+          ...(alocarViaRpc ? {} : { lote_id: loteIdNovo }),
+        })
+        .eq('id', editingCurral.id)
       error = updateError
     } else {
-      const { error: insertError } = await supabase.from('currais').insert(data)
+      const { data: novo, error: insertError } = await supabase
+        .from('currais')
+        .insert({
+          fazenda_id: fazendaId,
+          nome: curralFormData.nome,
+          linha_id: curralFormData.linha_id || null,
+          lote_id: alocarViaRpc ? null : loteIdNovo,
+        })
+        .select('id')
+        .single()
       error = insertError
+      curralId = novo?.id || ''
+    }
+
+    if (!error && alocarViaRpc && curralId) {
+      const { data: alocRes, error: alocError } = await supabase.rpc('alocar_lote_curral', {
+        p_curral_id: curralId,
+        p_lote_id: loteIdNovo,
+        p_kg_mn_dia_dia1: kgDia1,
+      })
+      if (alocError || !alocRes?.success) {
+        error = { message: alocRes?.error || alocError?.message || 'Erro ao alocar lote no curral' }
+      }
+    } else if (!error && editingCurral && loteIdNovo && loteIdNovo !== loteIdAtual && kgDia1 != null) {
+      // Troca de lote: o trigger já abriu a nova ocupação; ajusta o alvo nela.
+      const { data: ocup } = await supabase
+        .from('lote_curral_historico')
+        .select('id')
+        .eq('curral_id', editingCurral.id)
+        .is('data_final', null)
+        .maybeSingle()
+      if (ocup) {
+        await supabase
+          .from('lote_curral_historico')
+          .update({ kg_mn_dia_dia1: kgDia1, updated_at: new Date().toISOString() })
+          .eq('id', ocup.id)
+      }
     }
 
     if (error) {
       console.error('Erro ao salvar curral:', error)
+      toast.error(error.message || 'Erro ao salvar curral.')
     } else {
-      setCurralFormData({ nome: '', lote_id: '', linha_id: '' })
+      setCurralFormData({ nome: '', lote_id: '', linha_id: '', kg_mn_dia_dia1: '' })
       setLoteInfo(null)
       setEditingCurral(null)
       setShowCurralForm(false)
@@ -410,21 +463,34 @@ export function Currais() {
     setSubmittingCurral(false)
   }
 
-  const handleCurralEdit = (curral: Curral) => {
+  const handleCurralEdit = async (curral: Curral) => {
     setEditingCurral(curral)
     setCurralFormData({
       nome: curral.nome,
       lote_id: curral.lote_id || '',
       linha_id: curral.linha_id || '',
+      kg_mn_dia_dia1: '',
     })
-    if (curral.lote_id) fetchLoteInfo(curral.lote_id)
-    else setLoteInfo(null)
+    if (curral.lote_id) {
+      fetchLoteInfo(curral.lote_id)
+      const { data: ocup } = await supabase
+        .from('lote_curral_historico')
+        .select('kg_mn_dia_dia1')
+        .eq('curral_id', curral.id)
+        .is('data_final', null)
+        .maybeSingle()
+      if (ocup?.kg_mn_dia_dia1 != null) {
+        setCurralFormData((prev) => ({ ...prev, kg_mn_dia_dia1: String(ocup.kg_mn_dia_dia1) }))
+      }
+    } else {
+      setLoteInfo(null)
+    }
     setShowCurralForm(true)
   }
 
   const handleCurralCancel = () => {
     setEditingCurral(null)
-    setCurralFormData({ nome: '', lote_id: '', linha_id: '' })
+    setCurralFormData({ nome: '', lote_id: '', linha_id: '', kg_mn_dia_dia1: '' })
     setLoteInfo(null)
     setShowCurralForm(false)
   }
@@ -454,14 +520,14 @@ export function Currais() {
 
   const openNewCurralInLinha = (linhaId: string) => {
     setEditingCurral(null)
-    setCurralFormData({ nome: '', lote_id: '', linha_id: linhaId })
+    setCurralFormData({ nome: '', lote_id: '', linha_id: linhaId, kg_mn_dia_dia1: '' })
     setLoteInfo(null)
     setShowCurralForm(true)
   }
 
   const resetCurralForm = () => {
     setEditingCurral(null)
-    setCurralFormData({ nome: '', lote_id: '', linha_id: '' })
+    setCurralFormData({ nome: '', lote_id: '', linha_id: '', kg_mn_dia_dia1: '' })
     setLoteInfo(null)
     setShowCurralForm(true)
   }
@@ -708,6 +774,26 @@ export function Currais() {
                 {curralFormData.lote_id && lotes.find(l => l.id === curralFormData.lote_id)?.pasto_id && (
                   <p className="text-xs text-red-500 mt-1">
                     Este lote está alocado em um pasto. Remova-o do pasto antes de vincular a um curral.
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                  Alvo MN dia 1 (kg)
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.1"
+                  value={curralFormData.kg_mn_dia_dia1}
+                  onChange={(e) => setCurralFormData({ ...curralFormData, kg_mn_dia_dia1: e.target.value })}
+                  placeholder="a definir"
+                  disabled={!curralFormData.lote_id}
+                  className="border-border-base focus:border-accent text-sm"
+                />
+                {curralFormData.lote_id && (
+                  <p className="text-xs text-content-muted mt-1">
+                    Oferta sugerida no primeiro dia do lote no curral. Opcional: em branco, o operador define no primeiro trato.
                   </p>
                 )}
               </div>

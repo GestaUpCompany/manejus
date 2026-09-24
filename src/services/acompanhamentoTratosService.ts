@@ -60,62 +60,79 @@ export interface ResumoLote {
   tipo: TipoProgramacao | null
 }
 
+const TIPO_POR_SISTEMA: Record<string, TipoProgramacao> = {
+  Confinamento: 'confinamento',
+  Sequestro: 'sequestro',
+  TIP: 'tip',
+}
+
 /**
- * Busca a programação de tratos ativa da fazenda, agrupada por lote.
- * Usado para preencher dias sem execução (linhas "sem execução").
+ * Busca as ocupações de curral da fazenda (lote_curral_historico), agrupadas por
+ * lote. Cada ocupação vira um PlanejadoLote cuja janela é [data_inicial,
+ * data_final|∞]: o planejado de um dia só existe enquanto o lote ocupava o
+ * curral, independente do cronograma.
  */
 export async function fetchPlanejadoPorLote(
   fazendaId: string
 ): Promise<Record<string, PlanejadoLote[]>> {
-  const { data: progs, error: progError } = await supabase
-    .from('programacao_tratos')
-    .select('id, tipo, quantidade_tratos, data_inicio, data_fim')
-    .eq('fazenda_id', fazendaId)
-    .eq('ativo', true)
-
-  if (progError) throw progError
-  if (!progs || progs.length === 0) return {}
-
-  const resultado: Record<string, PlanejadoLote[]> = {}
-
-  for (const prog of progs) {
-    const { data: currais, error: curraisError } = await supabase
-      .from('programacao_tratos_currais')
+  const [ocupacoesRes, progsRes] = await Promise.all([
+    supabase
+      .from('lote_curral_historico')
       .select(`
+        id,
         curral_id,
         lote_id,
-        kg_mn_dia,
-        n_cabecas_snapshot,
-        peso_vivo_medio_snapshot,
+        data_inicial,
+        data_final,
+        kg_mn_dia_dia1,
         currais (nome),
-        lotes (nome)
+        lotes (nome, sistema_producao)
       `)
-      .eq('programacao_id', prog.id)
+      .eq('fazenda_id', fazendaId),
+    supabase
+      .from('programacao_tratos')
+      .select('id, tipo, quantidade_tratos, data_inicio, data_fim')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true),
+  ])
 
-    if (curraisError) throw curraisError
-    if (!currais) continue
+  if (ocupacoesRes.error) throw ocupacoesRes.error
+  if (progsRes.error) throw progsRes.error
+  if (!ocupacoesRes.data || ocupacoesRes.data.length === 0) return {}
 
-    for (const c of currais) {
-      const loteId = c.lote_id
-      if (!loteId) continue
-
-      const item: PlanejadoLote = {
-        lote_id: loteId,
-        lote_nome: (c.lotes as any)?.nome ?? null,
-        curral_id: c.curral_id,
-        curral_nome: (c.currais as any)?.nome ?? '—',
-        kg_mn_dia: Number(c.kg_mn_dia) || 0,
-        n_cabecas_snapshot: c.n_cabecas_snapshot,
-        peso_vivo_medio_snapshot: c.peso_vivo_medio_snapshot,
-        tipo: prog.tipo as TipoProgramacao,
-        quantidade_tratos: prog.quantidade_tratos,
-        data_inicio: prog.data_inicio,
-        data_fim: prog.data_fim,
-      }
-
-      if (!resultado[loteId]) resultado[loteId] = []
-      resultado[loteId].push(item)
+  // quantidade_tratos por tipo: vigência mais recente ativa do tipo
+  const progPorTipo = new Map<TipoProgramacao, any>()
+  for (const prog of (progsRes.data || []) as any[]) {
+    const tipo = prog.tipo as TipoProgramacao
+    const atual = progPorTipo.get(tipo)
+    if (!atual || prog.data_inicio > atual.data_inicio) {
+      progPorTipo.set(tipo, prog)
     }
+  }
+
+  const resultado: Record<string, PlanejadoLote[]> = {}
+  for (const o of ocupacoesRes.data as any[]) {
+    const loteId = o.lote_id
+    if (!loteId) continue
+    const tipo = TIPO_POR_SISTEMA[(o.lotes as any)?.sistema_producao]
+    if (!tipo) continue
+
+    const item: PlanejadoLote = {
+      lote_id: loteId,
+      lote_nome: (o.lotes as any)?.nome ?? null,
+      curral_id: o.curral_id,
+      curral_nome: (o.currais as any)?.nome ?? '—',
+      kg_mn_dia: o.kg_mn_dia_dia1 != null ? Number(o.kg_mn_dia_dia1) : 0,
+      n_cabecas_snapshot: null,
+      peso_vivo_medio_snapshot: null,
+      tipo,
+      quantidade_tratos: progPorTipo.get(tipo)?.quantidade_tratos ?? 0,
+      data_inicio: o.data_inicial,
+      data_fim: o.data_final ?? '9999-12-31',
+    }
+
+    if (!resultado[loteId]) resultado[loteId] = []
+    resultado[loteId].push(item)
   }
 
   return resultado
@@ -239,7 +256,7 @@ function gerarDatasPeriodo(dataInicio: string, dataFim: string): string[] {
 /**
  * Cruza planejado e real por lote × dia.
  * Para dias com execução, usa o kg_planejado que vem do próprio registro (mais preciso).
- * Para dias sem execução, usa o kg_mn_dia da programacao_tratos_currais.
+ * Para dias sem execução, usa o alvo kg_mn_dia_dia1 da ocupação vigente no dia.
  */
 export function cruzarPlanejadoReal(
   planejado: Record<string, PlanejadoLote[]>,
@@ -834,16 +851,19 @@ export async function fetchFabricaAcompanhamento(
   if (distribuicaoRes.error) throw distribuicaoRes.error
 
   const programas = (progsRes.data || []) as any[]
-  const programacaoIds = programas.map((programa) => programa.id)
-  const curraisRes = programacaoIds.length > 0
-    ? await supabase
-      .from('programacao_tratos_currais')
-      .select('programacao_id, lote_id, kg_mn_dia')
-      .in('programacao_id', programacaoIds)
-    : { data: [], error: null }
-  if (curraisRes.error) throw curraisRes.error
 
-  const loteIds = [...new Set((curraisRes.data || []).map((curral: any) => curral.lote_id).filter(Boolean))]
+  // O planejado por dia é derivado das ocupações de curral cobertas pelo
+  // período (lote_curral_historico), não do snapshot programacao_tratos_currais.
+  const ocupacoesRes = await supabase
+    .from('lote_curral_historico')
+    .select('id, curral_id, lote_id, data_inicial, data_final, kg_mn_dia_dia1, lotes(sistema_producao)')
+    .eq('fazenda_id', fazendaId)
+    .lte('data_inicial', dataFim)
+    .or(`data_final.is.null,data_final.gte.${dataInicio}`)
+  if (ocupacoesRes.error) throw ocupacoesRes.error
+
+  const ocupacoes = (ocupacoesRes.data || []) as any[]
+  const loteIds = [...new Set(ocupacoes.map((o) => o.lote_id).filter(Boolean))]
   const categoriasRes = loteIds.length > 0
     ? await supabase
       .from('lote_categorias')
@@ -902,32 +922,54 @@ export async function fetchFabricaAcompanhamento(
   }
 
   const percentuaisPorProg = new Map<string, any[]>()
-  for (const prog of programas) {
+  if (programas.length > 0) {
     const { data: percentuais } = await supabase
       .from('programacao_tratos_percentuais')
-      .select('ordem_trato, percentual')
-      .eq('programacao_id', prog.id)
-    percentuaisPorProg.set(prog.id, percentuais || [])
+      .select('programacao_id, ordem_trato, percentual')
+      .in('programacao_id', programas.map((p) => p.id))
+    for (const p of (percentuais || []) as any[]) {
+      const lista = percentuaisPorProg.get(p.programacao_id) || []
+      lista.push(p)
+      percentuaisPorProg.set(p.programacao_id, lista)
+    }
+  }
 
-    const { data: currais } = await supabase
-      .from('programacao_tratos_currais')
-      .select('lote_id, kg_mn_dia')
-      .eq('programacao_id', prog.id)
-    for (const data of gerarDatasPeriodo(dataInicio, dataFim)) {
-      if (data < prog.data_inicio || data > prog.data_fim) continue
-      for (const curral of currais || []) {
-        if (!curral.lote_id || (lotesFiltro.length > 0 && !lotesFiltro.includes(curral.lote_id))) continue
-        const formulacao = categoriaPorLote.get(curral.lote_id)
-        if (!formulacao) continue
-        for (const percentual of percentuaisPorProg.get(prog.id) || []) {
-          adicionarPlanejamento(
-            data,
-            prog.tipo as TipoProgramacao,
-            formulacao,
-            percentual.ordem_trato,
-            (Number(curral.kg_mn_dia) || 0) * (Number(percentual.percentual) || 0) / 100
-          )
-        }
+  for (const data of gerarDatasPeriodo(dataInicio, dataFim)) {
+    // Programação vigente por tipo nesta data (maior data_inicio <= data)
+    const progPorTipoNoDia = new Map<TipoProgramacao, any>()
+    for (const p of programas) {
+      if (data < p.data_inicio || data > p.data_fim) continue
+      const atual = progPorTipoNoDia.get(p.tipo as TipoProgramacao)
+      if (!atual || p.data_inicio > atual.data_inicio) {
+        progPorTipoNoDia.set(p.tipo as TipoProgramacao, p)
+      }
+    }
+
+    // Ocupação de cada curral nesta data (maior data_inicial <= data)
+    const ocupPorCurral = new Map<string, any>()
+    for (const o of ocupacoes) {
+      if (o.data_inicial > data) continue
+      if (o.data_final != null && o.data_final < data) continue
+      const atual = ocupPorCurral.get(o.curral_id)
+      if (!atual || o.data_inicial > atual.data_inicial) ocupPorCurral.set(o.curral_id, o)
+    }
+
+    for (const o of ocupPorCurral.values()) {
+      const tipo = TIPO_POR_SISTEMA[(o.lotes as any)?.sistema_producao]
+      if (!tipo) continue
+      const prog = progPorTipoNoDia.get(tipo)
+      if (!prog) continue
+      if (!o.lote_id || (lotesFiltro.length > 0 && !lotesFiltro.includes(o.lote_id))) continue
+      const formulacao = categoriaPorLote.get(o.lote_id)
+      if (!formulacao) continue
+      for (const percentual of percentuaisPorProg.get(prog.id) || []) {
+        adicionarPlanejamento(
+          data,
+          tipo,
+          formulacao,
+          percentual.ordem_trato,
+          (Number(o.kg_mn_dia_dia1) || 0) * (Number(percentual.percentual) || 0) / 100
+        )
       }
     }
   }
