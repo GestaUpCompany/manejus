@@ -37,6 +37,13 @@ export interface PontoMapa {
   geometria_geojson?: GeoJSON.FeatureCollection | null
 }
 
+export interface AreaMapa {
+  id: string
+  nome: string
+  tipo: string
+  geometria_geojson?: GeoJSON.FeatureCollection | null
+}
+
 export interface CurralMapa {
   id: string
   nome: string

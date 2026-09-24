@@ -59,12 +59,13 @@ export function MapaFazenda() {
     pastosGeoJSON, pastosLabelsGeoJSON,
     fabricas, pontosRegulares,
     fabricasGeoJSON, curraisGeoJSON, bebedourosGeoJSON,
-    mortesGeoJSON, mortes,
+    mortesGeoJSON, mortes, areasGeoJSON, areas, pontos,
   } = useMapaData(user, mortesDataInicio, mortesDataFim)
 
   const [pastoDetalhe, setPastoDetalhe] = useState<PastoDetalhe | null>(null)
   const [popup, setPopup] = useState<{ lng: number; lat: number; nome: string } | null>(null)
   const [popupBebedouro, setPopupBebedouro] = useState<{ lng: number; lat: number; id: string; nome: string } | null>(null)
+  const [popupArea, setPopupArea] = useState<{ lng: number; lat: number; id: string; nome: string; tipo: string } | null>(null)
   const [drawMode, setDrawMode] = useState<string | null>(null)
   const drawModeRef = useRef<string | null>(null)
   useEffect(() => { drawModeRef.current = drawMode }, [drawMode])
@@ -76,7 +77,7 @@ export function MapaFazenda() {
   const [nomeEstrada, setNomeEstrada] = useState('')
   const [estradaDesenhada, setEstradaDesenhada] = useState<GeoJSON.Feature<GeoJSON.LineString> | null>(null)
   const [estradaDetalhe, setEstradaDetalhe] = useState<EstradaMapa | null>(null)
-  const [visCamadas, setVisCamadas] = useState({ pastos: true, bebedouros: true, estradas: true, pontos: true, fabricas: true, currais: true, mortes: true })
+  const [visCamadas, setVisCamadas] = useState({ pastos: true, bebedouros: true, estradas: true, pontos: true, fabricas: true, currais: true, mortes: true, areas: true })
   const [showPontoModal, setShowPontoModal] = useState(false)
   const [pontoDesenhado, setPontoDesenhado] = useState<GeoJSON.Feature<GeoJSON.Point> | null>(null)
   const [tipoPontoSelecionado, setTipoPontoSelecionado] = useState('fabrica')
@@ -120,6 +121,7 @@ export function MapaFazenda() {
     | { type: 'removerPonto'; pontoId: string }
     | { type: 'removerFabrica'; fabricaId: string }
     | { type: 'removerGeometriaCurral'; curralId: string }
+    | { type: 'removerArea'; areaId: string }
     | null
   >(null)
 
@@ -138,8 +140,30 @@ export function MapaFazenda() {
   const [aplicandoMatch, setAplicandoMatch] = useState<{ atual: number; total: number } | null>(null)
   // Itens parseados aguardando seleção de pastas (filtro pré-carga)
   const [itensPendentes, setItensPendentes] = useState<FeatureImportadaItem[] | null>(null)
+  // Pastas cujos itens não associados a pasto devem ser salvos como
+  // geometria genérica do mapa (área/estrada/ponto). Definido no filtro
+  // pré-carga; pasta única entra como opt-in automático.
+  const [pastasSalvarSemAssoc, setPastasSalvarSemAssoc] = useState<Set<string | null>>(new Set())
   // Feature importada destacada no mapa (botão "ver no mapa" da revisão)
   const [importHighlight, setImportHighlight] = useState<GeoJSON.Feature | null>(null)
+
+  // Assinaturas (coords serializadas) das geometrias genéricas já salvas:
+  // marca na revisão itens que seriam duplicatas (o servidor também deduplica
+  // via ST_Equals, isto é só o aviso visual).
+  const geometriasExistentes = useMemo(() => {
+    const set = new Set<string>()
+    const add = (fc?: GeoJSON.FeatureCollection | null) => {
+      fc?.features?.forEach((f) => {
+        if (f.geometry && f.geometry.type !== 'GeometryCollection') {
+          set.add(JSON.stringify(f.geometry.coordinates))
+        }
+      })
+    }
+    areas.forEach((a) => add(a.geometria_geojson))
+    estradas.forEach((e) => add(e.geometria_geojson))
+    pontos.forEach((p) => add(p.geometria_geojson))
+    return set
+  }, [areas, estradas, pontos])
 
   const fazendaIdRef = useRef<string | null>(null)
   const bebedourosRef = useRef<BebedouroMapa[]>([])
@@ -315,20 +339,36 @@ export function MapaFazenda() {
       setItensPendentes(itens)
       return
     }
-    confirmarItensImportados(itens)
+    // Pasta única: mesmo padrão do filtro (salvar sem associação ligado)
+    confirmarItensImportados(itens, new Set(folders))
   }
 
-  const confirmarItensImportados = (itens: FeatureImportadaItem[]) => {
+  const confirmarItensImportados = (itens: FeatureImportadaItem[], salvarSemAssoc: Set<string | null>) => {
+    setPastasSalvarSemAssoc(salvarSemAssoc)
     aplicarItensImportados(itens)
     const rows = sugerirMatches(
       itens.filter((i) => i.tipoGeometria === 'Polygon'),
       todosOsPastos
     )
-    setMatchRows(rows)
-    if (rows.length > 0) setShowRevisao(true)
+    // Linhas/pontos de pastas com "salvar sem associação" entram na revisão
+    // para permitir exclusão individual (não têm candidato de pasto).
+    const extras: MatchRow[] = itens
+      .filter((i) => i.tipoGeometria !== 'Polygon' && salvarSemAssoc.has(i.folder))
+      .map((item) => ({
+        item,
+        status: 'sem_match',
+        score: 0,
+        pastoSugerido: null,
+        pastoSelecionado: '',
+        candidatos: [],
+        ignorado: false,
+      }))
+    const todas = [...rows, ...extras]
+    setMatchRows(todas)
+    if (todas.length > 0) setShowRevisao(true)
   }
 
-  const handleConfirmarFiltro = (folders: Set<string | null>) => {
+  const handleConfirmarFiltro = (folders: Set<string | null>, salvarSemAssoc: Set<string | null>) => {
     if (!itensPendentes) return
     const filtrados = itensPendentes.filter((i) => folders.has(i.folder))
     setItensPendentes(null)
@@ -336,7 +376,7 @@ export function MapaFazenda() {
       setImportStatus({ type: 'info', msg: 'Nenhuma pasta selecionada; importação descartada.' })
       return
     }
-    confirmarItensImportados(filtrados)
+    confirmarItensImportados(filtrados, salvarSemAssoc)
   }
 
   const handleChangeMatchRow = (importId: string, pastoId: string) => {
@@ -389,6 +429,7 @@ export function MapaFazenda() {
     setMatchRows([])
     setShowRevisao(false)
     setItensPendentes(null)
+    setPastasSalvarSemAssoc(new Set())
     setImportHighlight(null)
     setImportStatus(null)
   }
@@ -483,58 +524,111 @@ export function MapaFazenda() {
     const alvos = matchRows.filter(
       (r) => !r.ignorado && r.pastoSelecionado && !conflitos.has(r.item.importId)
     )
-    if (alvos.length === 0) return
+    // Itens sem pasto de pastas marcadas como "salvar sem associação":
+    // viram geometria genérica do mapa (área/estrada/ponto). Ignorados
+    // individualmente ou por pasta ficam de fora.
+    const alvosMapa = matchRows.filter(
+      (r) => !r.ignorado && !r.pastoSelecionado && pastasSalvarSemAssoc.has(r.item.folder)
+    )
+    const total = alvos.length + alvosMapa.length
+    if (total === 0) return
 
-    setAplicandoMatch({ atual: 0, total: alvos.length })
+    setAplicandoMatch({ atual: 0, total })
     const aplicadosIds: string[] = []
     const falhas: Record<string, string> = {}
+    let salvosPastos = 0
+    let salvosMapa = 0
+    let duplicadasMapa = 0
 
     // RPC em lote: uma chamada só; o banco aplica cada item em
     // subtransação própria e devolve ok/erro por pasto. Se a chamada
     // falhar no nível RPC, cai no fallback de chunks paralelos.
-    const { data: lote, error: erroLote } = await supabase.rpc('salvar_geometrias_pastos', {
-      p_itens: alvos.map((row) => ({
-        pasto_id: row.pastoSelecionado,
-        geojson: JSON.stringify(row.item.feature.geometry),
-      })),
-    })
-
-    if (!erroLote && Array.isArray(lote)) {
-      const resPorPasto = new globalThis.Map(
-        (lote as { pasto_id: string; ok: boolean; erro: string | null }[]).map((r) => [r.pasto_id, r])
-      )
-      alvos.forEach((row) => {
-        const res = resPorPasto.get(row.pastoSelecionado)
-        if (res?.ok) aplicadosIds.push(row.item.importId)
-        else falhas[row.item.importId] = res?.erro || 'sem resultado no lote'
+    if (alvos.length > 0) {
+      const { data: lote, error: erroLote } = await supabase.rpc('salvar_geometrias_pastos', {
+        p_itens: alvos.map((row) => ({
+          pasto_id: row.pastoSelecionado,
+          geojson: JSON.stringify(row.item.feature.geometry),
+        })),
       })
-      setAplicandoMatch({ atual: alvos.length, total: alvos.length })
-    } else {
-      console.warn('RPC em lote indisponível, usando chunks paralelos:', erroLote)
-      // Fallback: lotes paralelos de 8 chamadas unitárias.
-      const CHUNK = 8
-      for (let i = 0; i < alvos.length; i += CHUNK) {
-        const resultados = await Promise.all(
-          alvos.slice(i, i + CHUNK).map(async (row) => {
-            try {
-              const { error } = await supabase.rpc('salvar_geometria_pasto', {
-                p_pasto_id: row.pastoSelecionado,
-                p_geometria_geojson: JSON.stringify(row.item.feature.geometry),
-              })
-              if (error) throw error
-              return { id: row.item.importId, erro: null as string | null }
-            } catch (err) {
-              console.error('Erro ao salvar geometria associada:', err)
-              return { id: row.item.importId, erro: (err as Error).message }
-            }
-          })
+
+      if (!erroLote && Array.isArray(lote)) {
+        const resPorPasto = new globalThis.Map(
+          (lote as { pasto_id: string; ok: boolean; erro: string | null }[]).map((r) => [r.pasto_id, r])
         )
-        resultados.forEach((r) => {
-          if (r.erro) falhas[r.id] = r.erro
-          else aplicadosIds.push(r.id)
+        alvos.forEach((row) => {
+          const res = resPorPasto.get(row.pastoSelecionado)
+          if (res?.ok) aplicadosIds.push(row.item.importId)
+          else falhas[row.item.importId] = res?.erro || 'sem resultado no lote'
         })
-        setAplicandoMatch({ atual: Math.min(i + CHUNK, alvos.length), total: alvos.length })
+      } else {
+        console.warn('RPC em lote indisponível, usando chunks paralelos:', erroLote)
+        // Fallback: lotes paralelos de 8 chamadas unitárias.
+        const CHUNK = 8
+        for (let i = 0; i < alvos.length; i += CHUNK) {
+          const resultados = await Promise.all(
+            alvos.slice(i, i + CHUNK).map(async (row) => {
+              try {
+                const { error } = await supabase.rpc('salvar_geometria_pasto', {
+                  p_pasto_id: row.pastoSelecionado,
+                  p_geometria_geojson: JSON.stringify(row.item.feature.geometry),
+                })
+                if (error) throw error
+                return { id: row.item.importId, erro: null as string | null }
+              } catch (err) {
+                console.error('Erro ao salvar geometria associada:', err)
+                return { id: row.item.importId, erro: (err as Error).message }
+              }
+            })
+          )
+          resultados.forEach((r) => {
+            if (r.erro) falhas[r.id] = r.erro
+            else aplicadosIds.push(r.id)
+          })
+          setAplicandoMatch({ atual: Math.min(i + CHUNK, total), total })
+        }
       }
+      salvosPastos = aplicadosIds.length
+      setAplicandoMatch({ atual: salvosPastos + Object.keys(falhas).length, total })
+    }
+
+    // Lote genérico: polígonos → mapa_areas, linhas → mapa_estradas,
+    // pontos → mapa_pontos. Cada item em subtransação (ok/erro por idx).
+    if (alvosMapa.length > 0 && fazendaIdRef.current) {
+      const { data: loteMapa, error: erroMapa } = await supabase.rpc('salvar_geometrias_mapa', {
+        p_fazenda_id: fazendaIdRef.current,
+        p_itens: alvosMapa.map((row) => ({
+          nome: row.item.nomeLimpo || row.item.nomeOriginal || '(sem nome)',
+          tipo:
+            row.item.tipoGeometria === 'Polygon' ? 'area'
+            : row.item.tipoGeometria === 'LineString' ? 'estrada'
+            : 'ponto',
+          categoria: row.item.folder || 'Importado',
+          geojson: JSON.stringify(row.item.feature.geometry),
+        })),
+      })
+
+      if (!erroMapa && Array.isArray(loteMapa)) {
+        const resPorIdx = new globalThis.Map(
+          (loteMapa as { idx: number; ok: boolean; duplicada?: boolean; erro: string | null }[]).map((r) => [r.idx, r])
+        )
+        alvosMapa.forEach((row, i) => {
+          const res = resPorIdx.get(i)
+          if (res?.ok) {
+            // duplicada=true: geometria idêntica já existia, nada foi inserido,
+            // mas a linha sai da camada (o objeto já está no mapa).
+            aplicadosIds.push(row.item.importId)
+            if (res.duplicada) duplicadasMapa++
+            else salvosMapa++
+          } else {
+            falhas[row.item.importId] = res?.erro || 'sem resultado no lote'
+          }
+        })
+      } else {
+        alvosMapa.forEach((row) => {
+          falhas[row.item.importId] = erroMapa?.message || 'RPC salvar_geometrias_mapa indisponível'
+        })
+      }
+      setAplicandoMatch({ atual: total, total })
     }
 
     // Remover itens aplicados da camada de importação
@@ -560,13 +654,19 @@ export function MapaFazenda() {
     setAplicandoMatch(null)
     loadData()
 
+    const partesMsg = [
+      salvosPastos > 0 ? `${salvosPastos} associada(s) a pastos` : '',
+      salvosMapa > 0 ? `${salvosMapa} salva(s) no mapa` : '',
+      duplicadasMapa > 0 ? `${duplicadasMapa} já existia(m) (ignorada(s))` : '',
+    ].filter(Boolean).join(' + ')
+
     if (numFalhas > 0) {
       setImportStatus({
         type: 'error',
-        msg: `${aplicadosIds.length} geometria(s) salva(s), ${numFalhas} falha(s). Revise as linhas com erro e aplique novamente.`,
+        msg: `${aplicadosIds.length} geometria(s) salva(s) (${partesMsg}), ${numFalhas} falha(s). Revise as linhas com erro e aplique novamente.`,
       })
     } else {
-      setImportStatus({ type: 'success', msg: `${aplicadosIds.length} geometria(s) associada(s) com sucesso.` })
+      setImportStatus({ type: 'success', msg: `${aplicadosIds.length} geometria(s) salva(s) com sucesso (${partesMsg}).` })
       if (rowsRestantes.filter((r) => !r.ignorado).length === 0) setShowRevisao(false)
     }
   }
@@ -2000,6 +2100,20 @@ export function MapaFazenda() {
       }
     }
 
+    // Verificar se clicou numa área genérica do mapa (lavoura, reserva, APP)
+    const areaFeature = features.find((f) => f.source === 'areas-source')
+    if (areaFeature) {
+      const areaId = areaFeature.properties?.id as string
+      const areaNome = areaFeature.properties?.nome as string
+      const areaTipo = areaFeature.properties?.tipo as string
+      if (areaId) {
+        setPopupArea({ lng: e.lngLat.lng, lat: e.lngLat.lat, id: areaId, nome: areaNome, tipo: areaTipo })
+        setPopup(null)
+        setPopupBebedouro(null)
+        return
+      }
+    }
+
     // Procurar feature de pasto clicada (pode ser o polígono ou o label)
     const pastoFeature = features.find((f) => f.source === 'pastos-source' || f.source === 'pastos-labels-source')
     if (!pastoFeature) return
@@ -2174,12 +2288,19 @@ export function MapaFazenda() {
         setCurralDetalhe(null)
         setImportStatus({ type: 'success', msg: 'Geometria do curral removida.' })
         loadData()
+      } else if (action.type === 'removerArea') {
+        const { error } = await supabase.rpc('remover_area', { p_area_id: action.areaId })
+        if (error) throw error
+        setPopupArea(null)
+        setImportStatus({ type: 'success', msg: 'Área removida do mapa.' })
+        loadData()
       }
     } catch (err) {
       const rotuloErro =
         action.type === 'removerEstrada' ? 'Erro ao remover estrada:'
         : action.type === 'removerPonto' ? 'Erro ao remover ponto:'
         : action.type === 'removerFabrica' ? 'Erro ao remover fábrica:'
+        : action.type === 'removerArea' ? 'Erro ao remover área:'
         : 'Erro ao remover curral:'
       console.error(rotuloErro, err)
       setImportStatus({ type: 'error', msg: `Erro ao remover: ${(err as Error).message}` })
@@ -2193,6 +2314,7 @@ export function MapaFazenda() {
         removerPonto: { title: 'Remover ponto', message: 'Remover este ponto do mapa?' },
         removerFabrica: { title: 'Remover fábrica', message: 'Remover esta fábrica do mapa?' },
         removerGeometriaCurral: { title: 'Remover geometria do curral', message: 'Remover a geometria deste curral do mapa?' },
+        removerArea: { title: 'Remover área', message: 'Remover esta área do mapa? O cadastro de pastos não é afetado.' },
       }[confirmAction.type]
     : null
 
@@ -2575,6 +2697,18 @@ export function MapaFazenda() {
           <label className="flex items-center gap-1.5 cursor-pointer text-sm">
             <input
               type="checkbox"
+              checked={visCamadas.areas}
+              onChange={(e) => setVisCamadas((v) => ({ ...v, areas: e.target.checked }))}
+              className="accent-teal-600"
+            />
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-sm bg-teal-600/20 border border-teal-700" />
+              Áreas
+            </span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+            <input
+              type="checkbox"
               checked={visCamadas.mortes}
               onChange={(e) => setVisCamadas((v) => ({ ...v, mortes: e.target.checked }))}
               className="accent-red-800"
@@ -2866,6 +3000,7 @@ export function MapaFazenda() {
               ...(visCamadas.fabricas ? ['fabricas-fill', 'fabricas-line', 'fabricas-label'] : []),
               ...(visCamadas.currais ? ['currais-fill', 'currais-line', 'currais-label'] : []),
               ...(visCamadas.mortes ? ['mortes-circle', 'mortes-cluster-circle'] : []),
+              ...(visCamadas.areas ? ['areas-fill'] : []),
               ...(featuresImportadas ? ['import-fill', 'import-line', 'import-point', 'import-line-string'] : []),
             ]}
             onClick={handleMapClick}
@@ -2880,6 +3015,7 @@ export function MapaFazenda() {
               bebedourosGeoJSON={bebedourosGeoJSON}
               fabricasGeoJSON={fabricasGeoJSON}
               curraisGeoJSON={curraisGeoJSON}
+              areasGeoJSON={areasGeoJSON}
               mortesGeoJSON={mortesGeoJSON}
               agruparMortes={agruparMortes}
               areaSelecaoGeoJSON={areaSelecaoGeoJSON}
@@ -2908,9 +3044,12 @@ export function MapaFazenda() {
               userLocation={userLocation}
               popup={popup}
               popupBebedouro={popupBebedouro}
+              popupArea={popupArea}
               setPopup={setPopup}
               setPopupBebedouro={setPopupBebedouro}
+              setPopupArea={setPopupArea}
               onRemoverBebedouro={removerGeometriaBebedouro}
+              onRemoverArea={(id) => setConfirmAction({ type: 'removerArea', areaId: id })}
             />
 
             {/* Controles de navegação adicionados via useEffect no map instance */}
@@ -3234,6 +3373,8 @@ export function MapaFazenda() {
         onClose={() => setShowRevisao(false)}
         rows={matchRows}
         pastos={todosOsPastos}
+        pastasSalvarSemAssoc={pastasSalvarSemAssoc}
+        geometriasExistentes={geometriasExistentes}
         aplicando={aplicandoMatch}
         onChangeRow={handleChangeMatchRow}
         onToggleIgnorar={handleToggleIgnorarRow}

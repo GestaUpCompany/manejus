@@ -4,7 +4,7 @@ import { supabase } from '../../../services/supabaseClient'
 import { getFazendaIdForUser } from '../../../utils/fazendaContext'
 import { calcularMelhorLabel } from './geometriaUtils'
 import { corPonto } from './mapaConfig'
-import type { PastoMapa, BebedouroMapa, EstradaMapa, PontoMapa, CurralMapa } from './types'
+import type { PastoMapa, BebedouroMapa, EstradaMapa, PontoMapa, CurralMapa, AreaMapa } from './types'
 
 export function useMapaData(user: { id: string } | null, mortesDataInicio?: string | null, mortesDataFim?: string | null) {
   const [fazendaId, setFazendaId] = useState<string | null>(null)
@@ -14,6 +14,7 @@ export function useMapaData(user: { id: string } | null, mortesDataInicio?: stri
   const [estradas, setEstradas] = useState<EstradaMapa[]>([])
   const [pontos, setPontos] = useState<PontoMapa[]>([])
   const [currais, setCurrais] = useState<CurralMapa[]>([])
+  const [areas, setAreas] = useState<AreaMapa[]>([])
   const [curraisSemGeo, setCurraisSemGeo] = useState<{ id: string; nome: string }[]>([])
   const [pastosSemGeometria, setPastosSemGeometria] = useState<{ id: string; nome: string }[]>([])
   const [mortes, setMortes] = useState<any[]>([])
@@ -31,7 +32,7 @@ export function useMapaData(user: { id: string } | null, mortesDataInicio?: stri
 
     // Buscar pastos com geometria (ST_AsGeoJSON) e sem geometria (para o modal de associação)
     // e bebedouros com geometria (para renderizar no mapa)
-    const [pastosComGeo, pastosSemGeo, bebedourosComGeo, estradasRes, pontosRes, curraisComGeoRes, curraisSemGeoRes] = await Promise.all([
+    const [pastosComGeo, pastosSemGeo, bebedourosComGeo, estradasRes, pontosRes, curraisComGeoRes, curraisSemGeoRes, areasRes] = await Promise.all([
       supabase.rpc('get_pastos_com_geometria', { p_fazenda_id: fid }),
       supabase
         .from('pastos')
@@ -60,6 +61,12 @@ export function useMapaData(user: { id: string } | null, mortesDataInicio?: stri
         .eq('fazenda_id', fid)
         .is('geometria', null)
         .is('deleted_at', null)
+        .order('nome'),
+      supabase
+        .from('mapa_areas')
+        .select('id, nome, tipo, geometria')
+        .eq('fazenda_id', fid)
+        .eq('ativo', true)
         .order('nome'),
     ])
 
@@ -184,6 +191,27 @@ export function useMapaData(user: { id: string } | null, mortesDataInicio?: stri
       setCurraisSemGeo((curraisSemGeoRes.data as any[]).map((c) => ({ id: c.id, nome: c.nome })))
     }
 
+    if (areasRes.data) {
+      const areasParsed: AreaMapa[] = (areasRes.data as any[]).map((a) => ({
+        id: a.id,
+        nome: a.nome,
+        tipo: a.tipo,
+        geometria_geojson: a.geometria
+          ? ({
+              type: 'FeatureCollection',
+              features: [
+                {
+                  type: 'Feature',
+                  properties: { id: a.id, nome: a.nome, tipo: a.tipo },
+                  geometry: typeof a.geometria === 'string' ? JSON.parse(a.geometria) : a.geometria,
+                },
+              ],
+            } as GeoJSON.FeatureCollection)
+          : null,
+      }))
+      setAreas(areasParsed)
+    }
+
     setLoading(false)
   }, [user])
 
@@ -298,6 +326,16 @@ export function useMapaData(user: { id: string } | null, mortesDataInicio?: stri
     return { type: 'FeatureCollection', features }
   }, [estradas])
 
+  const areasGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
+    const features: GeoJSON.Feature[] = []
+    areas.forEach((a) => {
+      if (a.geometria_geojson?.features?.[0]) {
+        features.push(a.geometria_geojson.features[0])
+      }
+    })
+    return { type: 'FeatureCollection', features }
+  }, [areas])
+
   const pontosRegularesGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
     const features: GeoJSON.Feature[] = []
     pontosRegulares.forEach((p) => {
@@ -336,6 +374,7 @@ export function useMapaData(user: { id: string } | null, mortesDataInicio?: stri
     currais,
     curraisSemGeo,
     pastosSemGeometria,
+    areas,
     mortes,
     // Setters (para uso pelos handlers de salvar/remover)
     setPastos,
@@ -355,6 +394,7 @@ export function useMapaData(user: { id: string } | null, mortesDataInicio?: stri
     pontosRegulares,
     fabricasGeoJSON,
     curraisGeoJSON,
+    areasGeoJSON,
     bebedourosGeoJSON,
     estradasGeoJSON,
     pontosRegularesGeoJSON,

@@ -13,6 +13,10 @@ interface Props {
   onClose: () => void
   rows: MatchRow[]
   pastos: PastoCandidato[]
+  /** Pastas cujas sobras sem associação são salvas como geometria de mapa */
+  pastasSalvarSemAssoc: Set<string | null>
+  /** Assinaturas (coords serializadas) das geometrias já salvas no mapa */
+  geometriasExistentes?: Set<string>
   aplicando: { atual: number; total: number } | null
   onChangeRow: (importId: string, pastoId: string) => void
   onToggleIgnorar: (importId: string) => void
@@ -44,8 +48,19 @@ const STATUS_CLASS: Record<MatchStatus, string> = {
 
 const ORDEM_STATUS: MatchStatus[] = ['auto', 'sugestao', 'ambiguo', 'sem_match', 'sem_nome']
 
+const DESTINO_LABEL: Record<string, string> = {
+  Polygon: 'área',
+  LineString: 'estrada',
+  Point: 'ponto',
+}
+
+const assinatura = (item: FeatureImportadaItem) => {
+  const g = item.feature?.geometry
+  return g && g.type !== 'GeometryCollection' ? JSON.stringify(g.coordinates) : ''
+}
+
 export function ImportRevisaoModal({
-  isOpen, onClose, rows, pastos, aplicando,
+  isOpen, onClose, rows, pastos, pastasSalvarSemAssoc, geometriasExistentes, aplicando,
   onChangeRow, onToggleIgnorar, onIgnorarFolder, onIgnorarComGeometria, onIgnorarSemMatch, onAplicar, onFocarItem,
 }: Props) {
   // Pastas iniciam colapsadas: usuário expande só o que quer revisar
@@ -110,6 +125,10 @@ export function ImportRevisaoModal({
   }, [rows])
 
   const aplicaveis = rows.filter((r) => !r.ignorado && r.pastoSelecionado)
+  // Itens sem pasto selecionado de pastas marcadas viram geometria de mapa
+  const salvasMapa = rows.filter(
+    (r) => !r.ignorado && !r.pastoSelecionado && pastasSalvarSemAssoc.has(r.item.folder)
+  )
   const bloqueado = conflitos.size > 0 || aplicando !== null
 
   // Linhas cujo pasto selecionado já tem geometria salva
@@ -142,8 +161,9 @@ export function ImportRevisaoModal({
       <div className="space-y-4">
         <p className="text-sm text-content-muted">
           O sistema sugeriu associações entre os polígonos do arquivo e os pastos cadastrados.
-          Revise antes de aplicar: nada é salvo até você confirmar. Itens sem match costumam ser
-          áreas que não são pastos (lavoura, APP, reserva) — ignore em massa por pasta.
+          Revise antes de aplicar: nada é salvo até você confirmar. Itens sem pasto associado de
+          pastas marcadas para "salvar sem associação" viram áreas/estradas/pontos no mapa;
+          use "Ignorar" na linha ou na pasta para excluir do salvamento.
         </p>
 
         {/* Contadores */}
@@ -174,9 +194,22 @@ export function ImportRevisaoModal({
             </span>
           )}
           {conflitos.size > 0 && (
-            <span className="px-2 py-1 rounded border border-red-500/40 bg-red-500/15 text-red-800 dark:text-red-200 font-medium">
+            <button
+              type="button"
+              onClick={() =>
+                setExpandidos((prev) => {
+                  const next = new Set(prev)
+                  gruposCompletos.forEach((g) => {
+                    if (g.items.some((r) => conflitos.has(r.item.importId))) next.add(g.folder)
+                  })
+                  return next
+                })
+              }
+              title="Expandir pastas que contêm conflitos"
+              className="px-2 py-1 rounded border border-red-500/40 bg-red-500/15 text-red-800 dark:text-red-200 font-medium hover:bg-red-500/25 cursor-pointer"
+            >
               {conflitos.size} em conflito — resolva antes de aplicar
-            </span>
+            </button>
           )}
         </div>
 
@@ -226,6 +259,7 @@ export function ImportRevisaoModal({
             items.forEach((r) => {
               if (!r.ignorado) contGrupo[r.status] = (contGrupo[r.status] || 0) + 1
             })
+            const conflitosNoGrupo = items.filter((r) => conflitos.has(r.item.importId)).length
             return (
               <div key={folder} className="border border-border-base rounded-lg overflow-hidden">
                 <div className="flex items-center gap-2 px-3 py-2 bg-surface-2">
@@ -250,6 +284,9 @@ export function ImportRevisaoModal({
                       {contGrupo.sugestao ? ` · ${contGrupo.sugestao} aprox.` : ''}
                       {contGrupo.ambiguo ? ` · ${contGrupo.ambiguo} ambíguos` : ''}
                       {ignoradosNoGrupo > 0 && ` · ${ignoradosNoGrupo} ignorado${ignoradosNoGrupo === 1 ? '' : 's'}`}
+                      {conflitosNoGrupo > 0 && (
+                        <span className="text-red-700 dark:text-red-300 font-medium">{` · ${conflitosNoGrupo} em conflito`}</span>
+                      )}
                     </span>
                   </span>
                   {todosIgnorados ? (
@@ -301,14 +338,41 @@ export function ImportRevisaoModal({
                             {row.ignorado ? 'ignorado' : STATUS_LABEL[row.status]}
                           </span>
 
-                          <PastoCombobox
-                            value={row.pastoSelecionado}
-                            onChange={(id) => onChangeRow(row.item.importId, id)}
-                            candidatos={candidatos}
-                            restantes={restantes}
-                            disabled={row.ignorado}
-                            emConflito={emConflito}
-                          />
+                          {row.item.tipoGeometria === 'Polygon' ? (
+                            <PastoCombobox
+                              value={row.pastoSelecionado}
+                              onChange={(id) => onChangeRow(row.item.importId, id)}
+                              candidatos={candidatos}
+                              restantes={restantes}
+                              disabled={row.ignorado}
+                              emConflito={emConflito}
+                            />
+                          ) : (
+                            <span className="shrink-0 px-2 py-1 rounded border border-teal-600/40 bg-teal-500/10 text-teal-800 dark:text-teal-200 text-xs">
+                              → {DESTINO_LABEL[row.item.tipoGeometria] || 'mapa'}
+                            </span>
+                          )}
+                          {row.item.tipoGeometria === 'Polygon' &&
+                            !row.pastoSelecionado &&
+                            !row.ignorado &&
+                            pastasSalvarSemAssoc.has(row.item.folder) && (
+                              <span
+                                className="shrink-0 px-2 py-0.5 rounded border border-teal-600/40 bg-teal-500/10 text-teal-800 dark:text-teal-200 text-xs"
+                                title="Sem pasto associado: será salva como área no mapa"
+                              >
+                                → área
+                              </span>
+                            )}
+
+                          {!row.pastoSelecionado &&
+                            geometriasExistentes?.has(assinatura(row.item)) && (
+                              <span
+                                className="shrink-0 px-2 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs"
+                                title="Geometria idêntica já salva no mapa; o apply a ignora sem gravar de novo"
+                              >
+                                já no mapa
+                              </span>
+                            )}
 
                           {onFocarItem && (
                             <button
@@ -347,7 +411,12 @@ export function ImportRevisaoModal({
           <span className="text-sm text-content-muted">
             {aplicando
               ? `Salvando ${aplicando.atual}/${aplicando.total}...`
-              : `${aplicaveis.length} ${aplicaveis.length === 1 ? 'associação pronta' : 'associações prontas'} para aplicar`}
+              : `${aplicaveis.length + salvasMapa.length} ${aplicaveis.length + salvasMapa.length === 1 ? 'item pronto' : 'itens prontos'} para salvar` +
+                (aplicaveis.length > 0 && salvasMapa.length > 0
+                  ? ` (${aplicaveis.length} em pastos + ${salvasMapa.length} no mapa)`
+                  : aplicaveis.length === 0 && salvasMapa.length > 0
+                    ? ' (todos como geometrias do mapa)'
+                    : '')}
           </span>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onClose} disabled={aplicando !== null}>
@@ -356,9 +425,9 @@ export function ImportRevisaoModal({
             <Button
               variant="primary"
               onClick={onAplicar}
-              disabled={aplicaveis.length === 0 || bloqueado}
+              disabled={aplicaveis.length + salvasMapa.length === 0 || bloqueado}
             >
-              {aplicando ? 'Aplicando...' : `Aplicar ${aplicaveis.length} Associações`}
+              {aplicando ? 'Aplicando...' : `Aplicar ${aplicaveis.length + salvasMapa.length} Itens`}
             </Button>
           </div>
         </div>

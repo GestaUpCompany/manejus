@@ -12,6 +12,7 @@ interface VisCamadas {
   fabricas: boolean
   currais: boolean
   mortes: boolean
+  areas: boolean
 }
 
 interface EdicaoGeometria { pastoId: string; pastoNome: string; featureId: string }
@@ -22,6 +23,7 @@ interface EdicaoCurral { curralId: string; curralNome: string; featureId: string
 interface UserLocation { lng: number; lat: number; accuracy: number }
 interface PopupState { lng: number; lat: number; nome: string }
 interface PopupBebedouroState { lng: number; lat: number; id: string; nome: string }
+interface PopupAreaState { lng: number; lat: number; id: string; nome: string; tipo: string }
 
 interface Props {
   // Visibilidade
@@ -32,6 +34,7 @@ interface Props {
   bebedourosGeoJSON: GeoJSON.FeatureCollection
   fabricasGeoJSON: GeoJSON.FeatureCollection
   curraisGeoJSON: GeoJSON.FeatureCollection
+  areasGeoJSON: GeoJSON.FeatureCollection
   mortesGeoJSON: GeoJSON.FeatureCollection
   // Config de mortes
   agruparMortes: boolean
@@ -64,14 +67,17 @@ interface Props {
   // Popups
   popup: PopupState | null
   popupBebedouro: PopupBebedouroState | null
+  popupArea: PopupAreaState | null
   setPopup: (p: PopupState | null) => void
   setPopupBebedouro: (p: PopupBebedouroState | null) => void
+  setPopupArea: (p: PopupAreaState | null) => void
   onRemoverBebedouro: (id: string, nome: string) => void
+  onRemoverArea: (id: string, nome: string) => void
 }
 
 export function MapaCamadas({
   visCamadas,
-  pastosGeoJSON, pastosLabelsGeoJSON, bebedourosGeoJSON, fabricasGeoJSON, curraisGeoJSON, mortesGeoJSON,
+  pastosGeoJSON, pastosLabelsGeoJSON, bebedourosGeoJSON, fabricasGeoJSON, curraisGeoJSON, areasGeoJSON, mortesGeoJSON,
   agruparMortes,
   areaSelecaoGeoJSON,
   morteDestaqueId,
@@ -82,8 +88,8 @@ export function MapaCamadas({
   rotaOrigem, rotaDestinos, rotaResultado, rotaSetas,
   featuresImportadas, importHighlightGeoJSON,
   userLocation,
-  popup, popupBebedouro, setPopup, setPopupBebedouro,
-  onRemoverBebedouro,
+  popup, popupBebedouro, popupArea, setPopup, setPopupBebedouro, setPopupArea,
+  onRemoverBebedouro, onRemoverArea,
 }: Props) {
   return (
     <>
@@ -654,6 +660,47 @@ export function MapaCamadas({
         </Source>
       )}
 
+      {/* Source: áreas genéricas do mapa (lavoura, reserva, APP) — não são pastos */}
+      <Source id="areas-source" type="geojson" data={areasGeoJSON}>
+        <Layer
+          id="areas-fill"
+          type="fill"
+          layout={{ visibility: visCamadas.areas ? 'visible' : 'none' }}
+          paint={{
+            'fill-color': '#0d9488',
+            'fill-opacity': 0.15,
+          }}
+          filter={['==', '$type', 'Polygon']}
+        />
+        <Layer
+          id="areas-line"
+          type="line"
+          layout={{ visibility: visCamadas.areas ? 'visible' : 'none' }}
+          paint={{
+            'line-color': '#0f766e',
+            'line-width': 1.5,
+            'line-dasharray': [3, 2],
+          }}
+          filter={['==', '$type', 'Polygon']}
+        />
+        <Layer
+          id="areas-labels"
+          type="symbol"
+          layout={{
+            'text-field': ['get', 'nome'],
+            'text-size': 11,
+            'text-allow-overlap': false,
+            visibility: visCamadas.areas ? 'visible' : 'none',
+          }}
+          paint={{
+            'text-color': '#0f766e',
+            'text-halo-color': '#ffffff',
+            'text-halo-width': 1.5,
+          }}
+          filter={['==', '$type', 'Polygon']}
+        />
+      </Source>
+
       {/* Source: destaque do item focado na revisão de importação */}
       {importHighlightGeoJSON && (
         <Source id="import-highlight" type="geojson" data={importHighlightGeoJSON}>
@@ -799,6 +846,30 @@ export function MapaCamadas({
               onClick={() => {
                 onRemoverBebedouro(popupBebedouro.id, popupBebedouro.nome)
                 setPopupBebedouro(null)
+              }}
+              className="text-xs text-red-500 hover:text-red-700 font-medium"
+            >
+              Remover do mapa
+            </button>
+          </div>
+        </Popup>
+      )}
+      {/* Popup ao clicar em área genérica do mapa */}
+      {popupArea && (
+        <Popup
+          longitude={popupArea.lng}
+          latitude={popupArea.lat}
+          closeOnClick={false}
+          onClose={() => setPopupArea(null)}
+          anchor="bottom"
+        >
+          <div className="p-2 min-w-[160px]">
+            <p className="font-semibold text-sm">{popupArea.nome}</p>
+            <p className="text-xs text-content-muted mb-2">{popupArea.tipo}</p>
+            <button
+              onClick={() => {
+                onRemoverArea(popupArea.id, popupArea.nome)
+                setPopupArea(null)
               }}
               className="text-xs text-red-500 hover:text-red-700 font-medium"
             >

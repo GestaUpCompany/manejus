@@ -9,7 +9,7 @@ interface Props {
   isOpen: boolean
   onClose: () => void
   itens: FeatureImportadaItem[]
-  onConfirm: (folders: Set<string | null>) => void
+  onConfirm: (folders: Set<string | null>, salvarSemAssoc: Set<string | null>) => void
 }
 
 const SEM_PASTA = '(sem pasta)'
@@ -37,6 +37,10 @@ export function ImportFiltroModal({ isOpen, onClose, itens, onConfirm }: Props) 
   // o caso comum ("quero só as de pecuária") sai num clique, sem
   // hardcode de nomes de pasta.
   const [selecionados, setSelecionados] = useState<Set<string | null>>(new Set())
+  // Por pasta: itens que não casarem com pasto viram geometria de mapa
+  // (área/estrada/ponto) em vez de serem descartados no apply. Vem
+  // marcado por padrão; desmarcar exclui as sobras da pasta do save.
+  const [salvarSemAssoc, setSalvarSemAssoc] = useState<Set<string | null>>(new Set())
 
   // O componente fica montado com itens vazios antes do parse, então a
   // seleção inicial é recalculada no efeito (não no useState) sempre que
@@ -44,10 +48,20 @@ export function ImportFiltroModal({ isOpen, onClose, itens, onConfirm }: Props) 
   useEffect(() => {
     if (!isOpen) return
     setSelecionados(new Set(grupos.filter(([, g]) => g.comNome > 0).map(([f]) => f)))
+    setSalvarSemAssoc(new Set(grupos.map(([f]) => f)))
   }, [isOpen, grupos])
 
   const toggle = (folder: string | null) => {
     setSelecionados((prev) => {
+      const next = new Set(prev)
+      if (next.has(folder)) next.delete(folder)
+      else next.add(folder)
+      return next
+    })
+  }
+
+  const toggleSemAssoc = (folder: string | null) => {
+    setSalvarSemAssoc((prev) => {
       const next = new Set(prev)
       if (next.has(folder)) next.delete(folder)
       else next.add(folder)
@@ -70,7 +84,9 @@ export function ImportFiltroModal({ isOpen, onClose, itens, onConfirm }: Props) 
         <p className="text-sm text-content-muted">
           O arquivo contém {itens.length} geometrias em {grupos.length} pastas.
           Marque só o que quer carregar: pastas desmarcadas não aparecem no mapa nem na revisão.
-          Pastas sem nomes úteis (só medidas) já vêm desmarcadas.
+          Pastas sem nomes úteis (só medidas) já vêm desmarcadas. Por padrão, itens que não casarem
+          com pasto são salvos no mapa como áreas/estradas/pontos; desmarque "salvar sem associação"
+          na pasta cujas sobras você não quer gravar (ex.: lavoura).
         </p>
 
         <div className="flex gap-2">
@@ -94,9 +110,9 @@ export function ImportFiltroModal({ isOpen, onClose, itens, onConfirm }: Props) 
           {grupos.map(([folder, g]) => {
             const marcado = selecionados.has(folder)
             return (
-              <label
+              <div
                 key={folder ?? SEM_PASTA}
-                className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-surface-2 ${
+                className={`flex items-center gap-3 px-3 py-2.5 hover:bg-surface-2 ${
                   marcado ? '' : 'opacity-50'
                 }`}
               >
@@ -104,9 +120,9 @@ export function ImportFiltroModal({ isOpen, onClose, itens, onConfirm }: Props) 
                   type="checkbox"
                   checked={marcado}
                   onChange={() => toggle(folder)}
-                  className="w-4 h-4 shrink-0 accent-primary"
+                  className="w-4 h-4 shrink-0 accent-primary cursor-pointer"
                 />
-                <span className="flex-1 min-w-0">
+                <span className="flex-1 min-w-0 cursor-pointer" onClick={() => toggle(folder)}>
                   <span className="block text-sm font-medium text-content-strong truncate">
                     {folder || SEM_PASTA}
                   </span>
@@ -117,7 +133,21 @@ export function ImportFiltroModal({ isOpen, onClose, itens, onConfirm }: Props) 
                     </span>
                   </span>
                 </span>
-              </label>
+                {marcado && (
+                  <label
+                    className="flex items-center gap-1.5 shrink-0 cursor-pointer text-xs text-content-muted"
+                    title="Itens desta pasta que não casarem com pasto serão salvos no mapa (áreas, estradas, pontos)"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={salvarSemAssoc.has(folder)}
+                      onChange={() => toggleSemAssoc(folder)}
+                      className="w-3.5 h-3.5 accent-teal-600"
+                    />
+                    salvar sem associação
+                  </label>
+                )}
+              </div>
             )
           })}
         </div>
@@ -132,7 +162,7 @@ export function ImportFiltroModal({ isOpen, onClose, itens, onConfirm }: Props) 
             </Button>
             <Button
               variant="primary"
-              onClick={() => onConfirm(selecionados)}
+              onClick={() => onConfirm(selecionados, salvarSemAssoc)}
               disabled={totalSelecionado === 0}
             >
               Carregar {totalSelecionado} itens
