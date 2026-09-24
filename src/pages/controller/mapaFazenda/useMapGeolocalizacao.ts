@@ -1,8 +1,8 @@
 // Hook: geolocalizacao do dispositivo + import KML/KMZ
 import { useEffect, useRef, useState } from 'react'
-import { kml } from '@tmcw/togeojson'
-import { strFromU8, unzipSync } from 'fflate'
 import type { MapRef } from 'react-map-gl/maplibre'
+import { extrairCoordenadas, importarArquivoKml } from './importKml'
+import type { FeatureImportadaItem } from './importKml'
 
 interface ImportStatus { type: 'success' | 'error' | 'info'; msg: string }
 interface UserLocation { lng: number; lat: number; accuracy: number }
@@ -16,6 +16,7 @@ export function useMapGeolocalizacao({ mapRef, fileInputRef }: Props) {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
   const [localizando, setLocalizando] = useState(false)
   const [featuresImportadas, setFeaturesImportadas] = useState<GeoJSON.FeatureCollection | null>(null)
+  const [itensImportados, setItensImportados] = useState<FeatureImportadaItem[] | null>(null)
   const [importStatus, setImportStatus] = useState<ImportStatus | null>(null)
   const watchIdRef = useRef<number | null>(null)
 
@@ -103,111 +104,61 @@ export function useMapGeolocalizacao({ mapRef, fileInputRef }: Props) {
     }
   }, [])
 
-  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Retorna os itens parseados SEM commitar no estado: o caller decide
+  // (filtro de pastas → match → revisão) antes de aplicarItensImportados.
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>): Promise<FeatureImportadaItem[] | null> => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file) return null
 
     setImportStatus({ type: 'info', msg: `Processando ${file.name}...` })
 
     try {
-      let kmlText: string
-
-      if (file.name.toLowerCase().endsWith('.kmz')) {
-        // KMZ é ZIP: deszipar com fflate, pegar doc.kml
-        const arrayBuffer = await file.arrayBuffer()
-        const files = unzipSync(new Uint8Array(arrayBuffer))
-        // Procurar por doc.kml ou qualquer .kml dentro do ZIP
-        const kmlKey = Object.keys(files).find((k) => k.toLowerCase().endsWith('.kml'))
-        if (!kmlKey) {
-          setImportStatus({ type: 'error', msg: 'KMZ não contém arquivo KML.' })
-          return
-        }
-        kmlText = strFromU8(files[kmlKey])
-      } else if (file.name.toLowerCase().endsWith('.kml')) {
-        kmlText = await file.text()
-      } else {
-        setImportStatus({ type: 'error', msg: 'Formato não suportado. Use .kml ou .kmz.' })
-        return
-      }
-
-      // Parse KML → GeoJSON
-      // KMLs do Google Earth Pro podem ter namespaces não declarados (ex: xsi:schemaLocation)
-      // que fazem o DOMParser falhar. Remover namespaces problemáticos antes do parse.
-      let kmlClean = kmlText
-        .replace(/xsi:schemaLocation="[^"]*"/g, '')
-        .replace(/xmlns:xsi="[^"]*"/g, '')
-        .replace(/xsi:/g, '')
-
-      let dom: Document = new DOMParser().parseFromString(kmlClean, 'application/xml')
-      let parserError = dom.getElementsByTagName('parsererror')
-
-      if (parserError.length > 0) {
-        console.warn('[KML] Parser XML falhou mesmo após limpeza. Erro:', parserError[0].textContent?.substring(0, 200))
-        // Último fallback: tentar como HTML
-        dom = new DOMParser().parseFromString(kmlClean, 'text/html')
-      }
-
-      const geojson = kml(dom) as GeoJSON.FeatureCollection
-
-      // Filtrar features sem geometria (podem ocorrer em KMLs do Google Earth)
-      const featuresValidas = (geojson.features || []).filter((f) => f.geometry)
-
-      if (featuresValidas.length === 0) {
-        setImportStatus({ type: 'error', msg: 'KML não contém features válidas.' })
-        return
-      }
-
-      const geojsonLimpo: GeoJSON.FeatureCollection = {
-        type: 'FeatureCollection',
-        features: featuresValidas,
-      }
-
-      setFeaturesImportadas(geojsonLimpo)
-      setImportStatus({
-        type: 'success',
-        msg: `${featuresValidas.length} features importadas. Clique em cada uma para associar a um pasto cadastrado, ou desenhe novas delimitações.`,
-      })
-
-      // Ajustar zoom do mapa para mostrar as features importadas
-      if (mapRef.current && geojsonLimpo.features.length > 0) {
-        const coords: [number, number][] = []
-        geojsonLimpo.features.forEach((f) => {
-          if (!f.geometry) return
-          if (f.geometry.type === 'Polygon') {
-            f.geometry.coordinates[0].forEach((c) => coords.push(c as [number, number]))
-          } else if (f.geometry.type === 'Point') {
-            coords.push(f.geometry.coordinates as [number, number])
-          } else if (f.geometry.type === 'LineString') {
-            f.geometry.coordinates.forEach((c) => coords.push(c as [number, number]))
-          }
-        })
-        if (coords.length > 0) {
-          const lngs = coords.map((c) => c[0])
-          const lats = coords.map((c) => c[1])
-          const bounds: [[number, number], [number, number]] = [
-            [Math.min(...lngs), Math.min(...lats)],
-            [Math.max(...lngs), Math.max(...lats)],
-          ]
-          mapRef.current.fitBounds(bounds, { padding: 50, duration: 1000 })
-        }
-      }
+      const { itens } = await importarArquivoKml(file)
+      return itens
     } catch (err) {
       console.error('Erro ao importar KML/KMZ:', err)
       setImportStatus({ type: 'error', msg: `Erro ao processar arquivo: ${(err as Error).message}` })
+      return null
+    } finally {
+      // Limpar input para permitir reimportar o mesmo arquivo
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
+  }
 
-    // Limpar input para permitir reimportar o mesmo arquivo
-    if (fileInputRef.current) fileInputRef.current.value = ''
+  // Comita os itens na camada temporária de importação e enquadra o mapa.
+  const aplicarItensImportados = (itens: FeatureImportadaItem[]) => {
+    setItensImportados(itens)
+    setFeaturesImportadas({ type: 'FeatureCollection', features: itens.map((i) => i.feature) })
+    setImportStatus({
+      type: 'success',
+      msg: `${itens.length} features importadas. Revise as associações sugeridas ou clique numa feature para associar manualmente.`,
+    })
+
+    if (mapRef.current && itens.length > 0) {
+      const coords = itens.flatMap((i) => extrairCoordenadas(i.feature.geometry))
+      if (coords.length > 0) {
+        const lngs = coords.map((c) => c[0])
+        const lats = coords.map((c) => c[1])
+        const bounds: [[number, number], [number, number]] = [
+          [Math.min(...lngs), Math.min(...lats)],
+          [Math.max(...lngs), Math.max(...lats)],
+        ]
+        mapRef.current.fitBounds(bounds, { padding: 50, duration: 1000 })
+      }
+    }
   }
 
   return {
     userLocation,
     localizando,
     featuresImportadas,
+    itensImportados,
     importStatus,
     setImportStatus,
     setFeaturesImportadas,
+    setItensImportados,
     handleLocalizarDispositivo,
     handleFileImport,
+    aplicarItensImportados,
   }
 }

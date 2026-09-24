@@ -23,6 +23,12 @@ import { ConfirmarRemocaoModal, RemocaoLoteModal, NomearEstradaModal, NomearPont
 import { useMapaData } from './mapaFazenda/useMapaData'
 import { useMapGeolocalizacao } from './mapaFazenda/useMapGeolocalizacao'
 import { MapaCamadas } from './mapaFazenda/MapaCamadas'
+import { ImportRevisaoModal } from './mapaFazenda/ImportRevisaoModal'
+import { ImportFiltroModal } from './mapaFazenda/ImportFiltroModal'
+import { sugerirMatches, linhasEmConflito } from './mapaFazenda/nomeMatch'
+import type { MatchRow, PastoCandidato } from './mapaFazenda/nomeMatch'
+import { extrairCoordenadas } from './mapaFazenda/importKml'
+import type { FeatureImportadaItem } from './mapaFazenda/importKml'
 
 export function MapaFazenda() {
   const { user } = useAuth()
@@ -121,10 +127,19 @@ export function MapaFazenda() {
 
   // Geolocalização + import KML/KMZ
   const {
-    userLocation, localizando, featuresImportadas, importStatus,
-    setImportStatus, setFeaturesImportadas,
-    handleLocalizarDispositivo, handleFileImport,
+    userLocation, localizando, featuresImportadas, itensImportados, importStatus,
+    setImportStatus, setFeaturesImportadas, setItensImportados,
+    handleLocalizarDispositivo, handleFileImport, aplicarItensImportados,
   } = useMapGeolocalizacao({ mapRef, fileInputRef })
+
+  // Revisão de associações pós-importação (match nome → pasto)
+  const [matchRows, setMatchRows] = useState<MatchRow[]>([])
+  const [showRevisao, setShowRevisao] = useState(false)
+  const [aplicandoMatch, setAplicandoMatch] = useState<{ atual: number; total: number } | null>(null)
+  // Itens parseados aguardando seleção de pastas (filtro pré-carga)
+  const [itensPendentes, setItensPendentes] = useState<FeatureImportadaItem[] | null>(null)
+  // Feature importada destacada no mapa (botão "ver no mapa" da revisão)
+  const [importHighlight, setImportHighlight] = useState<GeoJSON.Feature | null>(null)
 
   const fazendaIdRef = useRef<string | null>(null)
   const bebedourosRef = useRef<BebedouroMapa[]>([])
@@ -282,6 +297,279 @@ export function MapaFazenda() {
 
   // ==================== Import KML/KMZ + Geolocalização ====================
   // (extraído para useMapGeolocalizacao)
+
+  // Pool de pastos para o match: com geometria (flag substituição) + sem geometria
+  const todosOsPastos = useMemo<PastoCandidato[]>(() => {
+    return [
+      ...pastos.map((p) => ({ id: p.id, nome: p.nome, temGeo: true })),
+      ...pastosSemGeometria.map((p) => ({ id: p.id, nome: p.nome, temGeo: false })),
+    ]
+  }, [pastos, pastosSemGeometria])
+
+  const handleImportChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const itens = await handleFileImport(e)
+    if (!itens) return
+    // Arquivo com mais de uma pasta: usuário escolhe o que carregar
+    const folders = new Set(itens.map((i) => i.folder))
+    if (folders.size > 1) {
+      setItensPendentes(itens)
+      return
+    }
+    confirmarItensImportados(itens)
+  }
+
+  const confirmarItensImportados = (itens: FeatureImportadaItem[]) => {
+    aplicarItensImportados(itens)
+    const rows = sugerirMatches(
+      itens.filter((i) => i.tipoGeometria === 'Polygon'),
+      todosOsPastos
+    )
+    setMatchRows(rows)
+    if (rows.length > 0) setShowRevisao(true)
+  }
+
+  const handleConfirmarFiltro = (folders: Set<string | null>) => {
+    if (!itensPendentes) return
+    const filtrados = itensPendentes.filter((i) => folders.has(i.folder))
+    setItensPendentes(null)
+    if (filtrados.length === 0) {
+      setImportStatus({ type: 'info', msg: 'Nenhuma pasta selecionada; importação descartada.' })
+      return
+    }
+    confirmarItensImportados(filtrados)
+  }
+
+  const handleChangeMatchRow = (importId: string, pastoId: string) => {
+    setMatchRows((prev) =>
+      prev.map((r) => (r.item.importId === importId ? { ...r, pastoSelecionado: pastoId, applyErro: undefined } : r))
+    )
+  }
+
+  const handleToggleIgnorarRow = (importId: string) => {
+    setMatchRows((prev) =>
+      prev.map((r) => (r.item.importId === importId ? { ...r, ignorado: !r.ignorado } : r))
+    )
+  }
+
+  const handleIgnorarFolder = (folder: string | null, ignorar: boolean) => {
+    setMatchRows((prev) =>
+      prev.map((r) => (r.item.folder === folder ? { ...r, ignorado: ignorar } : r))
+    )
+  }
+
+  // Descarte em massa das linhas cujo pasto selecionado já tem geometria
+  // (reimportação para adicionar só pastos novos; toggle também restaura)
+  const handleIgnorarComGeometria = (ignorar: boolean) => {
+    const comGeo = new Set(todosOsPastos.filter((p) => p.temGeo).map((p) => p.id))
+    setMatchRows((prev) =>
+      prev.map((r) =>
+        r.pastoSelecionado && comGeo.has(r.pastoSelecionado) ? { ...r, ignorado: ignorar } : r
+      )
+    )
+  }
+
+  // Descarte em massa das linhas de pastas onde nenhuma linha tem candidato
+  // nem seleção (tipicamente pastas ambientais/medição que passaram no filtro)
+  const handleIgnorarSemMatch = (ignorar: boolean) => {
+    setMatchRows((prev) => {
+      const pastasComCandidato = new Set(
+        prev
+          .filter((r) => r.candidatos.length > 0 || r.pastoSelecionado)
+          .map((r) => r.item.folder)
+      )
+      return prev.map((r) =>
+        !pastasComCandidato.has(r.item.folder) ? { ...r, ignorado: ignorar } : r
+      )
+    })
+  }
+
+  const limparImportacao = () => {
+    setItensImportados(null)
+    setFeaturesImportadas(null)
+    setMatchRows([])
+    setShowRevisao(false)
+    setItensPendentes(null)
+    setImportHighlight(null)
+    setImportStatus(null)
+  }
+
+  // Botão "ver no mapa" da revisão: destaca a geometria, enquadra nela e
+  // minimiza a modal (reabre pelo botão "Revisar Associações"; o estado
+  // das linhas é preservado)
+  const handleFocarItemImportado = (item: FeatureImportadaItem) => {
+    setImportHighlight(item.feature)
+    setShowRevisao(false)
+    const coords = extrairCoordenadas(item.feature.geometry)
+    if (!mapRef.current || coords.length === 0) return
+    const lngs = coords.map((c) => c[0])
+    const lats = coords.map((c) => c[1])
+    mapRef.current.fitBounds(
+      [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ],
+      { padding: 120, maxZoom: 17, duration: 800 }
+    )
+  }
+
+  // Detecção de pasto por ponto (bebedouro desenhado ou importado):
+  // abre o modal de associação já buscando o pasto que contém o ponto.
+  const detectarPastoParaPonto = useCallback(async (feature: GeoJSON.Feature<GeoJSON.Point>) => {
+    if (!fazendaIdRef.current) return
+    setBuscandoPasto(true)
+    setShowAssocModal(true) // já mostra o modal com estado de busca
+
+    try {
+      const pontoGeojson = JSON.stringify(feature.geometry)
+      const { data: pastoData, error: pastoError } = await supabase.rpc('encontrar_pasto_por_ponto', {
+        p_fazenda_id: fazendaIdRef.current,
+        p_ponto_geojson: pontoGeojson,
+      })
+
+      if (pastoError) throw pastoError
+
+      if (!pastoData || (pastoData as any[]).length === 0) {
+        // Ponto não está dentro de nenhum pasto
+        setPastoDetectado(null)
+        setBuscandoPasto(false)
+        return
+      }
+
+      const pasto = (pastoData as any[])[0]
+      setPastoDetectado({ id: pasto.id, nome: pasto.nome })
+
+      // Buscar bebedouros associados a este pasto que ainda não têm geometria
+      const { data: vinculosData, error: vinculosError } = await supabase
+        .from('pasto_bebedouros')
+        .select('bebedouros(id, nome)')
+        .eq('pasto_id', pasto.id)
+
+      if (vinculosError) throw vinculosError
+
+      // Filtrar bebedouros que ainda não têm geometria
+      const bebedourosVinculados: { id: string; nome: string }[] = []
+      if (vinculosData) {
+        const idsBebedourosComGeo = new Set(bebedourosRef.current.map((b) => b.id))
+        ;(vinculosData as any[]).forEach((row) => {
+          const b = row.bebedouros
+          if (b) {
+            const arr = Array.isArray(b) ? b : [b]
+            arr.forEach((x: any) => {
+              if (!idsBebedourosComGeo.has(x.id)) {
+                bebedourosVinculados.push({ id: x.id, nome: x.nome })
+              }
+            })
+          }
+        })
+      }
+
+      setBebedourosDoPasto(bebedourosVinculados)
+
+      // Se só tem um bebedouro, já selecionar automaticamente
+      if (bebedourosVinculados.length === 1) {
+        setPastoSelecionadoAssoc(bebedourosVinculados[0].id)
+      }
+
+      setBuscandoPasto(false)
+    } catch (err) {
+      console.error('Erro ao detectar pasto:', err)
+      setBuscandoPasto(false)
+    }
+  }, [])
+
+  const handleAplicarRevisao = async () => {
+    if (!itensImportados || aplicandoMatch) return
+    const conflitos = linhasEmConflito(matchRows)
+    const alvos = matchRows.filter(
+      (r) => !r.ignorado && r.pastoSelecionado && !conflitos.has(r.item.importId)
+    )
+    if (alvos.length === 0) return
+
+    setAplicandoMatch({ atual: 0, total: alvos.length })
+    const aplicadosIds: string[] = []
+    const falhas: Record<string, string> = {}
+
+    // RPC em lote: uma chamada só; o banco aplica cada item em
+    // subtransação própria e devolve ok/erro por pasto. Se a chamada
+    // falhar no nível RPC, cai no fallback de chunks paralelos.
+    const { data: lote, error: erroLote } = await supabase.rpc('salvar_geometrias_pastos', {
+      p_itens: alvos.map((row) => ({
+        pasto_id: row.pastoSelecionado,
+        geojson: JSON.stringify(row.item.feature.geometry),
+      })),
+    })
+
+    if (!erroLote && Array.isArray(lote)) {
+      const resPorPasto = new globalThis.Map(
+        (lote as { pasto_id: string; ok: boolean; erro: string | null }[]).map((r) => [r.pasto_id, r])
+      )
+      alvos.forEach((row) => {
+        const res = resPorPasto.get(row.pastoSelecionado)
+        if (res?.ok) aplicadosIds.push(row.item.importId)
+        else falhas[row.item.importId] = res?.erro || 'sem resultado no lote'
+      })
+      setAplicandoMatch({ atual: alvos.length, total: alvos.length })
+    } else {
+      console.warn('RPC em lote indisponível, usando chunks paralelos:', erroLote)
+      // Fallback: lotes paralelos de 8 chamadas unitárias.
+      const CHUNK = 8
+      for (let i = 0; i < alvos.length; i += CHUNK) {
+        const resultados = await Promise.all(
+          alvos.slice(i, i + CHUNK).map(async (row) => {
+            try {
+              const { error } = await supabase.rpc('salvar_geometria_pasto', {
+                p_pasto_id: row.pastoSelecionado,
+                p_geometria_geojson: JSON.stringify(row.item.feature.geometry),
+              })
+              if (error) throw error
+              return { id: row.item.importId, erro: null as string | null }
+            } catch (err) {
+              console.error('Erro ao salvar geometria associada:', err)
+              return { id: row.item.importId, erro: (err as Error).message }
+            }
+          })
+        )
+        resultados.forEach((r) => {
+          if (r.erro) falhas[r.id] = r.erro
+          else aplicadosIds.push(r.id)
+        })
+        setAplicandoMatch({ atual: Math.min(i + CHUNK, alvos.length), total: alvos.length })
+      }
+    }
+
+    // Remover itens aplicados da camada de importação
+    const restantes = itensImportados.filter((it) => !aplicadosIds.includes(it.importId))
+    setItensImportados(restantes.length > 0 ? restantes : null)
+    setFeaturesImportadas(
+      restantes.length > 0
+        ? { type: 'FeatureCollection', features: restantes.map((r) => r.feature) }
+        : null
+    )
+    setImportHighlight((prev) =>
+      prev && aplicadosIds.includes(prev.properties?.__importId) ? null : prev
+    )
+
+    // Rows aplicadas saem; falhas ficam marcadas para retry
+    const numFalhas = Object.keys(falhas).length
+    const rowsRestantes = matchRows
+      .filter((r) => !aplicadosIds.includes(r.item.importId))
+      .map((r) =>
+        falhas[r.item.importId] ? { ...r, applyErro: falhas[r.item.importId] } : r
+      )
+    setMatchRows(rowsRestantes)
+    setAplicandoMatch(null)
+    loadData()
+
+    if (numFalhas > 0) {
+      setImportStatus({
+        type: 'error',
+        msg: `${aplicadosIds.length} geometria(s) salva(s), ${numFalhas} falha(s). Revise as linhas com erro e aplique novamente.`,
+      })
+    } else {
+      setImportStatus({ type: 'success', msg: `${aplicadosIds.length} geometria(s) associada(s) com sucesso.` })
+      if (rowsRestantes.filter((r) => !r.ignorado).length === 0) setShowRevisao(false)
+    }
+  }
 
   // ==================== Desenho (Terra Draw) ====================
   // Cria (ou recria) a instância do Terra Draw sobre o mapa atual.
@@ -482,65 +770,7 @@ export function MapaFazenda() {
 
       // Se for ponto (bebedouro), detectar qual pasto contém o ponto
       if (lastFeature.geometry.type === 'Point' && fazendaIdRef.current) {
-        setBuscandoPasto(true)
-        setShowAssocModal(true) // já mostra o modal com estado de busca
-
-        try {
-          const pontoGeojson = JSON.stringify(lastFeature.geometry)
-          const { data: pastoData, error: pastoError } = await supabase.rpc('encontrar_pasto_por_ponto', {
-            p_fazenda_id: fazendaIdRef.current,
-            p_ponto_geojson: pontoGeojson,
-          })
-
-          if (pastoError) throw pastoError
-
-          if (!pastoData || (pastoData as any[]).length === 0) {
-            // Ponto não está dentro de nenhum pasto
-            setPastoDetectado(null)
-            setBuscandoPasto(false)
-            return
-          }
-
-          const pasto = (pastoData as any[])[0]
-          setPastoDetectado({ id: pasto.id, nome: pasto.nome })
-
-          // Buscar bebedouros associados a este pasto que ainda não têm geometria
-          const { data: vinculosData, error: vinculosError } = await supabase
-            .from('pasto_bebedouros')
-            .select('bebedouros(id, nome)')
-            .eq('pasto_id', pasto.id)
-
-          if (vinculosError) throw vinculosError
-
-          // Filtrar bebedouros que ainda não têm geometria
-          const bebedourosVinculados: { id: string; nome: string }[] = []
-          if (vinculosData) {
-            const idsBebedourosComGeo = new Set(bebedourosRef.current.map((b) => b.id))
-            ;(vinculosData as any[]).forEach((row) => {
-              const b = row.bebedouros
-              if (b) {
-                const arr = Array.isArray(b) ? b : [b]
-                arr.forEach((x: any) => {
-                  if (!idsBebedourosComGeo.has(x.id)) {
-                    bebedourosVinculados.push({ id: x.id, nome: x.nome })
-                  }
-                })
-              }
-            })
-          }
-
-          setBebedourosDoPasto(bebedourosVinculados)
-
-          // Se só tem um bebedouro, já selecionar automaticamente
-          if (bebedourosVinculados.length === 1) {
-            setPastoSelecionadoAssoc(bebedourosVinculados[0].id)
-          }
-
-          setBuscandoPasto(false)
-        } catch (err) {
-          console.error('Erro ao detectar pasto:', err)
-          setBuscandoPasto(false)
-        }
+        await detectarPastoParaPonto(lastFeature as GeoJSON.Feature<GeoJSON.Point>)
       } else {
         // Polígono (pasto): fluxo direto como antes
         setShowAssocModal(true)
@@ -1738,60 +1968,33 @@ export function MapaFazenda() {
 
     // Verificar se clicou numa feature importada (KML/KMZ)
     const importFeature = features.find((f) => f.source === 'import-source')
-    if (importFeature && featuresImportadas) {
-      // O MapLibre pode truncar coordenadas; buscar por tipo + nome ao invés de comparar coords
-      const importName = importFeature.properties?.name as string
-      const importType = importFeature.geometry?.type
+    if (importFeature && itensImportados) {
+      const importId = importFeature.properties?.__importId as string | undefined
+      const item = itensImportados.find((it) => it.importId === importId)
+      if (!item) return
+      const feature = item.feature
 
-      // Encontrar a feature completa no GeoJSON importado
-      let feature = featuresImportadas.features.find((f) => {
-        if (!f.geometry) return false
-        if (f.geometry.type !== importType) return false
-        if (importName && f.properties?.name === importName) return true
-        // Fallback: comparar primeira coordenada
-        if (importType === 'Polygon') {
-          const a = (importFeature.geometry as any).coordinates?.[0]?.[0]
-          const b = (f.geometry as GeoJSON.Polygon).coordinates[0][0]
-          return a && b && a[0] === b[0] && a[1] === b[1]
-        }
-        if (importType === 'Point') {
-          const a = (importFeature.geometry as any).coordinates
-          const b = (f.geometry as GeoJSON.Point).coordinates
-          return a && b && a[0] === b[0] && a[1] === b[1]
-        }
-        if (importType === 'LineString') {
-          const a = (importFeature.geometry as any).coordinates?.[0]
-          const b = (f.geometry as GeoJSON.LineString).coordinates[0]
-          return a && b && a[0] === b[0] && a[1] === b[1]
-        }
-        return false
-      })
-
-      // Se não encontrou por nome ou coordenada, pegar a primeira do mesmo tipo
-      if (!feature) {
-        feature = featuresImportadas.features.find((f) => f.geometry?.type === importType)
+      if (feature.geometry?.type === 'Polygon') {
+        // Se for polígono, perguntar se é pasto ou fábrica antes de associar
+        setFeatureDesenhada(feature as any)
+        setShowAssocTipoModal(true)
+        return
       }
 
-      if (feature && (feature.geometry?.type === 'Polygon' || feature.geometry?.type === 'Point')) {
-        // Se for polígono, perguntar se é pasto ou fábrica antes de associar
-        if (feature.geometry?.type === 'Polygon') {
-          setFeatureDesenhada(feature as any)
-          setShowAssocTipoModal(true)
-          return
-        }
-        // Se for ponto, associar direto (bebedouro)
+      if (feature.geometry?.type === 'Point') {
+        // Ponto importado: mesma detecção de pasto do fluxo desenhado (bebedouro)
         setFeatureDesenhada(feature as any)
         setPastoSelecionadoAssoc('')
         setPastoDetectado(null)
         setBebedourosDoPasto([])
-        setShowAssocModal(true)
+        await detectarPastoParaPonto(feature as GeoJSON.Feature<GeoJSON.Point>)
         return
       }
 
       // Se for LineString importada: abrir modal para nomear e salvar como estrada
-      if (feature && feature.geometry?.type === 'LineString') {
+      if (feature.geometry?.type === 'LineString') {
         setEstradaDesenhada(feature as GeoJSON.Feature<GeoJSON.LineString>)
-        setNomeEstrada(importName || '')
+        setNomeEstrada(item.nomeLimpo || item.nomeOriginal || '')
         setShowEstradaModal(true)
         return
       }
@@ -2016,7 +2219,7 @@ export function MapaFazenda() {
           ref={fileInputRef}
           type="file"
           accept=".kml,.kmz"
-          onChange={handleFileImport}
+          onChange={handleImportChange}
           className="hidden"
         />
 
@@ -2080,17 +2283,26 @@ export function MapaFazenda() {
           </span>
         </Button>
         {featuresImportadas && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              setFeaturesImportadas(null)
-              setImportStatus(null)
-            }}
-            className="bg-red-500/10 text-red-700 dark:text-red-300 hover:bg-red-500/10 border border-red-500/30"
-          >
-            Remover Importação
-          </Button>
+          <>
+            {matchRows.length > 0 && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowRevisao(true)}
+                className="bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 border border-amber-500/30"
+              >
+                Revisar Associações
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={limparImportacao}
+              className="bg-red-500/10 text-red-700 dark:text-red-300 hover:bg-red-500/10 border border-red-500/30"
+            >
+              Remover Importação
+            </Button>
+          </>
         )}
 
         {/* Divider */}
@@ -2688,6 +2900,11 @@ export function MapaFazenda() {
               rotaResultado={rotaResultado}
               rotaSetas={rotaSetas}
               featuresImportadas={featuresImportadas}
+              importHighlightGeoJSON={
+                importHighlight
+                  ? { type: 'FeatureCollection', features: [importHighlight] }
+                  : null
+              }
               userLocation={userLocation}
               popup={popup}
               popupBebedouro={popupBebedouro}
@@ -2998,6 +3215,33 @@ export function MapaFazenda() {
           setNomeFabrica('')
           setShowFabricaModal(true)
         }}
+      />
+
+      {/* Modal: seleção de pastas antes de carregar a importação */}
+      <ImportFiltroModal
+        isOpen={itensPendentes !== null}
+        onClose={() => {
+          setItensPendentes(null)
+          setImportStatus({ type: 'info', msg: 'Importação cancelada.' })
+        }}
+        itens={itensPendentes || []}
+        onConfirm={handleConfirmarFiltro}
+      />
+
+      {/* Modal: revisão de associações pós-importação KML/KMZ */}
+      <ImportRevisaoModal
+        isOpen={showRevisao}
+        onClose={() => setShowRevisao(false)}
+        rows={matchRows}
+        pastos={todosOsPastos}
+        aplicando={aplicandoMatch}
+        onChangeRow={handleChangeMatchRow}
+        onToggleIgnorar={handleToggleIgnorarRow}
+        onIgnorarFolder={handleIgnorarFolder}
+        onIgnorarComGeometria={handleIgnorarComGeometria}
+        onIgnorarSemMatch={handleIgnorarSemMatch}
+        onAplicar={handleAplicarRevisao}
+        onFocarItem={handleFocarItemImportado}
       />
 
       {/* Modal de confirmação genérico para remoções (estrada, ponto, fábrica, curral) */}

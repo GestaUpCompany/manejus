@@ -58,6 +58,7 @@ interface Props {
   rotaSetas: GeoJSON.FeatureCollection | null
   // Import
   featuresImportadas: GeoJSON.FeatureCollection | null
+  importHighlightGeoJSON: GeoJSON.FeatureCollection | null
   // Geolocalizacao
   userLocation: UserLocation | null
   // Popups
@@ -79,7 +80,7 @@ export function MapaCamadas({
   estradas, pontosRegulares,
   editandoGeometria, editandoEstrada, editandoFabrica, editandoCurral,
   rotaOrigem, rotaDestinos, rotaResultado, rotaSetas,
-  featuresImportadas,
+  featuresImportadas, importHighlightGeoJSON,
   userLocation,
   popup, popupBebedouro, setPopup, setPopupBebedouro,
   onRemoverBebedouro,
@@ -649,6 +650,41 @@ export function MapaCamadas({
               'line-width': 2,
             }}
             filter={['==', '$type', 'LineString']}
+          />
+        </Source>
+      )}
+
+      {/* Source: destaque do item focado na revisão de importação */}
+      {importHighlightGeoJSON && (
+        <Source id="import-highlight" type="geojson" data={importHighlightGeoJSON}>
+          <Layer
+            id="import-highlight-fill"
+            type="fill"
+            paint={{ 'fill-color': '#22d3ee', 'fill-opacity': 0.25 }}
+            filter={['==', '$type', 'Polygon']}
+          />
+          <Layer
+            id="import-highlight-line"
+            type="line"
+            paint={{ 'line-color': '#0891b2', 'line-width': 3 }}
+            filter={['==', '$type', 'Polygon']}
+          />
+          <Layer
+            id="import-highlight-line-string"
+            type="line"
+            paint={{ 'line-color': '#0891b2', 'line-width': 4 }}
+            filter={['==', '$type', 'LineString']}
+          />
+          <Layer
+            id="import-highlight-point"
+            type="circle"
+            paint={{
+              'circle-radius': 10,
+              'circle-color': 'rgba(34, 211, 238, 0.3)',
+              'circle-stroke-color': '#0891b2',
+              'circle-stroke-width': 3,
+            }}
+            filter={['==', '$type', 'Point']}
           />
         </Source>
       )}
