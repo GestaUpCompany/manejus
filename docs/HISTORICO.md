@@ -1332,3 +1332,19 @@ Migration 20260923130000_enfermaria_gmd_desconto_e_enforce_formulacao.sql (db pu
 2. Trigger defensiva trg_lotes_enforce_formulacao_vigente (BEFORE UPDATE em lotes, WHEN formulacao_id muda): se existe plano vigente, forca NEW.formulacao_id = vigente, revertendo qualquer escrita direta divergente (SQL manual, dashboard, codigo futuro). Sem plano vigente, o valor escrito e preservado. Efeito colateral intencional: recategorizar_lote_categoria trocando formulacao com plano vigente ativo tem a escrita no lote revertida ao vigente (a categoria continua recebendo a formulacao escolhida).
 
 Validacao transacional na fazenda de testes (rollback): escrita divergente revertida ao vigente; iniciar_plano_lote em lote enfermaria gravou gmd 0.5500 (fcg 1.100 x 0.5).
+
+### Isolamento de tenant no módulo de mapas (2026-09-24)
+
+Problema reportado: no PWA, logins de outras fazendas no mesmo dispositivo exibiam as geometrias da fazenda de testes. A auditoria encontrou três camadas de falha:
+
+1. **Cache local do PWA sem escopo por fazenda** (repo PWA, `mapaCache.ts`): `loadMapaFazenda()` usava chave única `mapa_fazenda` no IndexedDB e `MapaFazendaPage` renderizava o cache sem conferir o `fazendaId` da sessão. Corrigido: chave namespacada `mapa_fazenda_<fazendaId>`, sanity check em `data.fazendaId` no load, purga da chave legada uma vez por sessão, e `mapaPrecisaAtualizar` passa a tratar cache de outra fazenda como "precisa sincronizar" quando há versão no servidor (antes, fazenda sem linha em `mapa_versao` retornava `false` e servia o cache errado mesmo online).
+
+2. **RPCs SECURITY DEFINER sem check de vínculo** (migration `20260924160000_isolamento_tenant_mapa.sql`, db push): as 21 funções de mapa + 5 de routing confiavam no parâmetro `p_fazenda_id` ou no id do objeto, sem verificar se o chamador tinha acesso à fazenda. Qualquer autenticado podia ler e alterar geometrias alheias. Criado helper `caller_has_fazenda_access(uuid)`: `user_has_fazenda_access` (usuarios/usuario_fazenda) OU peão autenticado via `auth.jwt()->>'email'` contra `peoes`+`fazendas.acesso_id` (mesmo padrão de `current_user_has_access`). Funções LANGUAGE sql ganharam o predicado no WHERE; as plpgsql ganharam `RAISE EXCEPTION` no início do BEGIN. Verificado no banco: os 51 peões ativos têm `usuarios.auth_id` + `usuario_fazenda` ativo para a própria fazenda, então o helper cobre painel e PWA sem regressão.
+
+3. **RLS/policies**: `mapa_versao` tinha `USING(true)` para anon e authenticated (fix anterior abriu porque o join com usuario_fazenda "podia falhar no PWA"); agora `caller_has_fazenda_access(fazenda_id)` só para authenticated. SELECT de `mapa_estradas`/`mapa_pontos` migrado para o helper (mesmo efeito, cobre peões). `mapa_estradas_vertices_pgr` (topologia pgRouting) tinha RLS desabilitado com grants para anon/auth: RLS habilitado sem policies (deny all direto) + REVOKE; só as funções SECURITY DEFINER acessam.
+
+Bug colateral corrigido na mesma migration: `get_detalhes_curral_mapa` estava quebrada desde que `currais.formulacao_id` foi dropada (migration 20260822210000); `formulacao_nome` agora vem de `lotes.formulacao_id` (formulação vigente do lote do curral).
+
+Observações conhecidas fora do escopo: a topologia de routing (`mapa_estradas_vertices_pgr`, `source`/`target` em `mapa_estradas`) é global entre fazendas por design e o rebuild de uma fazenda reconstrói a de todas. Policies `qual=true` em `pastos`/`bebedouros`/`currais`/`fazendas` (ex: `pastos_update_public`, read public em bebedouros/fazendas) seguem abertas e fazem parte da auditoria maior do BACKLOG; apertá-las exige mapear antes quais fluxos do PWA rodam com role `anon`.
+
+Disparador: quando mencionar "isolamento de tenant", "mapa de outra fazenda", "geometria vazando", `caller_has_fazenda_access`, "mapa_versao policy", "vertices_pgr", ler esta seção.
