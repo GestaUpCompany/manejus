@@ -129,7 +129,7 @@ export function Racas() {
 
     const { error } = await supabase
       .from('racas')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: new Date().toISOString(), ativo: false })
       .eq('id', racaToDelete)
 
     if (error) {

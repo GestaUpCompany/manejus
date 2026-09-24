@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, ConfirmModal, MultiSelect, EmptyState, PageSkeleton } from '../../components/ui'
+import { Button, Card, Input, ConfirmModal, MultiSelect, EmptyState, PageSkeleton, useToast } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import type * as XLSXType from 'xlsx'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
@@ -35,6 +35,7 @@ interface Pasto {
 export function Pastos() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const toast = useToast()
   const [pastos, setPastos] = useState<Pasto[]>([])
   const [setores, setSetores] = useState<{ id: string; nome: string }[]>([])
   const [bebedouros, setBebedouros] = useState<{id: string, nome: string, capacidade?: number}[]>([])
@@ -212,6 +213,17 @@ export function Pastos() {
 
     const fazendaId = vinculos[0].fazenda_id
 
+    // Bloquear nome duplicado na mesma fazenda (case-insensitive)
+    const nomeNormalizado = formData.nome.trim().toLowerCase()
+    const duplicado = pastos.some(
+      (p) => p.nome.trim().toLowerCase() === nomeNormalizado && p.id !== editingPasto?.id
+    )
+    if (duplicado) {
+      toast.error(`Já existe um pasto chamado "${formData.nome.trim()}" nesta fazenda.`)
+      setSubmitting(false)
+      return
+    }
+
     const data = {
       fazenda_id: fazendaId,
       nome: formData.nome.trim(),
@@ -353,7 +365,7 @@ export function Pastos() {
 
     const { error } = await supabase
       .from('pastos')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: new Date().toISOString(), ativo: false })
       .eq('id', pastoToDelete)
 
     if (error) {
@@ -545,6 +557,7 @@ export function Pastos() {
             altura_saida_cm: alturaSaida,
             ativo: true,
           })
+          existingNames.add(nome.toLowerCase())
         } catch (err) {
           invalidRows.push({ row: rowNum, name: '(erro ao processar)', missingFields: ['Erro ao processar dados'] })
         }

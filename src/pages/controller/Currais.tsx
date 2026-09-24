@@ -343,7 +343,7 @@ export function Currais() {
   const handleLinhaDelete = async (id: string) => {
     // Desassociar todos os currais da linha antes de excluir
     await supabase.from('currais').update({ linha_id: null, lote_id: null }).eq('linha_id', id)
-    const { error } = await supabase.from('linhas_confinamento').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    const { error } = await supabase.from('linhas_confinamento').update({ deleted_at: new Date().toISOString(), ativo: false }).eq('id', id)
     if (error) {
       console.error('Erro ao excluir linha:', error)
     } else {
@@ -444,7 +444,7 @@ export function Currais() {
   }
 
   const handleCurralDelete = async (id: string) => {
-    const { error } = await supabase.from('currais').update({ deleted_at: new Date().toISOString(), lote_id: null }).eq('id', id)
+    const { error } = await supabase.from('currais').update({ deleted_at: new Date().toISOString(), lote_id: null, ativo: false }).eq('id', id)
     if (error) {
       console.error('Erro ao excluir curral:', error)
     } else {

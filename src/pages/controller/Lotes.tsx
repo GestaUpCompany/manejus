@@ -1944,7 +1944,7 @@ export function Lotes() {
       // 3. Soft-delete do lote (deleted_at=now)
       const { error: loteError } = await supabase
         .from('lotes')
-        .update({ deleted_at: nowIso })
+        .update({ deleted_at: nowIso, ativo: false })
         .eq('id', id)
       if (loteError) {
         console.error('Erro ao excluir lote:', loteError)

@@ -295,7 +295,7 @@ export async function updateAtividade(
 export async function deleteAtividade(id: string): Promise<boolean> {
   const { error } = await supabase
     .from('atividades')
-    .update({ deleted_at: new Date().toISOString() })
+    .update({ deleted_at: new Date().toISOString(), ativo: false })
     .eq('id', id)
 
   if (error) {

@@ -1,5 +1,17 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Soft-delete passa a gravar ativo=false + guarda de nome duplicado em pastos (2026-09-24)
+
+Bug reportado no PWA: "Pasto não encontrado" na caderneta de pastagens da Santa Vitória. Causa raiz: o delete deste repo setava só `deleted_at`, mantendo `ativo=true`; o PWA filtrava só `ativo` e ignorava `deleted_at`, então entidades excluídas aqui continuavam vivas lá, e o lookup por nome (`.single()`) estourava com duplicata.
+
+- `Pastos.tsx`: `handleDeleteConfirm` grava `ativo: false` junto com `deleted_at`; `handleSubmit` bloqueia criar/renomear para nome já existente na fazenda (case-insensitive, via estado `pastos`); feedback via `useToast`. A importação Excel também foi corrigida: `existingNames` só era montado a partir do banco e nunca recebia os nomes aceitos durante o loop, então uma planilha com o mesmo nome em duas linhas inseria as duas — agora cada nome aceito entra no set.
+- Mesma correção em `Lotes.tsx` (delete de lote), `Racas.tsx`, `Currais.tsx` (linha de confinamento e curral) e `services/atividadesService.ts` (`deleteAtividade`). `ModulosPastos.tsx`, `Formulacoes.tsx`, `CadastrosAuxiliares.tsx`, `EstoqueCombustivel.tsx`, `Medicamentos.tsx` e afins já gravavam os dois campos. `notificacoes` e `os_documentos` não têm coluna `ativo` e permanecem só com `deleted_at`.
+- Limpeza de dados via MCP: `ativo=false` nas 39 linhas com `deleted_at` preenchido e `ativo=true` remanescentes (3 pastos, 6 bebedouros, 30 atividades) + soft-delete do Pasto 5 duplicado da Santa Vitória.
+- Índice único parcial aplicado em 24/09/2026 via `supabase/migrations/20260924090000_pastos_unique_index_nome_fazenda.sql` (`ux_pastos_fazenda_nome_ativo` em `(fazenda_id, lower(nome)) WHERE deleted_at IS NULL`). Os duplicados vivos que bloqueavam foram resolvidos mantendo o registro mais recente de cada par (decisão do usuário): mantidos `b521620a` ("111", 4.00 ha) e `a5ed9523` ("Lajeado 1B", 8.31 ha); soft-deletados `acda7322` e `954ed89d`.
+- Lado do PWA: ver entrada correspondente no repo `Caderneta-Digital-Gesta-Up` (filtro `deleted_at` nas leituras + lookups tolerantes a duplicata).
+
+**Disparador**: quando mencionar divergência `ativo`/`deleted_at`, soft-delete de pasto/lote/raça/curral/atividade, "pasto não encontrado" ou duplicata de cadastro, ler esta seção.
+
 ## Creep feeding: formulações exclusivas + suplementação por escopo (2026-09-23)
 
 Bezerro(a) ao pé passou a ter dieta e suplementação próprias, separadas das categorias adultas do mesmo lote. O usuário pode suplementar só o lote, só o creep, ou ambos no mesmo lançamento; cada alvo gera uma linha própria em `registros_suplementacao` e aparece separado no relatório público de consumo.
