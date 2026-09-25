@@ -36,9 +36,35 @@ interface RegistroBebedouros {
   updated_at?: string
 }
 
+interface LimpezaInfo {
+  metaDias: number | null
+  ultimaLimpeza: string | null
+  proximaLimpeza: string | null
+}
+
 function boolSimNao(item?: ChecklistItem): string {
   if (!item) return '-'
   return item.valor ? 'Sim' : 'Não'
+}
+
+function addDias(data: string, dias: number): string {
+  const d = new Date(data + 'T00:00:00')
+  d.setDate(d.getDate() + dias)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function proximaLimpezaLabel(proxima: string): string {
+  const hoje = new Date()
+  const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
+  const diff = Math.round(
+    (new Date(proxima + 'T00:00:00').getTime() - new Date(hojeStr + 'T00:00:00').getTime()) / 86400000,
+  )
+  if (diff === 0) return `${formatDate(proxima)} (hoje)`
+  if (diff > 0) return `${formatDate(proxima)} (em ${diff} dia${diff > 1 ? 's' : ''})`
+  return `${formatDate(proxima)} (atrasada há ${-diff} dia${diff < -1 ? 's' : ''})`
 }
 
 export function BebedourosDetalhes() {
@@ -46,6 +72,7 @@ export function BebedourosDetalhes() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroBebedouros | null>(null)
+  const [limpeza, setLimpeza] = useState<LimpezaInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -80,10 +107,49 @@ export function BebedourosDetalhes() {
         setLoadError(error.message || 'Erro ao buscar registro')
       }
     } else {
-      setRegistro(data as RegistroBebedouros)
+      const reg = data as RegistroBebedouros
+      setRegistro(reg)
+      setLimpeza(await loadLimpeza(fazendaId, reg.numero_bebedouro))
     }
 
     setLoading(false)
+  }
+
+  // O payload do PWA identifica o bebedouro pelo nome (numero_bebedouro).
+  // Cruza com o cadastro para calcular a próxima limpeza pela meta em dias.
+  const loadLimpeza = async (fazendaId: string, numeroBebedouro?: string): Promise<LimpezaInfo | null> => {
+    if (!numeroBebedouro) return null
+
+    const { data: bebedouro } = await supabase
+      .from('bebedouros')
+      .select('id, meta_intervalo_limpeza, data_ultima_limpeza')
+      .eq('fazenda_id', fazendaId)
+      .eq('nome', numeroBebedouro)
+      .eq('ativo', true)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (!bebedouro) return null
+
+    const { data: ultima } = await supabase
+      .from('historico_limpezas_bebedouros')
+      .select('data_limpeza')
+      .eq('bebedouro_id', bebedouro.id)
+      .order('data_limpeza', { ascending: false })
+      .limit(1)
+
+    const histData = ultima && ultima.length > 0 ? (ultima[0].data_limpeza as string) : null
+    const ultimaLimpeza =
+      histData && bebedouro.data_ultima_limpeza
+        ? histData > bebedouro.data_ultima_limpeza ? histData : bebedouro.data_ultima_limpeza
+        : histData || bebedouro.data_ultima_limpeza || null
+
+    const metaDias = bebedouro.meta_intervalo_limpeza ?? null
+    return {
+      metaDias,
+      ultimaLimpeza,
+      proximaLimpeza: ultimaLimpeza && metaDias ? addDias(ultimaLimpeza, metaDias) : null,
+    }
   }
 
   const backUrl = '/controller/cadernetas/bebedouros'
@@ -115,6 +181,21 @@ export function BebedourosDetalhes() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <DetailField label="Nº Bebedouro" value={formatValue(registro!.numero_bebedouro)} />
                 <DetailField label="Leitura" value={registro!.leitura_bebedouro ?? 0} />
+                {limpeza && (
+                  <>
+                    <DetailField
+                      label="Meta de Limpeza"
+                      value={limpeza.metaDias ? `A cada ${limpeza.metaDias} dias` : '—'}
+                    />
+                    <DetailField
+                      label="Última Limpeza"
+                      value={limpeza.ultimaLimpeza ? formatDate(limpeza.ultimaLimpeza) : 'Sem registro'}
+                    />
+                    {limpeza.proximaLimpeza && (
+                      <DetailField label="Próxima Limpeza" value={proximaLimpezaLabel(limpeza.proximaLimpeza)} />
+                    )}
+                  </>
+                )}
               </div>
             </DetailSection>
 

@@ -1,5 +1,14 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Próxima limpeza no detalhe de bebedouro (2026-09-27)
+
+`BebedourosDetalhes.tsx` agora cruza o payload do PWA com o cadastro do bebedouro para exibir dados de limpeza na seção "Bebedouro". O payload só traz `numero_bebedouro` como texto (sem FK), então o join é `bebedouros.nome = registros_bebedouros.numero_bebedouro` na mesma fazenda (ativo, não deletado) — join frágil a renomeações, herdado de decisão anterior.
+
+- **`loadLimpeza`**: busca `bebedouros` pelo nome, depois `max(historico_limpezas_bebedouros.data_limpeza)`; a última limpeza efetiva é `max(histórico, bebedouros.data_ultima_limpeza)` (a coluna manual do cadastro serve de seed para bebedouros sem histórico).
+- **Campos novos**: "Meta de Limpeza" (a cada X dias), "Última Limpeza" (ou "Sem registro"), "Próxima Limpeza" (`ultima + meta`, com sufixo de status: "(hoje)", "(em N dias)" ou "(atrasada há N dias)"). Omitidos quando o bebedouro não é encontrado pelo nome, quando a meta não está configurada ou quando não há ponto de partida para projetar.
+
+**Disparador**: quando mencionar próxima limpeza de bebedouro, meta de limpeza, `meta_intervalo_limpeza`, `historico_limpezas_bebedouros`, ou limpeza atrasada no detalhe do registro, ler esta seção.
+
 ## Relatório público + PDF de Clima (2026-09-25)
 
 Novo tipo de relatório público (`tipo='clima'`) sobre `registros_clima`, seguindo a arquitetura dos demais relatórios compartilháveis (token em `relatorios_publicos` → rota `/r/:token` → RPC própria + componente próprio + endpoint PDF Puppeteer).
