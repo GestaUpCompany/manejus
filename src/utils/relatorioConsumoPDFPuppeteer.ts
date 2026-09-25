@@ -38,6 +38,7 @@ export async function gerarRelatorioConsumoPDFPuppeteer(
       raca: l.info.raca,
       categoria: l.info.categoria,
       dieta: l.info.dieta,
+      escopo: l.info.escopo,
     },
     dados: l.dados,
   }))

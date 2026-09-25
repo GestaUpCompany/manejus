@@ -397,7 +397,7 @@ export async function renderConsumoHtml(input) {
 
       pagesHtml.push(
         pageSection(`
-          ${renderHeader({ ...brand, reportTitle: 'Análise de Consumo', section: sectionName, sectionLabel: 'Lote' })}
+          ${renderHeader({ ...brand, reportTitle: 'Análise de Consumo', section: sectionName, sectionLabel: 'Lote', sectionBadge: info.escopo === 'creep' ? 'Creep Feeding' : undefined })}
           <p class="section-kicker">${isContinuation ? 'Continuação do lote' : 'Evolução do consumo'}</p>
           <div class="lote-content">${body}</div>
           ${renderFooter({ ...period, page: pageIndex, totalPages })}

@@ -319,7 +319,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
         .map((l) => ({
         info: {
           ...l.info,
-          lote_nome: l.escopo === 'creep' ? `${l.info.lote_nome} — Creep Feeding` : l.info.lote_nome,
+          escopo: l.escopo,
           fazenda_id: relatorioInfo.fazenda_id,
           fazenda_nome: relatorioInfo.fazenda_nome,
           fazenda_logo_url: relatorioInfo.fazenda_logo_url,

@@ -31,6 +31,7 @@ body{margin:0;background:#e9eeeb;color:#26352e;font-family:Arial,Helvetica,sans-
 .farm-logo{max-width:150px;max-height:75px;width:auto;height:auto;object-fit:contain}
 .header-section{text-align:right;border-left:1px solid #d8e0db;padding-left:12px;color:#7a8981;font-size:11px;text-transform:uppercase;letter-spacing:1px}
 .header-section strong{display:block;color:#0b6a42;font-size:13px;margin-top:4px;letter-spacing:.2px}
+.header-badge{display:inline-block;margin-top:5px;background:#fbbf24;color:#78350f;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;border-radius:4px;padding:2px 7px}
 .section-kicker{color:#0b6a42;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 2mm}
 .period-badge{display:inline-flex;align-items:center;align-self:flex-start;background:#f0f6f2;border:1px solid #d3e4d9;border-radius:5px;color:#0b6a42;font-size:14px;font-weight:700;padding:6px 11px;margin-bottom:4mm}
 .insight-box{border-left:3px solid #0b6a42;background:#f6f9f7;border-radius:0 5px 5px 0;padding:7px 10px;margin-bottom:3mm;line-height:1.4;color:#52635a}
@@ -70,10 +71,10 @@ const imageTag = (src, alt, className = '') =>
  * Renderiza o cabeçalho padrão: logo do Manejus, logo da fazenda, título do
  * relatório à esquerda e "seção" atual à direita (ex: "Resumo executivo").
  */
-export function renderHeader({ logoGestao, logoFazenda, fazendaNome, reportTitle, section, sectionLabel }) {
+export function renderHeader({ logoGestao, logoFazenda, fazendaNome, reportTitle, section, sectionLabel, sectionBadge }) {
   const right = `<div class="header-right">${logoFazenda ? imageTag(logoFazenda, 'Logo da fazenda', 'farm-logo') : ''}${
     section
-      ? `<div class="header-section"><span>${escapeHtml(sectionLabel ?? '')}</span><strong>${escapeHtml(section)}</strong></div>`
+      ? `<div class="header-section"><span>${escapeHtml(sectionLabel ?? '')}</span><strong>${escapeHtml(section)}</strong>${sectionBadge ? `<span class="header-badge">${escapeHtml(sectionBadge)}</span>` : ''}</div>`
       : ''
   }</div>`
   return `<header class="report-header"><div class="brand-block">${imageTag(logoGestao, 'Logo ManejUs 360', 'brand-logo')}<div><div class="brand-name">Manej'Us <b>360</b></div><div class="report-title">${escapeHtml(reportTitle)}</div><div class="farm-name">${escapeHtml(fazendaNome)}</div></div></div>${right}</header>`
