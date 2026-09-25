@@ -720,9 +720,10 @@ function CompraDetalhesView({ os, fmtBRL: fmt }: { os: OrdemServicoFull; fmtBRL:
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <DetailField label="Fornecedor" value={formatValue(os.fornecedor)} />
-        <DetailField label="Fazenda de Origem" value={formatValue(os.origem_fazenda)} />
-        <DetailField label="Município/UF" value={formatValue(os.origem_municipio_uf)} />
+        <DetailField label="Comprador" value={formatValue(os.comprador)} />
+        <DetailField label="Empresa" value={formatValue(os.fornecedor)} />
+        {os.origem_fazenda && <DetailField label="Fazenda de Origem" value={formatValue(os.origem_fazenda)} />}
+        {os.origem_municipio_uf && <DetailField label="Município/UF" value={formatValue(os.origem_municipio_uf)} />}
         {d.origemLocalizacao && <DetailField label="Localização" value={d.origemLocalizacao} />}
         <DetailField label="Quantidade Prevista" value={formatValue(os.quantidade_prevista)} />
         <DetailField label="Sexo" value={formatValue(os.sexo)} />
@@ -733,10 +734,11 @@ function CompraDetalhesView({ os, fmtBRL: fmt }: { os: OrdemServicoFull; fmtBRL:
         {d.tipoPesagem && (
           <DetailField label="Tipo de Pesagem" value={d.tipoPesagem === 'individual' ? 'Individual' : 'Coletivo (balanço)'} />
         )}
-        <DetailField label="Saída da Origem" value={formatDate(os.data_saida)} />
-        <DetailField label="Chegada Prevista" value={formatDate(os.data_prevista_embarque)} />
+        {os.data_saida && <DetailField label="Embarque na Origem" value={formatDate(os.data_saida)} />}
+        <DetailField label="Chegada na Fazenda" value={formatDate(os.data_prevista_embarque)} />
       </div>
 
+      {(os.modo_preco || os.valor_total_previsto != null || os.forma_pagamento || os.data_prevista_pagamento || fav.nome) && (
       <div>
         <p className="text-xs font-semibold text-content-muted uppercase mb-2">Preço e Pagamento</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -762,6 +764,7 @@ function CompraDetalhesView({ os, fmtBRL: fmt }: { os: OrdemServicoFull; fmtBRL:
           {fav.banco && <DetailField label="Banco" value={fav.banco} />}
         </div>
       </div>
+      )}
 
       {(transp.transportadora || transp.motorista || os.valor_frete != null) && (
         <div>
