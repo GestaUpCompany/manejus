@@ -131,3 +131,19 @@ Arquitetura correta a implementar quando autorizado:
 Cuidados: manter comportamento de lotes sem plano (hoje evoluem pelo gmd gravado; sem override e sem plano o `gmd_efetivo` seria NULL e a categoria pararia de projetar, o que pode ser indesejado; decidir fallback). Backfill dos overrides manuais existentes antes de virar a chave.
 
 Disparador: quando mencionar "gmd derivado", "gmd_override", "fonte única de GMD", "desconto de enfermaria no gmd", ou retomar a arquitetura de GMD efetivo, ler esta seção.
+
+## Tela de visualização de versões do cronograma de tratos (não implementada)
+
+Hoje a Configuração de Tratos mostra as versões ativas apenas como chips (`data_inicio → data_fim` + badge "vigente"). Não há como ver detalhes de uma versão sem carregá-la, versões inativas ficam invisíveis na UI, e versões futuras não são carregadas no formulário (a tela só carrega a vigente da data atual), o que já causou falha de save em teste (form vazio exigindo horários).
+
+O que a tela/seção deve cobrir:
+
+- Listar todas as versões do tipo selecionado, incluindo inativas, com `data_inicio → data_fim`, `quantidade_tratos`, e indicação de vigente.
+- Expandir uma versão para ver seus percentuais e horários (`programacao_tratos_percentuais`) em modo read-only.
+- Cruzamento opcional com `registros_oferta_trato.programacao_id`: quantos dias/tratos foram lançados sob cada versão (auditoria de "como foram os tratos de cada versão").
+- Botão "editar esta versão" que carrega a versão selecionada no formulário com sua `data_inicio` (salvar com mesma data já atualiza em lugar, mas hoje o form não carrega versão não-vigente). Isso resolve a limitação de edição de versão futura.
+- Considerar aviso quando uma edição in-place vai sobrescrever percentuais sem deixar rastro do conteúdo anterior (edição com mesma `data_inicio` faz delete+insert nos percentuais, sem auditoria).
+
+Fonte de dados já existe: `programacao_tratos` (sem filtro `ativo`) + `programacao_tratos_percentuais` + join opcional em `registros_oferta_trato`. Sem migration necessária.
+
+Disparador: quando mencionar "tela de versões", "histórico de versões do cronograma", "visualizar versões de tratos", ou editar versão futura/não-vigente, ler esta seção.
