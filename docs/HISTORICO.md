@@ -1,5 +1,37 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório público + PDF de Clima (2026-09-25)
+
+Novo tipo de relatório público (`tipo='clima'`) sobre `registros_clima`, seguindo a arquitetura dos demais relatórios compartilháveis (token em `relatorios_publicos` → rota `/r/:token` → RPC própria + componente próprio + endpoint PDF Puppeteer).
+
+- **Migration `20260927120000_rpc_relatorio_clima.sql`** (db push): `get_dados_relatorio_clima(p_token, p_data_inicio, p_data_fim)` SECURITY DEFINER no padrão `get_dados_relatorio_tratos`. Retorna `registros` **achatados** via `jsonb_array_elements(medicoes)`: uma linha por medição de pluviômetro (`data` no timezone da fazenda, `horario` com fallback para o horário do registro, `pluviometro_id/nome/localizacao`, `medicao_mm`, `temperatura`, `temperatura_media`, `umidade_relativa`, `responsavel`, `nome_usuario`, `observacao`). `pluviometros_disponiveis` é derivado das medições (não da tabela `pluviometros`) para cobrir pluviômetros inativos/excluídos no histórico. GRANT anon + authenticated.
+- **Semântica confirmada pelo usuário**: cada `medicao` é a leitura do pluviômetro desde o último esvaziamento (mm de chuva do período), então somar leituras do mesmo dia/pluviômetro é correto. `observacao` e `responsavel` podem aparecer no relatório público.
+- **`RelatorioClimaPublico.tsx`**: página pública com slicers (data início/fim → RPC, pluviômetro multi-select → filtro client), 7 KPIs (mm acumulado, leituras, dias com chuva, temp média/mín/máx, umidade média), ComposedChart recharts (barras mm/dia agrupadas por pluviômetro + linha temperatura média em eixo secundário), tabela resumo por pluviômetro e tabela cronológica de leituras. Helpers de agregação (`calcularKpis`, `resumirPorPluviometro`, `serieDiaria`) exportados e reutilizados pelo payload do PDF.
+- **Registro do tipo**: `RelatorioPublico.tsx` (early-return + dispatch) e `RELATORIOS_DISPONIVEIS` em `Relatorios.tsx` (título "Clima", ícone 🌧️).
+- **PDF**: `relatorioClimaPDFPuppeteer.ts` (client envia kpis + série diária + resumo + leituras filtradas) → `api/pdf/clima.js`. Página 1: KPIs + gráfico composto Chart.js (barras por pluviômetro no eixo esquerdo + linha temp média no direito, rótulos de mm sobre as barras). Página 2: "Resumo por pluviômetro" + primeiro bloco de "Leituras detalhadas" (orçamento vertical compartilhado, ~9mm/linha). Páginas 3+: continuação das leituras a 15 linhas/página.
+- **Teste**: link `9caea29b-e4b9-460c-9b5e-0cf3138e3907` criado na fazenda de testes; RPC retornou 30 linhas achatadas (15 registros × 2 pluviômetros); PDF local gerou 5 páginas/252KB com 40 leituras sintéticas exercitando paginação.
+
+**Disparador**: quando mencionar relatório de clima, pluviômetro no relatório público, `get_dados_relatorio_clima`, `RelatorioClimaPublico`, `api/pdf/clima`, ou "relatório de chuva/pluviometria", ler esta seção.
+
+## Comunicados de compra e venda simplificados (2026-09-27)
+
+Os comunicados (criados no PWA) viraram mensagens curtas para a equipe de gado. Na compra o formulário caiu de ~30 campos para 8: comprador (quem negociou pela fazenda, coluna `comprador`), empresa (quem vendeu, coluna `fornecedor`), quantidade, sexo, era, data de embarque (`data_saida`) e data de chegada na fazenda (`data_prevista_embarque`), mais observação opcional. Na venda só o label COMPRADOR virou EMPRESA. As colunas removidas permanecem no schema, nullable como antes, e `compra_detalhes` deixa de ser preenchido.
+
+No painel (`CompraDetalhesView` em `OrdemServicoDetalhes.tsx`), a seção do comunicado de compra passou a mostrar Comprador e Empresa e tornou condicionais os campos legados (origem/município, bloco Preço e Pagamento inteiro, transporte, corretagem), então OS antigas seguem exibindo tudo que foi preenchido e as novas saem limpas.
+
+**Disparador**: quando mencionar comunicado simplificado, campos removidos da compra, EMPRESA no lugar de fornecedor no detalhe da OS, ler esta seção.
+
+## Badge "Creep Feeding" no PDF de consumo (2026-09-25)
+
+O relatório público de consumo marcava lotes creep com um badge âmbar na web, mas no PDF a distinção existia apenas como sufixo de texto no nome do lote ("Lote X — Creep Feeding"). Agora o escopo viaja como campo de dados até o endpoint e vira um badge visual de verdade.
+
+- **`RelatorioConsumoPublico.tsx`**: `exportarPDF` deixou de concatenar o sufixo ao `lote_nome`; passa `escopo: l.escopo` dentro de `info`.
+- **`relatorioConsumoPDFPuppeteer.ts`**: `escopo` incluído no payload enviado ao `/api/pdf/consumo`.
+- **`api/pdf/_shared/template.js`**: `renderHeader` ganhou parâmetro opcional `sectionBadge` e o `BASE_CSS` ganhou `.header-badge` (chip âmbar `#fbbf24`/`#78350f`, alinhado à direita sob o nome da seção). Qualquer relatório Puppeteer pode usar.
+- **`api/pdf/consumo.js`**: passa `sectionBadge: 'Creep Feeding'` quando `info.escopo === 'creep'`; aparece também nas páginas de continuação do lote.
+
+**Disparador**: quando mencionar badge de creep no PDF, `sectionBadge`, `header-badge`, ou diferenciação adulto/creep em relatório PDF, ler esta seção.
+
 ## Módulo de Compra: OS de compra + recebimento por carga (2026-09-27)
 
 Implementada a segunda operação comercial sobre a arquitetura de OS criada para a venda: o PWA emite o comunicado de compra, cada caminhão gera um laudo de recebimento próprio (uma GTA por veículo, exigência legal), e o painel acompanha recebimentos, divergências e fechamento.

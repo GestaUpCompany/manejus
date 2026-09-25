@@ -55,6 +55,12 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     icone: '💧',
   },
   {
+    tipo: 'clima',
+    titulo: 'Clima',
+    descricao: 'Chuva acumulada por pluviômetro, temperatura e umidade por período.',
+    icone: '🌧️',
+  },
+  {
     tipo: 'morte',
     titulo: 'Mortes',
     descricao: 'Registros de morte por causa, categoria e sexo, taxa de mortalidade, peso médio e perda financeira estimada por animal (preço por kg vivo por categoria).',
