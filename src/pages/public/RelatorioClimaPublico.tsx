@@ -274,6 +274,44 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
   const resumo = useMemo(() => resumirPorPluviometro(registrosFiltrados), [registrosFiltrados])
   const serie = useMemo(() => serieDiaria(registrosFiltrados, nomesPluviometros), [registrosFiltrados, nomesPluviometros])
 
+  // Só entram no gráfico/legenda os pluviômetros com leitura no período
+  // filtrado (a lista completa inclui pluviômetros sem dados).
+  const nomesPluviometrosComDados = useMemo(() => {
+    const comDados = new Set(registrosFiltrados.map((r) => r.pluviometro_nome || '—'))
+    return nomesPluviometros.filter((n) => comDados.has(n))
+  }, [registrosFiltrados, nomesPluviometros])
+
+  // Sem registros de temperatura/umidade no período, os cards, a linha do
+  // gráfico e as colunas correspondentes ficam ocultos.
+  const temTemperatura = useMemo(
+    () => registrosFiltrados.some((r) => r.temperatura != null || r.temperatura_media != null),
+    [registrosFiltrados],
+  )
+  const temUmidade = useMemo(
+    () => registrosFiltrados.some((r) => r.umidade_relativa != null),
+    [registrosFiltrados],
+  )
+
+  const kpiCards = [
+    { label: 'Chuva acumulada', value: `${fmtNum(kpis.mm_total, 1)} mm` },
+    { label: 'Leituras', value: kpis.n_leituras.toString() },
+    { label: 'Dias com chuva', value: kpis.dias_com_chuva.toString() },
+    ...(temTemperatura
+      ? [
+          { label: 'Temp. média', value: kpis.temp_media !== null ? `${fmtNum(kpis.temp_media)}°C` : '—' },
+          { label: 'Temp. mínima', value: kpis.temp_min !== null ? `${fmtNum(kpis.temp_min)}°C` : '—' },
+          { label: 'Temp. máxima', value: kpis.temp_max !== null ? `${fmtNum(kpis.temp_max)}°C` : '—' },
+        ]
+      : []),
+    ...(temUmidade
+      ? [{ label: 'Umidade média', value: kpis.umidade_media !== null ? `${fmtNum(kpis.umidade_media, 0)}%` : '—' }]
+      : []),
+  ]
+  const kpiGridCols =
+    ({ 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4', 6: 'lg:grid-cols-6', 7: 'lg:grid-cols-7' } as Record<number, string>)[
+      kpiCards.length
+    ] || 'lg:grid-cols-7'
+
   const temFiltrosAtivos = filtroPluviometro.size > 0 || dataInicio || dataFim
 
   const limparFiltros = () => {
@@ -421,16 +459,8 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
 
       {/* KPIs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 sm:gap-3">
-          {[
-            { label: 'Chuva acumulada', value: `${fmtNum(kpis.mm_total, 1)} mm` },
-            { label: 'Leituras', value: kpis.n_leituras.toString() },
-            { label: 'Dias com chuva', value: kpis.dias_com_chuva.toString() },
-            { label: 'Temp. média', value: kpis.temp_media !== null ? `${fmtNum(kpis.temp_media)}°C` : '—' },
-            { label: 'Temp. mínima', value: kpis.temp_min !== null ? `${fmtNum(kpis.temp_min)}°C` : '—' },
-            { label: 'Temp. máxima', value: kpis.temp_max !== null ? `${fmtNum(kpis.temp_max)}°C` : '—' },
-            { label: 'Umidade média', value: kpis.umidade_media !== null ? `${fmtNum(kpis.umidade_media, 0)}%` : '—' },
-          ].map((kpi) => (
+        <div className={`grid grid-cols-2 sm:grid-cols-3 ${kpiGridCols} gap-2 sm:gap-3`}>
+          {kpiCards.map((kpi) => (
             <div
               key={kpi.label}
               className="rounded-lg p-2.5 text-center text-white shadow-sm"
@@ -537,7 +567,9 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Gráfico: chuva diária por pluviômetro + temperatura média */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Chuva diária (mm) e temperatura média (°C)</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">
+            {temTemperatura ? 'Chuva diária (mm) e temperatura média (°C)' : 'Chuva diária (mm)'}
+          </h2>
           {serie.length > 0 ? (
             <ResponsiveContainer width="100%" height={360}>
               <ComposedChart data={serie} margin={{ top: 10, right: 25, left: 0, bottom: 20 }} style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}>
@@ -548,12 +580,14 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
                   tick={{ fontSize: 11, fill: '#666' }}
                   label={{ value: 'mm', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#666' } }}
                 />
-                <YAxis
-                  yAxisId="temp"
-                  orientation="right"
-                  tick={{ fontSize: 11, fill: TEMP_COLOR }}
-                  label={{ value: '°C', angle: 90, position: 'insideRight', style: { fontSize: 11, fill: TEMP_COLOR } }}
-                />
+                {temTemperatura && (
+                  <YAxis
+                    yAxisId="temp"
+                    orientation="right"
+                    tick={{ fontSize: 11, fill: TEMP_COLOR }}
+                    label={{ value: '°C', angle: 90, position: 'insideRight', style: { fontSize: 11, fill: TEMP_COLOR } }}
+                  />
+                )}
                 <Tooltip
                   formatter={((value: any, name: any) => [
                     name === 'Temperatura média' ? `${fmtNum(Number(value))}°C` : `${fmtNum(Number(value))} mm`,
@@ -562,7 +596,7 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                {nomesPluviometros.map((nome, idx) => (
+                {nomesPluviometrosComDados.map((nome, idx) => (
                   <Bar
                     key={nome}
                     yAxisId="mm"
@@ -573,16 +607,18 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
                     barSize={24}
                   />
                 ))}
-                <Line
-                  yAxisId="temp"
-                  type="monotone"
-                  dataKey="temp_media"
-                  name="Temperatura média"
-                  stroke={TEMP_COLOR}
-                  strokeWidth={2.5}
-                  dot={{ r: 3 }}
-                  connectNulls
-                />
+                {temTemperatura && (
+                  <Line
+                    yAxisId="temp"
+                    type="monotone"
+                    dataKey="temp_media"
+                    name="Temperatura média"
+                    stroke={TEMP_COLOR}
+                    strokeWidth={2.5}
+                    dot={{ r: 3 }}
+                    connectNulls
+                  />
+                )}
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
@@ -606,8 +642,12 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
                     <th className="text-right py-2 px-3 font-semibold text-gray-700">Total (mm)</th>
                     <th className="text-right py-2 px-3 font-semibold text-gray-700">Média/leitura</th>
                     <th className="text-right py-2 px-3 font-semibold text-gray-700">Maior leitura</th>
-                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Temp. mín</th>
-                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Temp. máx</th>
+                    {temTemperatura && (
+                      <>
+                        <th className="text-right py-2 px-3 font-semibold text-gray-700">Temp. mín</th>
+                        <th className="text-right py-2 px-3 font-semibold text-gray-700">Temp. máx</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -619,8 +659,12 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
                       <td className="py-2 px-3 text-right font-semibold" style={{ color: GREEN_DARK }}>{fmtNum(r.mm_total)} mm</td>
                       <td className="py-2 px-3 text-right text-gray-700">{fmtNum(r.mm_medio)} mm</td>
                       <td className="py-2 px-3 text-right text-gray-700">{fmtNum(r.maior_leitura)} mm</td>
-                      <td className="py-2 px-3 text-right text-gray-700">{r.temp_min !== null ? `${fmtNum(r.temp_min)}°C` : '—'}</td>
-                      <td className="py-2 px-3 text-right text-gray-700">{r.temp_max !== null ? `${fmtNum(r.temp_max)}°C` : '—'}</td>
+                      {temTemperatura && (
+                        <>
+                          <td className="py-2 px-3 text-right text-gray-700">{r.temp_min !== null ? `${fmtNum(r.temp_min)}°C` : '—'}</td>
+                          <td className="py-2 px-3 text-right text-gray-700">{r.temp_max !== null ? `${fmtNum(r.temp_max)}°C` : '—'}</td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -645,8 +689,8 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
                     <th className="text-left py-2 px-3 font-semibold text-gray-700">Horário</th>
                     <th className="text-left py-2 px-3 font-semibold text-gray-700">Pluviômetro</th>
                     <th className="text-right py-2 px-3 font-semibold text-gray-700">Chuva (mm)</th>
-                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Temp. (°C)</th>
-                    <th className="text-right py-2 px-3 font-semibold text-gray-700">Umidade</th>
+                    {temTemperatura && <th className="text-right py-2 px-3 font-semibold text-gray-700">Temp. (°C)</th>}
+                    {temUmidade && <th className="text-right py-2 px-3 font-semibold text-gray-700">Umidade</th>}
                     <th className="text-left py-2 px-3 font-semibold text-gray-700">Responsável</th>
                     <th className="text-left py-2 px-3 font-semibold text-gray-700">Observação</th>
                   </tr>
@@ -658,8 +702,8 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
                       <td className="py-2 px-3 text-gray-600">{r.horario || '—'}</td>
                       <td className="py-2 px-3 text-gray-900">{r.pluviometro_nome || '—'}</td>
                       <td className="py-2 px-3 text-right font-semibold" style={{ color: GREEN_DARK }}>{fmtNum(r.medicao_mm)}</td>
-                      <td className="py-2 px-3 text-right text-gray-700">{r.temperatura !== null ? fmtNum(r.temperatura) : '—'}</td>
-                      <td className="py-2 px-3 text-right text-gray-700">{r.umidade_relativa !== null ? `${fmtNum(r.umidade_relativa, 0)}%` : '—'}</td>
+                      {temTemperatura && <td className="py-2 px-3 text-right text-gray-700">{r.temperatura !== null ? fmtNum(r.temperatura) : '—'}</td>}
+                      {temUmidade && <td className="py-2 px-3 text-right text-gray-700">{r.umidade_relativa !== null ? `${fmtNum(r.umidade_relativa, 0)}%` : '—'}</td>}
                       <td className="py-2 px-3 text-gray-700">{r.responsavel || r.nome_usuario || '—'}</td>
                       <td className="py-2 px-3 text-gray-600 max-w-[240px] truncate" title={r.observacao || ''}>{r.observacao || '—'}</td>
                     </tr>

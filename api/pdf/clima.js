@@ -51,30 +51,16 @@ function isPDFData(value) {
   return true
 }
 
-// CSS específico do clima: área do gráfico na página de resumo e larguras
-// das duas tabelas de detalhamento. Prefixo .clima-* nas tabelas para não
-// colidir com CSS de outros relatórios quando concatenados.
+// CSS específico do clima: área do gráfico na página de resumo e estilo das
+// duas tabelas de detalhamento (larguras de coluna ficam no colgroup gerado
+// por tabela, porque as colunas de temperatura/umidade são opcionais).
+// Prefixo .clima-* nas tabelas para não colidir com CSS de outros relatórios.
 const CLIMA_CSS = `
 .page{display:flex;flex-direction:column}
 .clima-content{flex:1;display:flex;flex-direction:column;min-height:0}
 .clima-chart{flex:1;min-height:0}
 .clima-chart .chart-card{height:100%}
-.clima-resumo-table th:nth-child(1){width:16%}
-.clima-resumo-table th:nth-child(2){width:20%}
-.clima-resumo-table th:nth-child(3){width:8%}
-.clima-resumo-table th:nth-child(4){width:12%}
-.clima-resumo-table th:nth-child(5){width:13%}
-.clima-resumo-table th:nth-child(6){width:13%}
-.clima-resumo-table th:nth-child(7){width:9%}
-.clima-resumo-table th:nth-child(8){width:9%}
-.clima-leituras-table th:nth-child(1){width:9%}
-.clima-leituras-table th:nth-child(2){width:7%}
-.clima-leituras-table th:nth-child(3){width:13%}
-.clima-leituras-table th:nth-child(4){width:9%}
-.clima-leituras-table th:nth-child(5){width:9%}
-.clima-leituras-table th:nth-child(6){width:9%}
-.clima-leituras-table th:nth-child(7){width:16%}
-.clima-leituras-table th:nth-child(8){width:28%}
+
 .clima-resumo-table td, .clima-leituras-table td{font-size:12px;padding:6px 5px;line-height:1.25}
 .clima-resumo-table th, .clima-leituras-table th{font-size:11px;padding:6px 5px}
 .clima-resumo-table th, .clima-resumo-table td,
@@ -132,22 +118,24 @@ const CHARTS_INIT_JS = `
         categoryPercentage: 0.7,
       }
     })
-    datasets.push({
-      type: 'line',
-      label: 'Temp. média (°C)',
-      data: serie.map(function(p){ return p.temp_media != null ? Number(p.temp_media) : null }),
-      borderColor: TEMP_COLOR,
-      backgroundColor: TEMP_COLOR,
-      borderWidth: 3,
-      pointRadius: 5,
-      pointBackgroundColor: TEMP_COLOR,
-      pointBorderColor: '#FFFFFF',
-      pointBorderWidth: 2,
-      yAxisID: 'y1',
-      order: 0,
-      tension: 0.3,
-      spanGaps: true,
-    })
+    if (entry.hasTemp) {
+      datasets.push({
+        type: 'line',
+        label: 'Temp. média (°C)',
+        data: serie.map(function(p){ return p.temp_media != null ? Number(p.temp_media) : null }),
+        borderColor: TEMP_COLOR,
+        backgroundColor: TEMP_COLOR,
+        borderWidth: 3,
+        pointRadius: 5,
+        pointBackgroundColor: TEMP_COLOR,
+        pointBorderColor: '#FFFFFF',
+        pointBorderWidth: 2,
+        yAxisID: 'y1',
+        order: 0,
+        tension: 0.3,
+        spanGaps: true,
+      })
+    }
 
     new Chart(el, {
       type: 'bar',
@@ -180,6 +168,7 @@ const CHARTS_INIT_JS = `
             grid: { color: '#E5E7EB' },
           },
           y1: {
+            display: entry.hasTemp === true,
             position: 'right',
             beginAtZero: true,
             suggestedMax: maxTemp * 1.3,
@@ -223,40 +212,71 @@ const CHARTS_INIT_JS = `
 })();
 `
 
-function kpisHtml(kpis) {
+function kpisHtml(kpis, hasTemp, hasUmidade) {
   const temp = (v) => (v != null ? `${numFmt(v, 1)}°C` : '—')
   const cards = [
     { value: `${numFmt(kpis.mm_total, 1)} mm`, label: 'Chuva acumulada' },
     { value: intFmt(kpis.n_leituras), label: 'Leituras' },
     { value: intFmt(kpis.dias_com_chuva), label: 'Dias com chuva' },
-    { value: temp(kpis.temp_media), label: 'Temp. média' },
-    { value: temp(kpis.temp_min), label: 'Temp. mínima' },
-    { value: temp(kpis.temp_max), label: 'Temp. máxima' },
-    { value: kpis.umidade_media != null ? `${numFmt(kpis.umidade_media, 0)}%` : '—', label: 'Umidade média' },
   ]
+  if (hasTemp) {
+    cards.push(
+      { value: temp(kpis.temp_media), label: 'Temp. média' },
+      { value: temp(kpis.temp_min), label: 'Temp. mínima' },
+      { value: temp(kpis.temp_max), label: 'Temp. máxima' },
+    )
+  }
+  if (hasUmidade) {
+    cards.push({ value: kpis.umidade_media != null ? `${numFmt(kpis.umidade_media, 0)}%` : '—', label: 'Umidade média' })
+  }
   return `<div class="kpi-grid">${cards.map((c) => kpi(c.value, c.label)).join('')}</div>`
 }
 
-function resumoTableHtml(resumo) {
-  const header = `<thead><tr><th>Pluviômetro</th><th>Localização</th><th>Leituras</th><th>Total (mm)</th><th>Média/leitura</th><th>Maior leitura</th><th>Temp. mín</th><th>Temp. máx</th></tr></thead>`
+// Monta colgroup + thead a partir de um array [título, largura], para que
+// colunas opcionais (temperatura, umidade) possam ser omitidas sem depender
+// de nth-child fixos no CSS.
+function tableHeadHtml(cols) {
+  const colgroup = `<colgroup>${cols.map(([, w]) => `<col style="width:${w}">`).join('')}</colgroup>`
+  const header = `<thead><tr>${cols.map(([t]) => `<th>${t}</th>`).join('')}</tr></thead>`
+  return colgroup + header
+}
+
+function resumoTableHtml(resumo, hasTemp) {
+  const cols = [
+    ['Pluviômetro', '16%'],
+    ['Localização', '20%'],
+    ['Leituras', '8%'],
+    ['Total (mm)', '12%'],
+    ['Média/leitura', '13%'],
+    ['Maior leitura', '13%'],
+  ]
+  if (hasTemp) cols.push(['Temp. mín', '9%'], ['Temp. máx', '9%'])
   const rows = resumo
     .map(
       (r) =>
-        `<tr><td>${escapeHtml(r.pluviometro_nome || '—')}</td><td>${escapeHtml(r.pluviometro_localizacao || '—')}</td><td class="numeric">${intFmt(r.n_medicoes)}</td><td class="numeric">${numFmt(r.mm_total, 1)} mm</td><td class="numeric">${r.mm_medio != null ? `${numFmt(r.mm_medio, 1)} mm` : '—'}</td><td class="numeric">${r.maior_leitura != null ? `${numFmt(r.maior_leitura, 1)} mm` : '—'}</td><td class="numeric">${r.temp_min != null ? `${numFmt(r.temp_min, 1)}°C` : '—'}</td><td class="numeric">${r.temp_max != null ? `${numFmt(r.temp_max, 1)}°C` : '—'}</td></tr>`,
+        `<tr><td>${escapeHtml(r.pluviometro_nome || '—')}</td><td>${escapeHtml(r.pluviometro_localizacao || '—')}</td><td class="numeric">${intFmt(r.n_medicoes)}</td><td class="numeric">${numFmt(r.mm_total, 1)} mm</td><td class="numeric">${r.mm_medio != null ? `${numFmt(r.mm_medio, 1)} mm` : '—'}</td><td class="numeric">${r.maior_leitura != null ? `${numFmt(r.maior_leitura, 1)} mm` : '—'}</td>${hasTemp ? `<td class="numeric">${r.temp_min != null ? `${numFmt(r.temp_min, 1)}°C` : '—'}</td><td class="numeric">${r.temp_max != null ? `${numFmt(r.temp_max, 1)}°C` : '—'}</td>` : ''}</tr>`,
     )
     .join('')
-  return `<h3 class="table-title">Resumo por pluviômetro<span>${resumo.length} pluviômetro(s)</span></h3><div class="table-block"><table class="clima-resumo-table">${header}<tbody>${rows}</tbody></table></div>`
+  return `<h3 class="table-title">Resumo por pluviômetro<span>${resumo.length} pluviômetro(s)</span></h3><div class="table-block"><table class="clima-resumo-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
 }
 
-function leiturasTableHtml(registros, total) {
-  const header = `<thead><tr><th>Data</th><th>Horário</th><th>Pluviômetro</th><th>Chuva (mm)</th><th>Temp. (°C)</th><th>Umidade</th><th>Responsável</th><th>Observação</th></tr></thead>`
+function leiturasTableHtml(registros, total, hasTemp, hasUmidade) {
+  const cols = [
+    ['Data', '9%'],
+    ['Horário', '7%'],
+    ['Pluviômetro', '13%'],
+    ['Chuva (mm)', '9%'],
+  ]
+  if (hasTemp) cols.push(['Temp. (°C)', '9%'])
+  if (hasUmidade) cols.push(['Umidade', '9%'])
+  cols.push(['Responsável', '16%'], ['Observação', '28%'])
   const rows = registros
     .map(
       (r) =>
-        `<tr><td>${dateFmt(r.data)}</td><td>${escapeHtml(r.horario || '—')}</td><td>${escapeHtml(r.pluviometro_nome || '—')}</td><td class="numeric">${r.medicao_mm != null ? numFmt(r.medicao_mm, 1) : '—'}</td><td class="numeric">${r.temperatura != null ? numFmt(r.temperatura, 1) : '—'}</td><td class="numeric">${r.umidade_relativa != null ? `${numFmt(r.umidade_relativa, 0)}%` : '—'}</td><td>${escapeHtml(r.responsavel || r.nome_usuario || '—')}</td><td>${escapeHtml(r.observacao || '—')}</td></tr>`,
+        `<tr><td>${dateFmt(r.data)}</td><td>${escapeHtml(r.horario || '—')}</td><td>${escapeHtml(r.pluviometro_nome || '—')}</td><td class="numeric">${r.medicao_mm != null ? numFmt(r.medicao_mm, 1) : '—'}</td>${hasTemp ? `<td class="numeric">${r.temperatura != null ? numFmt(r.temperatura, 1) : '—'}</td>` : ''}${hasUmidade ? `<td class="numeric">${r.umidade_relativa != null ? `${numFmt(r.umidade_relativa, 0)}%` : '—'}</td>` : ''}<td>${escapeHtml(r.responsavel || r.nome_usuario || '—')}</td><td>${escapeHtml(r.observacao || '—')}</td></tr>`,
     )
     .join('')
-  return `<h3 class="table-title">Leituras detalhadas<span>${total} leitura(s)</span></h3><div class="table-block"><table class="clima-leituras-table">${header}<tbody>${rows}</tbody></table></div>`
+  return `<h3 class="table-title">Leituras detalhadas<span>${total} leitura(s)</span></h3><div class="table-block"><table class="clima-leituras-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
 }
 
 function chunkArray(arr, size) {
@@ -272,6 +292,18 @@ export async function renderClimaHtml(input) {
   const { dataInicio, dataFim, fazendaNome, logoGestao, logoFazenda, kpis, pluviometros, serie, resumo, registros } = input
   const brand = { logoGestao, logoFazenda, fazendaNome }
   const period = { dataInicio, dataFim }
+
+  // O payload traz todos os pluviômetros disponíveis da fazenda; o gráfico e
+  // a legenda só devem listar os que têm leitura no período filtrado.
+  const nomesComDados = new Set(registros.map((r) => r.pluviometro_nome || '—'))
+  const pluviometrosComDados = pluviometros.filter((n) => nomesComDados.has(n))
+
+  // Quando a fazenda não registra temperatura/umidade no período, os cards,
+  // a linha do gráfico e as colunas correspondentes são omitidos por completo.
+  const hasTemp =
+    registros.some((r) => r.temperatura != null || r.temperatura_media != null) ||
+    serie.some((p) => p.temp_media != null)
+  const hasUmidade = registros.some((r) => r.umidade_relativa != null)
 
   // Pré-calcula a paginação do detalhamento para saber o total de páginas
   // antes de montar (footer mostra "Página X de Y").
@@ -291,8 +323,8 @@ export async function renderClimaHtml(input) {
   // Página 1: resumo (KPIs + gráfico composto)
   pageIndex += 1
   const canvasId = 'chart-clima-1'
-  if (serie.length > 0 && pluviometros.length > 0) {
-    chartsData.push({ canvasId, serie, pluviometros })
+  if (serie.length > 0 && pluviometrosComDados.length > 0) {
+    chartsData.push({ canvasId, serie, pluviometros: pluviometrosComDados, hasTemp })
   }
   pagesHtml.push(
     pageSection(`
@@ -300,8 +332,8 @@ export async function renderClimaHtml(input) {
       <p class="section-kicker">Resumo do período</p>
       <div class="clima-content">
         <div class="period-badge">${dateFmt(dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(dataFim)}</div>
-        ${kpisHtml(kpis)}
-        <div class="clima-chart">${chartCard({ canvasId, title: 'Chuva diária (mm) e temperatura média (°C)', subtitle: `${registros.length} leitura(s) · ${pluviometros.length} pluviômetro(s)`, hasData: serie.length > 0 && pluviometros.length > 0 })}</div>
+        ${kpisHtml(kpis, hasTemp, hasUmidade)}
+        <div class="clima-chart">${chartCard({ canvasId, title: hasTemp ? 'Chuva diária (mm) e temperatura média (°C)' : 'Chuva diária (mm)', subtitle: `${registros.length} leitura(s) · ${pluviometrosComDados.length} pluviômetro(s)`, hasData: serie.length > 0 && pluviometrosComDados.length > 0 })}</div>
       </div>
       ${renderFooter({ ...period, page: pageIndex, totalPages })}
     `),
@@ -315,8 +347,8 @@ export async function renderClimaHtml(input) {
         ${renderHeader({ ...brand, reportTitle: 'Relatório de Clima', section: 'Detalhamento', sectionLabel: 'Seção' })}
         <p class="section-kicker">Detalhamento</p>
         <div class="clima-content">
-          ${resumo.length > 0 ? resumoTableHtml(resumo) : ''}
-          ${firstChunk.length > 0 ? leiturasTableHtml(firstChunk, registros.length) : ''}
+          ${resumo.length > 0 ? resumoTableHtml(resumo, hasTemp) : ''}
+          ${firstChunk.length > 0 ? leiturasTableHtml(firstChunk, registros.length, hasTemp, hasUmidade) : ''}
         </div>
         ${renderFooter({ ...period, page: pageIndex, totalPages })}
       `),
@@ -329,7 +361,7 @@ export async function renderClimaHtml(input) {
         pageSection(`
           ${renderHeader({ ...brand, reportTitle: 'Relatório de Clima', section: 'Detalhamento (continuação)', sectionLabel: 'Seção' })}
           <p class="section-kicker">Leituras detalhadas (continuação)</p>
-          <div class="clima-content">${leiturasTableHtml(chunk, registros.length)}</div>
+          <div class="clima-content">${leiturasTableHtml(chunk, registros.length, hasTemp, hasUmidade)}</div>
           ${renderFooter({ ...period, page: pageIndex, totalPages })}
         `),
       )
