@@ -86,9 +86,9 @@ export function ConfiguracaoTratos() {
   // Ocupações abertas (fonte da seção "Currais em trato")
   const [ocupacoes, setOcupacoes] = useState<OcupacaoEmTrato[]>([])
   const [kgInputs, setKgInputs] = useState<Record<string, string>>({})
-  const [savingAlvos, setSavingAlvos] = useState(false)
-  const [salvoAlvos, setSalvoAlvos] = useState(false)
-  const [erroAlvos, setErroAlvos] = useState<string | null>(null)
+  const [savingPrevistos, setSavingPrevistos] = useState(false)
+  const [salvoPrevistos, setSalvoPrevistos] = useState(false)
+  const [erroPrevistos, setErroPrevistos] = useState<string | null>(null)
 
   // Leitura de cocho
   const [notasLeitura, setNotasLeitura] = useState<NotaLeituraConfig[]>([])
@@ -304,17 +304,17 @@ export function ConfiguracaoTratos() {
     setSaving(false)
   }
 
-  const haAlteracoesAlvos = ocupacoesDoTipo.some((o) => {
+  const haAlteracoesPrevistos = ocupacoesDoTipo.some((o) => {
     const editado = kgInputs[o.ocupacao_id] ?? ''
     const salvo = o.kg_mn_dia_dia1 != null ? String(o.kg_mn_dia_dia1) : ''
     return editado.trim() !== salvo
   })
 
-  const handleSalvarAlvos = async () => {
+  const handleSalvarPrevistos = async () => {
     if (!fazendaId) return
-    setSavingAlvos(true)
-    setSalvoAlvos(false)
-    setErroAlvos(null)
+    setSavingPrevistos(true)
+    setSalvoPrevistos(false)
+    setErroPrevistos(null)
 
     let teveErro = false
     for (const o of ocupacoesDoTipo) {
@@ -332,14 +332,14 @@ export function ConfiguracaoTratos() {
     }
 
     if (teveErro) {
-      setErroAlvos('Erro ao salvar um ou mais alvos. Verifique os valores informados.')
+      setErroPrevistos('Erro ao salvar um ou mais previstos. Verifique os valores informados.')
     } else {
-      setSalvoAlvos(true)
-      setTimeout(() => setSalvoAlvos(false), 3000)
+      setSalvoPrevistos(true)
+      setTimeout(() => setSalvoPrevistos(false), 3000)
       await loadData()
     }
 
-    setSavingAlvos(false)
+    setSavingPrevistos(false)
   }
 
   // Leitura de cocho
@@ -438,7 +438,7 @@ export function ConfiguracaoTratos() {
       <div>
         <h1 className="text-2xl font-bold text-content-strong">Configuração de Tratos</h1>
         <p className="text-sm text-content-muted mt-1">
-          Defina o cronograma de tratos, o alvo de matéria natural do primeiro dia por curral e os ajustes de leitura de cocho.
+          Defina o cronograma de tratos, o previsto de matéria natural do primeiro dia por curral e os ajustes de leitura de cocho.
         </p>
       </div>
 
@@ -456,8 +456,8 @@ export function ConfiguracaoTratos() {
               quantos tratos por dia, a distribuição percentual e os horários; ele não liga nem desliga o trato de nenhum curral.
             </p>
             <p className="mt-2">
-              O <strong>alvo de MN do dia 1</strong> é a sugestão inicial de oferta para aquela ocupação, ajustada a
-              partir do dia seguinte pela leitura de cocho. Sem alvo, o curral continua na folha e o operador
+              O <strong>previsto de MN do dia 1</strong> é a sugestão inicial de oferta para aquela ocupação, ajustada a
+              partir do dia seguinte pela leitura de cocho. Sem previsto, o curral continua na folha e o operador
               define a primeira oferta na hora do trato.
             </p>
             <p className="mt-2">
@@ -659,22 +659,22 @@ export function ConfiguracaoTratos() {
             )}
           </Card>
 
-          {/* Card: Currais em trato (ocupação + alvo dia 1) */}
+          {/* Card: Currais em trato (ocupação + previsto dia 1) */}
           <Card className="p-4 sm:p-6">
             <h2 className="text-lg font-bold text-content-strong mb-1">
               Currais em trato: {TIPOS.find((t) => t.value === tipoSelecionado)?.label}
             </h2>
             <p className="text-sm text-content-muted mb-4">
               Estes currais aparecem na folha de tratos porque estão ocupados por lotes deste sistema.
-              O alvo de MN do dia 1 é a oferta sugerida no primeiro dia da ocupação; em branco, a folha
+              O previsto de MN do dia 1 é a oferta sugerida no primeiro dia da ocupação; em branco, a folha
               mostra "a definir" e o operador informa no primeiro trato. Do dia 2 em diante, a oferta
               segue a leitura de cocho.
             </p>
 
-            {erroAlvos && (
+            {erroPrevistos && (
               <div className="p-4 bg-red-500/10 border-2 border-red-500/30 rounded-xl mb-4">
-                <p className="text-sm text-red-700 dark:text-red-200 font-medium">Erro ao salvar alvos</p>
-                <p className="text-xs text-red-500 mt-1">{erroAlvos}</p>
+                <p className="text-sm text-red-700 dark:text-red-200 font-medium">Erro ao salvar previstos</p>
+                <p className="text-xs text-red-500 mt-1">{erroPrevistos}</p>
               </div>
             )}
 
@@ -691,7 +691,7 @@ export function ConfiguracaoTratos() {
                       <th className="px-4 py-2">Curral</th>
                       <th className="px-4 py-2">Lote</th>
                       <th className="px-4 py-2">Entrada</th>
-                      <th className="px-4 py-2">Alvo MN dia 1 (kg)</th>
+                      <th className="px-4 py-2">Previsto MN dia 1 (kg)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -727,20 +727,20 @@ export function ConfiguracaoTratos() {
 
             {ocupacoesDoTipo.length > 0 && (
               <div className="flex justify-end gap-3 items-center mt-6">
-                {salvoAlvos && (
+                {salvoPrevistos && (
                   <span className="text-sm text-green-500 font-medium flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Alvos salvos
+                    Previstos salvos
                   </span>
                 )}
                 <Button
-                  onClick={handleSalvarAlvos}
-                  disabled={savingAlvos || !haAlteracoesAlvos}
+                  onClick={handleSalvarPrevistos}
+                  disabled={savingPrevistos || !haAlteracoesPrevistos}
                   className="px-6"
                 >
-                  {savingAlvos ? 'Salvando...' : 'Salvar alvos'}
+                  {savingPrevistos ? 'Salvando...' : 'Salvar previstos'}
                 </Button>
               </div>
             )}

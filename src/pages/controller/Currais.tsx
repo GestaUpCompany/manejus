@@ -387,7 +387,7 @@ export function Currais() {
     const kgInput = curralFormData.kg_mn_dia_dia1.trim()
     const kgDia1 = kgInput !== '' ? parseFloat(kgInput) : null
     if (kgInput !== '' && (kgDia1 == null || isNaN(kgDia1) || kgDia1 < 0)) {
-      toast.error('Alvo de MN do dia 1 inválido.')
+      toast.error('Previsto de MN do dia 1 inválido.')
       setSubmittingCurral(false)
       return
     }
@@ -433,15 +433,16 @@ export function Currais() {
       if (alocError || !alocRes?.success) {
         error = { message: alocRes?.error || alocError?.message || 'Erro ao alocar lote no curral' }
       }
-    } else if (!error && editingCurral && loteIdNovo && loteIdNovo !== loteIdAtual && kgDia1 != null) {
-      // Troca de lote: o trigger já abriu a nova ocupação; ajusta o alvo nela.
+    } else if (!error && editingCurral && loteIdNovo) {
+      // Lote mantido ou trocado: sincroniza o previsto do dia 1 na ocupação aberta
+      // (a troca já abriu ocupação nova via trigger em currais.lote_id).
       const { data: ocup } = await supabase
         .from('lote_curral_historico')
-        .select('id')
+        .select('id, kg_mn_dia_dia1')
         .eq('curral_id', editingCurral.id)
         .is('data_final', null)
         .maybeSingle()
-      if (ocup) {
+      if (ocup && (ocup.kg_mn_dia_dia1 ?? null) !== kgDia1) {
         await supabase
           .from('lote_curral_historico')
           .update({ kg_mn_dia_dia1: kgDia1, updated_at: new Date().toISOString() })
@@ -724,7 +725,7 @@ export function Currais() {
             </button>
           </div>
           <form onSubmit={handleCurralSubmit}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                   Nome <span className="text-red-500">*</span>
@@ -765,6 +766,11 @@ export function Currais() {
                   className="w-full px-3 py-2 rounded-lg border-2 border-border-base focus:border-accent bg-surface-1 text-content text-sm min-h-[44px]"
                 >
                   <option value="">Selecione...</option>
+                  {curralFormData.lote_id && !lotes.some((l) => l.id === curralFormData.lote_id) && (
+                    <option value={curralFormData.lote_id}>
+                      {editingCurral?.lote_nome || 'Lote atual'}
+                    </option>
+                  )}
                   {lotes.map((lote) => (
                     <option key={lote.id} value={lote.id} disabled={!!lote.pasto_id}>
                       {lote.nome}{lote.pasto_id ? ' (em pasto)' : ''}
@@ -779,7 +785,7 @@ export function Currais() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
-                  Alvo MN dia 1 (kg)
+                  Previsto MN dia 1 (kg)
                 </label>
                 <Input
                   type="number"

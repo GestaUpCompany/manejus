@@ -256,7 +256,7 @@ function gerarDatasPeriodo(dataInicio: string, dataFim: string): string[] {
 /**
  * Cruza planejado e real por lote × dia.
  * Para dias com execução, usa o kg_planejado que vem do próprio registro (mais preciso).
- * Para dias sem execução, usa o alvo kg_mn_dia_dia1 da ocupação vigente no dia.
+ * Para dias sem execução, usa o previsto kg_mn_dia_dia1 da ocupação vigente no dia.
  */
 export function cruzarPlanejadoReal(
   planejado: Record<string, PlanejadoLote[]>,
