@@ -4,7 +4,7 @@ import { comprimirDocumento } from '../utils/comprimirDocumento'
 const BUCKET = 'documentos-os'
 const SIGNED_URL_TTL = 3600
 
-export type TipoDocumentoOs = 'romaneio' | 'acerto' | 'outro'
+export type TipoDocumentoOs = 'romaneio' | 'acerto' | 'gta' | 'nota_fiscal' | 'laudo' | 'video' | 'outro'
 
 export interface OsDocumento {
   id: string
@@ -14,6 +14,8 @@ export interface OsDocumento {
   arquivo_url: string
   nome_arquivo: string | null
   uploaded_by: string | null
+  os_recebimento_id: string | null
+  bucket: string | null
   created_at: string
 }
 
@@ -21,8 +23,8 @@ export interface OsDocumentoComUrl extends OsDocumento {
   signedUrl: string | null
 }
 
-export async function getDocumentoSignedUrl(path: string): Promise<string | null> {
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGNED_URL_TTL)
+export async function getDocumentoSignedUrl(path: string, bucket?: string | null): Promise<string | null> {
+  const { data, error } = await supabase.storage.from(bucket || BUCKET).createSignedUrl(path, SIGNED_URL_TTL)
   if (error) return null
   return data.signedUrl
 }
@@ -39,7 +41,7 @@ export async function listarDocumentosOs(osId: string): Promise<OsDocumentoComUr
   return Promise.all(
     (data ?? []).map(async (doc) => ({
       ...(doc as OsDocumento),
-      signedUrl: await getDocumentoSignedUrl(doc.arquivo_url),
+      signedUrl: await getDocumentoSignedUrl(doc.arquivo_url, doc.bucket),
     })),
   )
 }
@@ -81,7 +83,7 @@ export async function uploadDocumentoOs(
 }
 
 export async function excluirDocumentoOs(doc: OsDocumento): Promise<void> {
-  const { error: storageError } = await supabase.storage.from(BUCKET).remove([doc.arquivo_url])
+  const { error: storageError } = await supabase.storage.from(doc.bucket || BUCKET).remove([doc.arquivo_url])
   if (storageError) throw storageError
   const { error } = await supabase
     .from('os_documentos')

@@ -12,9 +12,11 @@ export interface OrdemServico {
   numero_os: string | null
   tipo: 'venda' | 'compra' | 'transferencia'
   tipo_venda: 'abate' | 'animal_vivo' | null
-  status: 'aberta' | 'embarcada' | 'aguardando_pagamento' | 'fechada' | 'cancelada'
+  status: 'aberta' | 'embarcada' | 'recebida' | 'aguardando_pagamento' | 'fechada' | 'cancelada'
   vendedor: string | null
   comprador: string | null
+  fornecedor: string | null
+  origem_fazenda: string | null
   quantidade_prevista: number | null
   quantidade_embarcada: number | null
   data_prevista_embarque: string | null
@@ -26,6 +28,7 @@ export interface OrdemServico {
 export const STATUS_OS: Record<string, { label: string; classes: string }> = {
   aberta: { label: 'Aberta', classes: 'bg-blue-100 text-blue-800' },
   embarcada: { label: 'Embarcada', classes: 'bg-amber-100 text-amber-800' },
+  recebida: { label: 'Recebida', classes: 'bg-cyan-100 text-cyan-800' },
   aguardando_pagamento: { label: 'Aguard. Pagamento', classes: 'bg-amber-100 text-amber-800' },
   fechada: { label: 'Fechada', classes: 'bg-green-100 text-green-800' },
   cancelada: { label: 'Cancelada', classes: 'bg-red-100 text-red-800' },
@@ -86,6 +89,8 @@ export function OrdensServico() {
       (os.numero_os && os.numero_os.toLowerCase().includes(termo)) ||
       (os.vendedor && os.vendedor.toLowerCase().includes(termo)) ||
       (os.comprador && os.comprador.toLowerCase().includes(termo)) ||
+      (os.fornecedor && os.fornecedor.toLowerCase().includes(termo)) ||
+      (os.origem_fazenda && os.origem_fazenda.toLowerCase().includes(termo)) ||
       (os.nome_usuario && os.nome_usuario.toLowerCase().includes(termo))
     const matchesStatus = !filtroStatus || os.status === filtroStatus
     const matchesTipo = !filtroTipo || os.tipo === filtroTipo
@@ -200,11 +205,13 @@ export function OrdensServico() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-content-muted">Comprador:</span>
-                    <span className="text-content-strong font-medium">{os.comprador || '-'}</span>
+                    <span className="text-content-muted">{os.tipo === 'compra' ? 'Fornecedor:' : 'Comprador:'}</span>
+                    <span className="text-content-strong font-medium">
+                      {os.tipo === 'compra' ? (os.fornecedor || os.origem_fazenda || '-') : (os.comprador || '-')}
+                    </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-content-muted">Cabeças:</span>
+                    <span className="text-content-muted">Cabeças ({os.tipo === 'compra' ? 'rec./prev.' : 'emb./prev.'}):</span>
                     <span className="text-content-strong font-medium">
                       {os.quantidade_embarcada ?? 0} / {os.quantidade_prevista ?? '-'}
                     </span>
@@ -225,9 +232,9 @@ export function OrdensServico() {
                 <tr>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">OS</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Tipo</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Comprador</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Cabeças (emb./prev.)</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Embarque Prev.</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Comprador/Fornecedor</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Cabeças (proc./prev.)</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Data Prev.</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Status</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Criada em</th>
                 </tr>
@@ -247,7 +254,7 @@ export function OrdensServico() {
                       {os.tipo_venda ? ` · ${TIPO_VENDA[os.tipo_venda]}` : ''}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
-                      {os.comprador || '-'}
+                      {os.tipo === 'compra' ? (os.fornecedor || os.origem_fazenda || '-') : (os.comprador || '-')}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {os.quantidade_embarcada ?? 0} / {os.quantidade_prevista ?? '-'}

@@ -1,5 +1,16 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Módulo de Compra: OS de compra + recebimento por carga (2026-09-27)
+
+Implementada a segunda operação comercial sobre a arquitetura de OS criada para a venda: o PWA emite o comunicado de compra, cada caminhão gera um laudo de recebimento próprio (uma GTA por veículo, exigência legal), e o painel acompanha recebimentos, divergências e fechamento.
+
+- **Migrations** (`supabase/migrations/`): `20260925120000_modulo_compra_os.sql` (status `recebida` no CHECK de `ordens_servico`, colunas comerciais de compra — `fornecedor`, `origem_fazenda`, `origem_municipio_uf`, `modo_preco`, `valor_total_previsto`, `forma_pagamento`, `data_saida`, `valor_frete`, `mortes_transporte`, `divergencia_obs`, `compra_detalhes` jsonb —, tabela `os_recebimentos` para um laudo por caminhão/GTA, `os_recebimento_id` em `os_documentos`/`registros_movimentacao`, triggers de status e guardas por tipo, RPCs `fechar_os_venda`/`cancelar_os_venda`/`estornar_baixa_os` estendidas para compra — fechamento exige GTA anexada, estorno reverte entradas e laudos), `20260926170000_bucket_videos_os.sql` (bucket `videos-os` 500 MB para o vídeo de descarregamento, já que `documentos-os` só aceita imagem/PDF até 15 MB; coluna `os_documentos.bucket` registra a origem para signed URL), `20260926171000_os_recebimentos_lote_destino.sql` (`lote_destino_id`/`lote_destino` no recebimento).
+- **Convenção de schema confirmada em teste**: para `registros_movimentacao` com `motivo='Entrada'`, o lote receptor vai em `lote_origem_id` (não `lote_destino_id`); `calculate_quant_atual` soma entradas por `lote_origem_id`. O PWA e o estorno seguem essa convenção.
+- **Painel** (`OrdensServico.tsx`, `OrdemServicoDetalhes.tsx`): lista ganhou status `recebida`, busca por fornecedor/origem e labels tipo-aware ("Comprador/Fornecedor", "proc./prev."). Detalhe mostra o comunicado de compra completo (origem, animais, preço por KG/UA, pagamento, transporte, corretagem, nutrição e despesas via `compra_detalhes`), os laudos de recebimento por carga (GTA, NF, placas, contagens F/M por categoria, balanço médio, checklist diagnóstico expansível, vídeo embutido via signed URL do bucket correto), o bloco Divergência (previsto vs recebido, mortes, quebra de transporte peso origem vs chegada), upload de GTA/NF/laudo e as mesmas ações de fechar/cancelar/estornar com textos de compra.
+- **RBAC**: `comunicado-compra` e `recebimento-compra` adicionadas à lista de cadernetas (`src/utils/cadernetas.ts`) para liberação por peão.
+
+**Disparador**: quando mencionar compra de gado, recebimento de carga, laudo de chegada, GTA, `os_recebimentos`, `recebida`, `videos-os`, `compra_detalhes`, divergência de recebimento ou quebra de transporte, ler esta seção.
+
 ## Importação KML/KMZ com match de pastos + tela de revisão (2026-09-25)
 
 Problema: arquivos KML/KMZ de fazendas trazem centenas de geometrias e o fluxo exigia clicar uma a uma para associar ao pasto cadastrado, inviável para imports grandes (Bom Jesus: 923 placemarks). Implementado pipeline import → parse enriquecido → match automático por nome → tela de revisão obrigatória → apply em lote, sem nenhuma escrita antes da confirmação.

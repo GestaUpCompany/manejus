@@ -28,4 +28,6 @@ export const CADERNETAS: CadernetaOption[] = [
   { id: 'trato-confinamento', label: 'Trato Confinamento' },
   { id: 'pesagem', label: 'Pesagem' },
   { id: 'comunicado-venda', label: 'Comunicado de Venda' },
+  { id: 'comunicado-compra', label: 'Comunicado de Compra' },
+  { id: 'recebimento-compra', label: 'Recebimento de Compra' },
 ]
