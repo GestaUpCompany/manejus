@@ -9,6 +9,7 @@ import { getFazendaIdForUser } from '../../utils/fazendaContext'
 export interface OrdemServico {
   id: string
   fazenda_id: string
+  fazenda_destino_id: string | null
   numero_os: string | null
   tipo: 'venda' | 'compra' | 'transferencia'
   tipo_venda: 'abate' | 'animal_vivo' | null
@@ -23,6 +24,9 @@ export interface OrdemServico {
   nome_usuario: string | null
   data: string
   created_at: string
+  // Embeds (fazendas)
+  fazenda_origem_ref?: { nome: string } | null
+  fazenda_destino_ref?: { nome: string } | null
 }
 
 export const STATUS_OS: Record<string, { label: string; classes: string }> = {
@@ -67,10 +71,13 @@ export function OrdensServico() {
       return
     }
 
+    // OS da fazenda como origem OU destino (transferência entre fazendas do
+    // mesmo grupo é compartilhada: a destino enxerga pela policy
+    // os_select_fazenda_destino).
     const { data, error } = await supabase
       .from('ordens_servico')
-      .select('*')
-      .eq('fazenda_id', fazendaId)
+      .select('*, fazenda_origem_ref:fazendas!ordens_servico_fazenda_id_fkey(nome), fazenda_destino_ref:fazendas!ordens_servico_fazenda_destino_id_fkey(nome)')
+      .or(`fazenda_id.eq.${fazendaId},fazenda_destino_id.eq.${fazendaId}`)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
@@ -205,9 +212,15 @@ export function OrdensServico() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-content-muted">{os.tipo === 'compra' ? 'Fornecedor:' : 'Comprador:'}</span>
+                    <span className="text-content-muted">
+                      {os.tipo === 'compra' ? 'Fornecedor:' : os.tipo === 'transferencia' ? 'Destino:' : 'Comprador:'}
+                    </span>
                     <span className="text-content-strong font-medium">
-                      {os.tipo === 'compra' ? (os.fornecedor || os.origem_fazenda || '-') : (os.comprador || '-')}
+                      {os.tipo === 'compra'
+                        ? (os.fornecedor || os.origem_fazenda || '-')
+                        : os.tipo === 'transferencia'
+                          ? (os.fazenda_destino_ref?.nome || '-')
+                          : (os.comprador || '-')}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -254,7 +267,11 @@ export function OrdensServico() {
                       {os.tipo_venda ? ` · ${TIPO_VENDA[os.tipo_venda]}` : ''}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
-                      {os.tipo === 'compra' ? (os.fornecedor || os.origem_fazenda || '-') : (os.comprador || '-')}
+                      {os.tipo === 'compra'
+                        ? (os.fornecedor || os.origem_fazenda || '-')
+                        : os.tipo === 'transferencia'
+                          ? `${os.fazenda_origem_ref?.nome || 'Origem'} → ${os.fazenda_destino_ref?.nome || 'Destino'}`
+                          : (os.comprador || '-')}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {os.quantidade_embarcada ?? 0} / {os.quantidade_prevista ?? '-'}

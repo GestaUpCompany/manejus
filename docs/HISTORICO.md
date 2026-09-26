@@ -1,5 +1,24 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Módulo de transferência entre fazendas do grupo (2026-09-27)
+
+Terceiro tipo de ordem de serviço (`tipo='transferencia'`), completando o módulo comercial junto de venda e compra. Uma única OS é compartilhada entre as duas pontas: `ordens_servico.fazenda_id` é a origem e a nova coluna `fazenda_destino_id` é o destino. Trigger `os_transferencia_validar_grupo` exige no banco que destino ≠ origem e que ambas pertençam ao mesmo `grupo_id`; comunicados do PWA sem `fazenda_destino_id` são rejeitados também no `validateOrdensServico` do sync.
+
+Fluxo validado E2E: comunicado no PWA (origem escolhe a fazenda destino) → OS `aberta` → pesagem da origem vinculada à OS gera `Saída/Transferência` com `fazenda_destino_id`, marca indivíduos como `Transferido` e leva a OS a `embarcada` → peão do destino registra laudos de recebimento por carga (mesma caderneta da compra, status `embarcada`/`recebida`, N cargas permitidas), que **não creditam estoque no sync** → controller confere cada carga no painel via RPC `conferir_recebimento_transferencia`, que insere `Entrada/Transferência` no `lote_destino_id` e marca `os_recebimentos.conferido/at/por` → OS `recebida` (trigger `trg_os_recebimento_status`, migration 27160000) → fechamento exige GTA anexada e zero cargas pendentes, grava só `closed_by/at` (sem `valor_acerto`/`data_credito`).
+
+Migrations aplicadas (todas via `db push`):
+
+- **`20260927140000_modulo_transferencia_os.sql`**: `fazenda_destino_id`, validação de grupo, RLS de leitura para a fazenda destino, guarda de sessão única só na saída da origem, `quantidade_embarcada` contando só movimentações da origem, indivíduo `Transferido`, acesso por origem-ou-destino em `fechar`/`cancelar`/`estornar`, fechamento sem acerto com GTA obrigatória e cargas conferidas, notificação estendida ao destino.
+- **`20260927150000_transferencia_rls_compartilhada.sql`**: policies que dão a cada ponta visão dos laudos/movimentações/documentos gravados pela outra (`os_recebimentos`, `registros_movimentacao`, `os_documentos` resolvem a OS e checam acesso a `fazenda_id` OU `fazenda_destino_id`).
+- **`20260927160000_transferencia_os_status_recebida.sql`**: trigger em `os_recebimentos` que transiciona transferência `embarcada` → `recebida` (o trigger de movimentação não cobre porque a entrada não nasce no sync).
+- **`20260927170000_transferencia_fix_conferencia_entrada.sql`**: a RPC de conferência passou a gravar a entrada no padrão da compra (`motivo='Entrada'`, `lote_origem_id` = lote receptor, `tipo_entrada='Transferência'`), porque `trigger_update_quant_atual_movimentacao` sai cedo quando `lote_origem_id` é nulo. Primeira versão com `lote_destino_id` gravava a movimentação mas não atualizava `lote_categorias`.
+
+Painel: `OrdensServico.tsx` lista OS onde a fazenda é origem OU destino (`or(fazenda_id.eq,fazenda_destino_id.eq)`), badge "Transferência" e contraparte "origem → destino". `OrdemServicoDetalhes.tsx` mostra as duas fazendas, separa movimentações "Saída (origem)"/"Entrada (destino)", badge por carga "Pendente de conferência"/"Conferida", modal "Conferir recebimento", tipos de documento GTA/Laudo/Outro, seção de fechamento sem acerto e textos de cancelamento/estorno próprios.
+
+E2E validado (`TRA-2026-00001`, Fazenda Gesta'Up → Gesta'Up Teste, 20 previstas / 3 embarcadas / 2 recebidas + 1 morte): saldos conferidos (origem Lote A boi gordo 125→122, destino L1 199→201 após conferência), OS `fechada` com `closed_by` e `valor_acerto`/`data_credito` nulos. Ressalva conhecida: do lado destino o campo "Responsável" do fechamento renderiza "-" porque o embed `usuarios!closed_by` é barrado por RLS para usuários sem vínculo com a fazenda do responsável.
+
+**Disparador**: quando mencionar transferência entre fazendas, `fazenda_destino_id`, `conferir_recebimento_transferencia`, carga pendente de conferência, `TRA-`, ou fechamento sem acerto, ler esta seção.
+
 ## Próxima limpeza no detalhe de bebedouro (2026-09-27)
 
 `BebedourosDetalhes.tsx` agora cruza o payload do PWA com o cadastro do bebedouro para exibir dados de limpeza na seção "Bebedouro". O payload só traz `numero_bebedouro` como texto (sem FK), então o join é `bebedouros.nome = registros_bebedouros.numero_bebedouro` na mesma fazenda (ativo, não deletado) — join frágil a renomeações, herdado de decisão anterior.

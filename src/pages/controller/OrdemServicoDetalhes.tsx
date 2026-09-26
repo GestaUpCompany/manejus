@@ -19,6 +19,8 @@ interface MovimentacaoOs {
   id: string
   data: string
   lote_origem: string | null
+  destino: string | null
+  fazenda_id: string | null
   categoria: string | null
   sexo: string | null
   numero_cabecas: number | null
@@ -62,6 +64,9 @@ interface OsRecebimento {
   responsavel: string | null
   auxiliar: string | null
   nome_usuario: string | null
+  conferido: boolean
+  conferido_at: string | null
+  conferido_por: string | null
   created_at: string
 }
 
@@ -112,6 +117,10 @@ interface OrdemServicoFull extends OrdemServico {
   mortes_transporte: number | null
   divergencia_obs: string | null
   compra_detalhes: CompraDetalhes | null
+  // Embeds
+  fazenda_origem_ref?: { nome: string } | null
+  fazenda_destino_ref?: { nome: string } | null
+  fechado_por_ref?: { nome: string } | null
 }
 
 const fmtBRL = (v: number | null | undefined) =>
@@ -164,6 +173,8 @@ export function OrdemServicoDetalhes() {
   const [motivoCancelamento, setMotivoCancelamento] = useState('')
   const [showEstornoModal, setShowEstornoModal] = useState(false)
   const [acaoEmAndamento, setAcaoEmAndamento] = useState(false)
+  // Conferência de carga (transferência)
+  const [recebimentoAConferir, setRecebimentoAConferir] = useState<OsRecebimento | null>(null)
 
   useEffect(() => {
     loadTudo()
@@ -179,11 +190,13 @@ export function OrdemServicoDetalhes() {
       return
     }
 
+    // Transferência é compartilhada: a OS aparece também para quem tem acesso
+    // à fazenda destino (policy os_select_fazenda_destino).
     const { data, error } = await supabase
       .from('ordens_servico')
-      .select('*')
+      .select('*, fazenda_origem_ref:fazendas!ordens_servico_fazenda_id_fkey(nome), fazenda_destino_ref:fazendas!ordens_servico_fazenda_destino_id_fkey(nome), fechado_por_ref:usuarios!ordens_servico_closed_by_fkey(nome)')
       .eq('id', id)
-      .eq('fazenda_id', fazendaId)
+      .or(`fazenda_id.eq.${fazendaId},fazenda_destino_id.eq.${fazendaId}`)
       .is('deleted_at', null)
       .single()
 
@@ -203,7 +216,7 @@ export function OrdemServicoDetalhes() {
     const [movRes, pesRes, docs, recRes] = await Promise.all([
       supabase
         .from('registros_movimentacao')
-        .select('id, data, lote_origem, categoria, sexo, numero_cabecas, peso_vivo_atual_kg, observacao, os_recebimento_id')
+        .select('id, data, lote_origem, destino, fazenda_id, categoria, sexo, numero_cabecas, peso_vivo_atual_kg, observacao, os_recebimento_id')
         .eq('os_id', id)
         .is('deleted_at', null)
         .order('data', { ascending: false }),
@@ -216,7 +229,7 @@ export function OrdemServicoDetalhes() {
         console.error('Erro ao listar documentos:', e)
         return [] as OsDocumentoComUrl[]
       }),
-      osData.tipo === 'compra'
+      osData.tipo === 'compra' || osData.tipo === 'transferencia'
         ? supabase
             .from('os_recebimentos')
             .select('*')
@@ -266,23 +279,44 @@ export function OrdemServicoDetalhes() {
     }
   }
 
+  const handleConferirRecebimento = async () => {
+    if (!recebimentoAConferir || !user) return
+    setAcaoEmAndamento(true)
+    const { data, error } = await supabase.rpc('conferir_recebimento_transferencia', {
+      p_os_recebimento_id: recebimentoAConferir.id,
+      p_usuario_id: user.id,
+    })
+    setAcaoEmAndamento(false)
+    setRecebimentoAConferir(null)
+    if (error || !data?.success) {
+      toast.error(data?.error || error?.message || 'Erro ao conferir recebimento')
+      return
+    }
+    toast.success(`Carga conferida: ${data.movimentacoes_criadas} movimentação(ões) de entrada geradas`)
+    loadTudo()
+  }
+
   const handleFechar = async () => {
     if (!os || !user) return
     const isCompraOs = os.tipo === 'compra'
+    const isTransfOs = os.tipo === 'transferencia'
+    // Transferência fecha sem acerto financeiro (só confirmação + GTA)
     const valor = valorAcerto ? Number(valorAcerto.replace(',', '.')) : NaN
-    if (!valorAcerto || isNaN(valor) || valor <= 0) {
-      toast.error(isCompraOs ? 'Informe o valor pago ao fornecedor' : 'Informe o valor do acerto recebido')
-      return
-    }
-    if (!dataCredito) {
-      toast.error(isCompraOs ? 'Informe a data do pagamento' : 'Informe a data em que o valor caiu na conta')
-      return
+    if (!isTransfOs) {
+      if (!valorAcerto || isNaN(valor) || valor <= 0) {
+        toast.error(isCompraOs ? 'Informe o valor pago ao fornecedor' : 'Informe o valor do acerto recebido')
+        return
+      }
+      if (!dataCredito) {
+        toast.error(isCompraOs ? 'Informe a data do pagamento' : 'Informe a data em que o valor caiu na conta')
+        return
+      }
     }
     setAcaoEmAndamento(true)
     const { data, error } = await supabase.rpc('fechar_os_venda', {
       p_os_id: os.id,
-      p_valor_acerto: valor,
-      p_data_credito: dataCredito || null,
+      p_valor_acerto: isTransfOs ? null : valor,
+      p_data_credito: isTransfOs ? null : dataCredito || null,
       p_usuario_id: user.id,
     })
     setAcaoEmAndamento(false)
@@ -332,6 +366,8 @@ export function OrdemServicoDetalhes() {
   }
 
   const isCompra = os?.tipo === 'compra'
+  const isTransferencia = os?.tipo === 'transferencia'
+  const temRecebimentos = isCompra || isTransferencia
   const podeEstornar =
     os?.status === 'embarcada' || os?.status === 'aguardando_pagamento' || os?.status === 'recebida'
   const podeFechar = podeEstornar
@@ -415,9 +451,20 @@ export function OrdemServicoDetalhes() {
 
           {/* Comunicado */}
           <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
-            <DetailSection title={isCompra ? 'Comunicado de Compra' : 'Comunicado de Venda'} highlighted>
+            <DetailSection title={isCompra ? 'Comunicado de Compra' : isTransferencia ? 'Comunicado de Transferência' : 'Comunicado de Venda'} highlighted>
               {isCompra ? (
                 <CompraDetalhesView os={os!} fmtBRL={fmtBRL} />
+              ) : isTransferencia ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <DetailField label="Solicitante" value={formatValue(os!.vendedor)} />
+                  <DetailField label="Fazenda de Origem" value={formatValue(os!.fazenda_origem_ref?.nome)} />
+                  <DetailField label="Fazenda de Destino" value={formatValue(os!.fazenda_destino_ref?.nome)} />
+                  <DetailField label="Quantidade Prevista" value={formatValue(os!.quantidade_prevista)} />
+                  <DetailField label="Sexo" value={formatValue(os!.sexo)} />
+                  <DetailField label="Idade (Era)" value={formatValue(os!.idade_era)} />
+                  <DetailField label="Embarque Previsto" value={formatDate(os!.data_saida)} />
+                  <DetailField label="Chegada no Destino" value={formatDate(os!.data_prevista_embarque)} />
+                </div>
               ) : (
                 <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -447,38 +494,46 @@ export function OrdemServicoDetalhes() {
             </DetailSection>
           </Card>
 
-          {/* Embarque (venda) / Recebimentos (compra) */}
+          {/* Embarque (venda) / Recebimentos (compra) / Embarque + Recebimentos (transferência) */}
           <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
-            <DetailSection title={isCompra ? 'Recebimentos por Carga' : 'Embarque (Pesagem)'}>
+            <DetailSection title={temRecebimentos ? 'Embarque e Recebimentos por Carga' : 'Embarque (Pesagem)'}>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <DetailField label="Animais Pesados" value={totalPesados} />
                 <DetailField
                   label={isCompra ? 'Cabeças Recebidas' : 'Cabeças Embarcadas'}
                   value={`${os!.quantidade_embarcada ?? 0} de ${os!.quantidade_prevista ?? '-'}`}
                 />
-                {isCompra && (
+                {temRecebimentos && (
                   <DetailField label="Cargas Recebidas" value={recebimentos.length} />
                 )}
               </div>
 
-              {isCompra && (
+              {temRecebimentos && (
                 <>
                   {recebimentos.length === 0 ? (
                     <p className="text-sm text-content-muted mb-4">Nenhuma carga recebida ainda.</p>
                   ) : (
                     <div className="space-y-4 mb-4">
                       {recebimentos.map((r, i) => (
-                        <RecebimentoCard key={r.id} r={r} index={i} documentos={documentos} />
+                        <RecebimentoCard
+                          key={r.id}
+                          r={r}
+                          index={i}
+                          documentos={documentos}
+                          exigeConferencia={isTransferencia}
+                          podeConferir={isTransferencia && podeEstornar && !r.conferido}
+                          onConferir={() => setRecebimentoAConferir(r)}
+                        />
                       ))}
                     </div>
                   )}
 
-                  {/* Divergência previsto vs recebido */}
+                  {/* Divergência: compra = previsto vs recebido; transferência = embarcado vs recebido */}
                   <DetailSection title="Divergência">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
                       <DetailField
-                        label="Previsto vs Recebido"
-                        value={`${os!.quantidade_prevista ?? '-'} → ${totalRecebido}`}
+                        label={isTransferencia ? 'Embarcado vs Recebido' : 'Previsto vs Recebido'}
+                        value={`${isTransferencia ? (os!.quantidade_embarcada ?? '-') : (os!.quantidade_prevista ?? '-')} → ${totalRecebido}`}
                       />
                       <DetailField label="Mortes no Transporte" value={totalMortes} />
                       <DetailField
@@ -490,6 +545,11 @@ export function OrdemServicoDetalhes() {
                       <p className="text-xs text-content-muted mb-2">
                         Peso origem: {pesoOrigemTotal > 0 ? `${pesoOrigemTotal.toFixed(0)} kg` : '-'} ·
                         Peso chegada (balanção): {pesoChegadaTotal > 0 ? `${pesoChegadaTotal.toFixed(0)} kg` : '-'}
+                      </p>
+                    )}
+                    {isTransferencia && recebimentos.some((r) => !r.conferido) && (
+                      <p className="text-sm text-amber-700 font-medium mb-2">
+                        Existem cargas pendentes de conferência. O saldo do lote destino só é creditado após conferir cada carga.
                       </p>
                     )}
                     {os!.divergencia_obs && (
@@ -506,9 +566,12 @@ export function OrdemServicoDetalhes() {
                     <thead className="bg-surface-2">
                       <tr>
                         <th className="px-4 py-2 text-left text-xs font-medium text-content-muted uppercase">Data</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-content-muted uppercase">{isCompra ? 'Lote Destino' : 'Lote Origem'}</th>
+                        {isTransferencia && (
+                          <th className="px-4 py-2 text-left text-xs font-medium text-content-muted uppercase">Sentido</th>
+                        )}
+                        <th className="px-4 py-2 text-left text-xs font-medium text-content-muted uppercase">{temRecebimentos ? 'Lote' : 'Lote Origem'}</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-content-muted uppercase">Categoria</th>
-                        {isCompra && (
+                        {temRecebimentos && (
                           <th className="px-4 py-2 text-left text-xs font-medium text-content-muted uppercase">Sexo</th>
                         )}
                         <th className="px-4 py-2 text-left text-xs font-medium text-content-muted uppercase">Cabeças</th>
@@ -516,12 +579,21 @@ export function OrdemServicoDetalhes() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border-base">
-                      {movimentacoes.map((m) => (
+                      {movimentacoes.map((m) => {
+                        const ehSaida = m.fazenda_id === os!.fazenda_id
+                        return (
                         <tr key={m.id}>
                           <td className="px-4 py-2 text-sm text-content-strong">{formatDate(m.data)}</td>
-                          <td className="px-4 py-2 text-sm text-content-strong">{m.lote_origem || '-'}</td>
+                          {isTransferencia && (
+                            <td className="px-4 py-2 text-sm">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ehSaida ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                                {ehSaida ? 'Saída (origem)' : 'Entrada (destino)'}
+                              </span>
+                            </td>
+                          )}
+                          <td className="px-4 py-2 text-sm text-content-strong">{m.lote_origem || m.destino || '-'}</td>
                           <td className="px-4 py-2 text-sm text-content-strong">{m.categoria || '-'}</td>
-                          {isCompra && (
+                          {temRecebimentos && (
                             <td className="px-4 py-2 text-sm text-content-strong">{m.sexo || '-'}</td>
                           )}
                           <td className="px-4 py-2 text-sm text-content-strong">{m.numero_cabecas ?? '-'}</td>
@@ -529,13 +601,14 @@ export function OrdemServicoDetalhes() {
                             {m.peso_vivo_atual_kg != null ? m.peso_vivo_atual_kg.toFixed(1) : '-'}
                           </td>
                         </tr>
-                      ))}
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
               ) : (
                 <p className="text-sm text-content-muted">
-                  {isCompra ? 'Nenhuma entrada registrada ainda.' : 'Nenhum embarque registrado ainda.'}
+                  {temRecebimentos ? 'Nenhuma movimentação registrada ainda.' : 'Nenhum embarque registrado ainda.'}
                 </p>
               )}
             </DetailSection>
@@ -559,11 +632,17 @@ export function OrdemServicoDetalhes() {
                             { value: 'acerto', label: 'Acerto' },
                             { value: 'outro', label: 'Outro' },
                           ]
-                        : [
-                            ...(os!.tipo_venda === 'abate' ? [{ value: 'romaneio', label: 'Romaneio' }] : []),
-                            { value: 'acerto', label: 'Acerto' },
-                            { value: 'outro', label: 'Outro' },
-                          ]}
+                        : isTransferencia
+                          ? [
+                              { value: 'gta', label: 'GTA' },
+                              { value: 'laudo', label: 'Laudo' },
+                              { value: 'outro', label: 'Outro' },
+                            ]
+                          : [
+                              ...(os!.tipo_venda === 'abate' ? [{ value: 'romaneio', label: 'Romaneio' }] : []),
+                              { value: 'acerto', label: 'Acerto' },
+                              { value: 'outro', label: 'Outro' },
+                            ]}
                     />
                   </div>
                   <div className="flex-1 w-full">
@@ -626,7 +705,22 @@ export function OrdemServicoDetalhes() {
 
           {/* Acerto / Fechamento */}
           <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
-            <DetailSection title={isCompra ? 'Pagamento e Fechamento' : 'Acerto e Fechamento'}>
+            <DetailSection title={isCompra ? 'Pagamento e Fechamento' : isTransferencia ? 'Fechamento' : 'Acerto e Fechamento'}>
+              {isTransferencia ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {os!.status === 'fechada' && (
+                    <>
+                      <DetailField label="Fechada em" value={formatDateTime(os!.closed_at)} />
+                      <DetailField label="Responsável" value={formatValue(os!.fechado_por_ref?.nome)} />
+                    </>
+                  )}
+                  {os!.status !== 'fechada' && (
+                    <p className="text-sm text-content-muted sm:col-span-3">
+                      A transferência não tem acerto financeiro. A OS só fecha com a GTA anexada e todas as cargas conferidas.
+                    </p>
+                  )}
+                </div>
+              ) : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <DetailField label={isCompra ? 'Valor Pago' : 'Valor do Acerto'} value={fmtBRL(os!.valor_acerto)} />
                 <DetailField label={isCompra ? 'Data do Pagamento' : 'Data do Crédito'} value={formatDate(os!.data_credito)} />
@@ -634,7 +728,8 @@ export function OrdemServicoDetalhes() {
                   <DetailField label="Fechada em" value={formatDateTime(os!.closed_at)} />
                 )}
               </div>
-              {podeFechar && (
+              )}
+              {podeFechar && !isTransferencia && (
                 <p className="text-xs text-content-muted mt-3">
                   {isCompra
                     ? 'A OS de compra só fecha com a GTA anexada e depois de confirmar o pagamento ao fornecedor.'
@@ -652,22 +747,28 @@ export function OrdemServicoDetalhes() {
           <p className="text-sm text-content">
             {isCompra
               ? 'Confirme o pagamento ao fornecedor. A GTA do recebimento precisa estar anexada nos documentos.'
-              : 'Confirme que o valor do acerto caiu na conta da fazenda antes de fechar.'}
+              : isTransferencia
+                ? 'Confirme a conferência da transferência. A GTA precisa estar anexada e todas as cargas recebidas devem estar conferidas.'
+                : 'Confirme que o valor do acerto caiu na conta da fazenda antes de fechar.'}
           </p>
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-content mb-1">{isCompra ? 'Valor Pago (R$)' : 'Valor do Acerto (R$)'}</label>
-            <Input
-              type="text"
-              inputMode="decimal"
-              placeholder="Ex: 152340,50"
-              value={valorAcerto}
-              onChange={(e) => setValorAcerto(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-content mb-1">Data do Crédito</label>
-            <Input type="date" value={dataCredito} onChange={(e) => setDataCredito(e.target.value)} />
-          </div>
+          {!isTransferencia && (
+            <>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1">{isCompra ? 'Valor Pago (R$)' : 'Valor do Acerto (R$)'}</label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="Ex: 152340,50"
+                  value={valorAcerto}
+                  onChange={(e) => setValorAcerto(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-content mb-1">Data do Crédito</label>
+                <Input type="date" value={dataCredito} onChange={(e) => setDataCredito(e.target.value)} />
+              </div>
+            </>
+          )}
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setShowFecharModal(false)}>Voltar</Button>
             <Button onClick={handleFechar} disabled={acaoEmAndamento}>
@@ -676,6 +777,16 @@ export function OrdemServicoDetalhes() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!recebimentoAConferir}
+        onClose={() => setRecebimentoAConferir(null)}
+        onConfirm={handleConferirRecebimento}
+        title="Conferir Recebimento"
+        message={`Confirma o recebimento da carga ${recebimentoAConferir?.numero_gta ? `(GTA ${recebimentoAConferir.numero_gta})` : ''}? As entradas serão creditadas no lote destino.`}
+        confirmText="Conferir"
+        variant="warning"
+      />
 
       <Modal isOpen={showCancelarModal} onClose={() => setShowCancelarModal(false)} title="Cancelar OS" size="sm">
         <div className="space-y-4">
@@ -704,7 +815,9 @@ export function OrdemServicoDetalhes() {
         title="Estornar Baixa"
         message={isCompra
           ? 'As movimentações de entrada desta OS serão revertidas (cabeças saem dos lotes de destino) e os laudos de recebimento serão estornados. Deseja continuar?'
-          : 'As movimentações de saída desta OS serão revertidas (cabeças voltam aos lotes) e os animais marcados como vendidos retornam ao status anterior. Deseja continuar?'}
+          : isTransferencia
+            ? 'As movimentações de saída e as entradas já conferidas desta OS serão revertidas nas duas fazendas, os laudos serão estornados e os animais transferidos retornam ao status anterior. Deseja continuar?'
+            : 'As movimentações de saída desta OS serão revertidas (cabeças voltam aos lotes) e os animais marcados como vendidos retornam ao status anterior. Deseja continuar?'}
         confirmText="Estornar"
         variant="warning"
       />
@@ -810,10 +923,16 @@ function RecebimentoCard({
   r,
   index,
   documentos,
+  exigeConferencia = false,
+  podeConferir = false,
+  onConferir,
 }: {
   r: OsRecebimento
   index: number
   documentos: OsDocumentoComUrl[]
+  exigeConferencia?: boolean
+  podeConferir?: boolean
+  onConferir?: () => void
 }) {
   const [checklistAberto, setChecklistAberto] = useState(false)
   const totalCabecas = (r.contagens ?? []).reduce((a, c) => a + (c.femeas || 0) + (c.machos || 0), 0)
@@ -822,14 +941,31 @@ function RecebimentoCard({
 
   return (
     <div className="border border-border-base rounded-lg p-4">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold text-content-strong">
-          Carga {index + 1}{r.numero_gta ? ` · GTA ${r.numero_gta}` : ''}
-        </p>
-        <span className="text-xs text-content-muted">
-          {formatDate(r.data_chegada)}{r.hora_chegada ? ` ${r.hora_chegada}` : ''}
-        </span>
+      <div className="flex items-center justify-between mb-3 gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <p className="text-sm font-semibold text-content-strong">
+            Carga {index + 1}{r.numero_gta ? ` · GTA ${r.numero_gta}` : ''}
+          </p>
+          {exigeConferencia && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${r.conferido ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+              {r.conferido ? 'Conferida' : 'Pendente de conferência'}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          {podeConferir && (
+            <Button size="sm" onClick={onConferir}>Conferir recebimento</Button>
+          )}
+          <span className="text-xs text-content-muted">
+            {formatDate(r.data_chegada)}{r.hora_chegada ? ` ${r.hora_chegada}` : ''}
+          </span>
+        </div>
       </div>
+      {exigeConferencia && r.conferido && r.conferido_at && (
+        <p className="text-xs text-content-muted mb-3">
+          Conferida em {formatDateTime(r.conferido_at)}
+        </p>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <DetailField label="Nº NF" value={formatValue(r.numero_nf)} />
         <DetailField label="Doc. Origem" value={formatValue(r.doc_origem)} />
