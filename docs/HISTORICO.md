@@ -1,5 +1,29 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Auditoria do módulo comercial (2026-09-28)
+
+Revisão completa de venda, compra e transferência nas três camadas (PWA, painel, banco). Bugs confirmados foram reproduzidos nas fazendas de teste antes do fix. Migration **`20260928100000_auditoria_modulo_comercial_os.sql`** (db push) concentra as correções de banco:
+
+- **Estoque — entrada em categoria nova**: a categoria nascia com `quant_inicial = N` e `created_at` no dia seguinte; entradas posteriores na mesma data (fêmeas + machos da mesma categoria, duas cargas no mesmo dia) ficavam fora do cutoff e não somavam, e o estorno não zerava a categoria. `update_quant_atual_movimentacao` agora cria a categoria com `quant_base = 0` e `created_at` igual à data da entrada.
+- **Peão escalava privilégio**: peões do PWA são `usuario_fazenda` com papel `controller`, então passavam em `user_has_fazenda_access`: podiam fechar/estornar/cancelar/conferir via API e até reabrir OS fechada com UPDATE direto. RPCs agora recusam peão (`caller_is_peao`) e o trigger `trg_os_protege_campos` protege os campos de controle da OS contra escrita direta.
+- **Transferência fechava sem embarque**: laudo registrado antes do embarque sincronizar já marcava `recebida`, creditando destino sem débito na origem. Fechamento exige embarque e ao menos uma carga conferida; laudo de transferência só entra com OS `embarcada`/`recebida` (`trg_os_recebimento_guard`), e a transição para `recebida` continua em `trg_os_recebimento_status` (o trigger da migration 27160000 foi substituído).
+- **Conferência travada para sempre**: categoria repetida em duas linhas do laudo colidia no `local_id` sintético e a carga nunca conferia. `conferir_recebimento_transferencia` agrega por categoria+sexo, trava a linha `FOR UPDATE`, valida lote de destino e exige acesso à fazenda destino.
+- **Laudo conferido editável**: laudo conferido/processado podia ser editado ou excluído pelo PWA, e laudo/movimentação/pesagem podiam apontar para OS de outra fazenda — coberto por guards de `os_fazenda_pertence` e proteção de laudo conferido.
+- **Storage aberto**: `documentos-os` e `videos-os` tinham policies bucket-wide para qualquer autenticado. Agora `storage_os_object_access` resolve a OS pelo path (`fazenda_id/os_id/...`) e só libera quem tem acesso a origem ou destino.
+- **Retry de sync**: upsert por `local_id` redisparava triggers `BEFORE INSERT` — pesagem remarcava indivíduo estornado como vendido, movimentação de OS fechada falhava para sempre, cada reenvio de comunicado queimava um número de OS.
+- **Schema**: CHECK `ordens_servico_destino_so_transferencia` (`fazenda_destino_id` só em transferência) e coluna `os_recebimentos.observacao` (o PWA coletava e o sync descartava por falta de coluna).
+
+Painel (`OrdemServicoDetalhes.tsx`, `FarmSwitcher.tsx`, `fazendaContext.ts`, `osDocumentosService.ts`, novo `utils/parseValorBR.ts` + teste):
+
+- **`parseValorBR`**: o acerto era parseado com `Number(v.replace(',','.'))`, então "157.500" virava 157.5. O parser novo trata milhar BR, "R$", vírgula decimal e decimal com ponto.
+- **Botões condizentes com as RPCs**: transferência só mostra "Fechar OS" quando `recebida` com todas as cargas conferidas; "Conferir recebimento" só para quem está no contexto da fazenda destino; "Cancelar" só em `aberta` (com embarque/recebimento o caminho é estornar).
+- **FarmSwitcher entre abas**: a troca substitui a sessão compartilhada do Supabase; as outras abas abertas continuavam na fazenda anterior com a sessão nova. Listener de `storage` recarrega as demais abas quando `selectedFazendaId` muda.
+- **Exclusão de documento**: soft-delete da linha antes de remover o objeto do storage, com erro explícito quando a RLS não casa nenhuma linha — antes o arquivo podia sumir deixando a GTA "anexada" órfã.
+
+PWA (detalhes no HISTORICO do repo): laudo agrega contagens por categoria (colisão de `local_id`), `getFazendasDoMesmoGrupoCached` com fallback IndexedDB + timeout (menu de transferência sumia offline), retry de embarque faz upsert da movimentação em vez de recriar (débito dobrado por `sessao_id` duplicado), OS estornada volta a aceitar embarque (comparação por `updated_at`), sync só envia `fazenda_destino_id` em transferência e passa a persistir `observacao` do laudo, `validateOrdensServico` rejeita tipo desconhecido, types regenerados.
+
+**Disparador**: quando mencionar auditoria do módulo comercial, `parseValorBR`, `caller_is_peao`, `storage_os_object_access`, `trg_os_protege_campos`, `ordens_servico_destino_so_transferencia`, `os_recebimentos.observacao`, retry de sync queimando número de OS, ou débito dobrado no embarque, ler esta seção.
+
 ## Módulo de transferência entre fazendas do grupo (2026-09-27)
 
 Terceiro tipo de ordem de serviço (`tipo='transferencia'`), completando o módulo comercial junto de venda e compra. Uma única OS é compartilhada entre as duas pontas: `ordens_servico.fazenda_id` é a origem e a nova coluna `fazenda_destino_id` é o destino. Trigger `os_transferencia_validar_grupo` exige no banco que destino ≠ origem e que ambas pertençam ao mesmo `grupo_id`; comunicados do PWA sem `fazenda_destino_id` são rejeitados também no `validateOrdensServico` do sync.

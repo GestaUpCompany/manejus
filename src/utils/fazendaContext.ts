@@ -1,6 +1,7 @@
 import { supabase } from '../services/supabaseClient'
 
 const SELECTED_FAZENDA_KEY = 'selectedFazendaId'
+export const SELECTED_FAZENDA_STORAGE_KEY = SELECTED_FAZENDA_KEY
 
 export function getSelectedFazendaId(): string | null {
   return localStorage.getItem(SELECTED_FAZENDA_KEY)

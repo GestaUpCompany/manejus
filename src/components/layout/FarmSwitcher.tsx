@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../services/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
 import { useFazenda } from '../../hooks/useDashboardQueries'
-import { setSelectedFazendaId } from '../../utils/fazendaContext'
+import { setSelectedFazendaId, SELECTED_FAZENDA_STORAGE_KEY } from '../../utils/fazendaContext'
 import { Modal } from '../ui'
 
 interface FazendaSimplificada {
@@ -27,6 +27,19 @@ export function FarmSwitcher() {
   const [password, setPassword] = useState('')
   const [switching, setSwitching] = useState(false)
   const [error, setError] = useState('')
+
+  // A troca substitui a sessão do Supabase (compartilhada entre abas) e grava
+  // selectedFazendaId no localStorage. As outras abas abertas continuariam
+  // exibindo a fazenda anterior operando com a sessão da nova; recarrega-as.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === SELECTED_FAZENDA_STORAGE_KEY && e.newValue !== e.oldValue) {
+        window.location.reload()
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   useEffect(() => {
     if (!fazenda?.grupo_id) {

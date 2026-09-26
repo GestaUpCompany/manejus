@@ -14,6 +14,7 @@ import {
   type OsDocumentoComUrl, type TipoDocumentoOs,
 } from '../../services/osDocumentosService'
 import { validarDocumento } from '../../utils/comprimirDocumento'
+import { parseValorBR } from '../../utils/parseValorBR'
 
 interface MovimentacaoOs {
   id: string
@@ -158,6 +159,7 @@ export function OrdemServicoDetalhes() {
   const [documentos, setDocumentos] = useState<OsDocumentoComUrl[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [fazendaAtualId, setFazendaAtualId] = useState<string | null>(null)
 
   // Upload de documento
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -189,6 +191,7 @@ export function OrdemServicoDetalhes() {
       setLoading(false)
       return
     }
+    setFazendaAtualId(fazendaId)
 
     // Transferência é compartilhada: a OS aparece também para quem tem acesso
     // à fazenda destino (policy os_select_fazenda_destino).
@@ -301,7 +304,7 @@ export function OrdemServicoDetalhes() {
     const isCompraOs = os.tipo === 'compra'
     const isTransfOs = os.tipo === 'transferencia'
     // Transferência fecha sem acerto financeiro (só confirmação + GTA)
-    const valor = valorAcerto ? Number(valorAcerto.replace(',', '.')) : NaN
+    const valor = valorAcerto ? parseValorBR(valorAcerto) : NaN
     if (!isTransfOs) {
       if (!valorAcerto || isNaN(valor) || valor <= 0) {
         toast.error(isCompraOs ? 'Informe o valor pago ao fornecedor' : 'Informe o valor do acerto recebido')
@@ -370,8 +373,13 @@ export function OrdemServicoDetalhes() {
   const temRecebimentos = isCompra || isTransferencia
   const podeEstornar =
     os?.status === 'embarcada' || os?.status === 'aguardando_pagamento' || os?.status === 'recebida'
-  const podeFechar = podeEstornar
-  const podeCancelar = os?.status === 'aberta' || os?.status === 'recebida'
+  // Transferência só fecha recebida e com todas as cargas conferidas (mesma
+  // regra de fechar_os_venda); antes o botão aparecia e a RPC sempre recusava.
+  const podeFechar = isTransferencia
+    ? os?.status === 'recebida' && recebimentos.length > 0 && recebimentos.every((r) => r.conferido)
+    : podeEstornar
+  // cancelar_os_venda recusa OS com embarque/recebimento (estorna antes)
+  const podeCancelar = os?.status === 'aberta'
   const podeUpload = os?.status !== 'fechada' && os?.status !== 'cancelada'
 
   const totalRecebido = recebimentos.reduce(
@@ -521,7 +529,10 @@ export function OrdemServicoDetalhes() {
                           index={i}
                           documentos={documentos}
                           exigeConferencia={isTransferencia}
-                          podeConferir={isTransferencia && podeEstornar && !r.conferido}
+                          podeConferir={
+                            isTransferencia && podeEstornar && !r.conferido && !acaoEmAndamento &&
+                            fazendaAtualId === os!.fazenda_destino_id
+                          }
                           onConferir={() => setRecebimentoAConferir(r)}
                         />
                       ))}

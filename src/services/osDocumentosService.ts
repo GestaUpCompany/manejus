@@ -82,12 +82,17 @@ export async function uploadDocumentoOs(
   return data as OsDocumento
 }
 
+// Soft-delete da linha antes de remover o arquivo: se a RLS recusar o UPDATE
+// (0 linhas, sem erro), o arquivo não pode sumir deixando a GTA "anexada"
+// apontando para um objeto inexistente.
 export async function excluirDocumentoOs(doc: OsDocumento): Promise<void> {
-  const { error: storageError } = await supabase.storage.from(doc.bucket || BUCKET).remove([doc.arquivo_url])
-  if (storageError) throw storageError
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('os_documentos')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', doc.id)
+    .select('id')
   if (error) throw error
+  if (!data || data.length === 0) throw new Error('Sem permissão para excluir este documento')
+  const { error: storageError } = await supabase.storage.from(doc.bucket || BUCKET).remove([doc.arquivo_url])
+  if (storageError) console.error('Documento excluído, mas o arquivo não foi removido do storage:', storageError)
 }
