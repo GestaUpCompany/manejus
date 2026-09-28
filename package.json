@@ -5,6 +5,7 @@
   "packageManager": "pnpm@12.6.0",
   "scripts": {
     "dev": "pnpm --filter manejus dev",
+    "dev:manejus": "pnpm --filter manejus dev",
     "dev:vision": "pnpm --filter vision dev",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
