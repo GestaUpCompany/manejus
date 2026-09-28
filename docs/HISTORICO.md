@@ -1,5 +1,11 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## tempo_ocupacao / tempo_vedacao recriados como text em registros_pastagens (2026-09-28)
+
+O texto do PWA sempre mostrava "Tempo de ocupação/vedação: —" porque as colunas tinham sido criadas como `integer` e dropadas no mesmo dia (`20260508194751`/`20260508195134`), e o PWA nunca persistia os campos. Migration **`20260928190000_pastagens_tempo_ocupacao_vedacao_text.sql`** (db push) recria como `text` — o PWA grava string formatada ("17 dias/410 horas", "Primeiro uso"), snapshot calculado no aparelho no momento do manejo, não valor derivado no banco. Painel: `PastagensDetalhes` exibe os dois campos e `PASTAGENS_EXPORT_CONFIG` ganhou as colunas na planilha. Detalhes do lado PWA no HISTORICO do repo PWA.
+
+**Disparador**: quando mencionar tempo de ocupação/vedação em pastagens, ou colunas de pastagens ausentes, ler esta seção.
+
 ## Base adulta para consumo e peso de suplementação (2026-09-28)
 
 Divergência reportada na Fazenda Brilhante: o "CMS Geral (%PV)" do texto do PWA (0,958%) não batia com a média da coluna "Consumo (%PV)" da planilha exportada (~1,65%). A investigação mostrou que eram métricas diferentes sob nomes iguais:

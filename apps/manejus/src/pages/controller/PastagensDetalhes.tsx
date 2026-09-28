@@ -18,10 +18,12 @@ interface RegistroPastagens {
   avaliacao_saida?: number
   pasto_saida_area_util?: string
   pasto_saida_especie?: string
+  tempo_ocupacao?: string
   pasto_entrada?: string
   avaliacao_entrada?: number
   pasto_entrada_area_util?: string
   pasto_entrada_especie?: string
+  tempo_vedacao?: string
   vaca?: number
   touro?: number
   bezerro?: number
@@ -115,6 +117,7 @@ export function PastagensDetalhes() {
                     <DetailField label="Área Útil" value={formatValue(registro!.pasto_saida_area_util)} />
                     <DetailField label="Espécie" value={formatValue(registro!.pasto_saida_especie)} />
                     <DetailField label="Avaliação" value={formatValue(registro!.avaliacao_saida)} />
+                    <DetailField label="Tempo de Ocupação" value={formatValue(registro!.tempo_ocupacao)} />
                   </div>
                 </div>
 
@@ -126,6 +129,7 @@ export function PastagensDetalhes() {
                     <DetailField label="Área Útil" value={formatValue(registro!.pasto_entrada_area_util)} />
                     <DetailField label="Espécie" value={formatValue(registro!.pasto_entrada_especie)} />
                     <DetailField label="Avaliação" value={formatValue(registro!.avaliacao_entrada)} />
+                    <DetailField label="Tempo de Vedação" value={formatValue(registro!.tempo_vedacao)} />
                   </div>
                 </div>
               </div>
