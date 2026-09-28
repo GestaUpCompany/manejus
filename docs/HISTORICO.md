@@ -1,5 +1,24 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Base adulta para consumo e peso de suplementação (2026-09-28)
+
+Divergência reportada na Fazenda Brilhante: o "CMS Geral (%PV)" do texto do PWA (0,958%) não batia com a média da coluna "Consumo (%PV)" da planilha exportada (~1,65%). A investigação mostrou que eram métricas diferentes sob nomes iguais:
+
+- A coluna exportada lê `consumo_medio_geral_percent_pv` de `registros_suplementacao`, que **não guarda média geral**: `calcular_consumo_registro_anterior` (trigger) e `recalc_consumo_series` gravam o **consumo do intervalo** de cada trato (`kg_cocho ÷ dias ÷ (n_cabecas − qtd_bezerros)`, convertido a MS e dividido pelo `peso_vivo_kg` do registro).
+- O PWA calcula a média da série ao vivo em `calcularMetricasSuplementacao`, com denominador `n_cabecas` bruto e peso médio das categorias.
+- As bases estavam inconsistentes nos dois lados: no banco o numerador era por adulto (n_cabecas − qtd_bezerros) mas o peso era a média ponderada incluindo bezerros ao pé (~354 kg vs 457 kg adulto), inflando o %PV; e linhas antigas tinham `qtd_bezerros` null (campo passou a ser enviado pelo PWA na feature creep de 23/09), caindo para denominador total.
+
+**Decisão do usuário**: a fórmula correta é kg por cabeça adulta ÷ peso adulto (caso Brilhante Lote 05: 288 kg ÷ 35 vacas = 8,23 kg MN = 7,29 kg MS ÷ 457,15 kg = **1,595% PV**, contra meta 1,5%). Bezerros ao pé não entram em nenhum denominador do escopo 'lote'.
+
+Mudanças:
+
+- **Migration `20260928120000_peso_vivo_lote_sempre_sem_ao_pe.sql`** (db push): `recalcular_peso_vivo_lote` exclui categorias ao pé do `peso_vivo_kg` de linhas escopo 'lote' incondicionalmente — a exceção "legado sem creep" de `20260923190000` foi removida. Escopo 'creep' inalterado (média só das categorias ao pé). Sem backfill nesta migration: o cron `update_dados_lotes` e novos inserts/edits regravam `peso_vivo_kg` via triggers e `trigger_recalc_pct_pv_on_peso_change` recalcula o %PV em cascata; ou seja, registros existentes convergem para a base nova na próxima passagem do cron.
+- **PWA** (detalhes no HISTORICO do repo PWA): denominador por intervalo virou `n_cabecas − qtd_bezerros` e o share/resumo calculam por escopo, com categorias filtradas (adulto exclui ao pé, creep só ao pé).
+
+Efeito colateral aceito: a coluna "Peso Vivo (kg)" da exportação/detalhe passa a mostrar o peso médio adulto em lotes com ao pé (antes era a média de todas as cabeças).
+
+**Disparador**: quando mencionar divergência de CMS/%PV entre texto do PWA e planilha, "consumo por intervalo vs média geral", `qtd_bezerros` no denominador de consumo, ou `peso_vivo_kg` incluindo bezerros, ler esta seção.
+
 ## Auditoria do módulo comercial (2026-09-28)
 
 Revisão completa de venda, compra e transferência nas três camadas (PWA, painel, banco). Bugs confirmados foram reproduzidos nas fazendas de teste antes do fix. Migration **`20260928100000_auditoria_modulo_comercial_os.sql`** (db push) concentra as correções de banco:
