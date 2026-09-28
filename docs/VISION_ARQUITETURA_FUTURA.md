@@ -2,6 +2,8 @@
 ### Documento criado às 20h10min do dia 06/08/2026
 
 > **Status:** possível implementação futura. Nada aqui deve ser tratado como decisão tomada ou trabalho em andamento. Este documento existe apenas para registrar a arquitetura recomendada caso o projeto avance.
+>
+> **Atualização 28/09/2026:** adicionada auditoria da planilha fonte (seção "Auditoria da planilha Vision"). A auditoria reforça a recomendação de monorepo e redefine o escopo: cerca de 1/3 das abas é manejo e não deve ser reconstruído.
 
 ## Contexto
 
@@ -146,7 +148,43 @@ App financeiro novo. Estrutura inicial de páginas:
 
 O Vision lê do mesmo Supabase: tabelas de `fazendas`, `lotes`, `registros_suplementacao`, `usuarios`, e novas tabelas financeiras que seriam criadas (ex: `lancamentos_financeiros`, `contas_pagar`, `contas_receber`, `centros_custo`, `categorias_financeiras`).
 
-## Migração do repositório atual para monorepo
+## Auditoria da planilha Vision (28/09/2026)
+
+Auditoria do arquivo `Vision Versão Slim - Gesta'Up 2025 - v. 09.06.25 - Agrop. Marca.xlsm` (~40 MB), executada via `__audit_vision.cjs` na raiz do repo (SheetJS; reexecutável em qualquer cópia da planilha).
+
+### Números
+
+- **41 abas, ~2,2 milhões de células, ~1,57 milhão de fórmulas, 654 nomes definidos.**
+- Funções dominantes: IFERROR (1,08M), SUMIFS (139k), IF (112k), COUNTIFS (37k), VLOOKUP (19k), YEAR/EDATE/MONTH. Perfil clássico de agregação condicional por período e categoria: em sistema, isso vira SQL (views, RPCs, materialized views), não lógica de tela.
+- Maiores concentrações de fórmulas: `FC_diário` (711k), `Diárias_Categoria` (292k), `Desembolsos Previstos` (158k), `Desembolsos Realizados` (160k). `Contas a Pagar`, `Desembolsos` e `Financiamentos` usam ranges de 1M de linhas: são ledgers de lançamentos.
+
+### Achado central: ~1/3 das abas é manejo, não financeiro
+
+A planilha replica rastreamento de rebanho porque cada fazenda é um arquivo isolado que não pode consultar o sistema de manejo. No Vision sistematizado, **essas abas não devem ser reconstruídas**: viram leituras do banco compartilhado. É a maior economia de escopo do projeto.
+
+| Grupo | Abas | Destino no sistema |
+|---|---|---|
+| Manejo replicado | Nascimentos, Mortes_Consumos, Evolução_Rebanho, Estoque (auditoria do rebanho), Tropa, Desmama, Prenhez por Touro, IATF, Inseminador, Compra_Gado, Venda_Gado | Queries sobre `lotes`, `registros_*`, `lote_categorias` etc. Zero tela/tabela nova |
+| Ponte manejo-financeiro | Diárias, Diárias_Categoria | Engine de custo: cruza cabeças-dia (manejo) com desembolsos (financeiro). Vira view/RPC, não planilha de entrada |
+| Domínio financeiro novo | Cadastros, Centro de Custos, Compradores, Fornecedores, Contas a Receber, Receitas_Mensais, Contas a Pagar - Decisão, Financiamentos, Desembolsos Realizados, Desembolsos Previstos, Estoque Mensal (insumos), Orçamento Mensal, Fechamento Mensal, Consolidado Mensal (+Resumo), Investimentos, Levantamento Patrimonial, Análise Plano de Contas, Análise Agrupamentos, DGR, FC_diário, FC_Mensal, FC_Anual, Pagar_Receber, Meta_Mensal, Relatórios, Menu | Produto financeiro completo (~25-30 telas): ledgers, plano de contas hierárquico, 3 engines de cálculo (fluxo de caixa projetado, diárias/custo por cabeça, DRE/orçamento consolidado) |
+
+### Consequência para a decisão módulo vs monorepo
+
+A escala medida (~28 abas de domínio financeiro, três engines de cálculo, ledgers de lançamento) confirma que o Vision é um segundo produto, não uma feature. Como módulo dentro do painel, absorveria um ERP-lite inteiro na navegação e no bundle de um app já grande, além de acoplar os ciclos de release. Monorepo mantém-se como decisão recomendada.
+
+### Phasing recomendado (não portar 1:1)
+
+1. **Núcleo financeiro**: plano de contas + agrupamentos, centros de custo, fornecedores/compradores, lançamentos (desembolsos realizados/previstos), contas a pagar/receber, fluxo de caixa realizado.
+2. **Consolidação**: DRE/DGR, orçamento vs realizado, consolidado mensal/anual, metas, fluxo de caixa projetado.
+3. **Integração profunda**: diárias/custo por cabeça (cruzando manejo), financiamentos, investimentos, patrimônio.
+
+### Hotspots técnicos (spikes antes de fixar schema)
+
+- **FC_diário**: projeção diária com saldo acumulado por conta/categoria. Vira RPC/tabela-função ou rotina de materialização; é o item mais caro do projeto e deve ser prototipado antes de fechar o modelo de dados financeiro.
+- **Diárias/custo por cabeça**: precisa de cabeças-dia por categoria (já derivável de `lote_categorias`) cruzado com lançamentos por centro de custo. Definir granularidade de centro de custo na fase 1 para não refazer depois.
+- **Modelagem de ledgers**: Desembolsos Realizados vs Previstos pode ser uma tabela `fin_lancamentos` com status (`previsto`/`realizado`), que simplifica contas a pagar/receber e fluxo de caixa sobre a mesma base.
+
+
 
 Quando o projeto avançar, a migração seria:
 

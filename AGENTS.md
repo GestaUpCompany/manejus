@@ -103,3 +103,4 @@ Quando mencionar qualquer um destes tópicos, ler a seção correspondente em `d
 - "combustível", "tanque de combustível", "estoque de combustível", "WAC combustível", "custo médio por litro", `movimentacoes_combustivel`, `tanques_combustivel` → `docs/HISTORICO.md` (Controle de estoque de combustível)
 - "editar/excluir trato", "editar/excluir leitura de cocho", `editar_registro_oferta_trato`, `editar_registro_leitura_cocho`, "registros de tratos e leituras" → `docs/HISTORICO.md` (Tela de edição/exclusão de tratos e leituras de cocho)
 - "detalhamento operacional", "tabelas do abastecimento distantes", "fusão de páginas PDF", `operMergedCount`, `mergeDetail` → `docs/HISTORICO.md` (Fusão dinâmica das tabelas de detalhamento nos relatórios de Abastecimento e Mortalidade)
+- "Vision", "Vision'Up", "sistema financeiro", "monorepo", "módulo financeiro" → `docs/VISION_ARQUITETURA_FUTURA.md` (Arquitetura Vision + auditoria da planilha fonte)
