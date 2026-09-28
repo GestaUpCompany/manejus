@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@gestaup/shared'
 import { useFazenda } from '../../hooks/useDashboardQueries'
 import { Header } from './Header'
-import { FarmSwitcher } from './FarmSwitcher'
+import { FarmSwitcher } from '@gestaup/ui'
 import { Breadcrumbs } from '@gestaup/ui'
 import { CommandPalette } from '@gestaup/ui'
 import type { CommandItem } from '@gestaup/ui'
@@ -629,7 +629,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                   </div>
                 </div>
               )}
-              {!isSidebarCollapsed && <FarmSwitcher />}
+              {!isSidebarCollapsed && <FarmSwitcher redirectTo="/controller/dashboard" />}
             </div>
           )}
         </aside>
@@ -673,7 +673,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                       <p className="text-xs text-content-faint capitalize">{user.papel}</p>
                     </div>
                   </div>
-                  <FarmSwitcher />
+                  <FarmSwitcher redirectTo="/controller/dashboard" />
                 </div>
               )}
             </div>

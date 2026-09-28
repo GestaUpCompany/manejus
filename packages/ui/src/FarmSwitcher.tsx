@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@gestaup/supabase'
-import { useAuth } from '@gestaup/shared'
-import { useFazenda } from '../../hooks/useDashboardQueries'
-import { setSelectedFazendaId, SELECTED_FAZENDA_STORAGE_KEY } from '@gestaup/shared'
-import { Modal } from '@gestaup/ui'
+import { useAuth, useFazenda, setSelectedFazendaId, SELECTED_FAZENDA_STORAGE_KEY } from '@gestaup/shared'
+import { Modal } from './Modal'
 
 interface FazendaSimplificada {
   id: string
@@ -17,7 +15,11 @@ interface GrupoInfo {
   nome: string
 }
 
-export function FarmSwitcher() {
+interface FarmSwitcherProps {
+  redirectTo: string
+}
+
+export function FarmSwitcher({ redirectTo }: FarmSwitcherProps) {
   const { user } = useAuth()
   const { data: fazenda } = useFazenda(user?.id)
   const [grupo, setGrupo] = useState<GrupoInfo | null>(null)
@@ -132,7 +134,7 @@ export function FarmSwitcher() {
       setSelectedFazendaId(selectedFazenda.id)
 
       // Recarregar a página para re-inicializar o contexto
-      window.location.href = '/controller/dashboard'
+      window.location.href = redirectTo
     } catch (err) {
       setError('Erro ao trocar de fazenda')
       setSwitching(false)

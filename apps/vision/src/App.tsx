@@ -3,7 +3,7 @@ import { useAuth } from '@gestaup/shared'
 import { PageSkeleton } from '@gestaup/ui'
 import { VisionLayout } from './components/VisionLayout'
 import { Login } from './pages/Login'
-import { Dashboard } from './pages/Dashboard'
+import { Relatorios } from './pages/Relatorios'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -24,7 +24,8 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Navigate to="/relatorios" replace />} />
+          <Route path="/relatorios" element={<Relatorios />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

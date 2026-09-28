@@ -7,24 +7,7 @@ async function getFazendaId(userId: string): Promise<string | null> {
   return getFazendaIdForUser(userId)
 }
 
-export function useFazenda(userId: string | undefined) {
-  return useQuery({
-    queryKey: ['fazenda', userId],
-    enabled: !!userId,
-    queryFn: async () => {
-      const fazendaId = await getFazendaId(userId!)
-      if (!fazendaId) return null
-
-      const { data } = await supabase
-        .from('fazendas')
-        .select('*')
-        .eq('id', fazendaId)
-        .single()
-
-      return data
-    },
-  })
-}
+export { useFazenda } from '@gestaup/shared'
 
 export function useDashboardStats(userId: string | undefined) {
   return useQuery({
