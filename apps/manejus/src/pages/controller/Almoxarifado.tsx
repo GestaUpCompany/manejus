@@ -1,0 +1,316 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, Input, CardSkeleton } from '@gestaup/ui'
+import { exportToXLSX } from '@gestaup/shared'
+import { ALMOXARIFADO_EXPORT_CONFIG } from '../../utils/exportConfigs'
+import { formatDateTime } from '@gestaup/shared'
+import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
+
+interface RegistroAlmoxarifado {
+  id: string
+  fazenda_id: string
+  dispositivo_id?: string
+  nome_usuario?: string
+  data: string
+  tipo?: 'retirada' | 'devolucao' | 'entrada'
+  quem_entregou?: string
+  quem_pegou?: string
+  quem_recebeu?: string
+  setor?: string
+  observacao?: string
+  itens?: any
+  sync_status?: string
+  created_at: string
+}
+
+export function Almoxarifado() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [registros, setRegistros] = useState<RegistroAlmoxarifado[]>([])
+  const [loading, setLoading] = useState(true)
+  const [fazendaNome, setFazendaNome] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'retirada' | 'devolucao' | 'entrada'>('todos')
+
+  useEffect(() => {
+    loadRegistros()
+  }, [user])
+
+  const loadRegistros = async () => {
+    if (!user) return
+
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
+
+    if (!vinculos || vinculos.length === 0) return
+
+    const fazendaId = vinculos[0].fazenda_id
+    getFazendaNome(fazendaId).then(setFazendaNome)
+
+    let query = supabase
+      .from('registros_almoxarifado')
+      .select('*')
+      .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
+      .order('data', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Erro ao buscar registros de almoxarifado:', error)
+    } else {
+      setRegistros(data as RegistroAlmoxarifado[])
+    }
+
+    setLoading(false)
+  }
+
+  const filteredRegistros = registros.filter((registro) => {
+    const matchesSearch =
+      (registro.quem_entregou && registro.quem_entregou.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.quem_pegou && registro.quem_pegou.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.quem_recebeu && registro.quem_recebeu.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.setor && registro.setor.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    const matchesDataInicio = !dataInicio || registro.data >= dataInicio
+    const matchesDataFim = !dataFim || registro.data <= dataFim
+    const matchesTipo = tipoFiltro === 'todos' || (registro.tipo || 'retirada') === tipoFiltro
+
+    return matchesSearch && matchesDataInicio && matchesDataFim && matchesTipo
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
+  })
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Almoxarifado</h2>
+      </div>
+
+      <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+          <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
+          <Button
+            onClick={() => exportToXLSX(filteredRegistros, ALMOXARIFADO_EXPORT_CONFIG, fazendaNome)}
+            disabled={filteredRegistros.length === 0}
+            className="w-full sm:w-auto text-sm"
+          >
+            Exportar XLSX
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="sm:col-span-2">
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
+            <Input
+              type="text"
+              placeholder="Quem entregou, quem pegou, setor, observação..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
+            <Input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
+            <Input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight">Tipo</label>
+            <select value={tipoFiltro} onChange={(e) => setTipoFiltro(e.target.value as typeof tipoFiltro)} className="w-full rounded-lg border border-border-base bg-surface-1 px-3 py-2 text-sm text-content">
+              <option value="todos">Todos</option><option value="retirada">Retiradas</option><option value="devolucao">Devoluções</option><option value="entrada">Entradas</option>
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
+            <Button variant="secondary" onClick={() => {
+              setSearchTerm('')
+              setDataInicio('')
+              setDataFim('')
+              setTipoFiltro('todos')
+            }} className="w-full sm:w-auto text-sm">
+              Limpar Filtros
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {registros.length === 0 ? (
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro de almoxarifado encontrado</p>
+        </Card>
+      ) : (
+        <>
+          {/* Mobile Card View */}
+          <div className="sm:hidden space-y-3">
+            {filteredRegistros.map((registro) => (
+              <Card
+                key={registro.id}
+                className="bg-surface-1 p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => navigate(`/controller/cadernetas/almoxarifado/${registro.id}`)}
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-content-strong">
+                      {formatDateTime(registro.data)}
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${registro.tipo === 'devolucao' ? 'bg-blue-500/10 text-blue-700' : registro.tipo === 'entrada' ? 'bg-emerald-500/10 text-emerald-700' : 'bg-primary/10 text-primary'}`}>
+                      {registro.tipo === 'devolucao' ? 'Devolução' : registro.tipo === 'entrada' ? 'Entrada' : 'Retirada'}
+                    </span>
+                  </div>
+                  <span
+                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')
+                    }}
+                  >
+                    {dateSortOrder === 'asc' ? '↑' : '↓'}
+                  </span>
+                </div>
+                <div className="space-y-2 text-xs sm:text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Usuário:</span>
+                    <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  {registro.tipo === 'entrada' ? (
+                    <div className="flex justify-between">
+                      <span className="text-content-muted">Quem Recebeu:</span>
+                      <span className="text-content-strong font-medium">{registro.quem_recebeu || '-'}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-content-muted">Quem Entregou:</span>
+                        <span className="text-content-strong font-medium">{registro.quem_entregou || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-content-muted">Quem Pegou:</span>
+                        <span className="text-content-strong font-medium">{registro.quem_pegou || '-'}</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Setor:</span>
+                    <span className="text-content-strong font-medium">{registro.setor || '-'}</span>
+                  </div>
+                  {registro.itens && (
+                    <div className="flex justify-between">
+                      <span className="text-content-muted">Itens:</span>
+                      <span className="text-content-strong font-medium truncate max-w-[150px]">
+                        {Array.isArray(registro.itens) ? `${registro.itens.length} item(s)` : 'Ver detalhes'}
+                      </span>
+                    </div>
+                  )}
+                  {registro.observacao && (
+                    <div className="flex justify-between">
+                      <span className="text-content-muted">Observação:</span>
+                      <span className="text-content-strong font-medium truncate max-w-[150px]">{registro.observacao}</span>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <Card className="bg-surface-1 overflow-x-auto hidden sm:block" disableHover>
+            <table className="min-w-full divide-y divide-border-base">
+              <thead className="bg-surface-2">
+                <tr>
+                  <th
+                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider cursor-pointer hover:bg-surface-2 transition-colors"
+                    onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Tipo</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Quem Entregou</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Quem Pegou</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Setor</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Itens</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Observação</th>
+                </tr>
+              </thead>
+              <tbody className="bg-surface-1 divide-y divide-border-base">
+                {filteredRegistros.map((registro) => (
+                  <tr
+                    key={registro.id}
+                    onClick={() => navigate(`/controller/cadernetas/almoxarifado/${registro.id}`)}
+                    className="cursor-pointer hover:bg-surface-2 transition-colors"
+                  >
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {formatDateTime(registro.data)}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong"><span className={`rounded-full px-2 py-1 text-xs ${registro.tipo === 'devolucao' ? 'bg-blue-500/10 text-blue-700' : registro.tipo === 'entrada' ? 'bg-emerald-500/10 text-emerald-700' : 'bg-primary/10 text-primary'}`}>{registro.tipo === 'devolucao' ? 'Devolução' : registro.tipo === 'entrada' ? 'Entrada' : 'Retirada'}</span></td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {registro.tipo === 'entrada' ? (registro.quem_recebeu || '-') : (registro.quem_entregou || '-')}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {registro.quem_pegou || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {registro.setor || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {registro.itens ? (
+                        Array.isArray(registro.itens) ? (
+                          <span className="truncate max-w-[150px] inline-block">
+                            {registro.itens.length} item(s)
+                          </span>
+                        ) : (
+                          <span className="truncate max-w-[150px] inline-block">
+                            {typeof registro.itens === 'object' ? 'Ver detalhes' : String(registro.itens)}
+                          </span>
+                        )
+                      ) : '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {registro.observacao || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </>
+      )}
+    </div>
+  )
+}

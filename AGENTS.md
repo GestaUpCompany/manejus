@@ -17,11 +17,15 @@ Disparador: antes de rodar qualquer SQL que toque dados de `lote_categorias`, `p
 
 ## Comandos
 
-- Dev: `npm run dev`
-- Build: `npm run build` (roda `tsc && vite build`)
-- Typecheck: `npx tsc --noEmit`
-- Lint: `npm run lint`
-- Test: `npm run test` (vitest run)
+Monorepo pnpm workspaces (desde `refactor/monorepo-fase-0`): painel em `apps/manejus`, financeiro em `apps/vision`, packages compartilhados em `packages/{supabase,shared,ui}`, migrations em `supabase/` na raiz. Scripts da raiz rodam recursivo (`pnpm -r`) ou via `--filter`.
+
+- Install: `pnpm install` (na raiz)
+- Dev manejus: `pnpm dev` ou `pnpm --filter manejus dev`
+- Dev vision: `pnpm dev:vision` ou `pnpm --filter vision dev`
+- Build: `pnpm build` (ambos os apps) ou `pnpm --filter <app> build`
+- Typecheck: `pnpm typecheck` (ambos)
+- Test: `pnpm test` (vitest run)
+- Deploy Vercel: cada app é um projeto com Root Directory próprio (`apps/manejus`, `apps/vision`)
 
 ## Fluxo de abertura do painel via chrome-devtools
 

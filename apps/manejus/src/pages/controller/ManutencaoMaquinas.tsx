@@ -1,0 +1,278 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, Input, CardSkeleton } from '@gestaup/ui'
+import { exportToXLSX } from '@gestaup/shared'
+import { MANUTENCAO_MAQUINAS_EXPORT_CONFIG } from '../../utils/exportConfigs'
+import { formatDate } from '@gestaup/shared'
+import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
+
+interface RegistroManutencaoMaquinas {
+  id: string
+  fazenda_id: string
+  dispositivo_id?: string
+  nome_usuario?: string
+  data: string
+  responsavel_checklist?: string
+  operador_motorista?: string
+  veiculo_trator?: string
+  placa?: string
+  odometro_horimetro?: string
+  checklist?: Record<string, { valor: string; observacao: string }>
+  observacao?: string
+  sync_status?: string
+  created_at: string
+}
+
+export function ManutencaoMaquinas() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [registros, setRegistros] = useState<RegistroManutencaoMaquinas[]>([])
+  const [loading, setLoading] = useState(true)
+  const [fazendaNome, setFazendaNome] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
+
+  useEffect(() => {
+    loadRegistros()
+  }, [user])
+
+  const loadRegistros = async () => {
+    if (!user) return
+
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
+
+    if (!vinculos || vinculos.length === 0) return
+
+    const fazendaId = vinculos[0].fazenda_id
+    getFazendaNome(fazendaId).then(setFazendaNome)
+
+    let query = supabase
+      .from('registros_manutencao_maquinas')
+      .select('*')
+      .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
+      .order('data', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Erro ao buscar registros de manutenção de máquinas:', error)
+    } else {
+      setRegistros(data as RegistroManutencaoMaquinas[])
+    }
+
+    setLoading(false)
+  }
+
+  const filteredRegistros = registros.filter((registro) => {
+    const matchesSearch =
+      (registro.veiculo_trator && registro.veiculo_trator.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.operador_motorista && registro.operador_motorista.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.responsavel_checklist && registro.responsavel_checklist.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.placa && registro.placa.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    const matchesDataInicio = !dataInicio || registro.data >= dataInicio
+    const matchesDataFim = !dataFim || registro.data <= dataFim
+
+    return matchesSearch && matchesDataInicio && matchesDataFim
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
+  })
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Manutenção de Máquinas</h2>
+      </div>
+
+      <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+          <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
+          <Button
+            onClick={() => exportToXLSX(filteredRegistros, MANUTENCAO_MAQUINAS_EXPORT_CONFIG, fazendaNome)}
+            disabled={filteredRegistros.length === 0}
+            className="w-full sm:w-auto text-sm"
+          >
+            Exportar XLSX
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="sm:col-span-2">
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
+            <Input
+              type="text"
+              placeholder="Máquina, tipo de manutenção, responsável, descrição, status..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
+            <Input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
+            <Input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs sm:text-sm font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
+            <Button variant="secondary" onClick={() => {
+              setSearchTerm('')
+              setDataInicio('')
+              setDataFim('')
+            }} className="w-full sm:w-auto text-sm">
+              Limpar Filtros
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {registros.length === 0 ? (
+        <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
+          <p className="text-content-muted">Nenhum registro de manutenção de máquinas encontrado</p>
+        </Card>
+      ) : (
+        <>
+          {/* Mobile Card View */}
+          <div className="sm:hidden space-y-3">
+            {filteredRegistros.map((registro) => (
+              <Card
+                key={registro.id}
+                className="bg-surface-1 p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => navigate(`/controller/cadernetas/manutencao-maquinas/${registro.id}`)}
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-sm font-medium text-content-muted">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-content-strong">
+                      {formatDate(registro.data)}
+                    </span>
+                  </div>
+                  <span
+                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary dark:text-primary-light"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')
+                    }}
+                  >
+                    {dateSortOrder === 'asc' ? '↑' : '↓'}
+                  </span>
+                </div>
+                <div className="space-y-2 text-xs sm:text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Usuário:</span>
+                    <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Máquina/Veículo:</span>
+                    <span className="text-content-strong font-medium">{registro.veiculo_trator || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Operador:</span>
+                    <span className="text-content-strong font-medium">{registro.operador_motorista || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Responsável:</span>
+                    <span className="text-content-strong font-medium">{registro.responsavel_checklist || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Placa:</span>
+                    <span className="text-content-strong font-medium">{registro.placa || '-'}</span>
+                  </div>
+                  {registro.observacao && (
+                    <div className="flex justify-between">
+                      <span className="text-content-muted">Observação:</span>
+                      <span className="text-content-strong font-medium truncate max-w-[150px]">{registro.observacao}</span>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <Card className="bg-surface-1 overflow-x-auto hidden sm:block" disableHover>
+            <table className="min-w-full divide-y divide-border-base">
+              <thead className="bg-surface-2">
+                <tr>
+                  <th
+                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider cursor-pointer hover:bg-surface-2 transition-colors"
+                    onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Máquina/Veículo</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Operador</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Responsável</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Placa</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Observação</th>
+                </tr>
+              </thead>
+              <tbody className="bg-surface-1 divide-y divide-border-base">
+                {filteredRegistros.map((registro) => (
+                  <tr
+                    key={registro.id}
+                    onClick={() => navigate(`/controller/cadernetas/manutencao-maquinas/${registro.id}`)}
+                    className="cursor-pointer hover:bg-surface-2 transition-colors"
+                  >
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {formatDate(registro.data)}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {registro.veiculo_trator || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {registro.operador_motorista || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {registro.responsavel_checklist || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {registro.placa || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {registro.observacao || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </>
+      )}
+    </div>
+  )
+}

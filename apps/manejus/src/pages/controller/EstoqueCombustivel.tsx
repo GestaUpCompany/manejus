@@ -1,0 +1,963 @@
+import { useEffect, useState, useCallback } from 'react'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, Input, Select, Modal, ConfirmModal, CardSkeleton, EmptyState } from '@gestaup/ui'
+import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
+import { formatDate } from '@gestaup/shared'
+
+interface Tanque {
+  id: string
+  fazenda_id: string
+  nome: string
+  tipo_combustivel: string
+  capacidade_maxima_l: number
+  saldo_atual_l: number
+  limite_alerta_l: number
+  custo_medio_l: number
+  ativo: boolean
+  deleted_at: string | null
+}
+
+const TIPOS_COMBUSTIVEL = [
+  { value: 'Álcool', label: 'Álcool' },
+  { value: 'Gasolina', label: 'Gasolina' },
+  { value: 'Diesel S10', label: 'Diesel S10' },
+  { value: 'Diesel Comum', label: 'Diesel Comum' },
+]
+
+// Data local (YYYY-MM-DD) no fuso do navegador, evita deslocamento UTC apos 20h
+const hojeLocal = () => new Date().toLocaleDateString('en-CA')
+
+export function EstoqueCombustivel() {
+  const { user } = useAuth()
+  const [fazendaId, setFazendaId] = useState<string | null>(null)
+  const [fazendaNome, setFazendaNome] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [tanques, setTanques] = useState<Tanque[]>([])
+  const [fornecedores, setFornecedores] = useState<{ id: string; nome: string }[]>([])
+  const [kpiMes, setKpiMes] = useState({ consumo_l: 0, custo_rs: 0 })
+
+  // Modais
+  const [modalTanque, setModalTanque] = useState(false)
+  const [tanqueEditando, setTanqueEditando] = useState<Tanque | null>(null)
+  const [modalEntrada, setModalEntrada] = useState(false)
+  const [modalHistorico, setModalHistorico] = useState<Tanque | null>(null)
+  const [historicoMovs, setHistoricoMovs] = useState<any[]>([])
+  const [historicoLoading, setHistoricoLoading] = useState(false)
+  const [modalExcluirTanque, setModalExcluirTanque] = useState<Tanque | null>(null)
+  const [tanquesExcluidos, setTanquesExcluidos] = useState<Tanque[]>([])
+  const [mostrarLixeira, setMostrarLixeira] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Form ajuste (saldo absoluto, não altera custo medio)
+  const [modalAjuste, setModalAjuste] = useState<Tanque | null>(null)
+  const [ajusteForm, setAjusteForm] = useState({
+    novo_saldo_l: '',
+    custo_medio_l: '',
+    observacao: '',
+  })
+
+  // Form tanque
+  const [tanqueForm, setTanqueForm] = useState({
+    nome: '',
+    tipo_combustivel: '',
+    capacidade_maxima_l: '',
+    limite_alerta_l: '',
+    saldo_inicial_l: '',
+    preco_inicial_l: '',
+  })
+
+  // Form entrada (preco por litro digitado, valor total derivado)
+  const [entradaForm, setEntradaForm] = useState({
+    tanque_id: '',
+    quantidade_l: '',
+    preco_por_litro: '',
+    fornecedor: '',
+    nota_fiscal: '',
+    observacao: '',
+  })
+
+  const loadAll = useCallback(async () => {
+    if (!fazendaId) return
+    setLoading(true)
+    try {
+      const [tanquesRes, fornRes, kpiRes, excluidosRes] = await Promise.all([
+        supabase
+          .from('tanques_combustivel')
+          .select('*')
+          .eq('fazenda_id', fazendaId)
+          .is('deleted_at', null)
+          .order('tipo_combustivel'),
+        supabase
+          .from('fornecedores')
+          .select('id, nome')
+          .eq('fazenda_id', fazendaId)
+          .eq('ativo', true)
+          .order('nome'),
+        supabase
+          .from('movimentacoes_combustivel')
+          .select('quantidade_l, preco_por_litro')
+          .eq('fazenda_id', fazendaId)
+          .eq('tipo_movimentacao', 'baixa')
+          .gte('data', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]),
+        supabase
+          .from('tanques_combustivel')
+          .select('*')
+          .eq('fazenda_id', fazendaId)
+          .not('deleted_at', 'is', null)
+          .order('deleted_at', { ascending: false }),
+      ])
+
+      if (tanquesRes.error) throw tanquesRes.error
+      if (fornRes.error) throw fornRes.error
+      if (kpiRes.error) throw kpiRes.error
+      if (excluidosRes.error) throw excluidosRes.error
+
+      setTanques(tanquesRes.data as Tanque[])
+      setFornecedores((fornRes.data as { id: string; nome: string }[]) || [])
+      setTanquesExcluidos(excluidosRes.data as Tanque[])
+
+      const movs = kpiRes.data || []
+      const consumo = movs.reduce((sum, m) => sum + Number(m.quantidade_l), 0)
+      const custo = movs.reduce((sum, m) => sum + (Number(m.quantidade_l) * (Number(m.preco_por_litro) || 0)), 0)
+      setKpiMes({ consumo_l: consumo, custo_rs: custo })
+    } catch (err) {
+      console.error('Erro ao carregar estoque:', err)
+      setError('Erro ao carregar dados do estoque')
+    } finally {
+      setLoading(false)
+    }
+  }, [fazendaId])
+
+  useEffect(() => {
+    if (!user) return
+    ;(async () => {
+      const fid = await getFazendaIdForUser(user.id)
+      setFazendaId(fid)
+      if (fid) getFazendaNome(fid).then(setFazendaNome)
+    })()
+  }, [user])
+
+  useEffect(() => {
+    loadAll()
+  }, [loadAll])
+
+  // Helpers
+  const saldoTotal = tanques.reduce((sum, t) => sum + Number(t.saldo_atual_l), 0)
+  const valorEstoque = tanques.reduce((sum, t) => sum + Math.max(0, Number(t.saldo_atual_l)) * Number(t.custo_medio_l), 0)
+  const tanquesEmAlerta = tanques.filter((t) => Number(t.saldo_atual_l) <= Number(t.limite_alerta_l) && t.limite_alerta_l > 0)
+
+  const tanquesAtivos = tanques.filter((t) => t.ativo)
+
+  // Handlers tanque
+  const abrirModalTanque = (tanque: Tanque | null) => {
+    setTanqueEditando(tanque)
+    if (tanque) {
+      setTanqueForm({
+        nome: tanque.nome,
+        tipo_combustivel: tanque.tipo_combustivel,
+        capacidade_maxima_l: String(tanque.capacidade_maxima_l),
+        limite_alerta_l: String(tanque.limite_alerta_l),
+        saldo_inicial_l: '',
+        preco_inicial_l: '',
+      })
+    } else {
+      setTanqueForm({ nome: '', tipo_combustivel: '', capacidade_maxima_l: '', limite_alerta_l: '', saldo_inicial_l: '', preco_inicial_l: '' })
+    }
+    setModalTanque(true)
+  }
+
+  const salvarTanque = async () => {
+    if (!fazendaId) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      const payload = {
+        fazenda_id: fazendaId,
+        nome: tanqueForm.nome,
+        tipo_combustivel: tanqueForm.tipo_combustivel,
+        capacidade_maxima_l: parseFloat(tanqueForm.capacidade_maxima_l),
+        limite_alerta_l: parseFloat(tanqueForm.limite_alerta_l) || 0,
+      }
+      if (tanqueEditando) {
+        const { error } = await supabase.from('tanques_combustivel').update(payload).eq('id', tanqueEditando.id)
+        if (error) throw error
+      } else {
+        // Se houver saldo inicial, registrar movimentacao
+        const saldoInicial = parseFloat(tanqueForm.saldo_inicial_l) || 0
+        const precoInicial = parseFloat(tanqueForm.preco_inicial_l) || 0
+        const capacidadeMaxima = parseFloat(tanqueForm.capacidade_maxima_l) || 0
+        if (capacidadeMaxima > 0 && saldoInicial > capacidadeMaxima) {
+          throw new Error(`Saldo inicial (${saldoInicial} L) não pode ultrapassar a capacidade do tanque (${capacidadeMaxima} L).`)
+        }
+        const { data: newTanque, error } = await supabase.from('tanques_combustivel').insert(payload).select('id').single()
+        if (error) throw error
+
+        if (saldoInicial > 0) {
+          // Com preco: entrada normal (WAC calcula custo medio); sem preco: ajuste define saldo absoluto e o custo medio fica 0 ate a primeira entrada real
+          const movimento = precoInicial > 0
+            ? {
+                tipo_movimentacao: 'entrada',
+                quantidade_l: saldoInicial,
+                valor_total: parseFloat((saldoInicial * precoInicial).toFixed(2)),
+                preco_por_litro: precoInicial,
+                observacao: 'Saldo inicial do tanque',
+              }
+            : {
+                tipo_movimentacao: 'ajuste',
+                quantidade_l: saldoInicial,
+                observacao: 'Saldo inicial do tanque (sem custo)',
+              }
+          const { error: movError } = await supabase.from('movimentacoes_combustivel').insert({
+            fazenda_id: fazendaId,
+            tanque_id: newTanque.id,
+            ...movimento,
+            data: hojeLocal(),
+            origem: 'estoque_inicial',
+          })
+          if (movError) {
+            // Compensar: remover o tanque criado para nao ficar registro orfao sem saldo
+            await supabase.from('tanques_combustivel').delete().eq('id', newTanque.id)
+            throw movError
+          }
+        }
+      }
+      setModalTanque(false)
+      loadAll()
+    } catch (err: any) {
+      setError(err.message || 'Erro ao salvar tanque')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Handlers entrada (valor total unico, preco derivado)
+  const abrirModalEntrada = () => {
+    setEntradaForm({ tanque_id: '', quantidade_l: '', preco_por_litro: '', fornecedor: '', nota_fiscal: '', observacao: '' })
+    setModalEntrada(true)
+  }
+
+  const salvarEntrada = async () => {
+    if (!fazendaId || !entradaForm.tanque_id || !entradaForm.quantidade_l || !entradaForm.preco_por_litro) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      const tanque = tanques.find((t) => t.id === entradaForm.tanque_id)
+      const litros = parseFloat(entradaForm.quantidade_l)
+      const precoPorLitro = parseFloat(entradaForm.preco_por_litro)
+      const valorTotal = litros * precoPorLitro
+      if (tanque && Number(tanque.capacidade_maxima_l) > 0 && (Number(tanque.saldo_atual_l) + litros) > Number(tanque.capacidade_maxima_l)) {
+        throw new Error(`Quantidade excede a capacidade do tanque ${tanque.nome}. Capacidade: ${Number(tanque.capacidade_maxima_l)} L, saldo atual: ${Number(tanque.saldo_atual_l)} L, sobra: ${Number(tanque.capacidade_maxima_l) - Number(tanque.saldo_atual_l)} L.`)
+      }
+
+      const { error } = await supabase.from('movimentacoes_combustivel').insert({
+        fazenda_id: fazendaId,
+        tanque_id: entradaForm.tanque_id,
+        tipo_movimentacao: 'entrada',
+        quantidade_l: litros,
+        valor_total: valorTotal,
+        preco_por_litro: precoPorLitro,
+        data: hojeLocal(),
+        origem: 'painel_entrada',
+        fornecedor: entradaForm.fornecedor || null,
+        nota_fiscal: entradaForm.nota_fiscal || null,
+        observacao: entradaForm.observacao || null,
+      })
+      if (error) throw error
+      setModalEntrada(false)
+      loadAll()
+    } catch (err: any) {
+      setError(err.message || 'Erro ao registrar entrada')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Handler histórico
+  const abrirModalHistorico = async (tanque: Tanque) => {
+    setModalHistorico(tanque)
+    setHistoricoLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('movimentacoes_combustivel')
+        .select(`
+          id, tipo_movimentacao, quantidade_l, preco_por_litro, valor_total, data, origem, fornecedor, observacao, created_at, registro_abastecimento_id,
+          registro_abastecimento:registros_abastecimento!movimentacoes_combustivel_registro_abastecimento_id_fkey(id, maquina_veiculo)
+        `)
+        .eq('tanque_id', tanque.id)
+        .order('data', { ascending: false })
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      setHistoricoMovs(data || [])
+    } catch (err: any) {
+      console.error('Erro ao carregar histórico:', err)
+      setHistoricoMovs([])
+    } finally {
+      setHistoricoLoading(false)
+    }
+  }
+
+  // Handler excluir tanque (soft delete)
+  const excluirTanque = async () => {
+    if (!modalExcluirTanque) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      const { error } = await supabase
+        .from('tanques_combustivel')
+        .update({ deleted_at: new Date().toISOString(), ativo: false })
+        .eq('id', modalExcluirTanque.id)
+      if (error) throw error
+      setModalExcluirTanque(null)
+      loadAll()
+    } catch (err: any) {
+      setError(err.message || 'Erro ao excluir tanque')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Handler restaurar tanque (undo soft delete)
+  const restaurarTanque = async (tanque: Tanque) => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      const { error } = await supabase
+        .from('tanques_combustivel')
+        .update({ deleted_at: null, ativo: true })
+        .eq('id', tanque.id)
+      if (error) throw error
+      loadAll()
+    } catch (err: any) {
+      setError(err.message || 'Erro ao restaurar tanque')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Handler ajuste de saldo (define saldo absoluto, não altera custo medio)
+  const abrirModalAjuste = (tanque: Tanque) => {
+    setModalAjuste(tanque)
+    setAjusteForm({
+      novo_saldo_l: String(tanque.saldo_atual_l),
+      custo_medio_l: '',
+      observacao: '',
+    })
+  }
+
+  const salvarAjuste = async () => {
+    if (!fazendaId || !modalAjuste || !ajusteForm.novo_saldo_l) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      const novoSaldo = parseFloat(ajusteForm.novo_saldo_l)
+      if (Number(modalAjuste.capacidade_maxima_l) > 0 && novoSaldo > Number(modalAjuste.capacidade_maxima_l)) {
+        throw new Error(`Novo saldo não pode ultrapassar a capacidade do tanque ${modalAjuste.nome}. Capacidade: ${Number(modalAjuste.capacidade_maxima_l)} L, ajuste solicitado: ${novoSaldo} L.`)
+      }
+      const { error } = await supabase.from('movimentacoes_combustivel').insert({
+        fazenda_id: fazendaId,
+        tanque_id: modalAjuste.id,
+        tipo_movimentacao: 'ajuste',
+        quantidade_l: novoSaldo,
+        data: hojeLocal(),
+        origem: 'painel_ajuste',
+        observacao: ajusteForm.observacao || 'Ajuste de inventario',
+      })
+      if (error) throw error
+      // Custo medio opcional: corrige tanques com saldo inicial sem preco
+      const custoMedio = parseFloat(ajusteForm.custo_medio_l)
+      if (!Number.isNaN(custoMedio) && custoMedio > 0) {
+        const { error: custoError } = await supabase
+          .from('tanques_combustivel')
+          .update({ custo_medio_l: custoMedio })
+          .eq('id', modalAjuste.id)
+        if (custoError) throw new Error(`Ajuste aplicado, mas o custo médio não foi atualizado: ${custoError.message}`)
+      }
+      setModalAjuste(null)
+      loadAll()
+    } catch (err: any) {
+      setError(err.message || 'Erro ao ajustar saldo')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4 sm:space-y-6 min-w-0">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Estoque de Combustível</h2>
+          {fazendaNome && <p className="text-sm text-content-muted mt-1">{fazendaNome}</p>}
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="secondary" onClick={() => abrirModalTanque(null)}>
+            Configurar Tanque
+          </Button>
+          <Button onClick={abrirModalEntrada}>
+            Registrar Entrada
+          </Button>
+        </div>
+      </div>
+
+      {error && !modalTanque && !modalEntrada && !modalAjuste && (
+        <div className="bg-red-500/10 border border-red-300 rounded-xl p-4">
+          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          <button onClick={() => setError(null)} className="text-xs text-red-500 underline mt-1">Fechar</button>
+        </div>
+      )}
+
+      {/* KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch">
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Saldo Total</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">{saldoTotal.toLocaleString('pt-BR')} L</p>
+        </Card>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Valor em Estoque</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">R$ {valorEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        </Card>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Consumo do Mês</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">{kpiMes.consumo_l.toLocaleString('pt-BR')} L</p>
+        </Card>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Custo do Mês</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">R$ {kpiMes.custo_rs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        </Card>
+      </div>
+
+      {/* Alerta de tanques baixos */}
+      {tanquesEmAlerta.length > 0 && (
+        <div className="bg-red-500/10 border border-red-300 rounded-xl p-4">
+          <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+            {tanquesEmAlerta.length} tanque(s) com estoque baixo:
+          </p>
+          <p className="text-xs text-red-500 mt-1">
+            {tanquesEmAlerta.map((t) => t.nome).join(', ')}
+          </p>
+        </div>
+      )}
+
+      {/* Tanques */}
+      <div>
+        <h3 className="text-base sm:text-lg font-semibold text-content-strong mb-3">Tanques</h3>
+        {tanquesAtivos.length === 0 ? (
+          <Card className="bg-surface-1 p-6" disableHover>
+            <EmptyState
+              title="Nenhum tanque cadastrado"
+              description="Configure tanques de combustível para controlar o estoque."
+              action={<Button onClick={() => abrirModalTanque(null)}>Configurar Tanque</Button>}
+            />
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4">
+            {tanquesAtivos.map((tanque) => {
+              const pctOcupacao = tanque.capacidade_maxima_l > 0
+                ? Math.max(0, Math.min(100, (Number(tanque.saldo_atual_l) / Number(tanque.capacidade_maxima_l)) * 100))
+                : 0
+              const emAlerta = tanque.limite_alerta_l > 0 && Number(tanque.saldo_atual_l) <= Number(tanque.limite_alerta_l)
+              const saldoNegativo = Number(tanque.saldo_atual_l) < 0
+              const valorTanque = Math.max(0, Number(tanque.saldo_atual_l)) * Number(tanque.custo_medio_l)
+              return (
+                <Card key={tanque.id} className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+                  <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
+                    <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
+                      <p className="font-semibold text-content-strong truncate">{tanque.nome}</p>
+                      <p className="text-xs text-content-muted truncate">{tanque.tipo_combustivel}</p>
+                    </div>
+                    <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
+                      {emAlerta && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 dark:text-red-300">
+                          Alerta
+                        </span>
+                      )}
+                      <button
+                        onClick={() => abrirModalTanque(tanque)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary dark:text-primary-light transition-colors hover:bg-primary/10"
+                        title="Editar tanque"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => abrirModalHistorico(tanque)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-border-base bg-surface-2 px-2.5 py-1 text-xs font-semibold text-content transition-colors hover:bg-surface-2"
+                        title="Ver histórico"
+                      >
+                        Histórico
+                      </button>
+                      <button
+                        onClick={() => abrirModalAjuste(tanque)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300 transition-colors hover:bg-amber-500/10"
+                        title="Ajustar saldo"
+                      >
+                        Ajustar
+                      </button>
+                      <button
+                        onClick={() => setModalExcluirTanque(tanque)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-700 dark:text-red-300 transition-colors hover:bg-red-500/10"
+                        title="Excluir tanque"
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-content-muted">Saldo atual</span>
+                      <span className={`font-semibold ${saldoNegativo ? 'text-red-600' : 'text-content-strong'}`}>
+                        {Number(tanque.saldo_atual_l).toLocaleString('pt-BR')} L{saldoNegativo ? ' (reconciliar)' : ''}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-content-muted">Custo médio</span>
+                      <span className="text-content">R$ {Number(tanque.custo_medio_l).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/L</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-content-muted">Valor em estoque</span>
+                      <span className="font-semibold text-content-strong">R$ {valorTanque.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-content-muted">Capacidade</span>
+                      <span className="text-content">{Number(tanque.capacidade_maxima_l).toLocaleString('pt-BR')} L</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-content-muted">Alerta abaixo de</span>
+                      <span className="text-content">{Number(tanque.limite_alerta_l).toLocaleString('pt-BR')} L</span>
+                    </div>
+                  </div>
+                  {/* Barra de ocupacao */}
+                  <div className="mt-3">
+                    <div className="w-full bg-surface-3 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all ${emAlerta ? 'bg-red-500' : pctOcupacao > 80 ? 'bg-primary' : 'bg-blue-500'}`}
+                        style={{ width: `${pctOcupacao}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-content-muted mt-1">{pctOcupacao.toFixed(0)}% de ocupação</p>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Modal: Configurar Tanque */}
+      <Modal
+        isOpen={modalTanque}
+        onClose={() => { setModalTanque(false); setError(null) }}
+        title={tanqueEditando ? 'Editar Tanque' : 'Novo Tanque'}
+        size="md"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Nome do Tanque"
+            placeholder="Ex: Tanque Diesel S10"
+            value={tanqueForm.nome}
+            onChange={(e) => setTanqueForm({ ...tanqueForm, nome: e.target.value })}
+            required
+          />
+          <Select
+            label="Tipo de Combustível"
+            options={TIPOS_COMBUSTIVEL}
+            value={tanqueForm.tipo_combustivel}
+            onChange={(val) => setTanqueForm({ ...tanqueForm, tipo_combustivel: val })}
+            placeholder="Selecione..."
+            required
+          />
+          <Input
+            label="Capacidade Máxima (L)"
+            type="number"
+            placeholder="Ex: 5000"
+            value={tanqueForm.capacidade_maxima_l}
+            onChange={(e) => setTanqueForm({ ...tanqueForm, capacidade_maxima_l: e.target.value })}
+            required
+          />
+          <Input
+            label="Limite de Alerta (L)"
+            type="number"
+            placeholder="Ex: 500"
+            value={tanqueForm.limite_alerta_l}
+            onChange={(e) => setTanqueForm({ ...tanqueForm, limite_alerta_l: e.target.value })}
+          />
+          <p className="text-xs text-content-muted">Alerta dispara quando o saldo ficar abaixo deste valor.</p>
+          {!tanqueEditando && (
+            <>
+              <div className="border-t pt-4 mt-2">
+                <p className="text-sm font-semibold text-content mb-3">Campos opcionais</p>
+                <Input
+                  label="Saldo Inicial (L)"
+                  type="number"
+                  placeholder="Ex: 1800"
+                  value={tanqueForm.saldo_inicial_l}
+                  onChange={(e) => setTanqueForm({ ...tanqueForm, saldo_inicial_l: e.target.value })}
+                />
+                <Input
+                  label="Preço por Litro Inicial (R$)"
+                  type="number"
+                  placeholder="Ex: 5.99"
+                  value={tanqueForm.preco_inicial_l}
+                  onChange={(e) => setTanqueForm({ ...tanqueForm, preco_inicial_l: e.target.value })}
+                />
+                <p className="text-xs text-content-muted">Define o saldo inicial do tanque. Com preço, o custo médio é calculado (WAC); sem preço, o saldo é definido como ajuste e o custo médio fica R$ 0 até a primeira entrada real.</p>
+              </div>
+            </>
+          )}
+          {error && (
+            <div className="bg-red-500/10 border border-red-300 rounded-lg p-3">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            </div>
+          )}
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="secondary" onClick={() => { setModalTanque(false); setError(null) }}>Cancelar</Button>
+            <Button onClick={salvarTanque} disabled={submitting || !tanqueForm.nome || !tanqueForm.tipo_combustivel || !tanqueForm.capacidade_maxima_l}>
+              {submitting ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: Registrar Entrada */}
+      <Modal
+        isOpen={modalEntrada}
+        onClose={() => { setModalEntrada(false); setError(null) }}
+        title="Registrar Entrada de Combustível"
+        size="md"
+      >
+        <div className="space-y-4">
+          <Select
+            label="Tanque"
+            options={tanquesAtivos.map((t) => ({ value: t.id, label: `${t.nome} (${t.tipo_combustivel})` }))}
+            value={entradaForm.tanque_id}
+            onChange={(val) => setEntradaForm({ ...entradaForm, tanque_id: val })}
+            placeholder="Selecione o tanque..."
+            required
+          />
+          <Input
+            label="Quantidade (L)"
+            type="number"
+            placeholder="Ex: 1000"
+            value={entradaForm.quantidade_l}
+            onChange={(e) => setEntradaForm({ ...entradaForm, quantidade_l: e.target.value })}
+            required
+          />
+          <Input
+            label="Preço por Litro (R$)"
+            type="number"
+            placeholder="Ex: 6.50"
+            value={entradaForm.preco_por_litro}
+            onChange={(e) => setEntradaForm({ ...entradaForm, preco_por_litro: e.target.value })}
+            required
+          />
+          {entradaForm.quantidade_l && entradaForm.preco_por_litro && (() => {
+            const litros = parseFloat(entradaForm.quantidade_l) || 0
+            const preco = parseFloat(entradaForm.preco_por_litro) || 0
+            const total = litros * preco
+            if (total > 0) {
+              return (
+                <div className="bg-primary/10 border border-primary/30 rounded-lg p-3">
+                  <p className="text-sm text-primary dark:text-primary-light">
+                    <span className="font-bold">Valor total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="block text-xs mt-0.5">{litros.toLocaleString('pt-BR')} L × R$ {preco.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/L</span>
+                  </p>
+                </div>
+              )
+            }
+            return null
+          })()}
+          <p className="text-xs text-content-muted">O valor total é calculado automaticamente: preço por litro × quantidade.</p>
+          <Select
+            label="Fornecedor"
+            options={[{ value: '', label: 'Selecione o fornecedor...' }, ...fornecedores.map((f) => ({ value: f.nome, label: f.nome }))]}
+            value={entradaForm.fornecedor}
+            onChange={(val) => setEntradaForm({ ...entradaForm, fornecedor: val })}
+            placeholder="Selecione o fornecedor..."
+          />
+          <Input
+            label="Nota Fiscal"
+            placeholder="Número ou chave da NF"
+            value={entradaForm.nota_fiscal}
+            onChange={(e) => setEntradaForm({ ...entradaForm, nota_fiscal: e.target.value })}
+          />
+          <Input
+            label="Observação"
+            placeholder="Detalhes adicionais (opcional)"
+            value={entradaForm.observacao}
+            onChange={(e) => setEntradaForm({ ...entradaForm, observacao: e.target.value })}
+          />
+          {error && (
+            <div className="bg-red-500/10 border border-red-300 rounded-lg p-3">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            </div>
+          )}
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="secondary" onClick={() => { setModalEntrada(false); setError(null) }}>Cancelar</Button>
+            <Button onClick={salvarEntrada} disabled={submitting || !entradaForm.tanque_id || !entradaForm.quantidade_l || !entradaForm.preco_por_litro}>
+              {submitting ? 'Salvando...' : 'Registrar Entrada'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: Histórico do Tanque */}
+      <Modal
+        isOpen={!!modalHistorico}
+        onClose={() => setModalHistorico(null)}
+        title={modalHistorico ? `Histórico — ${modalHistorico.nome}` : 'Histórico'}
+        size="lg"
+      >
+        {modalHistorico && (() => {
+          const entradas = historicoMovs.filter((m) => m.tipo_movimentacao === 'entrada')
+          const saidas = historicoMovs.filter((m) => m.tipo_movimentacao === 'baixa')
+          const totalEntradasL = entradas.reduce((sum, m) => sum + Number(m.quantidade_l), 0)
+          const totalSaidasL = saidas.reduce((sum, m) => sum + Number(m.quantidade_l), 0)
+          const totalEntradasRS = entradas.reduce((sum, m) => sum + Number(m.valor_total || (Number(m.quantidade_l) * Number(m.preco_por_litro))), 0)
+          const totalSaidasRS = saidas.reduce((sum, m) => sum + Number(m.quantidade_l) * Number(m.preco_por_litro), 0)
+          const custoMedio = Number(modalHistorico.custo_medio_l)
+          const saldoAtual = Number(modalHistorico.saldo_atual_l)
+
+          return (
+            <div className="space-y-4">
+              {/* Métricas resumidas */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-surface-2 rounded-lg p-3">
+                  <p className="text-xs text-content-muted">Saldo Atual</p>
+                  <p className="text-lg font-bold text-content-strong">{saldoAtual.toLocaleString('pt-BR')} L</p>
+                </div>
+                <div className="bg-surface-2 rounded-lg p-3">
+                  <p className="text-xs text-content-muted">Custo Médio</p>
+                  <p className="text-lg font-bold text-content-strong">R$ {custoMedio.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}</p>
+                </div>
+                <div className="bg-green-500/10 rounded-lg p-3">
+                  <p className="text-xs text-green-500">Total Entradas</p>
+                  <p className="text-lg font-bold text-green-700 dark:text-green-300">{totalEntradasL.toLocaleString('pt-BR')} L</p>
+                  <p className="text-xs text-green-500">R$ {totalEntradasRS.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div className="bg-red-500/10 rounded-lg p-3">
+                  <p className="text-xs text-red-500">Total Saídas</p>
+                  <p className="text-lg font-bold text-red-700 dark:text-red-300">{totalSaidasL.toLocaleString('pt-BR')} L</p>
+                  <p className="text-xs text-red-500">R$ {totalSaidasRS.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div>
+                <h4 className="text-sm font-semibold text-content mb-2">Histórico</h4>
+                {historicoLoading ? (
+                  <div className="text-center py-8 text-content-muted">Carregando movimentações...</div>
+                ) : historicoMovs.length === 0 ? (
+                  <div className="text-center py-8 text-content-muted">Nenhuma movimentação registrada.</div>
+                ) : (
+                  <div className="max-h-96 overflow-y-auto space-y-2">
+                    {historicoMovs.map((mov) => {
+                      const isEntrada = mov.tipo_movimentacao === 'entrada'
+                      const valor = Number(mov.valor_total || (Number(mov.quantidade_l) * Number(mov.preco_por_litro)))
+                      const origemLabel: Record<string, string> = {
+                        estoque_inicial: 'Estoque Inicial',
+                        painel_entrada: 'Entrada via Site',
+                        pwa_entrada: 'Entrada via App',
+                        painel_baixa: 'Baixa via Site',
+                        pwa_baixa: 'Baixa via App',
+                        auto_baixa: 'Abastecimento',
+                        painel_ajuste: 'Ajuste via Site',
+                        manual: 'Manual',
+                      }
+                      return (
+                        <div
+                          key={mov.id}
+                          className={`flex items-start gap-3 rounded-lg border p-3 ${
+                            isEntrada ? 'border-green-500/30 bg-green-500/10' : 'border-red-500/30 bg-red-500/10'
+                          }`}
+                        >
+                          <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                            isEntrada ? 'bg-green-500/10 text-green-700 dark:text-green-300' : 'bg-red-500/10 text-red-700 dark:text-red-300'
+                          }`}>
+                            {isEntrada ? '↓' : '↑'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="text-sm font-semibold text-content-strong">
+                                  {isEntrada ? 'Entrada' : 'Saída'} — {Number(mov.quantidade_l).toLocaleString('pt-BR')} L
+                                </p>
+                                <p className="text-xs text-content-muted">
+                                  {(() => {
+                                    const maquina = mov.registro_abastecimento?.maquina_veiculo
+                                    const label = origemLabel[mov.origem] || mov.origem || '-'
+                                    return `${formatDate(mov.data)} · ${label}${maquina ? ` · ${maquina}` : ''}`
+                                  })()}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-content-strong">
+                                  R$ {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                                <p className="text-xs text-content-muted">
+                                  R$ {Number(mov.preco_por_litro).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/L
+                                </p>
+                              </div>
+                            </div>
+                            {(mov.fornecedor || mov.observacao) && (
+                              <p className="text-xs text-content-muted mt-1">
+                                {mov.fornecedor && `Fornecedor: ${mov.fornecedor}`}
+                                {mov.fornecedor && mov.observacao && ' · '}
+                                {mov.observacao}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button variant="secondary" onClick={() => setModalHistorico(null)}>Fechar</Button>
+              </div>
+            </div>
+          )
+        })()}
+      </Modal>
+
+      {/* Confirm: Excluir Tanque */}
+      <ConfirmModal
+        isOpen={!!modalExcluirTanque}
+        onClose={() => setModalExcluirTanque(null)}
+        onConfirm={excluirTanque}
+        title="Excluir Tanque"
+        message={
+          modalExcluirTanque
+            ? Number(modalExcluirTanque.saldo_atual_l) > 0
+              ? `Excluir "${modalExcluirTanque.nome}"? Este tanque possui ${Number(modalExcluirTanque.saldo_atual_l).toLocaleString('pt-BR')} L em saldo. O saldo sairá da contagem total do estoque. As movimentações históricas serão preservadas.`
+              : `Excluir "${modalExcluirTanque.nome}"? As movimentações históricas serão preservadas.`
+            : ''
+        }
+        confirmText="Excluir"
+        variant="danger"
+      />
+
+      {/* Modal: Ajustar Saldo */}
+      <Modal
+        isOpen={!!modalAjuste}
+        onClose={() => { setModalAjuste(null); setError(null) }}
+        title={modalAjuste ? `Ajustar Saldo — ${modalAjuste.nome}` : 'Ajustar Saldo'}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              <span className="font-bold">Saldo atual:</span> {modalAjuste ? Number(modalAjuste.saldo_atual_l).toLocaleString('pt-BR') : '0'} L
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+              O ajuste define o saldo absoluto do tanque (usado em inventário físico). O custo médio não é alterado.
+            </p>
+          </div>
+          <Input
+            label="Novo Saldo (L)"
+            type="number"
+            placeholder="Ex: 1850"
+            value={ajusteForm.novo_saldo_l}
+            onChange={(e) => setAjusteForm({ ...ajusteForm, novo_saldo_l: e.target.value })}
+            required
+          />
+          <Input
+            label="Custo Médio (R$/L) — opcional"
+            type="number"
+            placeholder="Ex: 6.50"
+            value={ajusteForm.custo_medio_l}
+            onChange={(e) => setAjusteForm({ ...ajusteForm, custo_medio_l: e.target.value })}
+          />
+          <p className="text-xs text-content-muted">Use para corrigir o custo médio quando o saldo inicial foi registrado sem preço. Se vazio, o custo médio atual é mantido.</p>
+          <Input
+            label="Motivo do Ajuste"
+            placeholder="Ex: Inventario fisico, evaporacao, correcao"
+            value={ajusteForm.observacao}
+            onChange={(e) => setAjusteForm({ ...ajusteForm, observacao: e.target.value })}
+          />
+          {error && (
+            <div className="bg-red-500/10 border border-red-300 rounded-lg p-3">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            </div>
+          )}
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="secondary" onClick={() => { setModalAjuste(null); setError(null) }}>Cancelar</Button>
+            <Button onClick={salvarAjuste} disabled={submitting || !ajusteForm.novo_saldo_l}>
+              {submitting ? 'Salvando...' : 'Ajustar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Lixeira: Tanques Excluídos */}
+      {tanquesExcluidos.length > 0 && (
+        <div>
+          <button
+            onClick={() => setMostrarLixeira(!mostrarLixeira)}
+            className="flex items-center gap-2 text-sm font-semibold text-content-muted hover:text-content transition-colors"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className={`w-4 h-4 text-content-faint transition-transform ${mostrarLixeira ? 'rotate-90' : ''}`}
+            >
+              <path
+                fillRule="evenodd"
+                d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Tanques Excluídos ({tanquesExcluidos.length})
+          </button>
+          {mostrarLixeira && (
+            <div className="mt-3 space-y-2">
+              {tanquesExcluidos.map((tanque) => (
+                <Card key={tanque.id} className="bg-surface-2 p-3 sm:p-4 border border-border-base" disableHover>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-content-muted">{tanque.nome}</p>
+                      <p className="text-xs text-content-faint">
+                        {tanque.tipo_combustivel} · Saldo final: {Number(tanque.saldo_atual_l).toLocaleString('pt-BR')} L
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => abrirModalHistorico(tanque)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-border-base bg-surface-1 px-2.5 py-1 text-xs font-semibold text-content-muted transition-colors hover:bg-surface-2"
+                        title="Ver histórico"
+                      >
+                        Histórico
+                      </button>
+                      <button
+                        onClick={() => restaurarTanque(tanque)}
+                        disabled={submitting}
+                        className="inline-flex items-center gap-1 rounded-lg border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-xs font-semibold text-green-700 dark:text-green-300 transition-colors hover:bg-green-500/10 disabled:opacity-50"
+                        title="Restaurar tanque"
+                      >
+                        Restaurar
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
