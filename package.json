@@ -5,9 +5,10 @@
   "packageManager": "pnpm@12.6.0",
   "scripts": {
     "dev": "pnpm --filter manejus dev",
-    "build": "pnpm --filter manejus build",
-    "lint": "pnpm --filter manejus lint",
-    "test": "pnpm --filter manejus test",
-    "typecheck": "pnpm --filter manejus exec tsc --noEmit"
+    "dev:vision": "pnpm --filter vision dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck"
   }
 }
