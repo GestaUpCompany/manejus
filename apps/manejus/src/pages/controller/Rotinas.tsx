@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
 import {
   Button,
   Card,
@@ -9,7 +9,7 @@ import {
   ConfirmModal,
   MultiSelect,
   useToast,
-} from '../../components/ui'
+} from '@gestaup/ui'
 import {
   ChecklistRegra,
   ChecklistRegraTipo,
@@ -21,7 +21,7 @@ import {
 import { getRotinas, createRotina, updateRotina, deleteRotina } from '../../services/rotinasService'
 import { CADERNETAS } from '../../utils/cadernetas'
 import { Rotina, rotinaEstaAtivaHoje, getRotinasDoDia } from '../../utils/rotinas'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { getFazendaIdForUser } from '@gestaup/shared'
 
 const CHECKLIST_CADERNETAS = ['bebedouros', 'suplementacao', 'rodeio', 'pastagens']
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { Card } from '../../components/ui'
+import { useAuth } from '@gestaup/shared'
+import { Card } from '@gestaup/ui'
 
 export function Login() {
   const { signIn } = useAuth()

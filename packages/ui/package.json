@@ -1,0 +1,21 @@
+{
+  "name": "@gestaup/ui",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@gestaup/shared": "workspace:*",
+    "@gestaup/supabase": "workspace:*",
+    "@supabase/supabase-js": "^2.45.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22"
+  }
+}

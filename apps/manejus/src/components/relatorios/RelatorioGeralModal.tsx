@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Modal, useToast } from '../ui'
+import { Modal, useToast } from '@gestaup/ui'
 import { RelatorioCapaGallery } from './RelatorioCapaGallery'
 import { RELATORIOS_GERAIS, type TipoRelatorioGeral } from '../../features/relatorioGeral/catalogo'
 import { agruparBoletim, listarLocaisBoletim, normalizarPlanilhaBoletim, type DadosPDFBoletimRebanho, type ResultadoNormalizacaoBoletim } from '../../features/relatorioGeral/boletimRebanho'

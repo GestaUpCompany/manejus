@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, NumericInput, Modal, useToast } from '../../components/ui'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, NumericInput, Modal, useToast } from '@gestaup/ui'
 import {
   calculateCompletenessScore,
   getSyncStatusFromScore,
@@ -16,8 +16,8 @@ import {
   getIdentificationLabel,
   type IdentificationField,
 } from '../../utils/checkDuplicateIdentification'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { useLotes } from '../../hooks/useFazendaQueries'
+import { getFazendaIdForUser } from '@gestaup/shared'
+import { useLotes } from '@gestaup/shared'
 
 interface SelectOption {
   id: string

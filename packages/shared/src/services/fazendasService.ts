@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { supabase } from '@gestaup/supabase'
 import { signUp } from './authService'
 import type { PostgrestError } from '@supabase/supabase-js'
 

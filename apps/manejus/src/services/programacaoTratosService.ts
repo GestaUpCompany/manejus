@@ -1,5 +1,5 @@
-import { supabase } from './supabaseClient'
-import { toFarmDateOnly } from '../utils/formatDate'
+import { supabase } from '@gestaup/supabase'
+import { toFarmDateOnly } from '@gestaup/shared'
 
 export type TipoProgramacao = 'confinamento' | 'sequestro' | 'tip'
 

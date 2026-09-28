@@ -1,5 +1,5 @@
-import { supabase } from './supabaseClient'
-import { comprimirDocumento } from '../utils/comprimirDocumento'
+import { supabase } from '@gestaup/supabase'
+import { comprimirDocumento } from '@gestaup/shared'
 
 const BUCKET = 'documentos-os'
 const SIGNED_URL_TTL = 3600

@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Card, Modal, Input, useToast } from '../../components/ui'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Card, Modal, Input, useToast } from '@gestaup/ui'
+import { getFazendaIdForUser } from '@gestaup/shared'
 import {
   getMonitoramentoData,
   getPrioridades,

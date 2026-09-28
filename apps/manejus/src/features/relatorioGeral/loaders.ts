@@ -1,4 +1,4 @@
-import { supabase } from '../../services/supabaseClient'
+import { supabase } from '@gestaup/supabase'
 import type { DadosPDFRelatorioAbastecimento } from '../../utils/relatorioAbastecimentoPDF'
 import type { DadosPDFBebedouros } from '../../utils/relatorioBebedourosPDF'
 import type { LoteRelatorio } from '../../utils/relatorioConsumoPDF'

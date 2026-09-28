@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { supabase } from '@gestaup/supabase'
 
 export type ChecklistRegraTipo = 'periodo' | 'excecao'
 

@@ -1,5 +1,5 @@
 // Modal: associar geometria desenhada a pasto (polígono) ou bebedouro (ponto)
-import { Button, Modal, Select } from '../../../components/ui'
+import { Button, Modal, Select } from '@gestaup/ui'
 import type { BebedouroMapa } from '../mapaFazenda/types'
 
 interface PastoDetectado {

@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { supabase } from '@gestaup/supabase'
 import { normalizarImagemCapa, sanitizarNomeImagem } from '../features/relatorioGeral/imagens'
 
 const BUCKET = 'relatorios-gerais'

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getFazendas, Fazenda } from '../../services/fazendasService'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card } from '../../components/ui'
+import { getFazendas, Fazenda } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card } from '@gestaup/ui'
 
 interface CadastroStats {
   pastos: number

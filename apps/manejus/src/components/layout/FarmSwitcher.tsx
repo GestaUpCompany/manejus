@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../services/supabaseClient'
-import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '@gestaup/supabase'
+import { useAuth } from '@gestaup/shared'
 import { useFazenda } from '../../hooks/useDashboardQueries'
-import { setSelectedFazendaId, SELECTED_FAZENDA_STORAGE_KEY } from '../../utils/fazendaContext'
-import { Modal } from '../ui'
+import { setSelectedFazendaId, SELECTED_FAZENDA_STORAGE_KEY } from '@gestaup/shared'
+import { Modal } from '@gestaup/ui'
 
 interface FazendaSimplificada {
   id: string

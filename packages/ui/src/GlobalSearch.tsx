@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { getFazendaIdForUser } from '@gestaup/shared'
 
 interface SearchResult {
   id: string

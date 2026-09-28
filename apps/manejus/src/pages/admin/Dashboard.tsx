@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getFazendas, Fazenda } from '../../services/fazendasService'
+import { getFazendas, Fazenda } from '@gestaup/shared'
 import { getAdminStats, AdminStats, getAdminEvolutionData, EvolutionData } from '../../services/adminStatsService'
-import { Button, Card } from '../../components/ui'
+import { Button, Card } from '@gestaup/ui'
 
 const statCards = [
   {

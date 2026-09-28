@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton } from '../../components/ui'
-import { exportToXLSX } from '../../utils/exportXLSX'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, Input, CardSkeleton } from '@gestaup/ui'
+import { exportToXLSX } from '@gestaup/shared'
 import { PROBLEMAS_EXPORT_CONFIG } from '../../utils/exportConfigs'
-import { formatDate } from '../../utils/formatDate'
-import { getFazendaIdForUser, getFazendaNome } from '../../utils/fazendaContext'
+import { formatDate } from '@gestaup/shared'
+import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
 
 interface RegistroProblemas {
   id: string

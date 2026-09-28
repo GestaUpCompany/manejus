@@ -8,8 +8,8 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
-import { AuthProvider } from './contexts/AuthContext.tsx'
-import { ToastProvider } from './components/ui/Toast.tsx'
+import { AuthProvider } from '@gestaup/shared'
+import { ToastProvider } from '@gestaup/ui'
 import './index.css'
 
 // Preconnect ao Supabase para eliminar DNS+TLS latency na primeira chamada de API

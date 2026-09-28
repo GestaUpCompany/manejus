@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { Card, Button } from '../../components/ui'
-import { supabase } from '../../services/supabaseClient'
+import { useAuth } from '@gestaup/shared'
+import { Card, Button } from '@gestaup/ui'
+import { supabase } from '@gestaup/supabase'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { getFazendaIdForUser } from '@gestaup/shared'
 
 interface RegistroMorte {
   id: string

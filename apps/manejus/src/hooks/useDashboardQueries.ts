@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../services/supabaseClient'
-import { getFazendaIdForUser } from '../utils/fazendaContext'
-import { formatDateTime } from '../utils/formatDate'
+import { supabase } from '@gestaup/supabase'
+import { getFazendaIdForUser } from '@gestaup/shared'
+import { formatDateTime } from '@gestaup/shared'
 
 async function getFazendaId(userId: string): Promise<string | null> {
   return getFazendaIdForUser(userId)

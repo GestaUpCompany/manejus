@@ -1,5 +1,5 @@
 // Side panel: detalhes da fábrica
-import { Button, Card } from '../../../components/ui'
+import { Button, Card } from '@gestaup/ui'
 import type { PontoMapa } from '../mapaFazenda/types'
 
 interface Props {

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, ConfirmModal, MultiSelect, EmptyState, PageSkeleton, useToast } from '../../components/ui'
-import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, Input, ConfirmModal, MultiSelect, EmptyState, PageSkeleton, useToast } from '@gestaup/ui'
+import { useKeyboardShortcuts } from '@gestaup/shared'
 import type * as XLSXType from 'xlsx'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { getFazendaIdForUser } from '@gestaup/shared'
 
 interface Pasto {
   id: string

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '../../services/supabaseClient'
-import { Card, DatePresets, Pagination } from '../../components/ui'
+import { supabase } from '@gestaup/supabase'
+import { Card, DatePresets, Pagination } from '@gestaup/ui'
 
 interface AuditEntry {
   id: number

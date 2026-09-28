@@ -1,6 +1,6 @@
-import { supabase } from './supabaseClient'
+import { supabase } from '@gestaup/supabase'
 import type { TipoProgramacao } from './programacaoTratosService'
-import { getDayBoundsInTimezone, toFarmDateOnly } from '../utils/formatDate'
+import { getDayBoundsInTimezone, toFarmDateOnly } from '@gestaup/shared'
 
 export interface PlanejadoLote {
   lote_id: string

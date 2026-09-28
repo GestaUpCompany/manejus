@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { getGruposWithFazendas, createGrupo, updateGrupo, deleteGrupo, setFazendasDoGrupo, GrupoWithFazendas } from '../../services/gruposService'
-import { getFazendas, Fazenda } from '../../services/fazendasService'
-import { Button, Card, Input, Modal, ConfirmModal, MultiSelect } from '../../components/ui'
+import { getGruposWithFazendas, createGrupo, updateGrupo, deleteGrupo, setFazendasDoGrupo, GrupoWithFazendas } from '@gestaup/shared'
+import { getFazendas, Fazenda } from '@gestaup/shared'
+import { Button, Card, Input, Modal, ConfirmModal, MultiSelect } from '@gestaup/ui'
 
 export function GruposList() {
   const [grupos, setGrupos] = useState<GrupoWithFazendas[]>([])

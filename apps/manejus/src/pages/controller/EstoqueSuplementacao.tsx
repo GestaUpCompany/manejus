@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, Select, Modal, CardSkeleton, EmptyState } from '../../components/ui'
-import { getFazendaIdForUser, getFazendaNome } from '../../utils/fazendaContext'
-import { formatDate } from '../../utils/formatDate'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, Input, Select, Modal, CardSkeleton, EmptyState } from '@gestaup/ui'
+import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
+import { formatDate } from '@gestaup/shared'
 
 interface InsumoItem {
   id: string

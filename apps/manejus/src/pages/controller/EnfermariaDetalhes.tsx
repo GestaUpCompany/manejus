@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '../../components/ui'
-import { formatDate } from '../../utils/formatDate'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '@gestaup/ui'
+import { formatDate } from '@gestaup/shared'
+import { getFazendaIdForUser } from '@gestaup/shared'
 
 interface RegistroEnfermaria {
   id: string

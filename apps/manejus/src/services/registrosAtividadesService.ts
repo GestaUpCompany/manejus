@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { supabase } from '@gestaup/supabase'
 
 export type PeriodoAtividade = 'day' | 'week' | 'month'
 

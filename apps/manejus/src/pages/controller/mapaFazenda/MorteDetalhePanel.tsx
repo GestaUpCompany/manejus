@@ -1,5 +1,5 @@
 // Side panel: detalhes da morte (ponto no mapa com coordenadas GPS)
-import { Card } from '../../../components/ui'
+import { Card } from '@gestaup/ui'
 
 interface MorteDetalhe {
   id: string

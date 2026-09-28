@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { User, signIn, signUp, signOut, getCurrentUser, updateUltimoAcesso } from '../services/authService'
-import { supabase, setAuditContext } from '../services/supabaseClient'
+import { supabase, setAuditContext } from '@gestaup/supabase'
 
 // BYPASS TEMPORÁRIO PARA TESTE NA BRANCH
 // Detecta se está apontado para a branch de teste e injeta usuário mock

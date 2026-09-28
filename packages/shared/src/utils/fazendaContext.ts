@@ -1,4 +1,4 @@
-import { supabase } from '../services/supabaseClient'
+import { supabase } from '@gestaup/supabase'
 
 const SELECTED_FAZENDA_KEY = 'selectedFazendaId'
 export const SELECTED_FAZENDA_STORAGE_KEY = SELECTED_FAZENDA_KEY

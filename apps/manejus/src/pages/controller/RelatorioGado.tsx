@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { Card, Button, Input } from '../../components/ui'
-import { supabase } from '../../services/supabaseClient'
+import { useAuth } from '@gestaup/shared'
+import { Card, Button, Input } from '@gestaup/ui'
+import { supabase } from '@gestaup/supabase'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { getFazendaIdForUser } from '@gestaup/shared'
 
 interface Lote {
   id: string

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, CardSkeleton, Input, Select } from '../../components/ui'
-import { getFazendaIdForUser, getFazendaNome } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, CardSkeleton, Input, Select } from '@gestaup/ui'
+import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
 
 interface Item {
   id: string

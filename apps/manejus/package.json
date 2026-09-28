@@ -12,6 +12,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@gestaup/shared": "workspace:*",
+    "@gestaup/supabase": "workspace:*",
+    "@gestaup/ui": "workspace:*",
     "@placemarkio/tokml": "^0.3.9",
     "@react-pdf/renderer": "^4.9.0",
     "@sparticuz/chromium": "^152.0.0",

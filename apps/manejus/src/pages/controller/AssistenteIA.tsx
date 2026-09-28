@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '@gestaup/shared'
 import { useFazenda } from '../../hooks/useDashboardQueries'
-import { Card, Button } from '../../components/ui'
+import { Card, Button } from '@gestaup/ui'
 import { enviarPerguntaIA, ChatResposta } from '../../services/chatIAService'
-import { supabase } from '../../services/supabaseClient'
+import { supabase } from '@gestaup/supabase'
 
 interface Mensagem {
   id: string

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Card, CardSkeleton } from '../../components/ui'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { useLotes, usePastos } from '../../hooks/useFazendaQueries'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Card, CardSkeleton } from '@gestaup/ui'
+import { getFazendaIdForUser } from '@gestaup/shared'
+import { useLotes, usePastos } from '@gestaup/shared'
 
 interface HistoricoItem {
   historico_id: string

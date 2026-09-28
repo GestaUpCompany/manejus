@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { supabase } from '@gestaup/supabase'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 

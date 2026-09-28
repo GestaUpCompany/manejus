@@ -1,7 +1,7 @@
 // Tela de revisão pós-importação KML/KMZ: usuário confirma/corrige os matches
 // sugeridos entre polígonos do arquivo e pastos cadastrados antes de salvar.
 import { useMemo, useState } from 'react'
-import { Button, Modal } from '../../../components/ui'
+import { Button, Modal } from '@gestaup/ui'
 import { linhasEmConflito } from './nomeMatch'
 import type { MatchRow, MatchStatus, PastoCandidato } from './nomeMatch'
 import { normalizarNome } from './nomeMatch'

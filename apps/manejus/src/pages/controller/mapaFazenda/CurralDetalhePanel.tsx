@@ -1,5 +1,5 @@
 // Side panel: detalhes do curral
-import { Button, Card } from '../../../components/ui'
+import { Button, Card } from '@gestaup/ui'
 import type { CurralDetalhe } from '../mapaFazenda/types'
 
 interface Props {

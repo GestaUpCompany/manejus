@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Card, Button } from '../../components/ui'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
+import { Card, Button } from '@gestaup/ui'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
 
 // ---------------------------------------------------------------------------
 // Tipos

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button, Input, NumericInput, Modal } from '../ui'
+import { Button, Input, NumericInput, Modal } from '@gestaup/ui'
 
 interface Formulacao {
   id: string

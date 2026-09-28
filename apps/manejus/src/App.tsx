@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useAuth } from './contexts/AuthContext'
+import { useAuth } from '@gestaup/shared'
 import { AdminLayout } from './components/layout/AdminLayout'
 import { ControllerLayout } from './components/layout/ControllerLayout'
 import { SuperAdminLayout } from './components/layout/SuperAdminLayout'
@@ -8,7 +8,7 @@ import { AdminRoute } from './components/routes/AdminRoute'
 import { ControllerRoute } from './components/routes/ControllerRoute'
 import { ConfinamentoRoute } from './components/routes/ConfinamentoRoute'
 import { SuperAdminRoute } from './components/routes/SuperAdminRoute'
-import { PageSkeleton } from './components/ui/PageSkeleton'
+import { PageSkeleton } from '@gestaup/ui'
 
 // Helper para lazy-load de exports nomeados
 const laz = <T extends Record<string, unknown>, K extends keyof T>(

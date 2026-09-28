@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, Select, CardSkeleton } from '../../components/ui'
-import { formatDate } from '../../utils/formatDate'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, Input, Select, CardSkeleton } from '@gestaup/ui'
+import { formatDate } from '@gestaup/shared'
+import { getFazendaIdForUser } from '@gestaup/shared'
 
 export interface OrdemServico {
   id: string

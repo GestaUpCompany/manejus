@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getUsuarios, Usuario } from '../../services/usuariosService'
-import { Button, Card } from '../../components/ui'
+import { getUsuarios, Usuario } from '@gestaup/shared'
+import { Button, Card } from '@gestaup/ui'
 
 const ONLINE_THRESHOLD_MINUTES = 5
 

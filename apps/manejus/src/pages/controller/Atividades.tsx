@@ -1,11 +1,11 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, Modal, MultiSelect, useToast } from '../../components/ui'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, Modal, MultiSelect, useToast } from '@gestaup/ui'
 import { AtividadeCard } from '../../components/atividades/AtividadeCard'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { usePastos, useCurrais } from '../../hooks/useFazendaQueries'
+import { getFazendaIdForUser } from '@gestaup/shared'
+import { usePastos, useCurrais } from '@gestaup/shared'
 import {
   getAtividades,
   createAtividade,

@@ -1,4 +1,4 @@
-import { supabase } from '../services/supabaseClient'
+import { supabase } from '@gestaup/supabase'
 
 export type IdentificationField = 'id_brinco' | 'id_chip' | 'id_manejo'
 

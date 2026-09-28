@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { supabase } from '@gestaup/supabase'
 
 const BUCKET = 'relatorios-gerais'
 const MAX_FILE_BYTES = 10 * 1024 * 1024

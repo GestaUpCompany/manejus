@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '@gestaup/shared'
 import { useFazenda } from '../../hooks/useDashboardQueries'
 
 interface ConfinamentoRouteProps {

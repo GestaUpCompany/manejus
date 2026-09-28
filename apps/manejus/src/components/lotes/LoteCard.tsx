@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { CardItem, Button } from '../ui'
+import { CardItem, Button } from '@gestaup/ui'
 import { usaCurral } from '../../utils/lotes'
 
 interface LoteCategoria {

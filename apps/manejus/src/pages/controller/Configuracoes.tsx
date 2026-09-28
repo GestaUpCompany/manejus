@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '@gestaup/shared'
 import { useFazenda } from '../../hooks/useDashboardQueries'
-import { updateFazenda } from '../../services/fazendasService'
+import { updateFazenda } from '@gestaup/shared'
 import { uploadLogo, deleteLogo } from '../../services/storageService'
-import { Card } from '../../components/ui'
+import { Card } from '@gestaup/ui'
 
 export function Configuracoes() {
   const { user } = useAuth()

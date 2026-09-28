@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { Card, CardSkeleton } from '../../components/ui'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { Card, CardSkeleton } from '@gestaup/ui'
+import { getFazendaIdForUser } from '@gestaup/shared'
 import {
   getRastreioUsuarios,
   getRastreioCadernetas,

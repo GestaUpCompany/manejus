@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import { supabase } from '../../services/supabaseClient'
+import { supabase } from '@gestaup/supabase'
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import logoManejus from '/images/manejus360.png'
 import { gerarRelatorioAbastecimentoPDFPuppeteer } from '../../utils/relatorioAbastecimentoPDFPuppeteer'

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createFazendaWithController } from '../../services/fazendasService'
-import { getGrupos, GrupoFazenda } from '../../services/gruposService'
+import { createFazendaWithController } from '@gestaup/shared'
+import { getGrupos, GrupoFazenda } from '@gestaup/shared'
 import { uploadLogo } from '../../services/storageService'
-import { Button, Input, Card } from '../../components/ui'
+import { Button, Input, Card } from '@gestaup/ui'
 
 export function NovaFazenda() {
   const navigate = useNavigate()

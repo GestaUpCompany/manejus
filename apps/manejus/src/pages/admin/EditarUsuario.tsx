@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getUsuarioById, updateUsuario } from '../../services/usuariosService'
-import { changeUserPassword } from '../../services/authService'
-import { getFazendas, Fazenda } from '../../services/fazendasService'
-import { getFazendasDoUsuario, vincularFazendaAoUsuario, desvincularFazendaDoUsuario } from '../../services/usuarioFazendaService'
-import { Button, Input, Card } from '../../components/ui'
+import { getUsuarioById, updateUsuario } from '@gestaup/shared'
+import { changeUserPassword } from '@gestaup/shared'
+import { getFazendas, Fazenda } from '@gestaup/shared'
+import { getFazendasDoUsuario, vincularFazendaAoUsuario, desvincularFazendaDoUsuario } from '@gestaup/shared'
+import { Button, Input, Card } from '@gestaup/ui'
 
 export function EditarUsuario() {
   const navigate = useNavigate()

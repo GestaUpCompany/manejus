@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Modal } from '../ui/Modal'
-import { Button } from '../ui'
-import { supabase } from '../../services/supabaseClient'
+import { Modal } from '@gestaup/ui'
+import { Button } from '@gestaup/ui'
+import { supabase } from '@gestaup/supabase'
 import { usaCurral } from '../../utils/lotes'
 
 interface CategoriaSnapshot {

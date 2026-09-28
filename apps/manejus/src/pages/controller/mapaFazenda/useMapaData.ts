@@ -1,7 +1,7 @@
 // Hook: carregamento de dados do mapa e derivacao de GeoJSON sources
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { supabase } from '../../../services/supabaseClient'
-import { getFazendaIdForUser } from '../../../utils/fazendaContext'
+import { supabase } from '@gestaup/supabase'
+import { getFazendaIdForUser } from '@gestaup/shared'
 import { calcularMelhorLabel } from './geometriaUtils'
 import { corPonto } from './mapaConfig'
 import type { PastoMapa, BebedouroMapa, EstradaMapa, PontoMapa, CurralMapa, AreaMapa } from './types'

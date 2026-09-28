@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo, useCallback, useRef, Fragment } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, CardSkeleton, Input } from '../../components/ui'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { formatDate } from '../../utils/formatDate'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, CardSkeleton, Input } from '@gestaup/ui'
+import { getFazendaIdForUser } from '@gestaup/shared'
+import { formatDate } from '@gestaup/shared'
 import {
   fetchPlanejadoPorLote,
   fetchRealPorLoteDia,

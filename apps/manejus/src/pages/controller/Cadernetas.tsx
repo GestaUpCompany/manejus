@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Button, useToast } from '../../components/ui'
+import { Card, Button, useToast } from '@gestaup/ui'
 import { CADERNETA_IMAGES, CADERNETA_TITLES, CADERNETA_DESCRIPTIONS } from '../../types/images'
-import { useAuth } from '../../contexts/AuthContext'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { getFazendaIdForUser } from '@gestaup/shared'
 import { exportAllCadernetas } from '../../utils/exportAllCadernetas'
 
 export function Cadernetas() {

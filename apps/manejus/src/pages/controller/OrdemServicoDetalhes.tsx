@@ -1,20 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
 import {
   Button, Card, Input, Select, Modal, ConfirmModal, useToast,
   DetailLayout, DetailSection, DetailField, formatValue,
-} from '../../components/ui'
-import { formatDate, formatDateTime } from '../../utils/formatDate'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+} from '@gestaup/ui'
+import { formatDate, formatDateTime } from '@gestaup/shared'
+import { getFazendaIdForUser } from '@gestaup/shared'
 import { STATUS_OS, TIPO_OS, TIPO_VENDA, type OrdemServico } from './OrdensServico'
 import {
   listarDocumentosOs, uploadDocumentoOs, excluirDocumentoOs,
   type OsDocumentoComUrl, type TipoDocumentoOs,
 } from '../../services/osDocumentosService'
-import { validarDocumento } from '../../utils/comprimirDocumento'
-import { parseValorBR } from '../../utils/parseValorBR'
+import { validarDocumento } from '@gestaup/shared'
+import { parseValorBR } from '@gestaup/shared'
 
 interface MovimentacaoOs {
   id: string

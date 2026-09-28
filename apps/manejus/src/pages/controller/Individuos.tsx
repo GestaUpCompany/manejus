@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, Select, Pagination } from '../../components/ui'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { useLotes, usePastos } from '../../hooks/useFazendaQueries'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, Input, CardSkeleton, Select, Pagination } from '@gestaup/ui'
+import { getFazendaIdForUser } from '@gestaup/shared'
+import { useLotes, usePastos } from '@gestaup/shared'
 
 interface Individuo {
   id: string

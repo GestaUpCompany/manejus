@@ -1,4 +1,4 @@
-import { TableExportConfig } from './exportXLSX'
+import { TableExportConfig } from '@gestaup/shared'
 
 export const MATERNIDADE_EXPORT_CONFIG: TableExportConfig = {
   tableName: 'registros_maternidade',

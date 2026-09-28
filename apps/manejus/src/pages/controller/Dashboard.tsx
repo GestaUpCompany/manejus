@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { Card, Button, ErrorState, PageSkeleton } from '../../components/ui'
+import { useAuth } from '@gestaup/shared'
+import { Card, Button, ErrorState, PageSkeleton } from '@gestaup/ui'
 import { CADERNETA_IMAGES, CADERNETA_TITLES } from '../../types/images'
 import { useFazenda, useDashboardStats, useGadoStats, useRecentActivities, useFormulacoesBackfillAlert } from '../../hooks/useDashboardQueries'
 

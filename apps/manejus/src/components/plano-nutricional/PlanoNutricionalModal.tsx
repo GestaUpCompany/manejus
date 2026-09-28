@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Input, NumericInput, ConfirmModal, Modal } from '../ui'
+import { supabase } from '@gestaup/supabase'
+import { Button, Input, NumericInput, ConfirmModal, Modal } from '@gestaup/ui'
 
 interface Formulacao {
   id: string

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { Dropdown, GlobalSearch, Notifications, ThemeToggle } from '../ui'
+import { useAuth } from '@gestaup/shared'
+import { Dropdown, GlobalSearch, Notifications, ThemeToggle } from '@gestaup/ui'
 
 export function Header() {
   const { user, signOut } = useAuth()

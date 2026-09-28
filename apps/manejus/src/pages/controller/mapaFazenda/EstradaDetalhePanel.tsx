@@ -1,5 +1,5 @@
 // Side panel: detalhes da estrada
-import { Button, Card } from '../../../components/ui'
+import { Button, Card } from '@gestaup/ui'
 import type { EstradaMapa } from '../mapaFazenda/types'
 import { calcularComprimentoEstrada } from '../mapaFazenda/geometriaUtils'
 

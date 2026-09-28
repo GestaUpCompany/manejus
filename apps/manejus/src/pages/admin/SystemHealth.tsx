@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '../../services/supabaseClient'
-import { Card } from '../../components/ui'
+import { supabase } from '@gestaup/supabase'
+import { Card } from '@gestaup/ui'
 
 interface SystemHealth {
   postgres: {

@@ -1,8 +1,8 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { Button, Card, Input } from '../../components/ui'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { Button, Card, Input } from '@gestaup/ui'
+import { getFazendaIdForUser } from '@gestaup/shared'
 import { useFazenda } from '../../hooks/useDashboardQueries'
 import {
   carregarLancamentoTratos,
@@ -13,7 +13,7 @@ import {
   type LancamentoTratosData,
 } from '../../services/lancamentoTratosService'
 import type { TipoProgramacao } from '../../services/programacaoTratosService'
-import { toFarmDateOnly } from '../../utils/formatDate'
+import { toFarmDateOnly } from '@gestaup/shared'
 
 const TIPOS: { value: TipoProgramacao; label: string }[] = [
   { value: 'confinamento', label: 'Confinamento' },

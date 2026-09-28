@@ -2,7 +2,7 @@
 // marcadas viram features importadas e entram na revisão de matches.
 // As demais são descartadas antes de pesar a camada do mapa e o DOM.
 import { useEffect, useMemo, useState } from 'react'
-import { Button, Modal } from '../../../components/ui'
+import { Button, Modal } from '@gestaup/ui'
 import type { FeatureImportadaItem } from './importKml'
 
 interface Props {

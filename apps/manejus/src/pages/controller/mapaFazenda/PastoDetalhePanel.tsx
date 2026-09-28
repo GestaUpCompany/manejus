@@ -1,6 +1,6 @@
 // Side panel: detalhes do pasto
 import { useNavigate } from 'react-router-dom'
-import { Button, Card } from '../../../components/ui'
+import { Button, Card } from '@gestaup/ui'
 import type { PastoDetalhe } from '../mapaFazenda/types'
 
 interface Props {

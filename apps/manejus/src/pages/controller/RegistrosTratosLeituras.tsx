@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
 import {
   Button, Card, CardSkeleton, Input, Select, Modal, ConfirmModal,
   Pagination, SearchInput, useToast,
-} from '../../components/ui'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { formatDate, formatDateTime, toFarmDateOnly, FARM_TIMEZONE } from '../../utils/formatDate'
+} from '@gestaup/ui'
+import { getFazendaIdForUser } from '@gestaup/shared'
+import { formatDate, formatDateTime, toFarmDateOnly, FARM_TIMEZONE } from '@gestaup/shared'
 
 type Aba = 'tratos' | 'leituras'
 

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { useToast, PageSkeleton, ConfirmModal } from '../../components/ui'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { getFazendaIdForUser } from '@gestaup/shared'
+import { useToast, PageSkeleton, ConfirmModal } from '@gestaup/ui'
 import { RelatorioGeralModal } from '../../components/relatorios/RelatorioGeralModal'
 
 interface RelatorioPublico {

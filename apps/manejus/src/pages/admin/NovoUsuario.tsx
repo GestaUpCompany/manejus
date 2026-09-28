@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { signUp } from '../../services/authService'
-import { getFazendas, Fazenda } from '../../services/fazendasService'
-import { vincularFazendaAoUsuario } from '../../services/usuarioFazendaService'
-import { Button, Input, Card } from '../../components/ui'
+import { signUp } from '@gestaup/shared'
+import { getFazendas, Fazenda } from '@gestaup/shared'
+import { vincularFazendaAoUsuario } from '@gestaup/shared'
+import { Button, Input, Card } from '@gestaup/ui'
 
 export function NovoUsuario() {
   const navigate = useNavigate()

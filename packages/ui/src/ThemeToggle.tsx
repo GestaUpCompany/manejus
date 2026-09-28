@@ -1,4 +1,4 @@
-import { useTheme } from '../../hooks/useTheme'
+import { useTheme } from '@gestaup/shared'
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme()

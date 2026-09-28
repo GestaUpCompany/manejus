@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Input, Modal } from '../ui'
+import { supabase } from '@gestaup/supabase'
+import { Button, Input, Modal } from '@gestaup/ui'
 
 interface Personalizacao {
   id: string

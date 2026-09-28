@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Card } from '../ui'
+import { Card } from '@gestaup/ui'
 import { Atividade } from '../../services/atividadesService'
 
 const PRIORIDADE_CORES: Record<number, string> = {

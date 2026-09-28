@@ -1,6 +1,6 @@
 import { useRef, useEffect, ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '@gestaup/shared'
 
 export interface SidebarItem {
   label: string

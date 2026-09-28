@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ConfirmModal } from '../ui'
+import { ConfirmModal } from '@gestaup/ui'
 import { excluirImagemCapa, enviarImagemCapa, listarImagensCapa, type ImagemCapa } from '../../services/relatorioCapasService'
 
 interface Props {

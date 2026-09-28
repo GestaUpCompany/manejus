@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { supabase } from '@gestaup/supabase'
 import { Rotina } from '../utils/rotinas'
 
 export type { Rotina }

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { supabase } from '../../services/supabaseClient'
+import { supabase } from '@gestaup/supabase'
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import logoManejus from '/images/manejus360.png'
 import { gerarRelatorioClimaPDFPuppeteer } from '../../utils/relatorioClimaPDFPuppeteer'

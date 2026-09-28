@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '@gestaup/ui'
+import { getFazendaIdForUser } from '@gestaup/shared'
 
 interface ModuloPasto {
   id: string

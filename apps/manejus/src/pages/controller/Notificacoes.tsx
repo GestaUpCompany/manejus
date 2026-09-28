@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, CardSkeleton, ConfirmModal, LoadMore } from '../../components/ui'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, CardSkeleton, ConfirmModal, LoadMore } from '@gestaup/ui'
+import { getFazendaIdForUser } from '@gestaup/shared'
 
 interface Notificacao {
   id: string

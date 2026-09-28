@@ -1,5 +1,5 @@
 // Side panel: metricas agregadas de mortes selecionadas por area
-import { Card } from '../../../components/ui'
+import { Card } from '@gestaup/ui'
 
 interface MorteSelecionada {
   id: string

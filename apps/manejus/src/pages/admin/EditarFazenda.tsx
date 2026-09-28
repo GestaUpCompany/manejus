@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getFazendaById, updateFazenda } from '../../services/fazendasService'
-import { getGrupos, GrupoFazenda } from '../../services/gruposService'
+import { getFazendaById, updateFazenda } from '@gestaup/shared'
+import { getGrupos, GrupoFazenda } from '@gestaup/shared'
 import { uploadLogo, deleteLogo } from '../../services/storageService'
-import { Button, Input, Card } from '../../components/ui'
+import { Button, Input, Card } from '@gestaup/ui'
 
 export function EditarFazenda() {
   const navigate = useNavigate()

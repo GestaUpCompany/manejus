@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase, setAuditContext } from '../../services/supabaseClient'
-import { Card } from '../../components/ui'
+import { supabase, setAuditContext } from '@gestaup/supabase'
+import { Card } from '@gestaup/ui'
 
 interface UsuarioGerenciavel {
   id: string

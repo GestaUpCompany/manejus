@@ -1,6 +1,6 @@
-import { supabase } from '../services/supabaseClient'
-import { exportToXLSXMultiSheet, TableExportConfig, SheetConfig, MultiSheetExportConfig } from './exportXLSX'
-import { getFazendaNome } from './fazendaContext'
+import { supabase } from '@gestaup/supabase'
+import { exportToXLSXMultiSheet, TableExportConfig, SheetConfig, MultiSheetExportConfig } from '@gestaup/shared'
+import { getFazendaNome } from '@gestaup/shared'
 import {
   MATERNIDADE_EXPORT_CONFIG,
   PASTAGENS_EXPORT_CONFIG,

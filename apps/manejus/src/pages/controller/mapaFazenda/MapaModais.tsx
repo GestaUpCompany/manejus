@@ -1,5 +1,5 @@
 // Modais do mapa: confirmar remoção, remoção em lote, nomear estrada/ponto/fábrica, associar curral, tipo de associação
-import { Button, Modal } from '../../../components/ui'
+import { Button, Modal } from '@gestaup/ui'
 import { TIPOS_PONTO } from '../mapaFazenda/mapaConfig'
 
 // Modal: confirmar remoção de geometria

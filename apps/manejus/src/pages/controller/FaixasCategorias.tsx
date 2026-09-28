@@ -1,11 +1,11 @@
 import { Fragment, useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, Modal, EmptyState, PageSkeleton } from '../../components/ui'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { exportToXLSXMultiSheet, type ColumnConfig } from '../../utils/exportXLSX'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, Modal, EmptyState, PageSkeleton } from '@gestaup/ui'
+import { getFazendaIdForUser } from '@gestaup/shared'
+import { exportToXLSXMultiSheet, type ColumnConfig } from '@gestaup/shared'
 
 interface FaixaCategoria {
   id: string

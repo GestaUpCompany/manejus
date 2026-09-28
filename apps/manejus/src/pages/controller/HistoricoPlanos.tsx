@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { Card, CardSkeleton, Button, Modal } from '../../components/ui'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { getFazendaIdForUser } from '@gestaup/shared'
+import { Card, CardSkeleton, Button, Modal } from '@gestaup/ui'
 import type * as XLSXType from 'xlsx'
 import { gerarRelatorioPlanosPDF } from '../../utils/relatorioPlanosPDF'
 

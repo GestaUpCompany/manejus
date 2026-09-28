@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { supabase } from '@gestaup/supabase'
 
 export async function uploadLogo(file: File): Promise<string | null> {
   try {

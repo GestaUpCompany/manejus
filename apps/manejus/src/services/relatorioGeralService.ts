@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { supabase } from '@gestaup/supabase'
 import { carregarLogoComoBase64 } from '../utils/relatorioConsumoPDF'
 import type { PayloadRelatorioGeral } from '../features/relatorioGeral/loaders'
 

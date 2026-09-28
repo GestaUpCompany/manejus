@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, CardSkeleton, Input } from '../../components/ui'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, CardSkeleton, Input } from '@gestaup/ui'
+import { getFazendaIdForUser } from '@gestaup/shared'
 import {
   SISTEMA_POR_TIPO,
   TipoProgramacao,
@@ -15,7 +15,7 @@ import {
   saveProgramacaoTratos,
   setOcupacaoKgDia1,
 } from '../../services/programacaoTratosService'
-import { toFarmDateOnly } from '../../utils/formatDate'
+import { toFarmDateOnly } from '@gestaup/shared'
 
 interface PercentualTrato {
   ordem_trato: number

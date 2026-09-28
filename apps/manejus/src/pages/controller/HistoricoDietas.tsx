@@ -1,4 +1,4 @@
-import { Card } from '../../components/ui'
+import { Card } from '@gestaup/ui'
 
 export function HistoricoDietas() {
   return (

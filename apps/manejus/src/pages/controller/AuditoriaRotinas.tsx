@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { getFazendaIdForUser } from '@gestaup/shared'
 import {
   getExecucoes,
   getResumo,
@@ -13,7 +13,7 @@ import {
   HistoricoAlteracao,
   StatusExecucao,
 } from '../../services/auditoriaRotinasService'
-import { Button, Card, Input, Modal, Select, CardSkeleton, TableSkeleton } from '../../components/ui'
+import { Button, Card, Input, Modal, Select, CardSkeleton, TableSkeleton } from '@gestaup/ui'
 import { CADERNETAS } from '../../utils/cadernetas'
 
 const CHECKLIST_CADERNETAS = ['bebedouros', 'suplementacao', 'rodeio', 'pastagens']

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
-import { Button, Card, DetailLayout, DetailSection, DetailField, formatValue, Input, Modal, ConfirmModal, useToast } from '../../components/ui'
-import { formatDate } from '../../utils/formatDate'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { useLotes } from '../../hooks/useFazendaQueries'
+import { useAuth } from '@gestaup/shared'
+import { supabase } from '@gestaup/supabase'
+import { Button, Card, DetailLayout, DetailSection, DetailField, formatValue, Input, Modal, ConfirmModal, useToast } from '@gestaup/ui'
+import { formatDate } from '@gestaup/shared'
+import { getFazendaIdForUser } from '@gestaup/shared'
+import { useLotes } from '@gestaup/shared'
 
 interface RegistroSuplementacao {
   id: string

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Modal } from '../ui/Modal'
-import { Button, NumericInput, Input, useToast } from '../ui'
-import { supabase } from '../../services/supabaseClient'
+import { Modal } from '@gestaup/ui'
+import { Button, NumericInput, Input, useToast } from '@gestaup/ui'
+import { supabase } from '@gestaup/supabase'
 
 interface Props {
   isOpen: boolean

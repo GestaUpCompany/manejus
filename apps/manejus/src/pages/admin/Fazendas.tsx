@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getFazendas, Fazenda, updateFazenda } from '../../services/fazendasService'
-import { getGrupos, GrupoFazenda } from '../../services/gruposService'
-import { Button, Card } from '../../components/ui'
+import { getFazendas, Fazenda, updateFazenda } from '@gestaup/shared'
+import { getGrupos, GrupoFazenda } from '@gestaup/shared'
+import { Button, Card } from '@gestaup/ui'
 
 export function FazendasList() {
   const navigate = useNavigate()

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Button } from '../../components/ui'
+import { Card, Button } from '@gestaup/ui'
 import {
   AtividadeRegistro,
   PeriodoAtividade,
