@@ -55,6 +55,10 @@ function countDataPoints(lotes) {
 const CONSUMO_CSS = `
 .page{display:flex;flex-direction:column}
 .lote-content{flex:1;display:flex;flex-direction:column;min-height:0}
+.lote-line{position:relative;display:flex;align-items:center;min-height:9mm;margin-bottom:1mm}
+.lote-line .period-badge{margin-bottom:0}
+.lote-title{position:absolute;left:50%;top:calc(50% - 5mm);transform:translate(-50%,-50%);color:#0b6a42;font-size:20px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;max-width:65%;overflow:hidden;text-overflow:ellipsis}
+.lote-title .header-badge{margin-top:0;margin-left:8px;vertical-align:2px}
 .pills-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:3mm}
 .consumo-pill{background:#0b6a42;color:#fff;border-radius:5px;padding:5px 10px;text-align:center;min-width:0;flex:1 1 60px}
 .consumo-pill .pill-value{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -376,6 +380,7 @@ export async function renderConsumoHtml(input) {
     chunks.forEach((chunk, ci) => {
       const isContinuation = ci > 0
       const sectionName = isContinuation ? `${info.lote_nome} (continuação)` : info.lote_nome
+      const loteTitle = `<div class="lote-title">${escapeHtml(sectionName)}${info.escopo === 'creep' ? '<span class="header-badge">Creep Feeding</span>' : ''}</div>`
       pageIndex += 1
       const canvasId = `chart-consumo-${pageIndex}`
       const hasData = chunk.length > 0
@@ -384,7 +389,10 @@ export async function renderConsumoHtml(input) {
       let body
       if (!isContinuation) {
         body = `
-          <div class="period-badge">${dateFmt(dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(dataFim)}</div>
+          <div class="lote-line">
+            <div class="period-badge">${dateFmt(dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(dataFim)}</div>
+            ${loteTitle}
+          </div>
           ${pillsHtml(info)}
           ${mostrarDieta ? `<div class="dieta-sep">Dieta: ${escapeHtml(dietaAtual)}</div>` : ''}
           <div class="lote-body">
@@ -392,12 +400,14 @@ export async function renderConsumoHtml(input) {
             <div class="chart-col">${chartCard({ canvasId, title: 'Consumo Médio %PV', subtitle: `${dados.length} registro(s) no período`, hasData })}</div>
           </div>`
       } else {
-        body = `<div class="continuation-wrap">${chartCard({ canvasId, title: 'Consumo Médio %PV', subtitle: `${info.lote_nome} · continuação`, hasData })}</div>`
+        body = `
+          <div class="lote-line">${loteTitle}</div>
+          <div class="continuation-wrap">${chartCard({ canvasId, title: 'Consumo Médio %PV', subtitle: `${info.lote_nome} · continuação`, hasData })}</div>`
       }
 
       pagesHtml.push(
         pageSection(`
-          ${renderHeader({ ...brand, reportTitle: 'Análise de Consumo', section: sectionName, sectionLabel: 'Lote', sectionBadge: info.escopo === 'creep' ? 'Creep Feeding' : undefined })}
+          ${renderHeader({ ...brand, reportTitle: 'Análise de Consumo' })}
           <p class="section-kicker">${isContinuation ? 'Continuação do lote' : 'Evolução do consumo'}</p>
           <div class="lote-content">${body}</div>
           ${renderFooter({ ...period, page: pageIndex, totalPages })}
