@@ -17,11 +17,15 @@ Disparador: antes de rodar qualquer SQL que toque dados de `lote_categorias`, `p
 
 ## Comandos
 
-- Dev: `npm run dev`
-- Build: `npm run build` (roda `tsc && vite build`)
-- Typecheck: `npx tsc --noEmit`
-- Lint: `npm run lint`
-- Test: `npm run test` (vitest run)
+Monorepo pnpm workspaces (desde `refactor/monorepo-fase-0`): painel em `apps/manejus`, packages compartilhados futuros em `packages/*`, migrations em `supabase/` na raiz. Scripts da raiz delegam via `pnpm --filter manejus`.
+
+- Install: `pnpm install` (na raiz)
+- Dev: `pnpm dev` (na raiz) ou `pnpm --filter manejus dev`
+- Build: `pnpm build` (roda `tsc && vite build` no app)
+- Typecheck: `pnpm typecheck` ou `pnpm --filter manejus exec tsc --noEmit`
+- Lint: `pnpm lint`
+- Test: `pnpm test` (vitest run)
+- Deploy Vercel: Root Directory do projeto deve ser `apps/manejus`
 
 ## Fluxo de abertura do painel via chrome-devtools
 
