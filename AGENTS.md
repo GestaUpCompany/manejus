@@ -108,3 +108,4 @@ Quando mencionar qualquer um destes tópicos, ler a seção correspondente em `d
 - "editar/excluir trato", "editar/excluir leitura de cocho", `editar_registro_oferta_trato`, `editar_registro_leitura_cocho`, "registros de tratos e leituras" → `docs/HISTORICO.md` (Tela de edição/exclusão de tratos e leituras de cocho)
 - "detalhamento operacional", "tabelas do abastecimento distantes", "fusão de páginas PDF", `operMergedCount`, `mergeDetail` → `docs/HISTORICO.md` (Fusão dinâmica das tabelas de detalhamento nos relatórios de Abastecimento e Mortalidade)
 - "Vision", "Vision'Up", "sistema financeiro", "monorepo", "módulo financeiro" → `docs/VISION_ARQUITETURA_FUTURA.md` (Arquitetura Vision + auditoria da planilha fonte)
+- "pill de pasto/curral", "localização do lote no relatório de consumo", `localizacao_por_lote`, `pasto_nome`/`curral_nome` no info → `docs/HISTORICO.md` (Pill de localização no relatório de consumo)

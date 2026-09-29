@@ -35,6 +35,8 @@ export async function gerarRelatorioConsumoPDFPuppeteer(
       dias_total: l.info.dias_total,
       data_prevista_final: l.info.data_prevista_final,
       n_cabecas_atual: l.info.n_cabecas_atual,
+      pasto_nome: l.info.pasto_nome,
+      curral_nome: l.info.curral_nome,
       raca: l.info.raca,
       categoria: l.info.categoria,
       dieta: l.info.dieta,

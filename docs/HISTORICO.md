@@ -1,5 +1,15 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Pill de localização (pasto/curral) no relatório de consumo (2026-09-29)
+
+O relatório de consumo passou a exibir a localização atual do lote como primeiro pill (à esquerda de "Nº Cab. Atual"), com label dinâmico: "Curral" quando o lote está confinado, "Pasto" quando está em pasto, e "Pasto/Curral" com `—` quando sem alocação.
+
+- **Migration `20260929120000_relatorio_consumo_pasto_curral.sql`** (db push): `get_dados_relatorio_consumo` ganhou a CTE `localizacao_por_lote` e retorna `pasto_nome`/`curral_nome` dentro de `info`. As fontes são mutuamente exclusivas por trigger (`lotes.pasto_id → pastos.nome`, `currais.lote_id → currais.nome` com `ativo/deleted_at` filtrados). Vale para os dois escopos ('lote' e 'creep' mostram a mesma localização) e não é bloqueada por `cce.erros`. O wrapper `get_dados_relatorio_consumo_fazenda` (painel/infográfico) herda automaticamente.
+- **Renderers**: pill adicionado em `api/pdf/consumo.js` (`pillsHtml`, cobre PDF individual e a seção de consumo do infográfico via `composeReports`), em `relatorioConsumoPDF.ts` (jsPDF legado + interface `InfoLote`), no payload de `relatorioConsumoPDFPuppeteer.ts` e na grid de pills da página pública `RelatorioConsumoPublico.tsx` (`sm:grid-cols-4` → `sm:grid-cols-5`).
+- **Reparo de histórico**: o remoto tinha `20260928140000_problemas_evidencia` aplicada fora do fluxo (provavelmente via MCP) sem arquivo local; criado placeholder e marcada applied via `supabase migration repair` para destravar o `db push`.
+
+**Disparador**: quando mencionar pill de pasto/curral no relatório de consumo, `pasto_nome`/`curral_nome` no `info` do relatório, ou `localizacao_por_lote`, ler esta seção.
+
 ## tempo_ocupacao / tempo_vedacao recriados como text em registros_pastagens (2026-09-28)
 
 O texto do PWA sempre mostrava "Tempo de ocupação/vedação: —" porque as colunas tinham sido criadas como `integer` e dropadas no mesmo dia (`20260508194751`/`20260508195134`), e o PWA nunca persistia os campos. Migration **`20260928190000_pastagens_tempo_ocupacao_vedacao_text.sql`** (db push) recria como `text` — o PWA grava string formatada ("17 dias/410 horas", "Primeiro uso"), snapshot calculado no aparelho no momento do manejo, não valor derivado no banco. Painel: `PastagensDetalhes` exibe os dois campos e `PASTAGENS_EXPORT_CONFIG` ganhou as colunas na planilha. Detalhes do lado PWA no HISTORICO do repo PWA.

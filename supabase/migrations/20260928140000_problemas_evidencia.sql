@@ -1,0 +1,4 @@
+-- Placeholder: migration aplicada diretamente no banco remoto (fora do fluxo
+-- db push) e registrada em schema_migrations como 20260928140000
+-- "problemas_evidencia". Arquivo criado apenas para alinhar o histórico local
+-- com o remoto; marcada como applied via `supabase migration repair`.

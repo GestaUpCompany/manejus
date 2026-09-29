@@ -24,6 +24,8 @@ export interface InfoLote {
   dias_total: number | null
   data_prevista_final: string | null
   n_cabecas_atual: number | null
+  pasto_nome?: string | null
+  curral_nome?: string | null
   raca: string | null
   categoria: string | null
   dieta: string | null
@@ -460,6 +462,7 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
   const minPillWidth = 40
   const rightMargin = 8
   const pills = [
+    { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' },
     { label: 'Nº Cab. Atual', value: formatarInteiro(info.n_cabecas_atual) },
     { label: 'Raça', value: info.raca || '—' },
     { label: 'Categoria', value: (info.categoria ? info.categoria.split(/,\s*/).map((c) => c.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') : '—') },
