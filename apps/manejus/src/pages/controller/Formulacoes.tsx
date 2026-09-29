@@ -851,7 +851,7 @@ export function Formulacoes() {
             onClick={() => setSistemaFilter('confinamento')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'confinamento' ? 'bg-primary text-white border-primary' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
           >
-            Confinamento <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && !d.e_creep && d.sistema_producao === 'Confinamento' && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
+            Confinamento <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && !d.e_creep && (d.sistema_producao === 'Confinamento' || d.sistema_producao == null) && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
           </button>
           <button
             onClick={() => setSistemaFilter('creep')}
@@ -1264,7 +1264,7 @@ export function Formulacoes() {
                (premixFilter === 'tmr' && !dieta.e_premix)) &&
               (sistemaFilter === 'todos' ||
                (sistemaFilter === 'pasto' && !dieta.e_creep && dieta.sistema_producao !== 'Confinamento') ||
-               (sistemaFilter === 'confinamento' && !dieta.e_creep && dieta.sistema_producao === 'Confinamento') ||
+               (sistemaFilter === 'confinamento' && !dieta.e_creep && (dieta.sistema_producao === 'Confinamento' || dieta.sistema_producao == null)) ||
                (sistemaFilter === 'creep' && dieta.e_creep)) &&
               (dieta.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
               (dieta.tipo && dieta.tipo.toLowerCase().includes(searchTerm.toLowerCase())))
@@ -1291,14 +1291,18 @@ export function Formulacoes() {
                       </span>
                     </p>
                   )}
-                  {dieta.sistema_producao && (
-                    <p>
-                      <span className="font-medium">Sistema:</span>{' '}
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${dieta.sistema_producao === 'Confinamento' ? 'bg-amber-500/10 text-amber-800 dark:text-amber-200' : 'bg-green-500/10 text-green-800 dark:text-green-200'}`}>
-                        {dieta.sistema_producao === 'Confinamento' ? 'Confinamento' : 'Pasto'}
-                      </span>
-                    </p>
-                  )}
+                  <p>
+                    <span className="font-medium">Sistema:</span>{' '}
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      dieta.sistema_producao === 'Confinamento'
+                        ? 'bg-amber-500/10 text-amber-800 dark:text-amber-200'
+                        : dieta.sistema_producao === 'Pasto'
+                          ? 'bg-green-500/10 text-green-800 dark:text-green-200'
+                          : 'bg-surface-2 text-content'
+                    }`}>
+                      {dieta.sistema_producao ?? 'Ambos'}
+                    </span>
+                  </p>
                   {!dieta.e_premix && dieta.consumo_ms_percent_pv != null && (
                     <p><span className="font-medium">Meta MS (%PV):</span> {fmt(dieta.consumo_ms_percent_pv)}%</p>
                   )}

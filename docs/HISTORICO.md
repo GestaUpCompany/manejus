@@ -1,5 +1,16 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Badge de sistema da formulação mostrava "Pasto" para qualquer valor não-Confinamento (2026-09-29)
+
+Em `Formulacoes.tsx`, o badge "Sistema:" do card usava condição binária (`=== 'Confinamento' ? 'Confinamento' : 'Pasto'`), então `Recria`, `Engorda`, `Cria` (fases legadas aceitas pelo check `dietas_sistema_producao_check`) e `null` (Ambos) eram rotulados ou filtrados como Pasto. Correções:
+
+- Badge sempre renderiza e mostra o valor real: `Confinamento` (âmbar), `Pasto` (verde), `null` exibe "Ambos" (neutro), valores legados (`Cria`/`Recria`/`Engorda`) exibem o literal em neutro, sem reler como Pasto.
+- Filtro/aba "Confinamento" passou a incluir `sistema_producao IS NULL` (Ambos serve os dois sistemas), no contador e no filtro da grid. Aba "Pasto" já incluía não-Confinamento, mantida.
+- O select do formulário continua com só Ambos/Pasto/Confinamento; ao editar formulação com valor legado (ex.: `Recria`), o estado é preservado no save porque `formData.sistema_producao` mantém o valor original.
+- **Backfill pontual via MCP** (mesmo dia, a pedido do usuário): `Cria`/`Recria`/`Engorda`/`TIP`/`RIP`/`Sequestro` → `Pasto`, qualquer outro valor não-nulo fora de `Pasto`/`Confinamento` → `Confinamento`, `null` mantido (Ambos). Resultado: 71 Pasto, 5 Confinamento, 19 null. Não sobram valores legados; o check `dietas_sistema_producao_check` ainda os aceita caso queira apertar depois.
+
+**Disparador**: quando mencionar badge/sistema/destino Pasto-Ambos-Confinamento no card de formulação, `sistema_producao` de `formulacoes` com valor legado, ou filtro Pasto/Confinamento da página, ler esta seção.
+
 ## Projeção de estoque nos cards de suplementação (2026-09-29)
 
 Em `EstoqueSuplementacao.tsx`, a barra dos cards de insumo/produto final indicava saldo vs estoque mínimo, mas `pctSaude` era truncado com `Math.min(100, ...)` antes da escolha da cor, então qualquer saldo ≥ mínimo renderizava barra cheia amarela com a legenda fixa "Estoque no limite mínimo" (o verde >150% era código morto). Após duas iterações com o usuário, a barra virou um bloco de **Projeção** ("Projeção · últimos 30 dias") no rodapé do card:
