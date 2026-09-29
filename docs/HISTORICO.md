@@ -1,5 +1,27 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Projeção de estoque nos cards de suplementação (2026-09-29)
+
+Em `EstoqueSuplementacao.tsx`, a barra dos cards de insumo/produto final indicava saldo vs estoque mínimo, mas `pctSaude` era truncado com `Math.min(100, ...)` antes da escolha da cor, então qualquer saldo ≥ mínimo renderizava barra cheia amarela com a legenda fixa "Estoque no limite mínimo" (o verde >150% era código morto). Após duas iterações com o usuário, a barra virou um bloco de **Projeção** ("Projeção · últimos 30 dias") no rodapé do card:
+
+- **Cálculo**: consumo médio diário por item na janela de 30 dias em `movimentacoes_estoque_suplementos` (`tipo_movimentacao` `baixa`/`consumo` somam, `estorno` subtrai). O divisor é o número de dias desde o primeiro consumo dentro da janela (cap 30), para não diluir a taxa quando o histórico é mais curto que 30 dias. Estado `consumoDiarioPorItem`.
+- **Linhas**: "Consumo médio ~X kg/dia", "Autonomia ~N dias · esgota DD/MM" (cor do semáforo) e "Abaixo do mínimo em ~M dias (DD/MM)" ou "Já abaixo" quando `saldo <= estoque_minimo` com mínimo >0.
+- **Barra removida**: uma versão intermediária tinha barra de autonomia (dias/30) com marcador do cruzamento do estoque mínimo, mas exigia legenda explicando a janela e o traço, gerando confusão. O desenho final tem apenas as três linhas de texto.
+- Saldo ≤0 com consumo ativo mostra "Esgotado"; itens sem consumo na janela mostram "Sem consumo registrado nos últimos 30 dias" sem barra.
+- A query de `movimentacoes_estoque_suplementos` em `loadAll` passou a selecionar `tipo_movimentacao, quantidade, data` (antes só `item_id`) para alimentar o cálculo; continua uma query só.
+
+**Disparador**: quando mencionar barra nos cards de insumo, autonomia em dias, projeção de estoque, "abaixo do mínimo em N dias", "esgota DD/MM", `consumoDiarioPorItem`, `diasAteMinimo`, ou a antiga legenda "Estoque no limite mínimo", ler esta seção.
+
+## Limpeza de saídas legadas do estoque de suplementação (2026-09-29)
+
+Migração pontual via MCP (sem arquivo): soft-delete (`deleted_at = now()`) de todas as saídas (`tipo_movimentacao` `baixa`/`consumo`/`estorno`) de `movimentacoes_estoque_suplementos` com `data <= '2026-09-19'`, em todas as fazendas. Motivo: essas saídas foram registradas quando a lógica de estoque ainda não estava pronta. Total: 110 movimentações em 11 fazendas (6 `baixa` insumo Chibata, 4 Gesta'Up; restante `consumo`/`suplementacao` de formulações). O trigger `update_estoque_suplemento` detecta a mudança de `deleted_at` e reprocessa cada item via `recalcular_custo_medio_item`, então saldos, WAC e cadeia `saldo_anterior/posterior` foram reconstruídos automaticamente. Resultado na Chibata: produtos finais de -28.030,8 kg para -130,8 kg. Restaram formulações negativas causadas por consumos **posteriores** a 19/09 sem produção/entrada registrada (ex.: Guanabara, Doce Ilusão, Marcon), o caminho correto é ajuste por levantamento ou registro da produção faltante.
+
+Na mesma sessão, os KPIs do topo de `EstoqueSuplementacao.tsx` mudaram de semântica: "Saldo Insumos"/"Saldo Produtos Finais" (e os "Valor" correspondentes) passaram a somar **apenas saldos positivos** (`Math.max(0, estoque_atual)`), porque a soma líquida mascarava anomalias (-3.654 kg em um produto aparecia como -130 kg agregado). Saldos negativos viram um subtítulo vermelho dentro do card do KPI ("N com saldo negativo (X kg)") e um alerta âmbar no topo listando os nomes, separado do alerta vermelho de estoque baixo.
+
+Ainda nessa tela: "Valor Produtos Finais" mostrava R$ 0,00 porque `formulacoes.custo_unitario` (WAC) nunca sai de zero, já que toda movimentação `producao` entra com `custo_unitario` NULL (`trg_saida_insumos_itens_mov` não passa custo) e `recalcular_custo_medio_item` preserva WAC nesse caso. Correção só no painel: produtos finais usam `formulacoes.custo_mn_tonelada / 1000` como custo/kg (derivado da composição `formulacao_insumos` × `insumos.preco_ton_mn`, mantido por trigger), no card ("Custo da composição") e no KPI de valor. Ressalva: é custo de catálogo (`preco_ton_mn`), não WAC real dos insumos; propagar o custo real para `producao`/formulations ficaria para uma mudança de trigger + backfill.
+
+**Disparador**: quando mencionar saldo negativo de formulação, saídas legadas do estoque, soft-delete de movimentações antigas, corte de 19/09/2026, pill/KPI de saldo somando negativos, "Valor Produtos Finais" zerado, ou custo de produto final, ler esta seção.
+
 ## Pill de localização (pasto/curral) no relatório de consumo (2026-09-29)
 
 O relatório de consumo passou a exibir a localização atual do lote como primeiro pill (à esquerda de "Nº Cab. Atual"), com label dinâmico: "Curral" quando o lote está confinado, "Pasto" quando está em pasto, e "Pasto/Curral" com `—` quando sem alocação.

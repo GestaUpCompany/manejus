@@ -25,6 +25,7 @@ interface FormulacaoItem {
   estoque_atual: number
   estoque_minimo: number
   custo_unitario: number
+  custo_mn_tonelada: number | null
   controla_estoque: boolean
   ativo: boolean
 }
@@ -80,6 +81,7 @@ export function EstoqueSuplementacao() {
   // Filtro: mostrar apenas itens com movimentação
   const [mostrarApenasComMovimentacao, setMostrarApenasComMovimentacao] = useState(false)
   const [itemsComMovimentacao, setItemsComMovimentacao] = useState<Set<string>>(new Set())
+  const [consumoDiarioPorItem, setConsumoDiarioPorItem] = useState<Map<string, number>>(new Map())
 
   // Edição inline de estoque mínimo
   const [editandoMinimoId, setEditandoMinimoId] = useState<string | null>(null)
@@ -126,13 +128,13 @@ export function EstoqueSuplementacao() {
           .order('nome'),
         supabase
           .from('formulacoes')
-          .select('id, nome, tipo, e_premix, estoque_atual, estoque_minimo, custo_unitario, controla_estoque, ativo')
+          .select('id, nome, tipo, e_premix, estoque_atual, estoque_minimo, custo_unitario, custo_mn_tonelada, controla_estoque, ativo')
           .eq('fazenda_id', fazendaId)
           .is('deleted_at', null)
           .order('nome'),
         supabase
           .from('movimentacoes_estoque_suplementos')
-          .select('item_id')
+          .select('item_id, tipo_movimentacao, quantidade, data')
           .eq('fazenda_id', fazendaId)
           .is('deleted_at', null),
       ])
@@ -147,6 +149,34 @@ export function EstoqueSuplementacao() {
       // Set de item_ids que possuem pelo menos uma movimentação
       const idsComMov = new Set<string>((movsRes.data || []).map((m: any) => m.item_id))
       setItemsComMovimentacao(idsComMov)
+
+      // Consumo médio diário por item na janela de 30 dias.
+      // O divisor é o número de dias desde o primeiro consumo na janela (cap 30),
+      // para não diluir a taxa quando o histórico é mais curto que a janela.
+      const hoje = new Date()
+      hoje.setHours(0, 0, 0, 0)
+      const limite30d = new Date(hoje)
+      limite30d.setDate(limite30d.getDate() - 30)
+      const consumoPorItem = new Map<string, { total: number; primeira: string }>()
+      for (const m of (movsRes.data || []) as { item_id: string; tipo_movimentacao: string; quantidade: number | null; data: string | null }[]) {
+        if (!m.data || new Date(`${m.data}T00:00:00`) < limite30d) continue
+        if (m.tipo_movimentacao === 'baixa' || m.tipo_movimentacao === 'consumo') {
+          const c = consumoPorItem.get(m.item_id) ?? { total: 0, primeira: m.data }
+          c.total += Number(m.quantidade)
+          if (m.data < c.primeira) c.primeira = m.data
+          consumoPorItem.set(m.item_id, c)
+        } else if (m.tipo_movimentacao === 'estorno') {
+          const c = consumoPorItem.get(m.item_id)
+          if (c) c.total -= Number(m.quantidade)
+        }
+      }
+      const consumoDiario = new Map<string, number>()
+      for (const [itemId, c] of consumoPorItem) {
+        if (c.total <= 0) continue
+        const diasDesdePrimeiro = Math.floor((hoje.getTime() - new Date(`${c.primeira}T00:00:00`).getTime()) / 86400000) + 1
+        consumoDiario.set(itemId, c.total / Math.min(30, Math.max(1, diasDesdePrimeiro)))
+      }
+      setConsumoDiarioPorItem(consumoDiario)
     } catch (err) {
       console.error('Erro ao carregar estoque:', err)
       setError('Erro ao carregar dados do estoque')
@@ -180,10 +210,21 @@ export function EstoqueSuplementacao() {
     ? formulacoesAtivas.filter((f) => itemsComMovimentacao.has(f.id))
     : formulacoesAtivas
 
-  const saldoTotalInsumos = insumosAtivos.reduce((sum, i) => sum + Number(i.estoque_atual), 0)
-  const valorTotalInsumos = insumosAtivos.reduce((sum, i) => sum + Number(i.estoque_atual) * Number(i.custo_unitario), 0)
-  const saldoTotalFormulacoes = formulacoesAtivas.reduce((sum, f) => sum + Number(f.estoque_atual), 0)
-  const valorTotalFormulacoes = formulacoesAtivas.reduce((sum, f) => sum + Number(f.estoque_atual) * Number(f.custo_unitario), 0)
+  // Saldos negativos não representam estoque físico: entram no KPI como contagem
+  // separada (alerta de saneamento) e não abatem o total disponível.
+  const insumosNegativos = insumosAtivos.filter((i) => Number(i.estoque_atual) < 0)
+  const formulacoesNegativas = formulacoesAtivas.filter((f) => Number(f.estoque_atual) < 0)
+  const negKgInsumos = insumosNegativos.reduce((s, i) => s + Number(i.estoque_atual), 0)
+  const negKgFormulacoes = formulacoesNegativas.reduce((s, f) => s + Number(f.estoque_atual), 0)
+
+  const saldoTotalInsumos = insumosAtivos.reduce((sum, i) => sum + Math.max(0, Number(i.estoque_atual)), 0)
+  const valorTotalInsumos = insumosAtivos.reduce((sum, i) => sum + Math.max(0, Number(i.estoque_atual)) * Number(i.custo_unitario), 0)
+  // Produto final: prefere o WAC real (custo_unitario, populado pelo custo do
+  // insumo na movimentação producao); cai para custo da composição quando zero
+  const custoKgFormulacao = (f: FormulacaoItem) =>
+    Number(f.custo_unitario) > 0 ? Number(f.custo_unitario) : Number(f.custo_mn_tonelada ?? 0) / 1000
+  const saldoTotalFormulacoes = formulacoesAtivas.reduce((sum, f) => sum + Math.max(0, Number(f.estoque_atual)), 0)
+  const valorTotalFormulacoes = formulacoesAtivas.reduce((sum, f) => sum + Math.max(0, Number(f.estoque_atual)) * custoKgFormulacao(f), 0)
 
   const insumosEmAlerta = insumosAtivos.filter((i) => i.estoque_minimo > 0 && Number(i.estoque_atual) <= Number(i.estoque_minimo))
   const formulacoesEmAlerta = formulacoesAtivas.filter((f) => f.estoque_minimo > 0 && Number(f.estoque_atual) <= Number(f.estoque_minimo))
@@ -362,15 +403,30 @@ export function EstoqueSuplementacao() {
 
   const renderCard = (item: InsumoItem | FormulacaoItem, tipo: ItemTipo) => {
     const saldo = Number(item.estoque_atual)
-    const custo = Number(item.custo_unitario)
+    const custo = tipo === 'formulacao'
+      ? custoKgFormulacao(item as FormulacaoItem)
+      : Number(item.custo_unitario)
+    const semWac = tipo === 'formulacao' && Number(item.custo_unitario) <= 0
     const valorEstoque = saldo * custo
     const emAlerta = item.estoque_minimo > 0 && saldo <= Number(item.estoque_minimo)
     const negativo = saldo < 0
     const temMovimentacao = itemsComMovimentacao.has(item.id)
     const editandoEste = editandoMinimoId === item.id
-    const pctSaude = item.estoque_minimo > 0
-      ? Math.min(100, (saldo / Number(item.estoque_minimo)) * 100)
+    const consumoDiario = consumoDiarioPorItem.get(item.id) ?? null
+    const minimo = Number(item.estoque_minimo)
+    const diasAutonomia = consumoDiario !== null && consumoDiario > 0 ? Math.max(0, saldo / consumoDiario) : null
+    const diasAteMinimo = consumoDiario !== null && consumoDiario > 0 && minimo > 0 && saldo > minimo
+      ? (saldo - minimo) / consumoDiario
       : null
+    const fmtProj = (dias: number) =>
+      new Date(Date.now() + dias * 86400000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+    const corTextoAutonomia = diasAutonomia === null
+      ? ''
+      : diasAutonomia < 7
+        ? 'text-red-500'
+        : diasAutonomia < 15
+          ? 'text-amber-600 dark:text-amber-400'
+          : 'text-content-strong'
 
     return (
       <Card key={item.id} className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
@@ -421,7 +477,7 @@ export function EstoqueSuplementacao() {
             </span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-content-muted">Custo médio</span>
+            <span className="text-content-muted">{semWac ? 'Custo da composição' : 'Custo médio'}</span>
             <span className="text-content">R$ {custo.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg</span>
           </div>
           <div className="flex justify-between text-sm">
@@ -465,26 +521,36 @@ export function EstoqueSuplementacao() {
               </span>
             )}
           </div>
-          {/* Barra de saúde do estoque vs estoque mínimo */}
-          {item.estoque_minimo > 0 && pctSaude !== null && (
-            <div className="mt-3">
-              <div className="w-full bg-surface-3 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all ${
-                    pctSaude < 100 ? 'bg-red-500' : pctSaude <= 150 ? 'bg-yellow-500' : 'bg-primary'
-                  }`}
-                  style={{ width: `${pctSaude}%` }}
-                />
+          {/* Projeção: consumo médio, autonomia e ponto de recompra na janela de 30 dias */}
+          <div className="mt-3 rounded-lg border border-border-base bg-surface-2/50 px-3 py-2.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-content-muted">Projeção · últimos 30 dias</p>
+            {diasAutonomia !== null ? (
+              <div className="mt-1.5 space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-content">Consumo médio</span>
+                  <span className="font-semibold text-content-strong">
+                    ~{Number(consumoDiario).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg/dia
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-content">Autonomia</span>
+                  <span className={`font-semibold ${corTextoAutonomia || 'text-content-strong'}`}>
+                    {diasAutonomia <= 0 ? 'Esgotado' : `~${diasAutonomia.toFixed(0)} dias · esgota ${fmtProj(diasAutonomia)}`}
+                  </span>
+                </div>
+                {minimo > 0 && saldo > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-content">Abaixo do mínimo</span>
+                    <span className={`font-semibold ${diasAteMinimo === null ? 'text-red-500' : 'text-content-strong'}`}>
+                      {diasAteMinimo === null ? 'Já abaixo' : `em ~${diasAteMinimo.toFixed(0)} dias (${fmtProj(diasAteMinimo)})`}
+                    </span>
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-content-muted mt-1">
-                {pctSaude < 100
-                  ? `${pctSaude.toFixed(0)}% do estoque mínimo`
-                  : pctSaude === 100
-                    ? 'Estoque no limite mínimo'
-                    : `${pctSaude.toFixed(0)}% acima do mínimo`}
-              </p>
-            </div>
-          )}
+            ) : (
+              <p className="mt-1 text-sm text-content-muted">Sem consumo registrado nos últimos 30 dias</p>
+            )}
+          </div>
         </div>
       </Card>
     )
@@ -516,6 +582,11 @@ export function EstoqueSuplementacao() {
         <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-content-muted font-medium">Saldo Insumos</p>
           <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">{saldoTotalInsumos.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
+          {insumosNegativos.length > 0 && (
+            <p className="text-xs text-red-500 mt-1">
+              {insumosNegativos.length} com saldo negativo ({negKgInsumos.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg)
+            </p>
+          )}
         </Card>
         <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-content-muted font-medium">Valor Insumos</p>
@@ -524,12 +595,30 @@ export function EstoqueSuplementacao() {
         <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-content-muted font-medium">Saldo Produtos Finais</p>
           <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">{saldoTotalFormulacoes.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg</p>
+          {formulacoesNegativas.length > 0 && (
+            <p className="text-xs text-red-500 mt-1">
+              {formulacoesNegativas.length} com saldo negativo ({negKgFormulacoes.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg)
+            </p>
+          )}
         </Card>
         <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
           <p className="text-xs sm:text-sm text-content-muted font-medium">Valor Produtos Finais</p>
           <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">R$ {valorTotalFormulacoes.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </Card>
       </div>
+
+      {/* Alerta de saldos negativos (drenagem sem entrada/produção registrada) */}
+      {(insumosNegativos.length > 0 || formulacoesNegativas.length > 0) && (
+        <div className="bg-amber-500/10 border border-amber-300 rounded-xl p-4">
+          <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+            {insumosNegativos.length + formulacoesNegativas.length} item(s) com saldo negativo:
+          </p>
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+            {insumosNegativos.map((i) => i.nome).concat(formulacoesNegativas.map((f) => f.nome)).join(', ')}.
+            Ajuste por levantamento ou registre a entrada/produção faltante.
+          </p>
+        </div>
+      )}
 
       {/* Alertas */}
       {(insumosEmAlerta.length > 0 || formulacoesEmAlerta.length > 0) && (
