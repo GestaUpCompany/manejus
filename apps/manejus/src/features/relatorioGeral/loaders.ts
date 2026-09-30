@@ -3,6 +3,8 @@ import type { DadosPDFRelatorioAbastecimento } from '../../utils/relatorioAbaste
 import type { DadosPDFBebedouros } from '../../utils/relatorioBebedourosPDF'
 import type { LoteRelatorio } from '../../utils/relatorioConsumoPDF'
 import type { LinhaMorte, ParametrosRelatorioMorte, PastoGeo, ResumoMorte } from '../../utils/relatorioMortePDF'
+import type { ParametrosRelatorioRodeio } from '../../utils/relatorioRodeioPDFPuppeteer'
+import { calcularResumoRodeio, type RegistroRodeio } from '../relatorioRodeio/agregacao'
 import type { TipoRelatorioGeral } from './catalogo'
 import type { DadosPDFBoletimRebanho } from './boletimRebanho'
 
@@ -62,6 +64,7 @@ export type PayloadRelatorioGeral =
   | { tipo: 'consumo'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; lotes: LoteRelatorio[] } }
   | { tipo: 'bebedouros'; dados: DadosPDFBebedouros }
   | { tipo: 'morte'; dados: ParametrosRelatorioMorte }
+  | { tipo: 'rodeio'; dados: ParametrosRelatorioRodeio }
   | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
 
 const CHECKLIST_ITEMS = [
@@ -426,6 +429,31 @@ async function carregarMortes(
   }
 }
 
+async function carregarRodeio(
+  fazenda: FazendaRelatorio,
+  dataInicio: string,
+  dataFim: string,
+): Promise<PayloadRelatorioGeral> {
+  const { data, error } = await supabase.rpc('get_dados_relatorio_rodeio_fazenda', {
+    p_fazenda_id: fazenda.id,
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
+  })
+  if (error) throw error
+  const registros = (data?.dados?.registros ?? []) as RegistroRodeio[]
+  return {
+    tipo: 'rodeio',
+    dados: {
+      dataInicio,
+      dataFim,
+      fazendaNome: fazenda.nome,
+      fazendaLogoUrl: fazenda.logoUrl,
+      resumo: calcularResumoRodeio(registros),
+      registros,
+    },
+  }
+}
+
 export interface OpcoesCarregamentoRelatorios {
   boletim?: DadosPDFBoletimRebanho
 }
@@ -452,6 +480,7 @@ const LOADERS: Record<TipoRelatorioGeral, (fazenda: FazendaRelatorio, dataInicio
   consumo: carregarConsumo,
   bebedouros: carregarBebedouros,
   morte: carregarMortes,
+  rodeio: carregarRodeio,
   boletim_rebanho: carregarBoletim,
 }
 

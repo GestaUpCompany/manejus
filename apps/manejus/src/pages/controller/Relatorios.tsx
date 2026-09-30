@@ -66,6 +66,12 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'Registros de morte por causa, categoria e sexo, taxa de mortalidade, peso médio e perda financeira estimada por animal (preço por kg vivo por categoria).',
     icone: '💀',
   },
+  {
+    tipo: 'rodeio',
+    titulo: 'Rodeio',
+    descricao: 'Contagem de cabeças por categoria, escore do gado e de fezes, e alertas de diagnóstico por pasto, lote e período.',
+    icone: '🤠',
+  },
 ]
 
 export function Relatorios() {

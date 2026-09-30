@@ -2,6 +2,7 @@ import { renderAbastecimentoHtml } from '../abastecimento.js'
 import { renderBebedourosHtml } from '../bebedouros.js'
 import { renderConsumoHtml } from '../consumo.js'
 import { renderMorteHtml } from '../morte.js'
+import { renderRodeioHtml } from '../rodeio.js'
 import { renderBoletimRebanhoHtml } from '../boletimRebanho.js'
 
 export const REPORT_REGISTRY = {
@@ -24,6 +25,11 @@ export const REPORT_REGISTRY = {
     title: 'Relatório de Mortalidade',
     render: (dados) => renderMorteHtml(dados, { incluirMapa: true }),
     hasData: (dados) => (dados.linhas?.length ?? 0) > 0,
+  },
+  rodeio: {
+    title: 'Relatório de Rodeio',
+    render: renderRodeioHtml,
+    hasData: (dados) => (dados.registros?.length ?? 0) > 0,
   },
   boletim_rebanho: {
     title: 'Boletim de Rebanho',

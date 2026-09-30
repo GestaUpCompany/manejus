@@ -1,5 +1,18 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Rodeio: link público, PDF e seção no Infográfico Mensal (2026-09-29)
+
+Novo relatório sobre `registros_rodeio`, seguindo o padrão dos demais relatórios operacionais (clima, morte, abastecimento). O usuário pediu "igual aos demais em `apps/vision/Relatorios.tsx`", mas aquela página do Vision é só placeholders; o sistema real de relatórios vive no manejus, então o relatório foi implementado lá.
+
+- **Migration `20260929160000_rpc_relatorio_rodeio.sql`** (db push): `get_dados_relatorio_rodeio(p_token, p_data_inicio, p_data_fim)` valida token em `relatorios_publicos` com `tipo = 'rodeio'`, converte `data` (timestamptz) pelo timezone da fazenda e retorna registros + dimensões distintas (`pastos_disponiveis`, `lotes_disponiveis`, `usuarios_disponiveis`) sem filtro de data para os slicers. Nome de pasto/lote resolve via join em `pasto_id`/`lote_id` com fallback para as colunas de texto legadas. Wrapper `get_dados_relatorio_rodeio_fazenda` (authenticated, `user_has_fazenda_access`, token temporário) alimenta o consolidado.
+- **Agregações compartilhadas**: `src/features/relatorioRodeio/agregacao.ts` concentra tipos e cálculo puro (`calcularResumoRodeio`, `serieDiariaRodeio`, `alertasDoRegistro`), usado tanto pela página pública quanto pelo loader do infográfico, evitando divergência de números entre os dois caminhos.
+- **Classificação de diagnósticos**: replica `RODEIO_DIAGNOSTICOS` do PWA (`pdfUtils.ts`). Itens "OK?" (`bebedourosCochos`, `pastagensTaxaLotacao`, `cercasCochosPorteiras`) alertam quando `valor = 'N'`; itens sanitários (`animalMorto`, `carrapatosMoscas`, `animaisEntreverados`, `animaisMachucadosDoentesBichados`) alertam quando `valor = 'S'`. Mesma tabela em `api/pdf/_shared/labels.js` para o renderer do PDF.
+- **Página pública** `RelatorioRodeioPublico.tsx`: KPIs (rodeios, cabeças contadas, média/rodeio, escore médio do gado e de fezes, alertas sanitários/infra), slicers de data (server-side) + pasto/lote/usuário (cross-filter multi-select), gráficos recharts (barras empilhadas de cabeças por categoria/dia, linha de escores, barras de frequência de alertas), resumo por lote e por pasto, detalhamento por registro. Registrada no dispatch de `RelatorioPublico.tsx` e no `RELATORIOS_DISPONIVEIS` de `controller/Relatorios.tsx`.
+- **PDF próprio**: `utils/relatorioRodeioPDFPuppeteer.ts` POSTa para `api/pdf/rodeio.js` (Puppeteer + Chart.js injetado, template `_shared/`). Página 1 com KPIs + gráficos, página 2 com frequência de alertas + resumos por lote/pasto, páginas seguintes com detalhamento paginado (12 linhas/página). Sem fotos (`foto_url` ignorado a pedido do usuário).
+- **Infográfico Mensal**: `rodeio` entrou no `REPORT_REGISTRY` (`hasData` = registros > 0), no catálogo `RELATORIOS_GERAIS` (posição 5, antes do boletim), no `LOADERS` de `loaders.ts` (`carregarRodeio` chama a RPC `_fazenda` e computa o resumo via `calcularResumoRodeio`) e o limite de seções do `geral.js` subiu de 5 para 6. `catalogo.test.ts` atualizado para a nova ordem.
+
+**Disparador**: quando mencionar relatório de rodeio, link público de rodeio, `get_dados_relatorio_rodeio`, `renderRodeioHtml`, seção de rodeio no infográfico, ou diagnósticos de rodeio (`diagnosticos` S/N), ler esta seção.
+
 ## Badge de sistema da formulação mostrava "Pasto" para qualquer valor não-Confinamento (2026-09-29)
 
 Em `Formulacoes.tsx`, o badge "Sistema:" do card usava condição binária (`=== 'Confinamento' ? 'Confinamento' : 'Pasto'`), então `Recria`, `Engorda`, `Cria` (fases legadas aceitas pelo check `dietas_sistema_producao_check`) e `null` (Ambos) eram rotulados ou filtrados como Pasto. Correções:
