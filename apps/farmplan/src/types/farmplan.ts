@@ -109,6 +109,28 @@ export interface FuncionarioFp {
   ativo: boolean
 }
 
+export interface FpContratoItem {
+  id: string
+  funcionario_id: string
+  fazenda_id: string
+  tipo: 'tarefa' | 'comportamento'
+  descricao: string
+  criterio_id: string | null
+  ordem: number
+  ativo: boolean
+}
+
+export interface FpAvaliacao {
+  id: string
+  contrato_item_id: string
+  funcionario_id: string
+  fazenda_id: string
+  ano: number
+  semana: number
+  nota: number | null
+  nsa: boolean
+}
+
 export const DIAS_SEMANA_CURTO = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'] as const
 
 /** Datas (segunda..domingo) de uma semana do plano, a partir de semana1_inicio. */
