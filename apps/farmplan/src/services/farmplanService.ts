@@ -180,6 +180,7 @@ export function useFpSetDia() {
       dia: number
       feita: boolean
       observacao?: string
+      usuarioId?: string
     }) => {
       const { error } = await supabase.rpc('fp_set_dia', {
         p_atividade_id: params.atividadeId,
@@ -187,6 +188,7 @@ export function useFpSetDia() {
         p_dia: params.dia,
         p_feita: params.feita,
         p_observacao: params.observacao ?? null,
+        p_feita_por_usuario_id: params.usuarioId ?? null,
       })
       if (error) throw error
     },
@@ -200,11 +202,17 @@ export function useFpSetDia() {
 export function useFpSetStatusSemana() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (params: { atividadeId: string; semana: number; status: number }) => {
+    mutationFn: async (params: {
+      atividadeId: string
+      semana: number
+      status: number
+      usuarioId?: string
+    }) => {
       const { error } = await supabase.rpc('fp_set_status_semana', {
         p_atividade_id: params.atividadeId,
         p_semana: params.semana,
         p_status: params.status,
+        p_feita_por_usuario_id: params.usuarioId ?? null,
       })
       if (error) throw error
     },

@@ -14,10 +14,25 @@ import { Indicadores } from './pages/Indicadores'
 import { Relatorios } from './pages/Relatorios'
 import { Cadastros } from './pages/Cadastros'
 
+const PAPEIS_PERMITIDOS = ['admin', 'controller', 'super_admin']
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return <PageSkeleton />
   if (!user) return <Navigate to="/login" replace />
+  if (!PAPEIS_PERMITIDOS.includes(user.papel)) {
+    return (
+      <div className="min-h-screen bg-surface-2 flex items-center justify-center p-6">
+        <div className="bg-surface-1 rounded-2xl p-8 shadow-lg border border-border-base max-w-md w-full text-center">
+          <h1 className="text-xl font-semibold text-content-strong mb-2">Acesso restrito</h1>
+          <p className="text-content-muted">
+            O Farm Plan é a ferramenta de gestão da fazenda. Colaboradores de campo dão baixa pelo
+            aplicativo (PWA).
+          </p>
+        </div>
+      </div>
+    )
+  }
   return <>{children}</>
 }
 

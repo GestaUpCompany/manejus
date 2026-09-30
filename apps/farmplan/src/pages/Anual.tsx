@@ -62,7 +62,7 @@ export function Anual() {
 
   const pintar = (atividadeId: string, semana: number) => {
     setStatus.mutate(
-      { atividadeId, semana, status: pincel },
+      { atividadeId, semana, status: pincel, usuarioId: user?.id },
       { onError: () => toast.error('Erro ao atualizar semana') },
     )
   }

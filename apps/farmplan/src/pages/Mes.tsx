@@ -36,13 +36,15 @@ export function Mes() {
   const [mesSel, setMesSel] = useState(hoje.getMonth()) // 0-11
   const [anoSel] = useState(hoje.getFullYear())
 
-  // Semanas do plano cuja segunda-feira cai dentro do mês selecionado
+  // Semanas do plano que intersectam o mês (seg <= último dia do mês e dom >= 1o dia)
   const semanasDoMes = useMemo(() => {
     if (!plano) return []
+    const primeiroDia = new Date(anoSel, mesSel, 1, 12)
+    const ultimoDia = new Date(anoSel, mesSel + 1, 0, 12)
     const lista: number[] = []
     for (let s = 1; s <= 53; s++) {
-      const seg = datasDaSemana(plano.semana1_inicio, s)[0]
-      if (seg.getMonth() === mesSel && seg.getFullYear() === anoSel) lista.push(s)
+      const datas = datasDaSemana(plano.semana1_inicio, s)
+      if (datas[0] <= ultimoDia && datas[6] >= primeiroDia) lista.push(s)
     }
     return lista
   }, [plano, mesSel, anoSel])

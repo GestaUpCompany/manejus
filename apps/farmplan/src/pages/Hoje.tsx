@@ -61,7 +61,7 @@ export function Hoje() {
   const toggle = (atividadeId: string) => {
     const atual = baixasMap.get(`${atividadeId}:${diaHoje}`) ?? false
     setDia.mutate(
-      { atividadeId, semana, dia: diaHoje, feita: !atual },
+      { atividadeId, semana, dia: diaHoje, feita: !atual, usuarioId: user?.id },
       { onError: () => toast.error('Erro ao atualizar baixa') },
     )
   }

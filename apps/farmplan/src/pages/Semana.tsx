@@ -79,14 +79,14 @@ export function Semana() {
   const toggleDia = (a: FpAtividade, dia: number) => {
     const atual = baixasMap.get(`${a.id}:${dia}`) ?? false
     setDia.mutate(
-      { atividadeId: a.id, semana, dia, feita: !atual },
+      { atividadeId: a.id, semana, dia, feita: !atual, usuarioId: user?.id },
       { onError: () => toast.error('Erro ao atualizar baixa') },
     )
   }
 
   const mudarStatus = (a: FpAtividade, status: number) => {
     setStatus.mutate(
-      { atividadeId: a.id, semana, status },
+      { atividadeId: a.id, semana, status, usuarioId: user?.id },
       { onError: () => toast.error('Erro ao atualizar status') },
     )
   }
