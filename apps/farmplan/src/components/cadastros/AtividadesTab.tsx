@@ -139,7 +139,8 @@ export function AtividadesTab() {
       return f?.apelido || f?.nome || '—'
     }
     if (a.executor_equipe_id) {
-      return `Equipe ${equipes?.find((e) => e.id === a.executor_equipe_id)?.nome ?? ''}`
+      const n = equipes?.find((e) => e.id === a.executor_equipe_id)?.nome ?? ''
+      return /^equipe/i.test(n.trim()) ? n : `Equipe ${n}`
     }
     return '—'
   }

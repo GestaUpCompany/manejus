@@ -15,6 +15,12 @@ function nomeDe(funcionarios: FuncionarioFp[], id: string | null): string {
   return f?.apelido || f?.nome || '—'
 }
 
+// Evita "Equipe Equipe de Gado" quando o nome ja comeca com "Equipe"
+function nomeEquipe(nome: string | undefined): string {
+  if (!nome) return '—'
+  return /^equipe/i.test(nome.trim()) ? nome : `Equipe ${nome}`
+}
+
 async function novoDoc(titulo: string, subtitulo: string) {
   const jsPDFMod = await import('jspdf')
   const doc = new jsPDFMod.default({ orientation: 'portrait', unit: 'mm', format: 'a4' })
@@ -102,15 +108,16 @@ export async function gerarRelatorioSemanal(input: RelatorioSemanalInput) {
       const executor = a.executor_funcionario_id
         ? nomeDe(input.funcionarios, a.executor_funcionario_id)
         : a.executor_equipe_id
-          ? `Equipe ${input.equipes.find((e) => e.id === a.executor_equipe_id)?.nome ?? ''}`
+          ? nomeEquipe(input.equipes.find((e) => e.id === a.executor_equipe_id)?.nome)
           : '—'
       return [
         a.nome + (s?.carry_from ? ` (veio da sem. ${s.carry_from})` : ''),
         executor,
         FP_TIPO_LABEL[a.tipo],
         s ? FP_STATUS_LABEL[s.status] : '—',
+        // Fonte padrao do jsPDF nao tem glifos ✓/○; usar apenas latin-1
         ...DIAS_SEMANA_CURTO.map((_, d) =>
-          !a.dias_semana[d] ? '·' : baixaMap.get(`${a.id}:${d}`) ? '✓' : '○',
+          !a.dias_semana[d] ? '·' : baixaMap.get(`${a.id}:${d}`) ? 'x' : '—',
         ),
       ]
     }),

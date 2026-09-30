@@ -206,7 +206,7 @@ export function Semana() {
     if (a.executor_funcionario_id) return nomePessoa(a.executor_funcionario_id) ?? '—'
     if (a.executor_equipe_id) {
       const eq = equipes?.find((e) => e.id === a.executor_equipe_id)
-      return eq ? `Equipe ${eq.nome}` : 'Equipe'
+      return eq ? (/^equipe/i.test(eq.nome.trim()) ? eq.nome : `Equipe ${eq.nome}`) : 'Equipe'
     }
     return '—'
   }
@@ -222,7 +222,10 @@ export function Semana() {
         chave = a.executor_funcionario_id
           ? (nomePessoa(a.executor_funcionario_id) ?? '—')
           : a.executor_equipe_id
-            ? `Equipe ${equipes?.find((e) => e.id === a.executor_equipe_id)?.nome ?? ''}`
+            ? (() => {
+                const n = equipes?.find((e) => e.id === a.executor_equipe_id)?.nome ?? ''
+                return /^equipe/i.test(n.trim()) ? n : `Equipe ${n}`
+              })()
             : 'Sem executor'
       } else {
         chave = setorNome(a.setor_id) ?? 'Sem setor'
