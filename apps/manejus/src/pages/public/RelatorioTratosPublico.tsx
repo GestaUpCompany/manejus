@@ -4,6 +4,7 @@ import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import logoManejus from '/images/manejus360.png'
+import { ordenarPeriodo } from '../../features/relatorioGeral/periodo'
 import {
   gerarRelatorioTratosPDF,
   type LinhaTrato,
@@ -422,7 +423,11 @@ export function RelatorioTratosPublico({ token, relatorioInfo }: Props) {
               <input
                 type="date"
                 value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
+                onChange={(e) => {
+                  const [ini, fim] = ordenarPeriodo(e.target.value, dataFim)
+                  setDataInicio(ini)
+                  setDataFim(fim)
+                }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
@@ -431,7 +436,11 @@ export function RelatorioTratosPublico({ token, relatorioInfo }: Props) {
               <input
                 type="date"
                 value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
+                onChange={(e) => {
+                  const [ini, fim] = ordenarPeriodo(dataInicio, e.target.value)
+                  setDataInicio(ini)
+                  setDataFim(fim)
+                }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>

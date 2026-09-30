@@ -68,9 +68,15 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
   },
   {
     tipo: 'rodeio',
-    titulo: 'Rodeio',
+    titulo: 'Rodeio de Gado',
     descricao: 'Contagem de cabeças por categoria, escore do gado e de fezes, e alertas de diagnóstico por pasto, lote e período.',
     icone: '🤠',
+  },
+  {
+    tipo: 'pastagens',
+    titulo: 'Manejo de Pastagens',
+    descricao: 'Movimentações entre pastos, avaliação saída/entrada, histórico de ocupação com dias em pasto, taxa de lotação (UA/ha) e desvio da meta.',
+    icone: '🌾',
   },
 ]
 

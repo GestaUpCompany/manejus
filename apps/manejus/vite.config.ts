@@ -13,6 +13,9 @@ import bebedourosHandler from './api/pdf/bebedouros.js'
 import geralHandler from './api/pdf/geral.js'
 // @ts-ignore
 import climaHandler from './api/pdf/clima.js'
+// @ts-ignore
+import rodeioHandler from './api/pdf/rodeio.js'
+import pastagensHandler from './api/pdf/pastagens.js'
 
 function localPdfApi(): Plugin {
   return {
@@ -73,6 +76,8 @@ function localPdfApi(): Plugin {
       register('/api/pdf/bebedouros', bebedourosHandler)
       register('/api/pdf/geral', geralHandler)
       register('/api/pdf/clima', climaHandler)
+      register('/api/pdf/rodeio', rodeioHandler)
+      register('/api/pdf/pastagens', pastagensHandler)
     },
   }
 }

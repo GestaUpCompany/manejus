@@ -42,6 +42,12 @@ export function validarPeriodoRelatorio(dataInicio: string, dataFim: string): st
   return null
 }
 
+// Inputs de período livres podem sair invertidos (início > fim), o que
+// gera relatório vazio/confuso; troca silenciosamente em vez de errar.
+export function ordenarPeriodo(inicio: string, fim: string): [string, string] {
+  return inicio && fim && inicio > fim ? [fim, inicio] : [inicio, fim]
+}
+
 export function formatarPeriodoCapa(dataInicio: string, dataFim: string): string {
   const inicio = parseData(dataInicio)
   const fim = parseData(dataFim)

@@ -4,7 +4,9 @@ import type { DadosPDFBebedouros } from '../../utils/relatorioBebedourosPDF'
 import type { LoteRelatorio } from '../../utils/relatorioConsumoPDF'
 import type { LinhaMorte, ParametrosRelatorioMorte, PastoGeo, ResumoMorte } from '../../utils/relatorioMortePDF'
 import type { ParametrosRelatorioRodeio } from '../../utils/relatorioRodeioPDFPuppeteer'
+import type { ParametrosRelatorioPastagens } from '../../utils/relatorioPastagensPDFPuppeteer'
 import { calcularResumoRodeio, type RegistroRodeio } from '../relatorioRodeio/agregacao'
+import { calcularResumoPastagens, type OcupacaoPasto, type PastoInfo, type RegistroPastagem } from '../relatorioPastagens/agregacao'
 import type { TipoRelatorioGeral } from './catalogo'
 import type { DadosPDFBoletimRebanho } from './boletimRebanho'
 
@@ -65,6 +67,7 @@ export type PayloadRelatorioGeral =
   | { tipo: 'bebedouros'; dados: DadosPDFBebedouros }
   | { tipo: 'morte'; dados: ParametrosRelatorioMorte }
   | { tipo: 'rodeio'; dados: ParametrosRelatorioRodeio }
+  | { tipo: 'pastagens'; dados: ParametrosRelatorioPastagens }
   | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
 
 const CHECKLIST_ITEMS = [
@@ -454,6 +457,35 @@ async function carregarRodeio(
   }
 }
 
+async function carregarPastagens(
+  fazenda: FazendaRelatorio,
+  dataInicio: string,
+  dataFim: string,
+): Promise<PayloadRelatorioGeral> {
+  const { data, error } = await supabase.rpc('get_dados_relatorio_pastagens_fazenda', {
+    p_fazenda_id: fazenda.id,
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
+  })
+  if (error) throw error
+  const registros = (data?.dados?.registros ?? []) as RegistroPastagem[]
+  const ocupacoes = (data?.dados?.ocupacoes ?? []) as OcupacaoPasto[]
+  const ocupacoesContexto = (data?.dados?.ocupacoes_contexto ?? []) as OcupacaoPasto[]
+  const pastosInfo = (data?.dados?.pastos_info ?? []) as PastoInfo[]
+  return {
+    tipo: 'pastagens',
+    dados: {
+      dataInicio,
+      dataFim,
+      fazendaNome: fazenda.nome,
+      fazendaLogoUrl: fazenda.logoUrl,
+      resumo: calcularResumoPastagens(registros, ocupacoes, pastosInfo, ocupacoesContexto),
+      registros,
+      ocupacoes,
+    },
+  }
+}
+
 export interface OpcoesCarregamentoRelatorios {
   boletim?: DadosPDFBoletimRebanho
 }
@@ -481,6 +513,7 @@ const LOADERS: Record<TipoRelatorioGeral, (fazenda: FazendaRelatorio, dataInicio
   bebedouros: carregarBebedouros,
   morte: carregarMortes,
   rodeio: carregarRodeio,
+  pastagens: carregarPastagens,
   boletim_rebanho: carregarBoletim,
 }
 

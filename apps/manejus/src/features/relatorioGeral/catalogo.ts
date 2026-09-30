@@ -1,4 +1,4 @@
-export type TipoRelatorioGeral = 'abastecimento' | 'consumo' | 'bebedouros' | 'morte' | 'rodeio' | 'boletim_rebanho'
+export type TipoRelatorioGeral = 'abastecimento' | 'consumo' | 'bebedouros' | 'morte' | 'rodeio' | 'pastagens' | 'boletim_rebanho'
 
 export interface RelatorioGeralCatalogoItem {
   id: TipoRelatorioGeral
@@ -29,8 +29,13 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
   },
   {
     id: 'rodeio',
-    titulo: 'Rodeio',
+    titulo: 'Rodeio de Gado',
     descricao: 'Contagem por categoria, escores do gado e alertas de diagnóstico por pasto e lote.',
+  },
+  {
+    id: 'pastagens',
+    titulo: 'Manejo de Pastagens',
+    descricao: 'Movimentações entre pastos, avaliações, ocupação em dias e taxa de lotação (UA/ha).',
   },
   {
     id: 'boletim_rebanho',

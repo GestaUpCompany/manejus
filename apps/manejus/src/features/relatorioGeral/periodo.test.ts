@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contarDiasInclusivos, formatarPeriodoCapa, validarPeriodoRelatorio } from './periodo'
+import { contarDiasInclusivos, formatarPeriodoCapa, ordenarPeriodo, validarPeriodoRelatorio } from './periodo'
 
 describe('período do relatório geral', () => {
   it('conta dias de forma inclusiva', () => {
@@ -13,6 +13,13 @@ describe('período do relatório geral', () => {
     expect(validarPeriodoRelatorio('2026-09-02', '2026-09-01')).toContain('posterior')
     expect(validarPeriodoRelatorio('2026-08-01', '2026-09-01')).toContain('31 dias')
     expect(validarPeriodoRelatorio('2026-08-01', '2026-08-31')).toBeNull()
+  })
+
+  it('troca período invertido e preserva o demais', () => {
+    expect(ordenarPeriodo('2026-09-23', '2026-09-16')).toEqual(['2026-09-16', '2026-09-23'])
+    expect(ordenarPeriodo('2026-09-01', '2026-09-16')).toEqual(['2026-09-01', '2026-09-16'])
+    expect(ordenarPeriodo('', '2026-09-16')).toEqual(['', '2026-09-16'])
+    expect(ordenarPeriodo('2026-09-01', '')).toEqual(['2026-09-01', ''])
   })
 
   it('formata mês e ano para a capa', () => {

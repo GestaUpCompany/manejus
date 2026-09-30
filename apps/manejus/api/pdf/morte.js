@@ -152,6 +152,7 @@ const CHARTS_INIT_JS = `
   var Chart = window.Chart
   if (!Chart) { window.__chartsReady = true; return }
   Chart.defaults.animation = false
+  Chart.defaults.devicePixelRatio = 3
   Chart.defaults.font.family = 'Arial, Helvetica, sans-serif'
 
   var data = window.__reportData || {}

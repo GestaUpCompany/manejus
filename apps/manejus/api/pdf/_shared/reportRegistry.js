@@ -3,6 +3,7 @@ import { renderBebedourosHtml } from '../bebedouros.js'
 import { renderConsumoHtml } from '../consumo.js'
 import { renderMorteHtml } from '../morte.js'
 import { renderRodeioHtml } from '../rodeio.js'
+import { renderPastagensHtml } from '../pastagens.js'
 import { renderBoletimRebanhoHtml } from '../boletimRebanho.js'
 
 export const REPORT_REGISTRY = {
@@ -27,9 +28,14 @@ export const REPORT_REGISTRY = {
     hasData: (dados) => (dados.linhas?.length ?? 0) > 0,
   },
   rodeio: {
-    title: 'Relatório de Rodeio',
+    title: 'Relatório de Rodeio de Gado',
     render: renderRodeioHtml,
     hasData: (dados) => (dados.registros?.length ?? 0) > 0,
+  },
+  pastagens: {
+    title: 'Relatório de Manejo de Pastagens',
+    render: renderPastagensHtml,
+    hasData: (dados) => (dados.registros?.length ?? 0) > 0 || (dados.ocupacoes?.length ?? 0) > 0,
   },
   boletim_rebanho: {
     title: 'Boletim de Rebanho',

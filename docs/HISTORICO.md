@@ -1,5 +1,41 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Zeramento do histórico de estoque da Fazenda Guanabara (2026-10-01)
+
+A Guanabara (`f8be22c5-12e9-4bda-a813-fae8cb3d47ec`) passou a controlar estoque de insumos/formulações efetivamente em 01/10/2026. Como suplementações já descontavam do estoque antes de haver saldo cadastrado (permitido por conveniência), o histórico anterior gerava saldos negativos grandes e sem sentido.
+
+Operação pontual via MCP: soft-delete (`deleted_at`) das 70 movimentações de `consumo` com `data <= 2026-09-29`, todas em formulações. Os 10 ajustes de insumo de 29/09 foram **preservados como saldo de abertura** (decisão do usuário), e as movimentações de 30/09 (7 baixas de insumo, 7 produções de formulação) ficaram ativas. Registros de suplementação e fabricação intactos; só o livro de movimentações foi ajustado. O trigger `update_estoque_suplemento` recalculou os saldos: formulações saíram de negativos (ex.: TIP SECA 2,2% -23.068 → 942; Bezerros 1,5% -16.468 → 3.504) para refletir só as produções de 30/09.
+
+Backup em `backup.guanabara_reset_20261001_movs` (70 linhas) e `backup.guanabara_reset_20261001_itens` (saldo/custo dos 17 itens). Restauração = `deleted_at = NULL` nas linhas do backup.
+
+Disparador: quando mencionar "Guanabara estoque", "saldo negativo Guanabara", "abertura de estoque Guanabara", ler esta seção.
+
+## Remoção do tipo 'estorno' do estoque de suplementação (2026-10-01)
+
+O tipo `estorno` foi removido de `movimentacoes_estoque_suplementos` porque era fruto de bug, não conceito de domínio. Causa-raiz: o PWA sincroniza itens com `.upsert(onConflict: 'local_id')`, e um retry de upsert numa linha já existente resolve como UPDATE no Postgres; as triggers de origem tratavam qualquer UPDATE como edição e gravavam um estorno que, no WAC, sempre subtraía saldo (sinal invertido para baixa/consumo). Caso real: SAL BRANCO na Fazenda Chibata ficou 222 kg abaixo do real por um estorno gerado em retry de sync, sem edição do usuário.
+
+Novo modelo na migration `20261001120000_remover_estorno_espelho_movimentacoes.sql`: a movimentação espelha a linha de origem. INSERT cria, UPDATE atualiza a mesma linha de movimentação (guarda `IS NOT DISTINCT FROM` faz retry virar no-op), DELETE/soft-delete marca `deleted_at`; movimentação soft-deletada é reavivada se o alvo voltar (contorna a chave única `uq_mov_estoque_supl_origem`). Reescritas `trg_entrada_insumos_itens_mov`, `trg_saida_insumos_itens_mov`, `trg_fabrica_confinamento_insumos_mov` (mantém expansão de premix) e `trg_suplementacao_mov` (soft-delete do trato agora remove o consumo, antes não revertia nada). 'estorno' saiu de `recalcular_custo_medio_item`, `update_estoque_suplemento`, `trg_mov_supl_auditoria` e do CHECK de `tipo_movimentacao`. Painel: removido label e subtração de estorno do consumo diário em `EstoqueSuplementacao.tsx` (o label em `EstoqueAlmoxarifado.tsx` é outro subsistema, intacto).
+
+Reconciliação pontual via MCP com backup em `backup.estorno_20260930_movs` e `backup.estorno_20260930_itens`: 9 estornos removidos; SAL BRANCO (Chibata) voltou de 5.377,5 para 5.599,5 kg com custo R$ 0,88/kg; 8 pares consumo+estorno órfãos de tratos deletados na fazenda de testes foram removidos (registros de origem já não existiam). Teste na fazenda de testes validou: upsert idêntico não gera movimentação nova, UPDATE de quantidade espelha a mesma linha, DELETE remove as movimentações.
+
+O mesmo padrão de estorno por UPDATE existe nos estoques de combustível, cantina, almoxarifado e módulo comercial/OS (tabelas próprias), fora deste escopo e candidato a auditoria futura.
+
+Disparador: quando mencionar "estorno", "movimentação fantasma", "saldo errado depois do sync", "upsert gerou desconto", ler esta seção.
+
+## Relatório de Manejo de Pastagens + fix das views de ocupação (2026-09-29)
+
+Novo relatório sobre `registros_pastagens` enriquecido com o histórico de ocupação (`lote_pasto_historico` + `pastos` + `modulos_pastos` + `lotes`), seguindo o padrão do rodeio: link público por token, PDF Puppeteer e seção no Infográfico Mensal. `registros_pastagens` sozinha só registra o evento de troca de pasto; a análise de ocupação (dias, UA/ha, desvio vs meta) sai das tabelas relacionadas, por isso a RPC retorna os dois conjuntos.
+
+- **Bug corrigido nas views de ocupação**: `v_historico_ocupacao_pasto` e `v_lote_pasto_ocupacao_atual` tinham `LEFT JOIN modulos_pastos m ON h.modulo_id = p.modulo_id` sem referenciar `m` no join, gerando produto cartesiano e linhas duplicadas na tela Histórico de Ocupação. A migration `20260929170000_rpc_relatorio_pastagens.sql` recria as duas views com o join correto (`m.id = h.modulo_id`). `v_historico_ocupacao_modulo` estava correta e não foi tocada.
+- **RPCs** (`get_dados_relatorio_pastagens` + wrapper `_fazenda`): retornam `registros` normalizados (coalesce id→texto legado, `modulo_saida`/`modulo_entrada` resolvidos via pastos, `avaliacao_geral` JSON intacto), `ocupacoes` calculadas direto de `lote_pasto_historico` (sem depender das views: dias, desvio_percent e taxa_lotacao_ua_ha computados na CTE, incluindo ocupações abertas com contagem parcial e UA/ha ao vivo a partir de `cabecas_entrada` × `peso_medio_entrada`), `pastos_info` (área, espécie, degradação, meta por pasto) e dimensões para slicers (pastos, lotes, responsáveis, módulos). Ocupação cruza com o período por interseção de intervalos, não por data pontual.
+- **Agregações compartilhadas** `src/features/relatorioPastagens/agregacao.ts`: KPIs (movimentações, animais, ocupação média, UA/ha média, ocupações acima da meta), resumo por pasto e por lote, série diária, fluxo entre pastos e alertas de `avaliacao_geral` reutilizando `alertasDoRegistro`/`DiagnosticosRodeio` do rodeio (mesmas 7 chaves e semântica S/N).
+- **Página pública** `RelatorioPastagensPublico.tsx`: slicers de data + pasto/lote/manejador/módulo (pasto e módulo casam com qualquer lado da movimentação), 4 gráficos recharts (movimentações/dia, avaliação saída vs entrada, UA/ha por pasto, frequência de alertas), tabelas de resumo por pasto e por lote, histórico de ocupação com status em andamento/encerrada, detalhamento das movimentações e exportar PDF. Tipo `'pastagens'` registrado no dispatch de `RelatorioPublico.tsx` e no catálogo `RELATORIOS_DISPONIVEIS` (ícone 🌾).
+- **PDF**: `api/pdf/pastagens.js` (Chart.js injetado, `renderPastagensHtml` exportada para o consolidado) + client `utils/relatorioPastagensPDFPuppeteer.ts` + registro `/api/pdf/pastagens` no `vite.config.ts` (dev server registra handlers manualmente; esquecer essa linha foi exatamente o bug do PDF do rodeio). Página 1 KPIs + gráficos, página 2 UA/ha por pasto + alertas, depois resumo por pasto, histórico de ocupação e detalhamento paginados.
+- **Infográfico**: `pastagens` no `REPORT_REGISTRY`, `RELATORIOS_GERAIS` (posição 6), `LOADERS` (`carregarPastagens` via RPC `_fazenda`) e o limite de seções do `geral.js` subiu de 6 para 7. `catalogo.test.ts` atualizado.
+- **Crivo de qualidade do PDF** (revisão visual com dados reais da Jacamim, 10→12 páginas): o wrap do gráfico de UA/ha usava `flex:1` e colapsava para ~0 quando a tabela de alertas consumia a página, sobrepondo o gráfico à tabela; virou altura fixa (55mm). Alertas passaram a paginar (14 na página 2, 22 por continuação). Alertas do detalhamento viraram bloco por item com observação própria (antes saíam colados em linha). Labels de diagnóstico quebram depois de "/" (`<wbr>`/ZWSP) em vez de cortar no meio da palavra. Colunas 100% vazias são omitidas por tabela (módulo, meta, desvio, ocup./vedação). Dias negativos (saída antes da entrada) saem em vermelho com nota "saída < entrada". `total_animais` null/0 cai para soma das categorias. Status "EM ANDAMENTO" virou "ABERTA" (coluna estreita quebrava em 3 linhas e cortava a última linha da página). UA/ha 0 renderiza "—". Detalhamento em 9 linhas/página. `Chart.defaults.devicePixelRatio = 3` no init dos gráficos: o canvas rasterizava na resolução CSS (~96dpi) e pixelava no zoom do PDF. Aplicado em todos os endpoints (`pastagens`, `rodeio`, `morte`, `consumo`, `clima`, `bebedouros`, `abastecimento`); o infográfico (`geral.js`) herda via scripts de init compostos pelo `reportComposer`.
+
+**Disparador**: quando mencionar relatório de manejo de pastagens, `registros_pastagens` no relatório, `get_dados_relatorio_pastagens`, `renderPastagensHtml`, histórico de ocupação no relatório, ou duplicidade nas views de ocupação (`v_historico_ocupacao_pasto`, `v_lote_pasto_ocupacao_atual`), ler esta seção.
+
 ## Relatório de Rodeio: link público, PDF e seção no Infográfico Mensal (2026-09-29)
 
 Novo relatório sobre `registros_rodeio`, seguindo o padrão dos demais relatórios operacionais (clima, morte, abastecimento). O usuário pediu "igual aos demais em `apps/vision/Relatorios.tsx`", mas aquela página do Vision é só placeholders; o sistema real de relatórios vive no manejus, então o relatório foi implementado lá.
@@ -10,6 +46,9 @@ Novo relatório sobre `registros_rodeio`, seguindo o padrão dos demais relatór
 - **Página pública** `RelatorioRodeioPublico.tsx`: KPIs (rodeios, cabeças contadas, média/rodeio, escore médio do gado e de fezes, alertas sanitários/infra), slicers de data (server-side) + pasto/lote/usuário (cross-filter multi-select), gráficos recharts (barras empilhadas de cabeças por categoria/dia, linha de escores, barras de frequência de alertas), resumo por lote e por pasto, detalhamento por registro. Registrada no dispatch de `RelatorioPublico.tsx` e no `RELATORIOS_DISPONIVEIS` de `controller/Relatorios.tsx`.
 - **PDF próprio**: `utils/relatorioRodeioPDFPuppeteer.ts` POSTa para `api/pdf/rodeio.js` (Puppeteer + Chart.js injetado, template `_shared/`). Página 1 com KPIs + gráficos, página 2 com frequência de alertas + resumos por lote/pasto, páginas seguintes com detalhamento paginado (12 linhas/página). Sem fotos (`foto_url` ignorado a pedido do usuário).
 - **Infográfico Mensal**: `rodeio` entrou no `REPORT_REGISTRY` (`hasData` = registros > 0), no catálogo `RELATORIOS_GERAIS` (posição 5, antes do boletim), no `LOADERS` de `loaders.ts` (`carregarRodeio` chama a RPC `_fazenda` e computa o resumo via `calcularResumoRodeio`) e o limite de seções do `geral.js` subiu de 5 para 6. `catalogo.test.ts` atualizado para a nova ordem.
+
+- **Meta de intervalo entre rodeios** (migration `20260929180000_rpc_rodeio_meta_intervalo.sql`): a RPC passa a trazer `meta_intervalo_dias` (de `lotes.meta_intervalo_rodeio_dias`) e `dias_desde_anterior` (gap desde o rodeio anterior do mesmo lote, buscado em todo o histórico, não só no período). `agregacao.ts` classifica cada registro (`situacaoMetaRodeio`: dentro/fora/sem_meta/sem_anterior) e agrega `rodeios_com_meta`, `dentro_meta`, `fora_meta` no resumo e por lote. PDF e página pública ganham KPI "Aderência à meta de intervalo" (4º card, condicional a existir meta), coluna "Meta intervalo" no resumo por lote e marcador "fora da meta (Nd > Md)" no detalhamento. Insight cita dentro/fora. Tudo condicional: fazendas sem meta não veem a seção.
+- **Ajustes pós-crivo**: título renomeado para "Relatório de Rodeio de Gado" (headers do PDF, `reportRegistry`, card em `Relatorios.tsx`, catálogo do infográfico, nome do arquivo baixado e fallback do pill da página pública). KPI "Contagens de cabeças" removido do PDF e da página pública (grid 4→3), e a frase "com N cabeças contadas" saiu do texto do insight; a contagem segue disponível no gráfico por dia, na composição e nas colunas de "Última contagem"/"Média cabeças" do resumo por lote.
 
 **Disparador**: quando mencionar relatório de rodeio, link público de rodeio, `get_dados_relatorio_rodeio`, `renderRodeioHtml`, seção de rodeio no infográfico, ou diagnósticos de rodeio (`diagnosticos` S/N), ler esta seção.
 
@@ -1596,3 +1635,73 @@ Bug colateral corrigido na mesma migration: `get_detalhes_curral_mapa` estava qu
 Observações conhecidas fora do escopo: a topologia de routing (`mapa_estradas_vertices_pgr`, `source`/`target` em `mapa_estradas`) é global entre fazendas por design e o rebuild de uma fazenda reconstrói a de todas. Policies `qual=true` em `pastos`/`bebedouros`/`currais`/`fazendas` (ex: `pastos_update_public`, read public em bebedouros/fazendas) seguem abertas e fazem parte da auditoria maior do BACKLOG; apertá-las exige mapear antes quais fluxos do PWA rodam com role `anon`.
 
 Disparador: quando mencionar "isolamento de tenant", "mapa de outra fazenda", "geometria vazando", `caller_has_fazenda_access`, "mapa_versao policy", "vertices_pgr", ler esta seção.
+
+### Redesenho dos gráficos do relatório de Manejo de Pastagens (2026-09-29)
+
+Os gráficos anteriores ("movimentações por dia" e "avaliação saída vs entrada" diária) foram substituídos por visualizações orientadas às perguntas do rotativo (descanso, sobreuso, condição pós-manejo), na página pública e no PDF:
+
+1. **Mapa de ocupação (Gantt por pasto)**: uma linha por pasto com cada janela entrada→saída; lacunas = descanso, barra azul = encerrada, dourada = em andamento (até dataFim). Ocupações com saída < entrada são comprimidas num ponto de um dia. `mapaOcupacaoPorPasto()` no `agregacao.ts` (página, componente HTML custom) e duplicata `mapaOcupacao()` no `pastagens.js` (PDF, barras flutuantes Chart.js com eixo x linear em epoch-day e ticks dd/mm via `fmtDia`; os pontos usam o formato `{x:[min,max], y:categoria}`).
+2. **Condição após o manejo (delta por pasto)**: `degradacaoPorPasto()` compara avaliação média registrada como "saída" no pasto de origem vs "entrada" no pasto de destino por pasto; delta negativo (vermelho) = o gado deixa o pasto pior do que encontrou. Substitui as linhas diárias de avaliação, que misturavam pastos diferentes.
+3. **Descanso entre ocupações**: `descansoPorPasto()` mede dias sem gado entre ocupações consecutivas do mesmo pasto (sobreposições e saída<entrada ignoradas), ordenado do mais apertado. Em Jacamim fica vazio (quase todo pasto tem uma ocupação só no período) e o card cai no placeholder "sem dados".
+
+`degradacao` e `descanso` entram em `ResumoPastagens`/`calcularResumoPastagens`, então chegam de graça ao PDF via payload `resumo`. Layout do PDF: página 1 passou a ter o Gantt full-width em área flex; página 2 virou `.past-trio` (3 cards de 45mm) + tabela de alertas paginada (ALERTAS_ROWS_P2 14→16, cabendo mais linhas no espaço liberado). `serie_diaria` e `avaliacao_*_media` continuam no resumo mas não têm mais gráfico próprio. Validado com PDF real da Jacamim (12 páginas, Gantt com 14 linhas, delta todo negativo, UA/ha preservado). Typecheck e 90 testes verdes.
+
+Disparador: quando mencionar "gráfico de pastagens", "mapa de ocupação", "Gantt de pasto", "descanso do pasto", "degradação do pasto", ler esta seção.
+
+### Ajustes no detalhamento do relatório de Rodeio de Gado (2026-09-30)
+
+A pedido do usuário: coluna "Composição" removida dos registros detalhados (página pública e PDF; `composicaoRodeio`/`composicaoHtml` ficaram sem uso no detalhamento e foram desconectadas) e o marcador de meta na coluna Lote passou de "fora da meta (13d > 7d)" para "Atraso de N dias", com N = dias_desde_anterior − meta_intervalo_dias. Typecheck limpo.
+
+### Guarda contra período invertido nos relatórios públicos (2026-09-30)
+
+PDF da Jacamim saiu zerado porque a tela aceitou intervalo invertido (início 23/09 > fim 16/09): as movimentações zeram por construção lógica e só o histórico de ocupação sobrevive à interseção, produzindo relatório meio-vazio. Correção sistematizada: novo helper `ordenarPeriodo()` em `features/relatorioGeral/periodo.ts` troca início/fim silenciosamente, aplicado nos inputs de data das 9 páginas públicas (pastagens, rodeio, abastecimento/RelatorioPublico, consumo, tratos, morte, clima, atividades, bebedouros) e no payload do PDF de pastagens. 4 casos de teste adicionados em `periodo.test.ts`. Typecheck limpo, 91 testes verdes.
+
+Disparador: quando mencionar "período invertido", "relatório zerado", "relatório vazio", "data início maior que fim", ler esta seção.
+
+### Escalabilidade dos gráficos do PDF de pastagens (2026-09-30)
+
+Com intervalo maior (01/09→15/09, 22 pastos) os gráficos quebravam: Gantt com 14 linhas tinha rótulos sobrepostos (~8px/linha vs fonte 9px), os 12 itens do trio de 45mm truncavam nomes no meio e os valores de delta colidiam nas barras. Ajustes em `api/pdf/pastagens.js`:
+
+- `mapaOcupacao` caiu para `maxPastos = 10` e o subtítulo mantém "+N pasto(s) não exibido(s)".
+- Trio (degradação, descanso, UA/ha) limitado a 8 itens, com subtítulo "top 8 de N" quando há omissão.
+- Novo `truncNome(label, max)` preserva o sufixo do pasto na truncagem ("Belito de C… 2A"), porque o identificador mora no final; aplicado nos ticks dos 4 gráficos.
+- Labels de delta: `grace: '8%'` no eixo x + fallback que desenha o valor em branco dentro da barra quando a ponta encosta na borda do plot (antes colidia com o rótulo do eixo).
+
+Página pública não precisou de mudança: o Gantt dela já é scrollável e os BarChart do Recharts usam altura fixa com eixo estável. Validado regenerando o PDF real da Jacamim no mesmo intervalo. Typecheck limpo.
+
+Disparador: quando mencionar "gráfico ilegível", "rótulo sobreposto", "gráfico de pastagens não escala", ler esta seção.
+### Pacote de qualidade analítica do relatório de Pastagens (2026-10-01)
+
+Revisão crítica dos gráficos (pedido do usuário) aplicada em página pública + PDF:
+
+- **Descanso com contexto histórico**: a RPC `get_dados_relatorio_pastagens` ganhou `ocupacoes_contexto` (migration `20261001100000_rpc_pastagens_ocupacoes_contexto.sql`, db push): para cada pasto, a última ocupação encerrada ANTES do período, em array separado para não poluir as tabelas. `calcularResumoPastagens` recebe o 4º arg `ocupacoesContexto` e calcula `descansoPorPasto([...ocupacoes, ...ocupacoesContexto])`, então a primeira ocupação do período compara com o ciclo anterior real. Em Jacamim segue vazio (histórico começa em 28/08, sem ciclo anterior) — correto, não bug. A página pública filtra `ocupacoes_contexto` pelos mesmos slicers (pasto/lote/módulo) antes de agregar; o loader do infográfico repassa o campo.
+- **Condição: delta virou entrada × saída**: o gráfico de delta era estruturalmente negativo (saída avaliada depois do pastejo, entrada depois do descanso) e medía efeito do pastejo, não qualidade do pasto. Novo card "Condição na entrada e na saída" mostra as duas médias lado a lado por pasto (entrada verde-acinzentada, saída verde/vermelha vs referência 3), ordenado pelo pior na saída, sem pretensão de métrica longitudinal. PDF: `drawCondicao` substitui `drawDelta`; pública: BarChart com duas séries + `ReferenceLine` em 3.
+- **UA/ha**: ordenado por valor decrescente e com linha tracejada na média da fazenda (`ReferenceLine` no Recharts; plugin `uaLabels` desenha a linha + rótulo "média N,NN" no Chart.js).
+- **Gantt**: ordenação por dias ocupados no período (era "atividade recente"); sigla do lote desenhada dentro da barra quando largura ≥ 40px (plugin `ganttLote`, com clamp contra a borda direita do plot); nota "N pasto(s) sem ocupação no período" na legenda (pública) e rodapé do card (PDF), via novo campo `resumo.pastos_sem_uso` (pastos cadastrados em `pastos_info` sem nenhuma ocupação na janela — comparação normalizada por trim+lowercase).
+- **Rotas de rotação no PDF**: novo card full-width "Rotas de rotação" (`drawFluxo`, barras horizontais "origem → destino" com "Nx"), top 6, só renderizado quando `fluxo.length > 1`. Quando presente, `alertasRowsP2` cai de 16 para 8 para caber na página 2. Na página pública o fluxo já existia como chips.
+- **Alertas**: mantida a decisão de não duplicar — a faixa "Alertas do período" da pág. 1 segue como leitura executiva e a tabela paginada responde o detalhe; não entrou gráfico de frequência no PDF.
+
+Validado com PDF real da Jacamim (01/09→15/09, 9 páginas): Gantt com lotes legíveis, fluxo com 6 rotas sem sobreposição, condição com top 8 de 22. Typecheck limpo.
+
+**Pendência operacional**: as migrations `20260929170000`, `20260929180000` e `20261001100000` e todo o código dos relatórios de pastagens/rodeio estão aplicados no banco mas ainda não commitados/pushados.
+
+Disparador: quando mencionar "entrada vs saída do pasto", "rotas de rotação", "pastos sem uso", "descanso com histórico", `ocupacoes_contexto`, `pastos_sem_uso`, ler esta seção.
+
+### Página dedicada para os gráficos de análise do relatório de Pastagens (2026-09-30)
+
+A página 2 do PDF era densa demais: trio de cards de 45mm + card de rotas + tabela de alertas na mesma página, com rótulos espremidos. Reestruturação em `api/pdf/pastagens.js`:
+
+- **Página 2 virou grid 2×2 full-page** (`.past-quad`, `flex:1` dentro da `.page` flex): Condição entrada×saída (top 10), Descanso (top 12), Taxa de lotação (top 12, barras verticais) e Rotas de rotação (top 10). Quando não há fluxo suficiente (`fluxo.length <= 1`), a Taxa de lotação expande para a linha inteira via `.past-span2`.
+- **Alertas ganharam página(s) próprias** (22 linhas/página, `ALERTAS_ROWS_PAGE`; a constante `ALERTAS_ROWS_P2` e a lógica de dividir a página 2 com gráficos sumiram).
+- Limites por gráfico subiram de 6-8 para 10-12 itens, já que cada card agora tem ~4x mais área.
+- Rótulo "média N,NN" da linha de referência do UA/ha movido para o canto superior direito do plot (antes ficava colado na linha e colidia com os valores das barras).
+
+Validado com PDF real da Jacamim (01/09→15/09, 9 páginas): os 4 gráficos legíveis com rótulos completos, alertas inteiros na página 3. Typecheck limpo.
+
+Disparador: quando mencionar "gráficos densos", "página de análise", "quad de gráficos", "rotas de rotação no PDF", ler esta seção.
+
+### Layout em L da página de análise do relatório de Pastagens (2026-09-30)
+
+A pedido do usuário, o grid 2×2 virou layout em L em `api/pdf/pastagens.js`: "Condição na entrada e na saída" ocupa a coluna esquerda inteira (`.past-tall{grid-row:1/-1}`, top 18 pastos), e a coluna direita divide a altura entre Taxa de lotação (em cima, top 12) e Descanso entre ocupações (embaixo, top 12). O gráfico "Rotas de rotação" foi removido do PDF (`drawFluxo` e kind 'fluxo' deletados); os dados de `resumo.fluxo` continuam na página pública como chips. Validado com PDF real da Jacamim (9 páginas).
+
+Disparador: quando mencionar "layout do relatório de pastagens", "gráfico de rotas", "página de análise de pastagens", ler esta seção.

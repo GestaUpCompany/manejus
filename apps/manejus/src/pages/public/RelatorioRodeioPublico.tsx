@@ -1,15 +1,20 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@gestaup/supabase'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ComposedChart, Line, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import logoManejus from '/images/manejus360.png'
+import { ordenarPeriodo } from '../../features/relatorioGeral/periodo'
 import { gerarRelatorioRodeioPDFPuppeteer } from '../../utils/relatorioRodeioPDFPuppeteer'
 import {
   CATEGORIAS_RODEIO,
   alertasDoRegistro,
+  abreviarNome,
   calcularResumoRodeio,
+  distribuicaoEscore,
+  listaAlertasRodeio,
+  situacaoMetaRodeio,
+  pastoAtualPorLote,
   type DadosRelatorioRodeio,
   type RegistroRodeio,
 } from '../../features/relatorioRodeio/agregacao'
@@ -162,6 +167,16 @@ export function RelatorioRodeioPublico({ token, relatorioInfo }: Props) {
 
   const resumo = useMemo(() => calcularResumoRodeio(registrosFiltrados), [registrosFiltrados])
 
+  // Mesmas derivações do PDF: lista plana de alertas, distribuição de
+  // escore por faixa e pasto atual de cada lote.
+  const alertasPeriodo = useMemo(() => listaAlertasRodeio(registrosFiltrados), [registrosFiltrados])
+  const distEscore = useMemo(() => distribuicaoEscore(registrosFiltrados), [registrosFiltrados])
+  const pastoPorLote = useMemo(() => pastoAtualPorLote(registrosFiltrados), [registrosFiltrados])
+  const dadosEscoreDist = useMemo(
+    () => distEscore.labels.map((label, i) => ({ label, gado: distEscore.gado[i], fezes: distEscore.fezes[i] })),
+    [distEscore],
+  )
+
   const temFiltrosAtivos =
     filtroPasto.size > 0 || filtroLote.size > 0 || filtroUsuario.size > 0 || Boolean(dataInicio) || Boolean(dataFim)
 
@@ -225,7 +240,7 @@ export function RelatorioRodeioPublico({ token, relatorioInfo }: Props) {
       const link = document.createElement('a')
       link.href = url
       const nomeFazenda = relatorioInfo.fazenda_nome || 'Fazenda'
-      link.download = `Gesta'Up - Relatório de Rodeio ${nomeFazenda}.pdf`
+      link.download = `Gesta'Up - Relatório de Rodeio de Gado ${nomeFazenda}.pdf`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -354,7 +369,7 @@ export function RelatorioRodeioPublico({ token, relatorioInfo }: Props) {
 
             <div className="bg-white rounded-full px-5 py-1.5 shadow-sm flex-1 max-w-md text-center">
               <h2 className="text-sm font-bold leading-tight" style={{ color: GREEN_DARK }}>
-                {relatorioInfo?.titulo || 'Rodeio'}
+                {relatorioInfo?.titulo || 'Relatório de Rodeio de Gado'}
               </h2>
               {relatorioInfo?.fazenda_nome && (
                 <p className="text-[10px] text-gray-500 leading-tight">{relatorioInfo.fazenda_nome}</p>
@@ -394,7 +409,11 @@ export function RelatorioRodeioPublico({ token, relatorioInfo }: Props) {
               <input
                 type="date"
                 value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
+                onChange={(e) => {
+                  const [ini, fim] = ordenarPeriodo(e.target.value, dataFim)
+                  setDataInicio(ini)
+                  setDataFim(fim)
+                }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
@@ -403,7 +422,11 @@ export function RelatorioRodeioPublico({ token, relatorioInfo }: Props) {
               <input
                 type="date"
                 value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
+                onChange={(e) => {
+                  const [ini, fim] = ordenarPeriodo(dataInicio, e.target.value)
+                  setDataInicio(ini)
+                  setDataFim(fim)
+                }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
@@ -442,16 +465,12 @@ export function RelatorioRodeioPublico({ token, relatorioInfo }: Props) {
               </div>
             )}
 
-            {/* KPIs */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* KPIs (a 4ª coluna de meta só aparece quando algum lote tem
+                meta_intervalo_rodeio_dias configurada) */}
+            <div className={`grid grid-cols-2 gap-3 ${resumo.rodeios_com_meta > 0 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <p className="text-2xl font-bold" style={{ color: GREEN_DARK }}>{formatarInteiro(resumo.total_rodeios)}</p>
                 <p className="text-xs text-gray-600 mt-1">Rodeios realizados</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <p className="text-2xl font-bold" style={{ color: GREEN_DARK }}>{formatarInteiro(resumo.cabecas_contadas)}</p>
-                <p className="text-xs text-gray-600 mt-1">Cabeças contadas</p>
-                <p className="text-[10px] text-gray-400 mt-1">Média: {formatarNumero(resumo.media_cabecas, 0)} por rodeio</p>
               </div>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <p className="text-2xl font-bold" style={{ color: GREEN_DARK }}>{formatarNumero(resumo.escore_gado_medio, 1)}</p>
@@ -468,9 +487,46 @@ export function RelatorioRodeioPublico({ token, relatorioInfo }: Props) {
                   {formatarInteiro(resumo.rodeios_com_alerta)} rodeio(s)
                 </p>
               </div>
+              {resumo.rodeios_com_meta > 0 && (() => {
+                const classificaveis = resumo.dentro_meta + resumo.fora_meta
+                const pct = classificaveis > 0 ? Math.round((resumo.dentro_meta / classificaveis) * 100) : null
+                return (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                    <p className="text-2xl font-bold" style={{ color: resumo.fora_meta > 0 ? RED : GREEN_DARK }}>
+                      {pct != null ? `${pct}%` : '—'}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">Aderência à meta de intervalo</p>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      {formatarInteiro(resumo.dentro_meta)} dentro · {formatarInteiro(resumo.fora_meta)} fora
+                    </p>
+                  </div>
+                )
+              })()}
             </div>
 
-            {/* Gráficos: cabeças por dia + escore */}
+            {/* Faixa de alertas (3 mais recentes), igual à página 1 do PDF */}
+            {alertasPeriodo.length > 0 && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: RED }}>
+                  Alertas do período ({alertasPeriodo.length})
+                </p>
+                <div className="mt-2 space-y-1">
+                  {alertasPeriodo.slice(0, 3).map((a, i) => (
+                    <p key={i} className="text-sm text-red-900 truncate">
+                      <span className="font-semibold">{formatarData(a.data)}</span> · {a.pasto} · {a.label}
+                      {a.observacao && <span className="italic"> — {a.observacao}</span>}
+                    </p>
+                  ))}
+                  {alertasPeriodo.length > 3 && (
+                    <p className="text-xs text-red-400 mt-1">
+                      + {alertasPeriodo.length - 3} alerta(s) listados abaixo
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Gráficos: cabeças por dia + distribuição de escore */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <h3 className="text-sm font-semibold text-gray-700 mb-1">Cabeças contadas por dia</h3>
@@ -489,118 +545,123 @@ export function RelatorioRodeioPublico({ token, relatorioInfo }: Props) {
                 </ResponsiveContainer>
               </div>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <h3 className="text-sm font-semibold text-gray-700 mb-1">Escore médio por dia</h3>
-                <p className="text-[10px] text-gray-400 mb-3">Condição corporal (gado) e digestiva (fezes), escala 1 a 5</p>
+                <h3 className="text-sm font-semibold text-gray-700 mb-1">Distribuição de escore</h3>
+                <p className="text-[10px] text-gray-400 mb-3">Rodeios por faixa de escore (gado e fezes)</p>
                 <ResponsiveContainer width="100%" height={260}>
-                  <ComposedChart data={resumo.serie_diaria} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
+                  <BarChart data={dadosEscoreDist} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis dataKey="data_label" tick={{ fontSize: 11 }} />
-                    <YAxis domain={[0, 5]} tick={{ fontSize: 11 }} allowDecimals={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="escore_medio" name="Escore gado" stroke={GREEN_DARK} strokeWidth={2.5} dot={{ r: 4 }} connectNulls />
-                    <Line type="monotone" dataKey="escore_fezes_medio" name="Escore fezes" stroke={GOLD} strokeWidth={2.5} strokeDasharray="6 3" dot={{ r: 4 }} connectNulls />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Alertas por diagnóstico */}
-            {resumo.frequencia_alertas.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <h3 className="text-sm font-semibold text-gray-700 mb-1">Alertas por diagnóstico</h3>
-                <p className="text-[10px] text-gray-400 mb-3">Quantas vezes cada item saiu do padrão esperado no período</p>
-                <ResponsiveContainer width="100%" height={Math.max(120, resumo.frequencia_alertas.length * 40)}>
-                  <BarChart data={resumo.frequencia_alertas} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                    <YAxis type="category" dataKey="label" width={220} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Bar dataKey="valor" name="Ocorrências" fill={RED} radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="gado" name="Escore gado" fill={GREEN_DARK} radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="fezes" name="Escore fezes" fill={GOLD} radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            )}
+            </div>
 
-            {/* Resumo por lote e por pasto */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {resumo.por_lote.length > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Resumo por lote</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-2 font-medium text-gray-500">Lote</th>
-                          <th className="text-right py-2 font-medium text-gray-500">Rodeios</th>
-                          <th className="text-right py-2 font-medium text-gray-500">Última contagem</th>
-                          <th className="text-right py-2 font-medium text-gray-500">Escore médio</th>
-                          <th className="text-right py-2 font-medium text-gray-500">Alertas</th>
+            {/* Alertas do período: lista detalhada, igual à página 2 do PDF */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+              <div className="flex items-baseline justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-700">Alertas do período</h3>
+                <span className="text-xs text-gray-400">{alertasPeriodo.length} alerta(s)</span>
+              </div>
+              {alertasPeriodo.length === 0 ? (
+                <p className="text-sm text-gray-500">Nenhum diagnóstico fora do padrão foi registrado nos rodeios do período.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-2 font-medium text-gray-500">Data</th>
+                        <th className="text-left py-2 font-medium text-gray-500">Pasto</th>
+                        <th className="text-left py-2 font-medium text-gray-500">Lote</th>
+                        <th className="text-left py-2 font-medium text-gray-500">Diagnóstico</th>
+                        <th className="text-left py-2 font-medium text-gray-500">Observação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {alertasPeriodo.map((a, i) => (
+                        <tr key={i} className="border-b border-gray-100">
+                          <td className="py-2 text-gray-800 whitespace-nowrap">{formatarData(a.data)}</td>
+                          <td className="py-2 text-gray-600">{a.pasto}</td>
+                          <td className="py-2 text-gray-600">{a.lote}</td>
+                          <td className="py-2 font-medium" style={{ color: RED }}>{a.label}</td>
+                          <td className="py-2 text-gray-600">{a.observacao || '—'}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {resumo.por_lote.map((l) => (
-                          <tr key={l.nome} className="border-b border-gray-100">
-                            <td className="py-2 font-medium text-gray-800">{l.nome}</td>
-                            <td className="py-2 text-right text-gray-600">{l.rodeios}</td>
-                            <td className="py-2 text-right text-gray-600">
-                              {l.cabecas_ultima != null ? `${formatarInteiro(l.cabecas_ultima)}` : '—'}
-                              {l.data_ultima && <span className="text-gray-400 text-xs"> ({formatarData(l.data_ultima)})</span>}
-                            </td>
-                            <td className="py-2 text-right text-gray-600">{formatarNumero(l.escore_medio, 1)}</td>
-                            <td className="py-2 text-right">
-                              <span className={l.alertas > 0 ? 'font-medium' : 'text-gray-400'} style={l.alertas > 0 ? { color: RED } : undefined}>
-                                {l.alertas}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-              {resumo.por_pasto.length > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Resumo por pasto</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-2 font-medium text-gray-500">Pasto</th>
-                          <th className="text-right py-2 font-medium text-gray-500">Rodeios</th>
-                          <th className="text-right py-2 font-medium text-gray-500">Última contagem</th>
-                          <th className="text-right py-2 font-medium text-gray-500">Escore médio</th>
-                          <th className="text-right py-2 font-medium text-gray-500">Alertas</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {resumo.por_pasto.map((p) => (
-                          <tr key={p.nome} className="border-b border-gray-100">
-                            <td className="py-2 font-medium text-gray-800">{p.nome}</td>
-                            <td className="py-2 text-right text-gray-600">{p.rodeios}</td>
-                            <td className="py-2 text-right text-gray-600">
-                              {p.cabecas_ultima != null ? `${formatarInteiro(p.cabecas_ultima)}` : '—'}
-                              {p.data_ultima && <span className="text-gray-400 text-xs"> ({formatarData(p.data_ultima)})</span>}
-                            </td>
-                            <td className="py-2 text-right text-gray-600">{formatarNumero(p.escore_medio, 1)}</td>
-                            <td className="py-2 text-right">
-                              <span className={p.alertas > 0 ? 'font-medium' : 'text-gray-400'} style={p.alertas > 0 ? { color: RED } : undefined}>
-                                {p.alertas}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
 
+            {/* Resumo por lote (com pasto atual); a tabela por pasto foi
+                fundida aqui porque pasto e lote são quase 1:1 */}
+            {resumo.por_lote.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <div className="flex items-baseline justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-700">Resumo por lote</h3>
+                  <span className="text-xs text-gray-400">{resumo.por_lote.length} lote(s)</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-2 font-medium text-gray-500">Lote</th>
+                        <th className="text-left py-2 font-medium text-gray-500">Pasto</th>
+                        <th className="text-right py-2 font-medium text-gray-500">Rodeios</th>
+                        <th className="text-right py-2 font-medium text-gray-500">Última contagem</th>
+                        <th className="text-right py-2 font-medium text-gray-500">Média cabeças</th>
+                        <th className="text-right py-2 font-medium text-gray-500">Escore médio</th>
+                        {resumo.por_lote.some((l) => l.meta_dias != null) && (
+                          <th className="text-right py-2 font-medium text-gray-500">Meta intervalo</th>
+                        )}
+                        <th className="text-right py-2 font-medium text-gray-500">Alertas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resumo.por_lote.map((l) => (
+                        <tr key={l.nome} className="border-b border-gray-100">
+                          <td className="py-2 font-medium text-gray-800">{l.nome}</td>
+                          <td className="py-2 text-gray-600">{pastoPorLote.get(l.nome) || '—'}</td>
+                          <td className="py-2 text-right text-gray-600">{l.rodeios}</td>
+                          <td className="py-2 text-right text-gray-600">
+                            {l.cabecas_ultima != null ? `${formatarInteiro(l.cabecas_ultima)}` : '—'}
+                            {l.data_ultima && <span className="text-gray-400 text-xs"> ({formatarData(l.data_ultima)})</span>}
+                          </td>
+                          <td className="py-2 text-right text-gray-600">{formatarNumero(l.cabecas_media, 0)}</td>
+                          <td className="py-2 text-right text-gray-600">{formatarNumero(l.escore_medio, 1)}</td>
+                          {resumo.por_lote.some((x) => x.meta_dias != null) && (
+                            <td className="py-2 text-right text-gray-600">
+                              {l.meta_dias != null ? `${l.meta_dias}d` : '—'}
+                              {l.fora_meta > 0 && (
+                                <span className="block text-[10px] font-medium" style={{ color: RED }}>
+                                  {l.fora_meta} fora · {l.dentro_meta} dentro
+                                </span>
+                              )}
+                            </td>
+                          )}
+                          <td className="py-2 text-right">
+                            <span className={l.alertas > 0 ? 'font-medium' : 'text-gray-400'} style={l.alertas > 0 ? { color: RED } : undefined}>
+                              {l.alertas > 0 ? l.alertas : '—'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* Detalhamento */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Registros detalhados</h3>
+              <div className="flex items-baseline justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-700">Registros detalhados</h3>
+                <span className="text-xs text-gray-400">{registrosFiltrados.length} registro(s)</span>
+              </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
@@ -609,12 +670,6 @@ export function RelatorioRodeioPublico({ token, relatorioInfo }: Props) {
                       <th className="text-left py-2 font-medium text-gray-500">Usuário</th>
                       <th className="text-left py-2 font-medium text-gray-500">Pasto</th>
                       <th className="text-left py-2 font-medium text-gray-500">Lote</th>
-                      <th className="text-right py-2 font-medium text-gray-500">Vac</th>
-                      <th className="text-right py-2 font-medium text-gray-500">Tou</th>
-                      <th className="text-right py-2 font-medium text-gray-500">Bez</th>
-                      <th className="text-right py-2 font-medium text-gray-500">Boi</th>
-                      <th className="text-right py-2 font-medium text-gray-500">Gar</th>
-                      <th className="text-right py-2 font-medium text-gray-500">Nov</th>
                       <th className="text-right py-2 font-medium text-gray-500">Total</th>
                       <th className="text-right py-2 font-medium text-gray-500">Esc. gado</th>
                       <th className="text-right py-2 font-medium text-gray-500">Esc. fezes</th>
@@ -625,19 +680,22 @@ export function RelatorioRodeioPublico({ token, relatorioInfo }: Props) {
                   <tbody>
                     {registrosFiltrados.map((r: RegistroRodeio) => {
                       const alertas = alertasDoRegistro(r.diagnosticos)
-                      const equipe = Array.isArray(r.equipe_nomes) && r.equipe_nomes.length ? r.equipe_nomes.join(', ') : r.equipe != null ? String(r.equipe) : '—'
+                      const equipe = Array.isArray(r.equipe_nomes) && r.equipe_nomes.length
+                        ? r.equipe_nomes.map(abreviarNome).filter(Boolean).join(', ') || '—'
+                        : r.equipe != null ? String(r.equipe) : '—'
                       return (
                         <tr key={r.registro_id} className="border-b border-gray-100">
                           <td className="py-2 text-gray-800 whitespace-nowrap">{formatarData(r.data)}</td>
                           <td className="py-2 text-gray-600">{r.nome_usuario || '—'}</td>
                           <td className="py-2 text-gray-600">{r.pasto || '—'}</td>
-                          <td className="py-2 text-gray-600">{r.lote || '—'}</td>
-                          <td className="py-2 text-right text-gray-600">{r.vaca ?? '—'}</td>
-                          <td className="py-2 text-right text-gray-600">{r.touro ?? '—'}</td>
-                          <td className="py-2 text-right text-gray-600">{r.bezerro ?? '—'}</td>
-                          <td className="py-2 text-right text-gray-600">{r.boi ?? '—'}</td>
-                          <td className="py-2 text-right text-gray-600">{r.garrote ?? '—'}</td>
-                          <td className="py-2 text-right text-gray-600">{r.novilha ?? '—'}</td>
+                          <td className="py-2 text-gray-600">
+                            {r.lote || '—'}
+                            {situacaoMetaRodeio(r) === 'fora' && (
+                              <span className="block text-[10px] font-medium" style={{ color: RED }}>
+                                Atraso de {(r.dias_desde_anterior ?? 0) - (r.meta_intervalo_dias ?? 0)} dias
+                              </span>
+                            )}
+                          </td>
                           <td className="py-2 text-right font-medium text-gray-800">{r.total_cabecas ?? '—'}</td>
                           <td className="py-2 text-right text-gray-600">{r.escore_gado != null ? formatarNumero(r.escore_gado, 1) : '—'}</td>
                           <td className="py-2 text-right text-gray-600">{r.escore_fezes ?? '—'}</td>
