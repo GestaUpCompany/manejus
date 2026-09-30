@@ -147,3 +147,18 @@ O que a tela/seção deve cobrir:
 Fonte de dados já existe: `programacao_tratos` (sem filtro `ativo`) + `programacao_tratos_percentuais` + join opcional em `registros_oferta_trato`. Sem migration necessária.
 
 Disparador: quando mencionar "tela de versões", "histórico de versões do cronograma", "visualizar versões de tratos", ou editar versão futura/não-vigente, ler esta seção.
+
+## Farm Plan (produto novo, spec aprovada 2026-09-30, não implementado)
+
+Substitui todo o módulo de atividades do manejus (Atividades, MonitoramentoAtividades, Rotinas, AuditoriaRotinas, RelatorioAtividades + services) e as telas de atividades do PWA (`AtividadesPage`, `ProgramacaoHojePage`) por um produto próprio de gestão de execução e gente, baseado na planilha "Farm Plan - Faz. Rio Juruena - GestaUp 2026". Protótipo de referência: `FarmPlan_RioJuruena_6.html` na raiz deste repo (single-file, sync via `window.claude.use('db')` que precisa ser reescrito sobre Supabase Realtime).
+
+Decisões já tomadas com o usuário:
+
+1. Terceiro app `apps/farmplan` no monorepo existente (pnpm workspace + Vercel próprio), mesmo stack do manejus. Não é um módulo dentro do manejus.
+2. Baixa de campo fica no PWA offline-first existente; FarmPlan web é a ferramenta do gestor. Não duplicar infra offline.
+3. Migração total do schema atual de atividades (`atividades`, `atividade_funcionarios`, `atividade_sessoes`, `atividade_imprevistos`, `rotinas`, `execucoes_rotina`, auditoria) para o modelo novo por semana, com backup antes.
+4. Pessoas: extensão de `funcionarios` (apelido, superior_id, contrato de resultados, avaliações semanais), não cadastro paralelo. Identidade no PWA já resolvida pelo RBAC de PIN (`funcionarios.acessa_app`/`pin_hash`); baixas gravam `feita_por` = funcionario_id logado.
+
+Plano completo, schema proposto (tabelas `fp_*`), mapeamento de migração e fases: `PLANO_IMPLEMENTACAO_FARMPLAN.md` na raiz. Decisões abertas listadas lá (catálogo de critérios/indicadores por fazenda, overlap com FarmMetrics, time tracking, templates, RBAC).
+
+Disparador: quando mencionar "Farm Plan", "farmplan", "plano anual de atividades", "avaliação semanal", "contrato de resultados", "5M", ou retomar a implementação, ler esta seção e o plano na raiz.
