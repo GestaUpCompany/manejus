@@ -222,3 +222,23 @@ export function useFpSetStatusSemana() {
     },
   })
 }
+
+/** Observação da semana de uma atividade (RPC preserva o status existente). */
+export function useSaveObsSemana() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: {
+      atividadeId: string
+      semana: number
+      observacao: string | null
+    }) => {
+      const { error } = await supabase.rpc('fp_set_obs_semana', {
+        p_atividade_id: params.atividadeId,
+        p_semana: params.semana,
+        p_observacao: params.observacao,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fp_semana'] }),
+  })
+}
