@@ -148,6 +148,27 @@ export function useSemanaDados(
   })
 }
 
+/** Todas as linhas de semana das atividades de um plano (grade anual). */
+export function usePlanoSemanas(
+  fazendaId: string | undefined,
+  planoId: string | undefined,
+  atividadeIds: string[] | undefined,
+) {
+  return useQuery({
+    queryKey: ['fp_plano_anual', fazendaId, planoId],
+    enabled: !!fazendaId && !!planoId && !!atividadeIds && atividadeIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fp_atividade_semanas')
+        .select('*')
+        .eq('fazenda_id', fazendaId!)
+        .in('atividade_id', atividadeIds!)
+      if (error) throw error
+      return data as FpAtividadeSemana[]
+    },
+  })
+}
+
 // ============ Mutations ============
 
 export function useFpSetDia() {
