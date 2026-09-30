@@ -221,6 +221,9 @@ export interface DegradacaoPasto {
   avaliacao_entrada_media: number | null
   avaliacao_saida_media: number | null
   delta: number | null
+  // Quantas avaliações alimentam as médias: 2,0 sobre 1 avaliação é
+  // ruído; 2,0 sobre 5 é diagnóstico.
+  avaliacoes: number
 }
 
 export interface DescansoPasto {
@@ -256,6 +259,11 @@ export interface ResumoPastagens {
   // Pastos cadastrados (pastos_info) sem nenhuma ocupação na janela:
   // candidatos a reforma, feno ou entrada no rodízio.
   pastos_sem_uso: number
+  // Área pasteável com uso no período vs. cadastrada — o KPI de
+  // headline que a contagem de pastos não entrega sozinha.
+  area_utilizada_ha: number | null
+  area_total_ha: number | null
+  area_utilizada_pct: number | null
   insights: string
 }
 
@@ -270,6 +278,39 @@ function dataLabel(iso: string): string {
 
 function formatarNumero(valor: number, casas: number): string {
   return valor.toFixed(casas).replace('.', ',')
+}
+
+// "1 pasto" / "5 pastos" sem o padrão "(s)" que entrega relatório gerado
+// por sistema.
+export function plural(n: number, singular: string, pluralForm: string): string {
+  return n === 1 ? singular : pluralForm
+}
+
+// Nomes de pasto e lote gravados no histórico/movimentações divergem do
+// cadastro em caixa e espaços ("volta de cima A" vs "Volta de Cima A",
+// "PV - 01" vs "PV-01"). Resolve cada nome para a forma cadastral via
+// pastos_info/lotes_disponiveis; sem correspondência, mantém o original.
+export function normalizarNomesPasto<
+  R extends { pasto_saida: string | null; pasto_entrada: string | null; lote: string | null },
+  O extends { pasto: string | null; lote: string | null },
+>(
+  registros: R[],
+  ocupacoes: O[],
+  ocupacoesContexto: O[],
+  pastosInfo: { nome: string }[],
+  lotesDisponiveis: string[],
+): { registros: R[]; ocupacoes: O[]; ocupacoesContexto: O[] } {
+  const chave = (n: string) => n.trim().toLowerCase().replace(/\s+/g, ' ')
+  const canonPasto = new Map(pastosInfo.filter((p) => p.nome).map((p) => [chave(p.nome), p.nome]))
+  const chaveLote = (n: string) => n.trim().toLowerCase().replace(/\s+/g, '')
+  const canonLote = new Map(lotesDisponiveis.filter(Boolean).map((l) => [chaveLote(l), l]))
+  const nomePasto = (n: string | null) => (n ? (canonPasto.get(chave(n)) ?? n) : n)
+  const nomeLote = (n: string | null) => (n ? (canonLote.get(chaveLote(n)) ?? n) : n)
+  return {
+    registros: registros.map((r) => ({ ...r, pasto_saida: nomePasto(r.pasto_saida), pasto_entrada: nomePasto(r.pasto_entrada), lote: nomeLote(r.lote) })),
+    ocupacoes: ocupacoes.map((o) => ({ ...o, pasto: nomePasto(o.pasto), lote: nomeLote(o.lote) })),
+    ocupacoesContexto: ocupacoesContexto.map((o) => ({ ...o, pasto: nomePasto(o.pasto), lote: nomeLote(o.lote) })),
+  }
 }
 
 export function serieDiariaPastagens(registros: RegistroPastagem[]): PontoSeriePastagens[] {
@@ -363,6 +404,7 @@ export function degradacaoPorPasto(registros: RegistroPastagem[]): DegradacaoPas
         avaliacao_entrada_media: entradaMedia,
         avaliacao_saida_media: saidaMedia,
         delta: entradaMedia != null && saidaMedia != null ? saidaMedia - entradaMedia : null,
+        avaliacoes: (entradas.get(nome)?.length ?? 0) + (saidas.get(nome)?.length ?? 0),
       }
     })
     // Ordena pela pior condição na saída: o pasto que o gado deixou mais
@@ -458,7 +500,9 @@ function resumirPorPasto(
     if (!o.pasto) continue
     const p = obter(o.pasto)
     p.ocupacoes += 1
-    if (o.dias != null) p._dias.push(Number(o.dias))
+    // dias < 0 = saída antes da entrada (erro na fonte): sai na
+    // listagem em vermelho, mas não pode puxar a média para baixo.
+    if (o.dias != null && Number(o.dias) >= 0) p._dias.push(Number(o.dias))
     if (o.taxa_lotacao_ua_ha != null && Number(o.taxa_lotacao_ua_ha) > 0) p._ua.push(Number(o.taxa_lotacao_ua_ha))
     if (o.desvio_percent != null) p._desv.push(Number(o.desvio_percent))
   }
@@ -526,14 +570,14 @@ function gerarInsights(
       `Foram realizadas ${registros.length} ${registros.length === 1 ? 'movimentação de pasto' : 'movimentações de pasto'} no período, manejando ${animais} animais entre ${pastos.size} ${pastos.size === 1 ? 'pasto' : 'pastos'}.`,
     )
   }
-  const encerradas = ocupacoes.filter((o) => !o.em_andamento && o.dias != null)
+  const encerradas = ocupacoes.filter((o) => !o.em_andamento && o.dias != null && o.dias >= 0)
   if (encerradas.length) {
     const diasMedia = media(encerradas.map((o) => o.dias as number))
     partes.push(`O tempo médio de ocupação dos períodos encerrados foi de ${formatarNumero(diasMedia ?? 0, 1)} dias.`)
   }
   const emAndamento = ocupacoes.filter((o) => o.em_andamento)
   if (emAndamento.length) {
-    partes.push(`${emAndamento.length} ${emAndamento.length === 1 ? 'pasto está ocupado' : 'pastos estão ocupados'} no momento.`)
+    partes.push(`${emAndamento.length} ${emAndamento.length === 1 ? 'pasto estava' : 'pastos estavam'} com ocupação em aberto ao fim do período.`)
   }
   const acimaMeta = ocupacoes.filter((o) => (o.desvio_percent ?? 0) > 0)
   if (acimaMeta.length) {
@@ -541,7 +585,7 @@ function gerarInsights(
   }
   const maisEntradas = porPasto[0]
   if (maisEntradas && maisEntradas.entradas + maisEntradas.saidas > 1) {
-    partes.push(`O pasto mais movimentado foi ${maisEntradas.nome} (${maisEntradas.entradas} entrada(s) e ${maisEntradas.saidas} saída(s)).`)
+    partes.push(`O pasto mais movimentado foi ${maisEntradas.nome} (${maisEntradas.entradas} ${plural(maisEntradas.entradas, 'entrada', 'entradas')} e ${maisEntradas.saidas} ${plural(maisEntradas.saidas, 'saída', 'saídas')}).`)
   }
   const alertas = frequencia.reduce((s, item) => s + item.valor, 0)
   if (alertas > 0) {
@@ -597,9 +641,27 @@ export function calcularResumoPastagens(
   }
   const fluxo = Array.from(fluxoMap.values()).sort((a, b) => b.vezes - a.vezes)
 
-  const encerradas = ocupacoes.filter((o) => !o.em_andamento && o.dias != null)
+  const encerradas = ocupacoes.filter((o) => !o.em_andamento && o.dias != null && o.dias >= 0)
   const porPasto = resumirPorPasto(registros, ocupacoes, pastosInfo)
   const porLote = resumirPorLote(registros, ocupacoes)
+
+  // Área pasteável com uso no período (movimentação ou ocupação) vs.
+  // área cadastrada: o KPI de headline que a contagem de pastos não
+  // entrega sozinha.
+  let areaUtilizada: number | null = null
+  let areaTotal: number | null = null
+  for (const p of pastosInfo) {
+    if (p.area_util_ha == null || p.area_util_ha <= 0) continue
+    areaTotal = (areaTotal ?? 0) + p.area_util_ha
+    if (p.nome && pastosNorm.has(p.nome.trim().toLowerCase())) {
+      areaUtilizada = (areaUtilizada ?? 0) + p.area_util_ha
+    }
+  }
+  const areaPct = areaTotal != null && areaTotal > 0 && areaUtilizada != null ? (areaUtilizada / areaTotal) * 100 : null
+  let insights = gerarInsights(registros, ocupacoes, porPasto, frequencia)
+  if (areaTotal != null && areaUtilizada != null && areaUtilizada < areaTotal) {
+    insights += `${insights ? ' ' : ''}Dos ${formatarNumero(areaTotal, 0)} ha cadastrados, ${formatarNumero(areaUtilizada, 0)} ha (${formatarNumero(areaPct ?? 0, 0)}%) tiveram uso no período.`
+  }
 
   return {
     total_movimentacoes: registros.length,
@@ -635,6 +697,9 @@ export function calcularResumoPastagens(
       0,
       pastosInfo.filter((p) => p.nome && !pastosNorm.has(p.nome.trim().toLowerCase())).length,
     ),
-    insights: gerarInsights(registros, ocupacoes, porPasto, frequencia),
+    area_utilizada_ha: areaUtilizada,
+    area_total_ha: areaTotal,
+    area_utilizada_pct: areaPct,
+    insights,
   }
 }

@@ -6,7 +6,7 @@ import type { LinhaMorte, ParametrosRelatorioMorte, PastoGeo, ResumoMorte } from
 import type { ParametrosRelatorioRodeio } from '../../utils/relatorioRodeioPDFPuppeteer'
 import type { ParametrosRelatorioPastagens } from '../../utils/relatorioPastagensPDFPuppeteer'
 import { calcularResumoRodeio, type RegistroRodeio } from '../relatorioRodeio/agregacao'
-import { calcularResumoPastagens, type OcupacaoPasto, type PastoInfo, type RegistroPastagem } from '../relatorioPastagens/agregacao'
+import { calcularResumoPastagens, normalizarNomesPasto, type OcupacaoPasto, type PastoInfo, type RegistroPastagem } from '../relatorioPastagens/agregacao'
 import type { TipoRelatorioGeral } from './catalogo'
 import type { DadosPDFBoletimRebanho } from './boletimRebanho'
 
@@ -468,10 +468,14 @@ async function carregarPastagens(
     p_data_fim: dataFim,
   })
   if (error) throw error
-  const registros = (data?.dados?.registros ?? []) as RegistroPastagem[]
-  const ocupacoes = (data?.dados?.ocupacoes ?? []) as OcupacaoPasto[]
-  const ocupacoesContexto = (data?.dados?.ocupacoes_contexto ?? []) as OcupacaoPasto[]
   const pastosInfo = (data?.dados?.pastos_info ?? []) as PastoInfo[]
+  const norm = normalizarNomesPasto(
+    (data?.dados?.registros ?? []) as RegistroPastagem[],
+    (data?.dados?.ocupacoes ?? []) as OcupacaoPasto[],
+    (data?.dados?.ocupacoes_contexto ?? []) as OcupacaoPasto[],
+    pastosInfo,
+    (data?.dados?.lotes_disponiveis ?? []) as string[],
+  )
   return {
     tipo: 'pastagens',
     dados: {
@@ -479,9 +483,9 @@ async function carregarPastagens(
       dataFim,
       fazendaNome: fazenda.nome,
       fazendaLogoUrl: fazenda.logoUrl,
-      resumo: calcularResumoPastagens(registros, ocupacoes, pastosInfo, ocupacoesContexto),
-      registros,
-      ocupacoes,
+      resumo: calcularResumoPastagens(norm.registros, norm.ocupacoes, pastosInfo, norm.ocupacoesContexto),
+      registros: norm.registros,
+      ocupacoes: norm.ocupacoes,
     },
   }
 }

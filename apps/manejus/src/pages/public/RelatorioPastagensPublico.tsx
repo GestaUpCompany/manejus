@@ -13,6 +13,8 @@ import {
   composicaoPastagem,
   listaAlertasPastagens,
   mapaOcupacaoPorPasto,
+  normalizarNomesPasto,
+  plural,
   totalAnimaisRegistro,
   type DadosRelatorioPastagens,
   type RegistroPastagem,
@@ -126,7 +128,22 @@ export function RelatorioPastagensPublico({ token, relatorioInfo }: Props) {
         return
       }
 
-      setDados(rpcData?.dados as DadosRelatorioPastagens)
+      const dadosRpc = rpcData?.dados as DadosRelatorioPastagens
+      // Resolve grafias divergentes ("volta de cima A", "PV - 01") para
+      // o nome cadastral antes de qualquer filtro/agregação.
+      if (dadosRpc) {
+        const norm = normalizarNomesPasto(
+          dadosRpc.registros ?? [],
+          dadosRpc.ocupacoes ?? [],
+          dadosRpc.ocupacoes_contexto ?? [],
+          dadosRpc.pastos_info ?? [],
+          dadosRpc.lotes_disponiveis ?? [],
+        )
+        dadosRpc.registros = norm.registros
+        dadosRpc.ocupacoes = norm.ocupacoes
+        dadosRpc.ocupacoes_contexto = norm.ocupacoesContexto
+      }
+      setDados(dadosRpc)
       setError(null)
     } catch (err) {
       console.error('Erro:', err)
@@ -519,7 +536,7 @@ export function RelatorioPastagensPublico({ token, relatorioInfo }: Props) {
           </div>
           <div className="flex items-center justify-between mt-2">
             <p className="text-xs text-gray-400">
-              {registrosFiltrados.length} movimentação(ões) · {ocupacoesFiltradas.length} período(s) de ocupação.
+              {registrosFiltrados.length} {plural(registrosFiltrados.length, 'movimentação', 'movimentações')} · {ocupacoesFiltradas.length} {plural(ocupacoesFiltradas.length, 'período', 'períodos')} de ocupação.
             </p>
             {temFiltrosAtivos && (
               <button onClick={limparFiltros} className="text-xs text-gray-500 hover:text-gray-700 underline">
@@ -557,7 +574,7 @@ export function RelatorioPastagensPublico({ token, relatorioInfo }: Props) {
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <p className="text-2xl font-bold" style={{ color: GREEN_DARK }}>{formatarInteiro(resumo.total_movimentacoes)}</p>
                 <p className="text-xs text-gray-600 mt-1">Movimentações de pasto</p>
-                <p className="text-[10px] text-gray-400 mt-1">{formatarInteiro(resumo.lotes_movimentados)} lote(s) · {formatarInteiro(resumo.pastos_utilizados)} pasto(s)</p>
+                <p className="text-[10px] text-gray-400 mt-1">{formatarInteiro(resumo.lotes_movimentados)} {plural(resumo.lotes_movimentados, 'lote', 'lotes')} · {formatarInteiro(resumo.pastos_utilizados)} {plural(resumo.pastos_utilizados, 'pasto', 'pastos')}</p>
               </div>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <p className="text-2xl font-bold" style={{ color: GREEN_DARK }}>{formatarInteiro(resumo.animais_manejados)}</p>
@@ -598,8 +615,8 @@ export function RelatorioPastagensPublico({ token, relatorioInfo }: Props) {
                       </div>
                     </div>
                     <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
-                      {mapa.linhas.map((linha) => (
-                        <div key={linha.pasto} className="flex items-center h-7">
+                      {mapa.linhas.map((linha, li) => (
+                        <div key={linha.pasto} className={`flex items-center h-7 ${li % 2 === 0 ? 'bg-gray-50/70' : ''}`}>
                           <div className="w-36 shrink-0 pr-2 text-xs text-gray-700 truncate" title={linha.pasto}>{linha.pasto}</div>
                           <div className="relative flex-1 h-4 border-l border-r border-gray-100">
                             {linha.barras.map((b, i) => (
@@ -610,8 +627,14 @@ export function RelatorioPastagensPublico({ token, relatorioInfo }: Props) {
                                 style={{
                                   left: `${mapaEscala.left(b.inicio)}%`,
                                   width: `${mapaEscala.width(b.inicio, b.fim)}%`,
-                                  backgroundColor: b.aberta ? GOLD : BLUE,
-                                  opacity: b.aberta ? 0.9 : 0.85,
+                                  ...(b.aberta
+                                    ? { backgroundColor: BLUE }
+                                    : {
+                                        // Hachura + cor: em impressão P&B a diferença
+                                        // sólido vs listrado continua legível.
+                                        background: `repeating-linear-gradient(45deg, transparent 0, transparent 3px, ${GOLD} 3px, ${GOLD} 5px)`,
+                                        border: `1px solid ${GOLD}`,
+                                      }),
                                 }}
                               />
                             ))}
@@ -621,13 +644,14 @@ export function RelatorioPastagensPublico({ token, relatorioInfo }: Props) {
                     </div>
                     <div className="flex items-center gap-4 mt-3 text-[11px] text-gray-500">
                       <span className="flex items-center gap-1.5">
-                        <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: BLUE }} />Encerrada
+                        <span className="inline-block w-3 h-3 rounded-sm border" style={{ borderColor: GOLD, background: `repeating-linear-gradient(45deg, transparent 0, transparent 2px, ${GOLD} 2px, ${GOLD} 4px)` }} />Encerrada
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: GOLD }} />Em andamento
+                        <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: BLUE }} />Em andamento
                       </span>
-                      {mapa.pastosOmitidos > 0 && <span>+ {mapa.pastosOmitidos} pasto(s) não exibido(s)</span>}
-                      {pastosSemUso > 0 && <span>{pastosSemUso} pasto(s) sem ocupação no período</span>}
+                      {mapa.pastosOmitidos > 0 && <span>+ {mapa.pastosOmitidos} {plural(mapa.pastosOmitidos, 'pasto não exibido', 'pastos não exibidos')}</span>}
+                      {pastosSemUso > 0 && <span>{pastosSemUso} {plural(pastosSemUso, 'pasto', 'pastos')} sem ocupação no período</span>}
+                      {resumo.area_utilizada_pct != null && <span>{formatarNumero(resumo.area_utilizada_pct, 0)}% da área utilizada</span>}
                     </div>
                   </div>
                 ) : (
@@ -678,7 +702,7 @@ export function RelatorioPastagensPublico({ token, relatorioInfo }: Props) {
                       <YAxis type="category" dataKey="nome" tick={{ fontSize: 10, fill: '#666' }} width={130} />
                       <Tooltip
                         formatter={(value: any, _name: any, item: any) => [
-                          `${formatarNumero(Number(value), 0)} dias (menor: ${formatarInteiro(item?.payload?.menor_descanso)} · ${formatarInteiro(item?.payload?.intervalos)} intervalo(s))`,
+                          `${formatarNumero(Number(value), 0)} dias (menor: ${formatarInteiro(item?.payload?.menor_descanso)} · ${formatarInteiro(item?.payload?.intervalos)} ${plural(item?.payload?.intervalos ?? 0, 'intervalo', 'intervalos')})`,
                           'Descanso médio',
                         ]}
                         contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
@@ -909,7 +933,7 @@ export function RelatorioPastagensPublico({ token, relatorioInfo }: Props) {
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Manejador</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Lote</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Trajeto</th>
-                        <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Aval. S/E</th>
+                        <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Aval. saída/entrada</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Ocup./Vedação</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Composição</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Animais</th>
@@ -943,7 +967,7 @@ export function RelatorioPastagensPublico({ token, relatorioInfo }: Props) {
                             {Array.isArray(r.equipe_nomes) && r.equipe_nomes.length
                               ? r.equipe_nomes.map(abreviarNome).filter(Boolean).join(', ')
                               : r.numero_pessoas_manejo != null
-                                ? `${r.numero_pessoas_manejo} pessoa(s)`
+                                ? `${r.numero_pessoas_manejo} ${plural(r.numero_pessoas_manejo, 'pessoa', 'pessoas')}`
                                 : '—'}
                           </td>
                           <td className="px-4 py-2">{alertasCell(r)}</td>

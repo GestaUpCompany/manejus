@@ -1705,3 +1705,38 @@ Disparador: quando mencionar "gráficos densos", "página de análise", "quad de
 A pedido do usuário, o grid 2×2 virou layout em L em `api/pdf/pastagens.js`: "Condição na entrada e na saída" ocupa a coluna esquerda inteira (`.past-tall{grid-row:1/-1}`, top 18 pastos), e a coluna direita divide a altura entre Taxa de lotação (em cima, top 12) e Descanso entre ocupações (embaixo, top 12). O gráfico "Rotas de rotação" foi removido do PDF (`drawFluxo` e kind 'fluxo' deletados); os dados de `resumo.fluxo` continuam na página pública como chips. Validado com PDF real da Jacamim (9 páginas).
 
 Disparador: quando mencionar "layout do relatório de pastagens", "gráfico de rotas", "página de análise de pastagens", ler esta seção.
+
+### Gantt de ocupação legível em impressão P&B (2026-09-30)
+
+Dois problemas no mapa de ocupação: leitura fraca e dependência de cor (encerrada azul / em andamento dourado) que se perde em impressão preto-e-branco. Solução por redundância de codificação — cor + padrão:
+
+- **Barras encerradas viram hachura diagonal dourada** (`CanvasPattern` de tile 8×8 + borda `borderColor` no PDF; `repeating-linear-gradient` na página pública). Em andamento é barra sólida azul (codificação final escolhida pelo usuário: sólido = em curso, hachura = encerrada). Em P&B lê-se "cheio vs listrado".
+- **Fundo zebrado por linha** (`beforeDatasetsDraw` pinta bandas alternadas sobre o chartArea; `bg-gray-50/70` nas linhas pares da página pública) para guiar o olho do rótulo do pasto até a barra sem grade horizontal.
+- **Sigla do lote** branca sobre o azul sólido e escura sobre a hachura.
+- Legenda atualizada: o quadradinho "Em andamento" mostra a hachura (CSS `gantt-hatch` / gradiente inline).
+- De quebra: `taxa_lotacao_media_ua_ha` e a média por pasto passaram a ignorar UA/ha = 0 (ocupação sem área/cabeças não é lotação zero, é dado faltante). Na Jacamim a referência subiu de 1,17 para 2,80.
+
+Validado com PDF real da Jacamim. Typecheck limpo.
+
+Disparador: quando mencionar "Gantt P&B", "impressão do mapa de ocupação", "hachura", "cor do relatório", ler esta seção.
+
+### Condição entrada×saída vira tabela na página de análise (2026-09-30)
+
+O gráfico de barras "Condição na entrada e na saída" do PDF de pastagens virou tabela (`condicaoTableHtml` em `api/pdf/pastagens.js`): com muitos pastos, barras lado a lado eram menos legíveis que colunas numéricas. Layout da página 2 mantido em L: a coluna esquerda exibe a tabela (Pasto, Aval. entrada, Aval. saída, Variação colorida verde/vermelho; saída <3 em vermelho) com limite fixo de 20 linhas (CONDICAO_ROWS_P2), o excedente pagina em páginas de continuação dedicadas (CONDICAO_ROWS_PAGE=22); coluna direita segue com Taxa de lotação em cima e Descanso embaixo. `drawCondicao`, kind 'condicao', canvasDelta removidos; `.past-condicao-table` compartilha o estilo das demais tabelas, sem compactação de padding (decisão do usuário: limite fixo + paginação, em vez de espremer linhas). A página pública mantém o gráfico Recharts (interativo, com tooltip). Validado com PDF real da Jacamim (22 pastos → 20 na coluna + 2 na página de continuação, 10 páginas).
+
+Disparador: quando mencionar "tabela de condição", "gráfico de condição no PDF", ler esta seção.
+
+### Auditoria do relatório de pastagens: pacote de correções (2026-09-30)
+
+Seis itens da auditoria crítica implementados:
+
+1. **Média de ocupação saneada**: `dias < 0` (saída antes da entrada, erro de fonte) deixou de contaminar `ocupacao_media_dias` e a média por pasto. Segue sinalizado em vermelho na listagem do histórico. Na Jacamim o KPI subiu de 2,7 para 3,0.
+2. **% de área utilizada**: novos campos `area_utilizada_ha/total_ha/pct` no resumo; frase no insight ("Dos X ha cadastrados, Y ha (Z%) tiveram uso") e nota na legenda do Gantt do PDF e da página pública.
+3. **Descanso vazio colapsa**: sem dados de descanso, o card some e Taxa de lotação ocupa a coluna direita inteira da página 2.
+4. **Alertas: 24 linhas/página** (era 22): a página final com 1 linha sozinha deixa de acontecer na prática comum.
+5. **Coluna "Avaliações"** na tabela de condição: n de leituras por pasto, distingue média confiável de ruído de amostra única.
+6. **Plural real + normalização de nomes**: helper `plural()`/`pl()` elimina todos os "(s)"/"(ões)" nas duas superfícies; `normalizarNomesPasto()` resolve grafias divergentes de pasto e lote para a forma cadastral (aplicado na página pública e no loader do infográfico — "PV - 01"/"PV- 01" viram "PV-01"). "em andamento no momento" virou "com ocupação em aberto ao fim do período". Cabeçalho "Aval. S/E" virou "Aval. saída/entrada".
+
+Validado com PDF real da Jacamim (25/08→30/09, 13 páginas). Typecheck limpo, 92 testes verdes.
+
+Disparador: quando mencionar "auditoria do relatório", "pluralização", "área utilizada", ler esta seção.

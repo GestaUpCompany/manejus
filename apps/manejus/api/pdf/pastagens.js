@@ -8,9 +8,10 @@
 // Estrutura:
 //  - Página 1: KPIs + faixa de alertas + Gantt "mapa de ocupação" por
 //    pasto (barras flutuantes entrada→saída; vazios = descanso).
-//  - Página 2: trio de gráficos "condição após o manejo" (delta
-//    avaliação), "descanso entre ocupações" e "UA/ha por pasto" +
-//    lista detalhada de alertas.
+//  - Página 2: página de análise em L — coluna esquerda com a tabela
+//    "Condição na entrada e na saída" (excedente pagina), coluna
+//    direita com os gráficos "Taxa de lotação" e "Descanso entre
+//    ocupações". Alertas têm página(s) próprias em seguida.
 //  - Página 3: tabela "Resumo por pasto" (movimentações + ocupação + UA/ha).
 //  - Página 4+: tabela "Histórico de ocupação" (períodos que intersectam o
 //    intervalo, incluindo ocupações ainda abertas).
@@ -41,7 +42,11 @@ const OCUPACAO_ROWS_PER_PAGE = 16
 const PASTO_ROWS_PER_PAGE = 18
 
 // Alertas têm página própria depois da página de análise visual.
-const ALERTAS_ROWS_PAGE = 22
+const ALERTAS_ROWS_PAGE = 24
+// Tabela de condição: a coluna esquerda da página 2 comporta 20
+// linhas com folga; o excedente pagina em páginas de continuação.
+const CONDICAO_ROWS_P2 = 20
+const CONDICAO_ROWS_PAGE = 22
 
 const CATEGORIAS = [
   { key: 'vaca', label: 'Vacas', short: 'Vac' },
@@ -84,10 +89,13 @@ const PASTAGENS_CSS = `
 .past-gantt-wrap .chart-card{flex:1;min-height:0}
 .gantt-legend{display:flex;gap:14px;font-size:9px;color:#6B7280;margin-top:4px}
 .gantt-dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.gantt-hatch{border:1px solid #c28a27;background:repeating-linear-gradient(45deg,transparent 0,transparent 2px,#c28a27 2px,#c28a27 4px)}
 .past-quad{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px}
 .past-quad .chart-card{height:auto;min-height:0}
 .past-quad .past-tall{grid-row:1/-1;display:flex;flex-direction:column;min-height:0}
-.past-quad .past-tall .chart-card{flex:1;min-height:0}
+.past-quad .past-tall > .chart-card{flex:1;min-height:0}
+.past-quad .past-tall .past-condicao{flex:1;min-height:0;overflow:hidden}
+.past-condicao .table-block{display:flex;flex-direction:column;height:100%}
 .past-alertas-mini{border:1px solid #efd8d6;border-left:3px solid #c94d46;border-radius:0 5px 5px 0;background:#fdf6f5;padding:6px 10px;margin-bottom:3mm}
 .past-alertas-mini .am-title{color:#c94d46;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
 .past-alertas-mini .am-item{font-size:11px;color:#7a4a45;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -96,18 +104,21 @@ const PASTAGENS_CSS = `
 .past-alertas-table td{font-size:10px;padding:4px 5px;line-height:1.3}
 .past-alertas-table th{font-size:10px;padding:5px}
 .past-resumo-wrap{margin-top:6mm}
-.past-resumo-table td, .past-detail-table td, .past-ocupacao-table td{font-size:11px;padding:5px 4px;line-height:1.25}
-.past-resumo-table th, .past-detail-table th, .past-ocupacao-table th{font-size:10px;padding:5px 4px}
+.past-resumo-table td, .past-detail-table td, .past-ocupacao-table td, .past-condicao-table td{font-size:11px;padding:5px 4px;line-height:1.25}
+.past-resumo-table th, .past-detail-table th, .past-ocupacao-table th, .past-condicao-table th{font-size:10px;padding:5px 4px}
 .past-resumo-table th, .past-resumo-table td,
 .past-detail-table th, .past-detail-table td,
-.past-ocupacao-table th, .past-ocupacao-table td{border-right:1px solid #d8e0db}
+.past-ocupacao-table th, .past-ocupacao-table td,
+.past-condicao-table th, .past-condicao-table td{border-right:1px solid #d8e0db}
 .past-resumo-table th:last-child, .past-resumo-table td:last-child,
 .past-detail-table th:last-child, .past-detail-table td:last-child,
-.past-ocupacao-table th:last-child, .past-ocupacao-table td:last-child{border-right:none}
-.past-resumo-table tbody tr:nth-child(even), .past-detail-table tbody tr:nth-child(even), .past-ocupacao-table tbody tr:nth-child(even){background:#f7faf8}
+.past-ocupacao-table th:last-child, .past-ocupacao-table td:last-child,
+.past-condicao-table th:last-child, .past-condicao-table td:last-child{border-right:none}
+.past-resumo-table tbody tr:nth-child(even), .past-detail-table tbody tr:nth-child(even), .past-ocupacao-table tbody tr:nth-child(even), .past-condicao-table tbody tr:nth-child(even){background:#f7faf8}
 .past-alerta{display:block;color:#c94d46;font-weight:600;line-height:1.3}
 .past-alerta-obs{display:block;color:#8a9890;font-weight:400;font-size:9px}
 .past-anomalia{color:#c94d46;font-weight:600}
+.past-melhora{color:#0F6437;font-weight:600}
 .past-composicao{font-size:10px;color:#4f5f56}
 .past-equipe{font-size:10px;color:#4f5f56}
 .past-detail-table td{overflow-wrap:break-word;word-break:normal}
@@ -119,7 +130,6 @@ const PASTAGENS_CSS = `
 
 // Script rodado dentro do Chromium headless. Kinds suportados:
 // 'gantt' (mapa de ocupação: barras flutuantes entrada→saída por pasto),
-// 'condicao' (avaliação média de entrada e de saída por pasto),
 // 'descanso' (dias sem gado entre ocupações) e 'uaPasto' (UA/ha por
 // pasto com linha da média da fazenda).
 const CHARTS_INIT_JS = `
@@ -161,20 +171,40 @@ const CHARTS_INIT_JS = `
 
   // Gantt de ocupação: uma linha por pasto, cada janela entrada→saída
   // é uma barra flutuante ([min,max] no eixo linear de dias epoch).
-  // Barra azul = ocupação encerrada, dourada = ainda em andamento.
+  // Em andamento = barra sólida; encerrada = hachura diagonal. Cor E
+  // padrão codificam o estado juntos: na impressão P&B a distinção
+  // cheio vs listrado continua legível sem depender de cor.
   function drawGantt(el, entry) {
     var m = entry.mapa
     if (!m || !m.pts || !m.pts.length) return
+    // Tile 8x8 com diagonais; tile transparente, o traço é a cor do status.
+    var tile = document.createElement('canvas')
+    tile.width = 8
+    tile.height = 8
+    var tp = tile.getContext('2d')
+    tp.strokeStyle = GOLD
+    tp.lineWidth = 2
+    tp.beginPath()
+    tp.moveTo(-2, 2)
+    tp.lineTo(2, -2)
+    tp.moveTo(0, 8)
+    tp.lineTo(8, 0)
+    tp.moveTo(6, 10)
+    tp.lineTo(10, 6)
+    tp.stroke()
+    var hatch = el.getContext('2d').createPattern(tile, 'repeat')
     new Chart(el, {
       type: 'bar',
       data: {
         labels: m.labels,
         datasets: [{
           data: m.pts,
-          backgroundColor: m.pts.map(function(p){ return p.aberta ? GOLD : BLUE }),
+          backgroundColor: m.pts.map(function(p){ return p.aberta ? BLUE : hatch }),
+          borderColor: m.pts.map(function(p){ return p.aberta ? BLUE : GOLD }),
+          borderWidth: m.pts.map(function(p){ return p.aberta ? 0 : 1.5 }),
           borderRadius: 2,
           borderSkipped: false,
-          barPercentage: 0.75,
+          barPercentage: 0.8,
           categoryPercentage: 0.8,
         }],
       },
@@ -211,20 +241,37 @@ const CHARTS_INIT_JS = `
           },
         },
       },
-      // Sigla do lote dentro da barra quando ela é larga o suficiente —
-      // o PDF não tem tooltip, então essa é a única forma de saber qual
-      // lote está em cada janela.
       plugins: [{
-        id: 'ganttLotes',
+        id: 'ganttRows',
+        // Fundo zebrado por linha: guia o olho do rótulo do pasto até
+        // a barra sem precisar de grade horizontal.
+        beforeDatasetsDraw: function(chart) {
+          var ctx = chart.ctx
+          var y = chart.scales.y
+          var area = chart.chartArea
+          if (m.labels.length < 2) return
+          var half = Math.abs(y.getPixelForValue(1) - y.getPixelForValue(0)) / 2
+          ctx.save()
+          ctx.fillStyle = '#F3F6F4'
+          for (var i = 0; i < m.labels.length; i += 2) {
+            var cy = y.getPixelForValue(i)
+            ctx.fillRect(area.left, Math.max(area.top, cy - half), area.right - area.left, Math.min(area.bottom, cy + half) - Math.max(area.top, cy - half))
+          }
+          ctx.restore()
+        },
+        // Sigla do lote dentro da barra quando ela é larga o suficiente —
+        // o PDF não tem tooltip, então essa é a única forma de saber qual
+        // lote está em cada janela. Branco sobre o azul sólido; escuro
+        // sobre a hachura, que tem faixas claras.
         afterDatasetsDraw: function(chart) {
           var ctx = chart.ctx
           var meta = chart.getDatasetMeta(0)
           ctx.save()
           ctx.font = 'bold 7px Arial, sans-serif'
-          ctx.fillStyle = '#fff'
           ctx.textAlign = 'left'
           meta.data.forEach(function(bar, j) {
-            var lote = m.pts[j] && m.pts[j].lote
+            var pt = m.pts[j]
+            var lote = pt && pt.lote
             if (!lote || (bar.width || 0) < 40) return
             var txt = String(lote)
             var tw = ctx.measureText(txt).width
@@ -232,6 +279,7 @@ const CHARTS_INIT_JS = `
             var x0 = bar.x - bar.width / 2 + 3
             var x1 = x0 + tw
             if (x1 > chart.chartArea.right - 2) x1 = chart.chartArea.right - 2
+            ctx.fillStyle = pt.aberta ? '#fff' : DARK_TEXT
             ctx.fillText(txt, x1 - tw, bar.y + 2)
           })
           ctx.restore()
@@ -243,95 +291,9 @@ const CHARTS_INIT_JS = `
   // Condição do pasto na entrada × saída: duas barras por pasto (1-5).
   // A agregação entrega ordenado pela pior saída, que é quem precisa de
   // mais descanso. A linha tracejada marca a referência "3".
-  function drawCondicao(el, entry) {
-    var itens = entry.itens || []
-    if (!itens.length) return
-    new Chart(el, {
-      type: 'bar',
-      data: {
-        labels: itens.map(function(p){ return p.nome }),
-        datasets: [
-          {
-            label: 'Entrada',
-            data: itens.map(function(p){ return p.avaliacao_entrada_media }),
-            backgroundColor: '#9CB4A8',
-            borderRadius: 2,
-            borderSkipped: false,
-            barPercentage: 0.85,
-            categoryPercentage: 0.7,
-          },
-          {
-            label: 'Saída',
-            data: itens.map(function(p){ return p.avaliacao_saida_media }),
-            backgroundColor: itens.map(function(p){ return (p.avaliacao_saida_media ?? 0) < 3 ? RED : GREEN }),
-            borderRadius: 2,
-            borderSkipped: false,
-            barPercentage: 0.85,
-            categoryPercentage: 0.7,
-          },
-        ],
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        layout: { padding: { top: 6, right: 16, bottom: 0, left: 4 } },
-        plugins: {
-          legend: { display: true, position: 'bottom', labels: { boxWidth: 8, font: { size: 8 }, color: MEDIUM_TEXT } },
-          tooltip: { enabled: false },
-        },
-        scales: {
-          x: {
-            min: 0,
-            max: 5,
-            grid: { color: '#E5E7EB' },
-            ticks: { color: MEDIUM_TEXT, font: { size: 9 }, stepSize: 1 },
-          },
-          y: {
-            grid: { display: false },
-            ticks: {
-              color: DARK_TEXT,
-              font: { size: 9 },
-              autoSkip: false,
-              callback: function(v) {
-                var label = this.getLabelForValue(v) || ''
-                return truncNome(label, 13)
-              },
-            },
-          },
-        },
-      },
-      plugins: [{
-        id: 'condicaoLabels',
-        afterDatasetsDraw: function(chart) {
-          var ctx = chart.ctx
-          var xAxis = chart.scales.x
-          var metaSaida = chart.getDatasetMeta(1)
-          var x3 = xAxis.getPixelForValue(3)
-          ctx.save()
-          ctx.strokeStyle = '#9ca3af'
-          ctx.setLineDash([3, 3])
-          ctx.lineWidth = 1
-          ctx.beginPath()
-          ctx.moveTo(x3, chart.chartArea.top)
-          ctx.lineTo(x3, chart.chartArea.bottom)
-          ctx.stroke()
-          ctx.setLineDash([])
-          ctx.font = 'bold 8px Arial, sans-serif'
-          metaSaida.data.forEach(function(bar, j) {
-            var v = Number(itens[j].avaliacao_saida_media)
-            if (!isFinite(v)) return
-            var txt = v.toFixed(1).replace('.', ',')
-            // Dentro da barra (branco) quando cabe; fora quando curta.
-            if ((bar.width || 0) > 26) { ctx.textAlign = 'right'; ctx.fillStyle = '#fff'; ctx.fillText(txt, bar.x - 3, bar.y + 3) }
-            else { ctx.textAlign = 'left'; ctx.fillStyle = DARK_TEXT; ctx.fillText(txt, bar.x + 3, bar.y + 3) }
-          })
-          ctx.restore()
-        },
-      }],
-    })
-  }
+  // Condição entrada×saída virou tabela (condicaoTableHtml): com muitos
+  // pastos, barras lado a lado eram menos legíveis que colunas
+  // numéricas com a variação explícita.
 
   // Descanso: dias médios sem gado entre ocupações consecutivas do
   // mesmo pasto, ordenado do mais apertado para o mais folgado.
@@ -487,7 +449,6 @@ const CHARTS_INIT_JS = `
     var el = document.getElementById(entry.canvasId)
     if (!el) return
     if (entry.kind === 'gantt') drawGantt(el, entry)
-    else if (entry.kind === 'condicao') drawCondicao(el, entry)
     else if (entry.kind === 'descanso') drawDescanso(el, entry)
     else if (entry.kind === 'uaPasto') drawUaPasto(el, entry)
   })
@@ -570,6 +531,12 @@ function mapaOcupacao(ocupacoes, dataFim, maxPastos = 10) {
   }
 }
 
+// "1 pasto" / "5 pastos" sem o padrão "(s)" que entrega relatório
+// gerado por sistema.
+function pl(n, singular, plural) {
+  return n === 1 ? singular : plural
+}
+
 // Faixa compacta na página 1: os 3 alertas mais recentes + quanto resta.
 function alertasMiniHtml(itens) {
   if (!itens.length) return ''
@@ -580,13 +547,14 @@ function alertasMiniHtml(itens) {
         `<div class="am-item"><b>${dateFmt(a.data)}</b> · ${escapeHtml(a.trajeto)} · ${escapeHtml(a.label)}${a.observacao ? ` — <i>${escapeHtml(a.observacao)}</i>` : ''}</div>`,
     )
     .join('')
-  const resto = itens.length > 3 ? `<div class="am-more">+ ${itens.length - 3} alerta(s) listados em Diagnósticos</div>` : ''
+  const restoN = itens.length - 3
+  const resto = itens.length > 3 ? `<div class="am-more">+ ${restoN} ${pl(restoN, 'alerta listado', 'alertas listados')} em Diagnósticos</div>` : ''
   return `<div class="past-alertas-mini"><div class="am-title">Alertas do período (${itens.length})</div>${linhas}${resto}</div>`
 }
 
 function alertasTableHtml(itens, total = itens.length) {
   if (!total) {
-    return `<div class="table-block"><h3 class="table-title">Alertas do período<span>0 alerta(s)</span></h3><p style="font-size:12px;color:#7a8981;margin:0">Nenhum diagnóstico fora do padrão foi registrado nas movimentações do período.</p></div>`
+    return `<div class="table-block"><h3 class="table-title">Alertas do período<span>0 alertas</span></h3><p style="font-size:12px;color:#7a8981;margin:0">Nenhum diagnóstico fora do padrão foi registrado nas movimentações do período.</p></div>`
   }
   const cols = [
     ['Data', '10%'],
@@ -601,13 +569,44 @@ function alertasTableHtml(itens, total = itens.length) {
         `<tr><td>${dateFmt(a.data)}</td><td>${escapeHtml(a.trajeto)}</td><td>${escapeHtml(a.lote)}</td><td><span class="past-alerta">${escapeHtml(a.label)}</span></td><td>${a.observacao ? escapeHtml(a.observacao) : '—'}</td></tr>`,
     )
     .join('')
-  return `<div class="table-block"><h3 class="table-title">Alertas do período<span>${total} alerta(s)</span></h3><table class="past-alertas-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
+  return `<div class="table-block"><h3 class="table-title">Alertas do período<span>${total} ${pl(total, 'alerta', 'alertas')}</span></h3><table class="past-alertas-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
 }
 
 // Resumo por pasto: movimentações (entradas/saídas, avaliação média) +
 // ocupação (dias média, UA/ha, desvio da meta) + alertas. Colunas que
 // sairiam 100% vazias no período (módulo sem vínculo, desvio sem meta)
 // são omitidas para não desperdiçar largura.
+// Condição na entrada e na saída por pasto (avaliação 1–5), pior
+// saída primeiro. Substituiu o gráfico de barras na página de análise:
+// com muitos pastos, colunas numéricas com a variação explícita são
+// mais legíveis que barras empilhadas lado a lado.
+function condicaoTableHtml(itens, total = itens.length) {
+  if (!total) {
+    return `<div class="table-block"><h3 class="table-title">Condição na entrada e na saída<span>0 pastos</span></h3><p style="font-size:12px;color:#7a8981;margin:0">Nenhuma avaliação de condição registrada nas movimentações do período.</p></div>`
+  }
+  const cols = [
+    ['Pasto', '36%'],
+    ['Aval. entrada', '18%'],
+    ['Aval. saída', '18%'],
+    ['Variação', '16%'],
+    ['Avaliações', '12%'],
+  ]
+  const fmt = (v) => (v != null ? numFmt(v, 1) : '—')
+  const rows = itens
+    .map((p) => {
+      const saidaTd = p.avaliacao_saida_media != null
+        ? `<td class="numeric${p.avaliacao_saida_media < 3 ? ' past-anomalia' : ''}">${numFmt(p.avaliacao_saida_media, 1)}</td>`
+        : '<td class="numeric">—</td>'
+      const deltaTd = p.delta != null
+        ? `<td class="numeric${p.delta < 0 ? ' past-anomalia' : ' past-melhora'}">${p.delta > 0 ? '+' : ''}${numFmt(p.delta, 1)}</td>`
+        : '<td class="numeric">—</td>'
+      // n de avaliações: média sobre 1 leitura é ruído, sobre 5 é sinal.
+      return `<tr><td>${escapeHtml(p.nome)}</td><td class="numeric">${fmt(p.avaliacao_entrada_media)}</td>${saidaTd}${deltaTd}<td class="numeric" style="color:#7a8981">${p.avaliacoes || '—'}</td></tr>`
+    })
+    .join('')
+  return `<div class="table-block"><h3 class="table-title">Condição na entrada e na saída<span>${total} ${pl(total, 'pasto', 'pastos')}</span></h3><table class="past-condicao-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
+}
+
 function resumoPastoTableHtml(itens, total, semMovimentacao) {
   const temModulo = itens.some((p) => p.modulo)
   const temDesvio = itens.some((p) => p.desvio_medio_percent != null)
@@ -641,9 +640,9 @@ function resumoPastoTableHtml(itens, total, semMovimentacao) {
     })
     .join('')
   const notaSemMov = semMovimentacao > 0
-    ? `<p style="font-size:10px;color:#7a8981;margin:0 0 4px">${semMovimentacao} pasto(s) sem movimentação no período aparecem apenas porque têm ocupação registrada.</p>`
+    ? `<p style="font-size:10px;color:#7a8981;margin:0 0 4px">${semMovimentacao} ${pl(semMovimentacao, 'pasto sem movimentação', 'pastos sem movimentação')} no período ${pl(semMovimentacao, 'aparece', 'aparecem')} apenas porque ${pl(semMovimentacao, 'tem', 'têm')} ocupação registrada.</p>`
     : ''
-  return `<div class="table-block"><h3 class="table-title">Resumo por pasto<span>${total} pasto(s)</span></h3>${notaSemMov}<table class="past-resumo-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
+  return `<div class="table-block"><h3 class="table-title">Resumo por pasto<span>${total} ${pl(total, 'pasto', 'pastos')}</span></h3>${notaSemMov}<table class="past-resumo-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
 }
 
 // Histórico de ocupação: períodos que intersectam o intervalo. "Dias"
@@ -688,7 +687,7 @@ function ocupacaoTableHtml(itens, total) {
       return `<tr><td>${escapeHtml(o.lote || '—')}</td><td>${escapeHtml(o.pasto || '—')}</td>${temModulo ? `<td>${escapeHtml(o.modulo || '—')}</td>` : ''}<td>${dateFmt(o.data_entrada)}</td><td>${o.data_saida ? dateFmt(o.data_saida) : '—'}</td>${diasTd}<td class="numeric">${o.cabecas_entrada != null ? intFmt(o.cabecas_entrada) : '—'}</td>${uaTd}${metaTd}${desvioTd}<td>${status}</td></tr>`
     })
     .join('')
-  return `<div class="table-block"><h3 class="table-title">Histórico de ocupação<span>${total} período(s)</span></h3><table class="past-ocupacao-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
+  return `<div class="table-block"><h3 class="table-title">Histórico de ocupação<span>${total} ${pl(total, 'período', 'períodos')}</span></h3><table class="past-ocupacao-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
 }
 
 function alertasCellHtml(registro) {
@@ -726,7 +725,7 @@ function equipeHtml(r) {
     const abreviados = r.equipe_nomes.map(abreviarNome).filter(Boolean)
     return escapeHtml(abreviados.join(', ') || '—')
   }
-  return r.numero_pessoas_manejo != null ? `${intFmt(r.numero_pessoas_manejo)} pessoa(s)` : '—'
+  return r.numero_pessoas_manejo != null ? `${intFmt(r.numero_pessoas_manejo)} ${pl(r.numero_pessoas_manejo, 'pessoa', 'pessoas')}` : '—'
 }
 
 function detailTableHtml(registros, total, temTempos) {
@@ -735,7 +734,7 @@ function detailTableHtml(registros, total, temTempos) {
     ['Manejador', '11%'],
     ['Lote', '12%'],
     ['Trajeto', temTempos ? '16%' : '20%'],
-    ['Aval. S/E', '7%'],
+    ['Aval. saída / entrada', '7%'],
     ...(temTempos ? [['Ocup./Vedação', '10%']] : []),
     ['Composição', '12%'],
     ['Animais', '6%'],
@@ -753,7 +752,7 @@ function detailTableHtml(registros, total, temTempos) {
       return `<tr><td>${dateFmt(r.data)}${r.horario_manejo ? `<span class="past-equipe"><br>${escapeHtml(r.horario_manejo)}</span>` : ''}</td><td>${escapeHtml(r.responsavel || '—')}</td><td>${escapeHtml(r.lote || '—')}</td><td>${escapeHtml(trajeto)}</td><td class="numeric">${escapeHtml(aval)}</td>${temposTd}<td><span class="past-composicao">${escapeHtml(composicaoHtml(r))}</span></td><td class="numeric"><strong>${animais != null ? intFmt(animais) : '—'}</strong></td><td><span class="past-equipe">${equipeHtml(r)}</span></td>${alertasCellHtml(r)}</tr>`
     })
     .join('')
-  return `<div class="table-block"><h3 class="table-title">Movimentações detalhadas<span>${total} registro(s)</span></h3><table class="past-detail-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
+  return `<div class="table-block"><h3 class="table-title">Movimentações detalhadas<span>${total} ${pl(total, 'registro', 'registros')}</span></h3><table class="past-detail-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
 }
 
 function chunkArray(arr, size) {
@@ -773,7 +772,7 @@ export async function renderPastagensHtml(input) {
   const porPasto = resumo.por_pasto ?? []
   const alertas = listaAlertas(registros)
   const totalUa = porPasto.filter((p) => p.ua_ha_media != null && p.ua_ha_media > 0).length
-  const totalDelta = (resumo.degradacao ?? []).filter((d) => d.avaliacao_saida_media != null || d.avaliacao_entrada_media != null).length
+  const totalCondicao = (resumo.degradacao ?? []).filter((d) => d.avaliacao_saida_media != null || d.avaliacao_entrada_media != null).length
   const totalDescanso = (resumo.descanso ?? []).length
   // Os cards da página de análise ocupam metade da página cada (~60mm);
   // cabem ~10-12 barras com rótulos legíveis, o resto é omitido.
@@ -782,7 +781,7 @@ export async function renderPastagensHtml(input) {
     .sort((a, b) => b.ua_ha_media - a.ua_ha_media)
     .slice(0, 12)
   const mapa = mapaOcupacao(ocupacoes, dataFim)
-  const itensDelta = (resumo.degradacao ?? []).filter((d) => d.avaliacao_saida_media != null || d.avaliacao_entrada_media != null).slice(0, 18)
+  const itensCondicao = (resumo.degradacao ?? []).filter((d) => d.avaliacao_saida_media != null || d.avaliacao_entrada_media != null)
   const itensDescanso = (resumo.descanso ?? []).slice(0, 12)
   const top = (n, total) => (total > n ? ` · top ${n} de ${total}` : '')
   const temTempos = registros.some((r) => r.tempo_ocupacao || r.tempo_vedacao)
@@ -794,7 +793,10 @@ export async function renderPastagensHtml(input) {
   // Alertas ganharam página(s) próprias depois que a página 2 virou
   // exclusiva dos gráficos de análise.
   const alertasChunks = alertas.length ? chunkArray(alertas, ALERTAS_ROWS_PAGE) : []
-  const totalPages = 2 + alertasChunks.length + pastoChunks.length + ocupacaoChunks.length + detailChunks.length
+  // Condição virou tabela na coluna esquerda da página 2; o excedente
+  // do primeiro chunk pagina em páginas próprias.
+  const condicaoExtraChunks = itensCondicao.length > CONDICAO_ROWS_P2 ? chunkArray(itensCondicao.slice(CONDICAO_ROWS_P2), CONDICAO_ROWS_PAGE) : []
+  const totalPages = 2 + alertasChunks.length + condicaoExtraChunks.length + pastoChunks.length + ocupacaoChunks.length + detailChunks.length
 
   const chartsData = []
   const pagesHtml = []
@@ -803,11 +805,9 @@ export async function renderPastagensHtml(input) {
   // Página 1: resumo executivo (KPIs + insights + faixa de alertas + Gantt)
   pageIndex += 1
   const canvasGantt = 'chart-past-gantt'
-  const canvasDelta = 'chart-past-delta'
   const canvasDescanso = 'chart-past-descanso'
   const canvasUa = 'chart-past-ua'
   if (mapa.pts.length) chartsData.push({ canvasId: canvasGantt, kind: 'gantt', mapa })
-  if (itensDelta.length) chartsData.push({ canvasId: canvasDelta, kind: 'condicao', itens: itensDelta })
   if (itensDescanso.length) chartsData.push({ canvasId: canvasDescanso, kind: 'descanso', itens: itensDescanso })
   if (itensUa.length) chartsData.push({ canvasId: canvasUa, kind: 'uaPasto', itens: itensUa, media: resumo.taxa_lotacao_media_ua_ha })
 
@@ -819,18 +819,18 @@ export async function renderPastagensHtml(input) {
       <div class="period-badge">${dateFmt(dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(dataFim)}</div>
       ${resumo.insights ? `<div class="insight-box"><span class="insight-label">Resumo</span>${escapeHtml(resumo.insights)}</div>` : ''}
       <div class="kpi-grid">
-        ${kpi(intFmt(resumo.total_movimentacoes), 'Movimentações de pasto', `${intFmt(resumo.lotes_movimentados)} lote(s) · ${intFmt(resumo.pastos_utilizados)} pasto(s)`)}
+        ${kpi(intFmt(resumo.total_movimentacoes), 'Movimentações de pasto', `${intFmt(resumo.lotes_movimentados)} ${pl(resumo.lotes_movimentados, 'lote', 'lotes')} · ${intFmt(resumo.pastos_utilizados)} ${pl(resumo.pastos_utilizados, 'pasto', 'pastos')}`)}
         ${kpi(intFmt(resumo.animais_manejados), 'Animais manejados', `Escore gado: ${resumo.escore_gado_medio != null ? numFmt(resumo.escore_gado_medio, 1) : '—'}`)}
-        ${kpi(resumo.ocupacao_media_dias != null ? numFmt(resumo.ocupacao_media_dias, 1) : '—', 'Ocupação média (dias)', `UA/ha: ${resumo.taxa_lotacao_media_ua_ha != null ? numFmt(resumo.taxa_lotacao_media_ua_ha, 2) : '—'} · ${intFmt(resumo.ocupacoes_em_andamento)} aberta(s)`)}
+        ${kpi(resumo.ocupacao_media_dias != null ? numFmt(resumo.ocupacao_media_dias, 1) : '—', 'Ocupação média (dias)', `UA/ha: ${resumo.taxa_lotacao_media_ua_ha != null ? numFmt(resumo.taxa_lotacao_media_ua_ha, 2) : '—'} · ${intFmt(resumo.ocupacoes_em_andamento)} ${pl(resumo.ocupacoes_em_andamento, 'aberta', 'abertas')}`)}
         ${kpi(intFmt(totalAlertas), 'Alertas de diagnóstico', `${intFmt(resumo.alertas_sanitarios)} sanitários · ${intFmt(resumo.pendencias_infra)} infra · ${intFmt(resumo.ocupacoes_acima_meta)} ocup. acima da meta`, totalAlertas + (resumo.ocupacoes_acima_meta || 0) > 0 ? 'red' : 'green')}
       </div>
       ${alertasMiniHtml(alertas)}
       <div class="past-gantt-wrap">
-        ${chartCard({ canvasId: canvasGantt, title: 'Mapa de ocupação', subtitle: `Períodos com gado em cada pasto; os vazios são o descanso${mapa.omitidos > 0 ? ` · +${mapa.omitidos} pasto(s) não exibido(s)` : ''}`, hasData: mapa.pts.length > 0 })}
+        ${chartCard({ canvasId: canvasGantt, title: 'Mapa de ocupação', subtitle: `Períodos com gado em cada pasto; os vazios são o descanso${mapa.omitidos > 0 ? ` · +${mapa.omitidos} ${pl(mapa.omitidos, 'pasto não exibido', 'pastos não exibidos')}` : ''}`, hasData: mapa.pts.length > 0 })}
         <div class="gantt-legend">
-          <span><span class="gantt-dot" style="background:#1E3A5F"></span>Encerrada</span>
-          <span><span class="gantt-dot" style="background:#c28a27"></span>Em andamento</span>
-          ${(resumo.pastos_sem_uso || 0) > 0 ? `<span style="margin-left:auto">${resumo.pastos_sem_uso} pasto(s) sem ocupação no período</span>` : ''}
+          <span><span class="gantt-dot gantt-hatch"></span>Encerrada</span>
+          <span><span class="gantt-dot" style="background:#1E3A5F"></span>Em andamento</span>
+          ${(resumo.pastos_sem_uso || 0) > 0 ? `<span style="margin-left:auto">${resumo.pastos_sem_uso} ${pl(resumo.pastos_sem_uso, 'pasto', 'pastos')} sem ocupação no período${resumo.area_utilizada_pct != null ? ` · ${numFmt(resumo.area_utilizada_pct, 0)}% da área utilizada` : ''}</span>` : ''}
         </div>
       </div>
       ${renderFooter({ ...period, page: pageIndex, totalPages })}
@@ -847,14 +847,29 @@ export async function renderPastagensHtml(input) {
       <p class="section-kicker">Condição, lotação e descanso dos pastos</p>
       <div class="past-quad">
         <div class="past-tall">
-          ${chartCard({ canvasId: canvasDelta, title: 'Condição na entrada e na saída', subtitle: `avaliação 1–5, pior saída primeiro${top(itensDelta.length, totalDelta)}`, hasData: itensDelta.length > 0 })}
+          <div class="past-condicao">${condicaoTableHtml(itensCondicao.slice(0, CONDICAO_ROWS_P2), itensCondicao.length)}</div>
         </div>
-        ${chartCard({ canvasId: canvasUa, title: 'Taxa de lotação', subtitle: `UA/ha média das ocupações${top(itensUa.length, totalUa)}`, hasData: itensUa.length > 0 })}
-        ${chartCard({ canvasId: canvasDescanso, title: 'Descanso entre ocupações', subtitle: `Dias médios sem gado no pasto${top(itensDescanso.length, totalDescanso)}`, hasData: itensDescanso.length > 0 })}
+        ${/* Sem dados de descanso o card colapsa e a lotação ocupa a coluna inteira. */''}
+        <div class="${itensDescanso.length ? '' : 'past-tall'}">${chartCard({ canvasId: canvasUa, title: 'Taxa de lotação', subtitle: `UA/ha média das ocupações${top(itensUa.length, totalUa)}`, hasData: itensUa.length > 0 })}</div>
+        ${itensDescanso.length ? chartCard({ canvasId: canvasDescanso, title: 'Descanso entre ocupações', subtitle: `Dias médios sem gado no pasto${top(itensDescanso.length, totalDescanso)}`, hasData: true }) : ''}
       </div>
       ${renderFooter({ ...period, page: pageIndex, totalPages })}
     `),
   )
+
+  // Continuação da tabela de condição quando há mais pastos do que
+  // cabem na coluna da página 2.
+  condicaoExtraChunks.forEach((chunk, i) => {
+    pageIndex += 1
+    pagesHtml.push(
+      pageSection(`
+        ${renderHeader({ ...brand, reportTitle: 'Relatório de Manejo de Pastagens', section: `Condição na entrada e na saída${condicaoExtraChunks.length > 1 ? ` (${i + 1}/${condicaoExtraChunks.length})` : ''}`, sectionLabel: 'Análise' })}
+        <p class="section-kicker">Condição dos pastos (continuação)</p>
+        <div class="past-content">${condicaoTableHtml(chunk, itensCondicao.length)}</div>
+        ${renderFooter({ ...period, page: pageIndex, totalPages })}
+      `),
+    )
+  })
 
   // Páginas de alertas do período.
   alertasChunks.forEach((chunk, i) => {
