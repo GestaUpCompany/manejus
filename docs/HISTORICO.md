@@ -1,5 +1,20 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Estoque: link público, PDF e seção no Infográfico Mensal (2026-10-01)
+
+Snapshot de estoque de insumos e formulações (sem filtro de período), seguindo o padrão dos demais relatórios: RPC pública por token, página pública, PDF Puppeteer e seção opcional no infográfico.
+
+- **`relatorios_publicos.config jsonb`** (migration `20261001140000_relatorio_estoque.sql`, db push): coluna nova e genérica; o relatório de estoque a usa para persistir `{"escopo": "insumos"|"formulacoes"|"todos"}` escolhido na geração do link. Escopo é restrição de exposição, não filtro de UI: a RPC devolve só os grupos autorizados, então um link "só insumos" não vaza dados de formulações no payload.
+- **RPCs**: `get_dados_relatorio_estoque(p_token)` valida token ativo/tipo/não expirado e retorna `escopo`, `gerado_em`, `itens` (item_tipo, nome, tipo, unidade, estoque_atual, estoque_minimo, custo_unitario, valor_estoque, em_alerta, negativo) e `totais`. `get_dados_relatorio_estoque_fazenda(p_fazenda_id)` valida `user_has_fazenda_access`, cria token efêmero e delega (sempre escopo "todos", para o infográfico). Valor segue a regra da tela de estoque: insumo `estoque_atual × custo_unitario`; formulação usa `custo_unitario` ou fallback `custo_mn_tonelada/1000`; `GREATEST(estoque_atual,0)` no valor, com flag `negativo` separada.
+- **Hub** (`Relatorios.tsx`): tipo `'estoque'` no catálogo e seletor de escopo de 3 opções no modal de gerar link.
+- **Página pública** `RelatorioEstoquePublico.tsx`: KPIs (valor total, itens, abaixo do mínimo, saldos negativos) + tabela; abas Insumos/Formulações só aparecem quando o escopo cobre os dois.
+- **PDF**: `api/pdf/estoque.js` (`renderEstoqueHtml` exportada), client `relatorioEstoquePDFPuppeteer.ts`, rota em `vite.config.ts`. Tabela paginada por grupo; o "Total do grupo" só renderiza no último chunk (correção: antes vazava nas continuações intermediárias e era cortado na página 1).
+- **Infográfico**: `estoque` em `RELATORIOS_GERAIS`, `carregarEstoque` nos loaders (ignora dataInicio/dataFim, é snapshot), `REPORT_REGISTRY`, rotulado "posição em <data>" para deixar claro que não é fechamento de período.
+
+Validado na fazenda de testes: RPC com 22 itens (15 insumos + 7 formulações, R$ 245.188,66), escopo 'insumos' filtrando no servidor, PDF de 3 páginas revisado por screenshot. Typecheck limpo, 91 testes verdes.
+
+Disparador: quando mencionar "relatório de estoque", "posição de estoque", `get_dados_relatorio_estoque`, `config.escopo`, `renderEstoqueHtml`, ler esta seção.
+
 ## Zeramento do histórico de estoque da Fazenda Guanabara (2026-10-01)
 
 A Guanabara (`f8be22c5-12e9-4bda-a813-fae8cb3d47ec`) passou a controlar estoque de insumos/formulações efetivamente em 01/10/2026. Como suplementações já descontavam do estoque antes de haver saldo cadastrado (permitido por conveniência), o histórico anterior gerava saldos negativos grandes e sem sentido.
@@ -1682,8 +1697,6 @@ Revisão crítica dos gráficos (pedido do usuário) aplicada em página públic
 - **Alertas**: mantida a decisão de não duplicar — a faixa "Alertas do período" da pág. 1 segue como leitura executiva e a tabela paginada responde o detalhe; não entrou gráfico de frequência no PDF.
 
 Validado com PDF real da Jacamim (01/09→15/09, 9 páginas): Gantt com lotes legíveis, fluxo com 6 rotas sem sobreposição, condição com top 8 de 22. Typecheck limpo.
-
-**Pendência operacional**: as migrations `20260929170000`, `20260929180000` e `20261001100000` e todo o código dos relatórios de pastagens/rodeio estão aplicados no banco mas ainda não commitados/pushados.
 
 Disparador: quando mencionar "entrada vs saída do pasto", "rotas de rotação", "pastos sem uso", "descanso com histórico", `ocupacoes_contexto`, `pastos_sem_uso`, ler esta seção.
 

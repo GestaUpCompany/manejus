@@ -1,4 +1,4 @@
-export type TipoRelatorioGeral = 'abastecimento' | 'consumo' | 'bebedouros' | 'morte' | 'rodeio' | 'pastagens' | 'boletim_rebanho'
+export type TipoRelatorioGeral = 'abastecimento' | 'consumo' | 'bebedouros' | 'morte' | 'rodeio' | 'pastagens' | 'estoque' | 'boletim_rebanho'
 
 export interface RelatorioGeralCatalogoItem {
   id: TipoRelatorioGeral
@@ -36,6 +36,11 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
     id: 'pastagens',
     titulo: 'Manejo de Pastagens',
     descricao: 'Movimentações entre pastos, avaliações, ocupação em dias e taxa de lotação (UA/ha).',
+  },
+  {
+    id: 'estoque',
+    titulo: 'Estoque de Insumos',
+    descricao: 'Posição atual de insumos e formulações: saldo, custo médio e valor em estoque.',
   },
   {
     id: 'boletim_rebanho',

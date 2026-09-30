@@ -16,6 +16,8 @@ import climaHandler from './api/pdf/clima.js'
 // @ts-ignore
 import rodeioHandler from './api/pdf/rodeio.js'
 import pastagensHandler from './api/pdf/pastagens.js'
+// @ts-ignore
+import estoqueHandler from './api/pdf/estoque.js'
 
 function localPdfApi(): Plugin {
   return {
@@ -78,6 +80,7 @@ function localPdfApi(): Plugin {
       register('/api/pdf/clima', climaHandler)
       register('/api/pdf/rodeio', rodeioHandler)
       register('/api/pdf/pastagens', pastagensHandler)
+      register('/api/pdf/estoque', estoqueHandler)
     },
   }
 }

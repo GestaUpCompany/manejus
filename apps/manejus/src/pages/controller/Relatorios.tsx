@@ -13,6 +13,7 @@ interface RelatorioPublico {
   criado_em: string
   expira_em: string | null
   ativo: boolean
+  config?: { escopo?: string } | null
 }
 
 interface RelatorioDisponivel {
@@ -78,7 +79,25 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'Movimentações entre pastos, avaliação saída/entrada, histórico de ocupação com dias em pasto, taxa de lotação (UA/ha) e desvio da meta.',
     icone: '🌾',
   },
+  {
+    tipo: 'estoque',
+    titulo: 'Estoque de Insumos',
+    descricao: 'Posição atual de insumos e formulações: saldo, custo médio e valor em estoque.',
+    icone: '📦',
+  },
 ]
+
+const ESCOPOS_ESTOQUE = [
+  { value: 'todos', label: 'Insumos e formulações' },
+  { value: 'insumos', label: 'Somente insumos' },
+  { value: 'formulacoes', label: 'Somente formulações' },
+]
+
+function tituloEstoquePorEscopo(escopo: string, fazendaNome: string | null): string {
+  const nome = escopo === 'insumos' ? 'Insumos' : escopo === 'formulacoes' ? 'Formulações' : 'Insumos e Formulações'
+  const base = `Relatório de Estoque de ${nome}`
+  return fazendaNome ? `${base} - ${fazendaNome}` : base
+}
 
 export function Relatorios() {
   const { user } = useAuth()
@@ -94,6 +113,8 @@ export function Relatorios() {
   const [modalAberto, setModalAberto] = useState(false)
   const [relatorioSelecionado, setRelatorioSelecionado] = useState<RelatorioDisponivel | null>(null)
   const [tituloLink, setTituloLink] = useState('')
+  const [tituloSugerido, setTituloSugerido] = useState('')
+  const [escopoEstoque, setEscopoEstoque] = useState('todos')
   const [linkGerado, setLinkGerado] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
@@ -126,7 +147,7 @@ export function Relatorios() {
   const carregarLinks = async (fid: string) => {
     const { data, error } = await supabase
       .from('relatorios_publicos')
-      .select('id, tipo, titulo, criado_em, expira_em, ativo')
+      .select('id, tipo, titulo, criado_em, expira_em, ativo, config')
       .eq('fazenda_id', fid)
       .order('criado_em', { ascending: false })
 
@@ -139,10 +160,14 @@ export function Relatorios() {
 
   const abrirModalGerarLink = (rel: RelatorioDisponivel) => {
     setRelatorioSelecionado(rel)
-    const tituloPadrao = fazendaNome
-      ? `Relatório de ${rel.titulo} - ${fazendaNome}`
-      : `Relatório de ${rel.titulo}`
+    const tituloPadrao = rel.tipo === 'estoque'
+      ? tituloEstoquePorEscopo('todos', fazendaNome)
+      : fazendaNome
+        ? `Relatório de ${rel.titulo} - ${fazendaNome}`
+        : `Relatório de ${rel.titulo}`
     setTituloLink(tituloPadrao)
+    setTituloSugerido(tituloPadrao)
+    setEscopoEstoque('todos')
     setLinkGerado(null)
     setCopiado(false)
     setModalAberto(true)
@@ -158,6 +183,7 @@ export function Relatorios() {
         tipo: relatorioSelecionado.tipo,
         titulo: tituloLink.trim() || relatorioSelecionado.titulo,
         criado_por: user.id,
+        ...(relatorioSelecionado.tipo === 'estoque' ? { config: { escopo: escopoEstoque } } : {}),
       })
       .select('id')
       .single()
@@ -223,7 +249,7 @@ export function Relatorios() {
 
   const excluirLink = async (id: string) => {
     if (!fazendaId) return
-    setConfirmAction({ type: 'inativar', id })
+    setConfirmAction({ type: 'excluir', id })
   }
 
   const excluirLinkExec = async (id: string) => {
@@ -231,12 +257,12 @@ export function Relatorios() {
 
     const { error } = await supabase
       .from('relatorios_publicos')
-      .update({ ativo: false })
+      .delete()
       .eq('id', id)
 
     if (error) {
-      console.error('Erro ao inativar link:', error)
-      toast.error('Erro ao inativar link.')
+      console.error('Erro ao excluir link:', error)
+      toast.error('Erro ao excluir link.')
     } else {
       await carregarLinks(fazendaId)
     }
@@ -248,7 +274,7 @@ export function Relatorios() {
     setConfirmAction(null)
     if (type === 'desativar' && id) {
       await desativarLinkExec(id)
-    } else if (type === 'inativar' && id) {
+    } else if (type === 'excluir' && id) {
       await excluirLinkExec(id)
     }
   }
@@ -345,14 +371,24 @@ export function Relatorios() {
                     </button>
                   )}
                   {linkAtivo ? (
-                    <a
-                      href={`${window.location.origin}/r/${linkAtivo.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full rounded-lg bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 transition-colors text-center"
-                    >
-                      Abrir link público
-                    </a>
+                    <>
+                      <a
+                        href={`${window.location.origin}/r/${linkAtivo.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full rounded-lg bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 transition-colors text-center"
+                      >
+                        Abrir link público
+                      </a>
+                      {rel.tipo === 'estoque' && (
+                        <button
+                          onClick={() => abrirModalGerarLink(rel)}
+                          className="w-full rounded-lg border border-surface-3 px-3 py-2 text-sm font-medium text-content hover:bg-surface-2 transition-colors"
+                        >
+                          Gerar novo link
+                        </button>
+                      )}
+                    </>
                   ) : (
                     <button
                       onClick={() => abrirModalGerarLink(rel)}
@@ -390,7 +426,14 @@ export function Relatorios() {
                 {linksVisiveis.map((link) => (
                   <tr key={link.id} className="border-t border-border-subtle hover:bg-surface-2">
                     <td className="py-3 px-4 text-content-strong font-medium">{link.titulo}</td>
-                    <td className="py-3 px-4 text-content-muted capitalize">{link.tipo}</td>
+                    <td className="py-3 px-4 text-content-muted capitalize">
+                      {link.tipo}
+                      {link.tipo === 'estoque' && link.config?.escopo && (
+                        <span className="normal-case text-content-faint">
+                          {` · ${ESCOPOS_ESTOQUE.find((e) => e.value === link.config?.escopo)?.label ?? link.config.escopo}`}
+                        </span>
+                      )}
+                    </td>
                     <td className="py-3 px-4 text-content-muted">
                       {new Date(link.criado_em).toLocaleDateString('pt-BR')}
                     </td>
@@ -500,6 +543,31 @@ export function Relatorios() {
                   />
                 </div>
 
+                {relatorioSelecionado.tipo === 'estoque' && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-content mb-1">
+                      Escopo do relatório
+                    </label>
+                    <select
+                      value={escopoEstoque}
+                      onChange={(e) => {
+                        const novo = e.target.value
+                        setEscopoEstoque(novo)
+                        const novaSugestao = tituloEstoquePorEscopo(novo, fazendaNome)
+                        if (!tituloLink.trim() || tituloLink === tituloSugerido) {
+                          setTituloLink(novaSugestao)
+                        }
+                        setTituloSugerido(novaSugestao)
+                      }}
+                      className="w-full rounded-lg border border-surface-3 px-3 py-2 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600 bg-surface-1 text-content"
+                    >
+                      {ESCOPOS_ESTOQUE.map((op) => (
+                        <option key={op.value} value={op.value}>{op.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <p className="text-xs text-amber-800">
                     O link será público e acessível por qualquer pessoa que o tenha.
@@ -571,14 +639,14 @@ export function Relatorios() {
         isOpen={confirmAction !== null}
         onClose={() => setConfirmAction(null)}
         onConfirm={handleConfirm}
-        title={confirmAction?.type === 'desativar' ? 'Desativar link público' : 'Inativar link público'}
+        title={confirmAction?.type === 'desativar' ? 'Desativar link público' : 'Excluir link público'}
         message={
           confirmAction?.type === 'desativar'
-            ? 'Desativar este link público? O relatório não será mais acessível.'
-            : 'Inativar este link público? O registro será desativado, não excluído. Você pode reativá-lo posteriormente.'
+            ? 'Desativar este link público? O relatório não será mais acessível, mas você pode reativá-lo depois.'
+            : 'Excluir este link público? O registro será removido permanentemente e o link deixará de funcionar.'
         }
-        confirmText={confirmAction?.type === 'desativar' ? 'Desativar' : 'Inativar'}
-        variant={confirmAction?.type === 'desativar' ? 'danger' : 'warning'}
+        confirmText={confirmAction?.type === 'desativar' ? 'Desativar' : 'Excluir'}
+        variant="danger"
       />
     </div>
   )

@@ -7,6 +7,7 @@ import type { ParametrosRelatorioRodeio } from '../../utils/relatorioRodeioPDFPu
 import type { ParametrosRelatorioPastagens } from '../../utils/relatorioPastagensPDFPuppeteer'
 import { calcularResumoRodeio, type RegistroRodeio } from '../relatorioRodeio/agregacao'
 import { calcularResumoPastagens, normalizarNomesPasto, type OcupacaoPasto, type PastoInfo, type RegistroPastagem } from '../relatorioPastagens/agregacao'
+import type { DadosRelatorioEstoque } from '../relatorioEstoque/agregacao'
 import type { TipoRelatorioGeral } from './catalogo'
 import type { DadosPDFBoletimRebanho } from './boletimRebanho'
 
@@ -68,6 +69,7 @@ export type PayloadRelatorioGeral =
   | { tipo: 'morte'; dados: ParametrosRelatorioMorte }
   | { tipo: 'rodeio'; dados: ParametrosRelatorioRodeio }
   | { tipo: 'pastagens'; dados: ParametrosRelatorioPastagens }
+  | { tipo: 'estoque'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null } & DadosRelatorioEstoque }
   | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
 
 const CHECKLIST_ITEMS = [
@@ -490,6 +492,32 @@ async function carregarPastagens(
   }
 }
 
+// Estoque é snapshot: ignora o período do infográfico e devolve a posição
+// atual. A RPC _fazenda sempre cobre insumos + formulações (sem seletor de
+// escopo, que só existe no link público). dataInicio/dataFim entram no
+// payload apenas para a página "sem registros" do composer exibir o período.
+async function carregarEstoque(
+  fazenda: FazendaRelatorio,
+  dataInicio: string,
+  dataFim: string,
+): Promise<PayloadRelatorioGeral> {
+  const { data, error } = await supabase.rpc('get_dados_relatorio_estoque_fazenda', {
+    p_fazenda_id: fazenda.id,
+  })
+  if (error) throw error
+  const dados = (data?.dados ?? { escopo: 'todos', itens: [], totais: null }) as DadosRelatorioEstoque
+  return {
+    tipo: 'estoque',
+    dados: {
+      dataInicio,
+      dataFim,
+      fazendaNome: fazenda.nome,
+      fazendaLogoUrl: fazenda.logoUrl,
+      ...dados,
+    },
+  }
+}
+
 export interface OpcoesCarregamentoRelatorios {
   boletim?: DadosPDFBoletimRebanho
 }
@@ -518,6 +546,7 @@ const LOADERS: Record<TipoRelatorioGeral, (fazenda: FazendaRelatorio, dataInicio
   morte: carregarMortes,
   rodeio: carregarRodeio,
   pastagens: carregarPastagens,
+  estoque: carregarEstoque,
   boletim_rebanho: carregarBoletim,
 }
 

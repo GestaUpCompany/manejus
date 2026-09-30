@@ -26,7 +26,7 @@ function capaPadraoDataUrl() {
 function validarBody(body) {
   if (!body || typeof body !== 'object') return 'Payload inválido'
   if (typeof body.fazendaId !== 'string' || typeof body.fazendaNome !== 'string') return 'Fazenda inválida'
-  if (!Array.isArray(body.reports) || body.reports.length < 1 || body.reports.length > 7) return 'Seleção de relatórios inválida'
+  if (!Array.isArray(body.reports) || body.reports.length < 1 || body.reports.length > 8) return 'Seleção de relatórios inválida'
   const tipos = body.reports.map((report) => report?.tipo)
   const temOperacionais = tipos.some((tipo) => tipo !== 'boletim_rebanho')
   if (temOperacionais) {
