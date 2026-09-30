@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth, useFazenda } from '@gestaup/shared'
 import {
   Card,
@@ -70,6 +71,17 @@ export function AtividadesTab() {
     setForm(FORM_VAZIO)
     setModalOpen(true)
   }
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const novaHandled = useRef(false)
+  useEffect(() => {
+    if (novaHandled.current || searchParams.get('nova') !== '1' || !plano) return
+    novaHandled.current = true
+    abrirNovo()
+    searchParams.delete('nova')
+    setSearchParams(searchParams, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, plano])
 
   const abrirEdicao = (a: FpAtividade) => {
     setEditId(a.id)

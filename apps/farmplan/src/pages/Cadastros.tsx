@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { PlanoTab } from '../components/cadastros/PlanoTab'
 import { AtividadesTab } from '../components/cadastros/AtividadesTab'
 import { TemplatesTab } from '../components/cadastros/TemplatesTab'
@@ -18,7 +19,11 @@ const ABAS: { id: Aba; label: string }[] = [
 ]
 
 export function Cadastros() {
-  const [aba, setAba] = useState<Aba>('plano')
+  const [searchParams] = useSearchParams()
+  const abaParam = searchParams.get('aba') as Aba | null
+  const [aba, setAba] = useState<Aba>(
+    abaParam && ABAS.some((a) => a.id === abaParam) ? abaParam : 'plano',
+  )
 
   return (
     <div className="space-y-4">
