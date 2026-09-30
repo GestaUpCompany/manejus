@@ -109,6 +109,30 @@ export interface FuncionarioFp {
   ativo: boolean
 }
 
+export interface FpIndicador {
+  id: string
+  fazenda_id: string
+  nome: string
+  unidade: string
+  direcao: 'up' | 'down'
+  meta_valor: number | null
+  atencao_valor: number | null
+  meta_label: string | null
+  casas_decimais: number
+  origem: 'manual' | 'escore' | 'atividades'
+  ordem: number
+  ativo: boolean
+}
+
+export interface FpIndicadorValor {
+  id: string
+  indicador_id: string
+  fazenda_id: string
+  ano: number
+  mes: number // 1-12
+  valor: number | null
+}
+
 export interface FpContratoItem {
   id: string
   funcionario_id: string
@@ -143,4 +167,20 @@ export function datasDaSemana(semana1Inicio: string, semana: number): Date[] {
     d.setDate(base.getDate() + i)
     return d
   })
+}
+
+/** Semanas do plano (1-53) que intersectam o mês (mes 0-11). */
+export function semanasIntersectamMes(
+  semana1Inicio: string,
+  ano: number,
+  mes: number,
+): number[] {
+  const primeiroDia = new Date(ano, mes, 1, 12)
+  const ultimoDia = new Date(ano, mes + 1, 0, 12)
+  const lista: number[] = []
+  for (let s = 1; s <= 53; s++) {
+    const datas = datasDaSemana(semana1Inicio, s)
+    if (datas[0] <= ultimoDia && datas[6] >= primeiroDia) lista.push(s)
+  }
+  return lista
 }
