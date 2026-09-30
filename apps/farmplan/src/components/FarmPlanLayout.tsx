@@ -1,8 +1,9 @@
 import { ReactNode, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '@gestaup/shared'
+import { useAuth, useFazenda } from '@gestaup/shared'
 import { Breadcrumbs, FarmSwitcher } from '@gestaup/ui'
 import { FarmPlanHeader } from './FarmPlanHeader'
+import { useFarmPlanRealtime } from '../services/farmplanService'
 
 interface MenuItem {
   label: string
@@ -31,6 +32,8 @@ const menuItems: MenuItem[] = [
 
 export function FarmPlanLayout() {
   const { user } = useAuth()
+  const { data: fazenda } = useFazenda(user?.id)
+  useFarmPlanRealtime(fazenda?.id)
   const location = useLocation()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)

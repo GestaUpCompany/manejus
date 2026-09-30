@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@gestaup/supabase'
 import type {
@@ -221,6 +222,44 @@ export function useFpSetStatusSemana() {
       qc.invalidateQueries({ queryKey: ['fp_plano_anual'] })
     },
   })
+}
+
+// ============ Realtime ============
+
+/** Tabelas publicadas no supabase_realtime -> query keys a invalidar. */
+const REALTIME_INVALIDATIONS: Record<string, string[]> = {
+  fp_atividades: ['fp_semana', 'fp_atividades', 'fp_plano_anual'],
+  fp_atividade_semanas: ['fp_semana', 'fp_plano_anual'],
+  fp_atividade_baixas: ['fp_semana'],
+  fp_baixa_sessoes: ['fp_semana'],
+  fp_extras: ['fp_semana'],
+  fp_avaliacoes: ['fp_avaliacoes', 'fp_avaliacoes_ano'],
+  fp_contrato_itens: ['fp_contrato', 'fp_contratos_fazenda'],
+  fp_recados: ['fp_recado'],
+  fp_indicador_valores: ['fp_indicador_valores'],
+}
+
+/**
+ * Assina postgres_changes das tabelas fp_* da fazenda e invalida as queries
+ * afetadas. Montar uma vez no layout cobre todas as telas.
+ */
+export function useFarmPlanRealtime(fazendaId: string | undefined) {
+  const qc = useQueryClient()
+  useEffect(() => {
+    if (!fazendaId) return
+    let channel = supabase.channel(`farmplan_${fazendaId}`)
+    for (const [table, keys] of Object.entries(REALTIME_INVALIDATIONS)) {
+      channel = channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table, filter: `fazenda_id=eq.${fazendaId}` },
+        () => keys.forEach((k) => qc.invalidateQueries({ queryKey: [k] })),
+      )
+    }
+    channel.subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fazendaId, qc])
 }
 
 /** Observação da semana de uma atividade (RPC preserva o status existente). */
