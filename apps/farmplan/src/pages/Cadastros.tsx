@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { PlanoTab } from '../components/cadastros/PlanoTab'
 import { AtividadesTab } from '../components/cadastros/AtividadesTab'
+import { TemplatesTab } from '../components/cadastros/TemplatesTab'
 import { PessoasTab } from '../components/cadastros/PessoasTab'
 import { EquipesTab } from '../components/cadastros/EquipesTab'
 import { SetoresTab } from '../components/cadastros/SetoresTab'
 
-type Aba = 'plano' | 'atividades' | 'pessoas' | 'equipes' | 'setores'
+type Aba = 'plano' | 'atividades' | 'templates' | 'pessoas' | 'equipes' | 'setores'
 
 const ABAS: { id: Aba; label: string }[] = [
   { id: 'plano', label: 'Plano anual' },
   { id: 'atividades', label: 'Atividades' },
+  { id: 'templates', label: 'Templates' },
   { id: 'pessoas', label: 'Pessoas' },
   { id: 'equipes', label: 'Equipes' },
   { id: 'setores', label: 'Setores' },
@@ -47,6 +49,7 @@ export function Cadastros() {
 
       {aba === 'plano' && <PlanoTab />}
       {aba === 'atividades' && <AtividadesTab />}
+      {aba === 'templates' && <TemplatesTab />}
       {aba === 'pessoas' && <PessoasTab />}
       {aba === 'equipes' && <EquipesTab />}
       {aba === 'setores' && <SetoresTab />}

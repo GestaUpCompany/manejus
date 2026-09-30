@@ -256,6 +256,204 @@ export function useDeleteEquipe() {
   })
 }
 
+// ============ Templates ============
+
+export interface FpTemplate {
+  id: string
+  fazenda_id: string
+  nome: string
+  local: string | null
+  coordenador_id: string | null
+  executor_funcionario_id: string | null
+  executor_equipe_id: string | null
+  setor_id: string | null
+  tipo: number
+  urgencia: number
+  dias_semana: boolean[]
+  metodologia: string | null
+  maquinas: string | null
+  materiais: string | null
+  meta: string | null
+  rep_a_cada: number
+  ativo: boolean
+}
+
+export function useTemplates(fazendaId: string | undefined) {
+  return useQuery({
+    queryKey: ['fp_templates', fazendaId],
+    enabled: !!fazendaId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fp_atividade_templates')
+        .select('*')
+        .eq('fazenda_id', fazendaId!)
+        .is('deleted_at', null)
+        .order('nome', { ascending: true })
+      if (error) throw error
+      return data as FpTemplate[]
+    },
+  })
+}
+
+export function useSaveTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: Omit<FpTemplate, 'id' | 'ativo'> & { id?: string }) => {
+      const { id, ...dados } = input
+      if (id) {
+        const { error } = await supabase.from('fp_atividade_templates').update(dados).eq('id', id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('fp_atividade_templates').insert(dados)
+        if (error) throw error
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fp_templates'] }),
+  })
+}
+
+export function useDeleteTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('fp_atividade_templates')
+        .update({ deleted_at: new Date().toISOString(), ativo: false })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fp_templates'] }),
+  })
+}
+
+/** Materializa um template: cria a atividade no plano e pinta as semanas a partir de `semanaInicio` a cada `rep_a_cada` semanas. */
+export function useAplicarTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: {
+      template: FpTemplate
+      planoId: string
+      semanaInicio: number
+    }) => {
+      const { template: t, planoId, semanaInicio } = params
+      const { data: ativ, error } = await supabase
+        .from('fp_atividades')
+        .insert({
+          plano_id: planoId,
+          fazenda_id: t.fazenda_id,
+          nome: t.nome,
+          local: t.local,
+          coordenador_id: t.coordenador_id,
+          executor_funcionario_id: t.executor_funcionario_id,
+          executor_equipe_id: t.executor_equipe_id,
+          setor_id: t.setor_id,
+          tipo: t.tipo,
+          urgencia: t.urgencia,
+          dias_semana: t.dias_semana,
+          metodologia: t.metodologia,
+          maquinas: t.maquinas,
+          materiais: t.materiais,
+          meta: t.meta,
+        })
+        .select('id')
+        .single()
+      if (error) throw error
+
+      const passo = Math.max(1, t.rep_a_cada)
+      const semanas = []
+      for (let s = semanaInicio; s <= 53; s += passo) semanas.push(s)
+      if (semanas.length) {
+        const { error: sErr } = await supabase.from('fp_atividade_semanas').insert(
+          semanas.map((semana) => ({
+            atividade_id: ativ.id,
+            fazenda_id: t.fazenda_id,
+            semana,
+            status: 1,
+          })),
+        )
+        if (sErr) throw sErr
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fp_atividades'] })
+      qc.invalidateQueries({ queryKey: ['fp_plano_anual'] })
+      qc.invalidateQueries({ queryKey: ['fp_semana'] })
+    },
+  })
+}
+
+// ============ Extras e recados ============
+
+export function useSaveExtra() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: {
+      fazendaId: string
+      semana: number
+      dia: number
+      nome: string
+      funcionarioId?: string | null
+      setorId?: string | null
+      observacao?: string | null
+      usuarioId?: string
+    }) => {
+      const { error } = await supabase.from('fp_extras').insert({
+        fazenda_id: params.fazendaId,
+        semana: params.semana,
+        dia: params.dia,
+        nome: params.nome,
+        funcionario_id: params.funcionarioId ?? null,
+        setor_id: params.setorId ?? null,
+        observacao: params.observacao ?? null,
+        criado_por_usuario_id: params.usuarioId ?? null,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fp_semana'] }),
+  })
+}
+
+export function useRecado(planoId: string | undefined, semana: number | undefined) {
+  return useQuery({
+    queryKey: ['fp_recado', planoId, semana],
+    enabled: !!planoId && !!semana,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fp_recados')
+        .select('id, texto')
+        .eq('plano_id', planoId!)
+        .eq('semana', semana!)
+        .maybeSingle()
+      if (error) throw error
+      return data as { id: string; texto: string } | null
+    },
+  })
+}
+
+export function useSaveRecado() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: {
+      planoId: string
+      fazendaId: string
+      semana: number
+      texto: string
+    }) => {
+      const { error } = await supabase.from('fp_recados').upsert(
+        {
+          plano_id: params.planoId,
+          fazenda_id: params.fazendaId,
+          semana: params.semana,
+          texto: params.texto,
+        },
+        { onConflict: 'plano_id,semana' },
+      )
+      if (error) throw error
+    },
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ['fp_recado', v.planoId, v.semana] }),
+  })
+}
+
 // ============ Setores ============
 
 export function useSaveSetor() {

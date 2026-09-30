@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useAuth, useFazenda } from '@gestaup/shared'
-import { Card, PageSkeleton, EmptyState } from '@gestaup/ui'
+import { Card, PageSkeleton, EmptyState, Button, useToast } from '@gestaup/ui'
 import { usePlanoAtivo, useSemanaDados } from '../services/farmplanService'
+import { useRecado, useSaveRecado } from '../services/cadastrosService'
 import { FP_STATUS_LABEL, FP_TIPO_LABEL } from '../types/farmplan'
 
 export function Painel() {
@@ -13,6 +15,11 @@ export function Painel() {
     plano?.id,
     plano?.semanaAtual ?? 1,
   )
+  const { data: recado } = useRecado(plano?.id, plano?.semanaAtual)
+  const saveRecado = useSaveRecado()
+  const toast = useToast()
+  const [editandoRecado, setEditandoRecado] = useState(false)
+  const [recadoTxt, setRecadoTxt] = useState('')
 
   if (loadingPlano || loadingSemana) return <PageSkeleton />
 
@@ -67,6 +74,70 @@ export function Painel() {
           </Card>
         ))}
       </div>
+
+      <Card className="p-4" disableHover>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-content-strong">
+            Recado da semana {plano.semanaAtual}
+          </h2>
+          {!editandoRecado && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setRecadoTxt(recado?.texto ?? '')
+                setEditandoRecado(true)
+              }}
+            >
+              {recado?.texto ? 'Editar' : 'Escrever'}
+            </Button>
+          )}
+        </div>
+        {editandoRecado ? (
+          <div className="space-y-2">
+            <textarea
+              value={recadoTxt}
+              onChange={(e) => setRecadoTxt(e.target.value)}
+              rows={3}
+              placeholder="Mensagem para a equipe (aparece no PDF semanal)"
+              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-surface-1 text-content-strong border-border-base"
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={saveRecado.isPending}
+                onClick={() => {
+                  if (!fazendaId) return
+                  saveRecado.mutate(
+                    {
+                      planoId: plano.id,
+                      fazendaId,
+                      semana: plano.semanaAtual,
+                      texto: recadoTxt.trim(),
+                    },
+                    {
+                      onSuccess: () => {
+                        toast.success('Recado salvo')
+                        setEditandoRecado(false)
+                      },
+                      onError: () => toast.error('Erro ao salvar recado'),
+                    },
+                  )
+                }}
+              >
+                Salvar
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setEditandoRecado(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : recado?.texto ? (
+          <p className="text-sm text-content italic">{recado.texto}</p>
+        ) : (
+          <p className="text-sm text-content-faint">Nenhum recado esta semana.</p>
+        )}
+      </Card>
 
       <Card className="p-4" disableHover>
         <h2 className="text-sm font-semibold text-content-strong mb-3">
