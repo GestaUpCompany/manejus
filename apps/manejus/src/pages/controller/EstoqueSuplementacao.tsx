@@ -109,6 +109,7 @@ export function EstoqueSuplementacao() {
   const [ajusteForm, setAjusteForm] = useState({
     item_tipo: 'insumo' as ItemTipo,
     item_id: '',
+    escopo: '' as '' | 'saldo' | 'custo' | 'saldo_custo',
     modo: 'absoluto' as 'absoluto' | 'delta',
     novo_saldo: '',
     custo_unitario: '',
@@ -296,6 +297,7 @@ export function EstoqueSuplementacao() {
     setAjusteForm({
       item_tipo: itemTipo,
       item_id: itemId ?? '',
+      escopo: '',
       modo: 'absoluto',
       novo_saldo: item ? String(Number(item.estoque_atual)) : '',
       custo_unitario: item && Number(item.custo_unitario) > 0 ? String(Number(item.custo_unitario)) : '',
@@ -305,20 +307,35 @@ export function EstoqueSuplementacao() {
   }
 
   const salvarAjuste = async () => {
-    if (!fazendaId || !ajusteForm.item_id || !ajusteForm.novo_saldo || ajusteForm.custo_unitario === '') return
+    if (!fazendaId || !ajusteForm.item_id || !ajusteForm.escopo) return
+    if (ajusteForm.escopo !== 'custo' && !ajusteForm.novo_saldo) return
+    if (ajusteForm.escopo !== 'saldo' && ajusteForm.custo_unitario === '') return
     setSubmitting(true)
     setError(null)
     try {
-      const valorInformado = parseFloat(ajusteForm.novo_saldo)
       const itemAjuste = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
         .find((i) => i.id === ajusteForm.item_id)
       const saldoAtual = itemAjuste ? Number(itemAjuste.estoque_atual) : 0
-      const novoSaldo = ajusteForm.modo === 'delta' ? saldoAtual + valorInformado : valorInformado
-      const custoInformado = ajusteForm.custo_unitario !== '' ? parseFloat(ajusteForm.custo_unitario) : null
+      const custoAtual = itemAjuste ? Number(itemAjuste.custo_unitario) : 0
+      const valorInformado = ajusteForm.novo_saldo !== '' ? parseFloat(ajusteForm.novo_saldo) : 0
+      const novoSaldo = ajusteForm.escopo === 'custo'
+        ? saldoAtual
+        : ajusteForm.modo === 'delta' ? saldoAtual + valorInformado : valorInformado
+      const custoInformado = ajusteForm.escopo === 'saldo' || ajusteForm.custo_unitario === ''
+        ? null
+        : parseFloat(ajusteForm.custo_unitario)
 
-      const observacao = ajusteForm.modo === 'delta'
+      const mudouSaldo = novoSaldo !== saldoAtual
+      const mudouCusto = custoInformado !== null && custoInformado !== custoAtual
+      const observacaoPadrao = mudouCusto && !mudouSaldo
+        ? 'Ajuste manual de custo'
+        : mudouSaldo && mudouCusto
+          ? 'Ajuste manual de saldo e custo'
+          : 'Ajuste manual de saldo'
+
+      const observacao = ajusteForm.escopo !== 'custo' && ajusteForm.modo === 'delta'
         ? `Levantamento bruto: ${valorInformado.toLocaleString('pt-BR')} kg${ajusteForm.observacao ? `; ${ajusteForm.observacao}` : ''}`
-        : ajusteForm.observacao || 'Ajuste manual de saldo'
+        : ajusteForm.observacao || observacaoPadrao
 
       const { error: movError } = await supabase.from('movimentacoes_estoque_suplementos').insert({
         fazenda_id: fazendaId,
@@ -790,7 +807,7 @@ export function EstoqueSuplementacao() {
               setAjusteForm({
                 ...ajusteForm,
                 item_id: val,
-                novo_saldo: ajusteForm.modo === 'absoluto' && item ? String(Number(item.estoque_atual)) : ajusteForm.novo_saldo,
+                novo_saldo: (ajusteForm.modo === 'absoluto' || ajusteForm.escopo === 'custo') && item ? String(Number(item.estoque_atual)) : ajusteForm.novo_saldo,
                 custo_unitario: item && Number(item.custo_unitario) > 0 ? String(Number(item.custo_unitario)) : '',
               })
             }}
@@ -812,82 +829,153 @@ export function EstoqueSuplementacao() {
             )
           })()}
           <Select
-            label="Modo de ajuste"
+            label="O que será ajustado"
             options={[
-              { value: 'absoluto', label: 'Contagem física (substitui o atual)' },
-              { value: 'delta', label: 'Levantamento bruto (soma ao atual)' },
+              { value: 'saldo_custo', label: 'Saldo e custo médio' },
+              { value: 'saldo', label: 'Somente saldo' },
+              { value: 'custo', label: 'Somente custo médio' },
             ]}
-            value={ajusteForm.modo}
+            placeholder="Escolha uma opção..."
+            value={ajusteForm.escopo}
             onChange={(val) => {
-              const modo = val as 'absoluto' | 'delta'
+              const escopo = val as 'saldo' | 'custo' | 'saldo_custo'
               const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
                 .find((i) => i.id === ajusteForm.item_id)
               setAjusteForm({
                 ...ajusteForm,
-                modo,
-                novo_saldo: modo === 'absoluto' && item ? String(Number(item.estoque_atual)) : '',
+                escopo,
+                novo_saldo: escopo === 'custo' && item ? String(Number(item.estoque_atual)) : ajusteForm.novo_saldo,
               })
             }}
             required
           />
-          <Input
-            label={ajusteForm.modo === 'delta' ? 'Levantamento bruto (kg)' : 'Novo Saldo (kg)'}
-            type="number"
-            placeholder="Ex: 850"
-            value={ajusteForm.novo_saldo}
-            onChange={(e) => setAjusteForm({ ...ajusteForm, novo_saldo: e.target.value })}
-            required
-          />
-          {ajusteForm.modo === 'delta' && ajusteForm.item_id && ajusteForm.novo_saldo && (() => {
+          {ajusteForm.escopo === 'custo' && ajusteForm.item_id && (() => {
             const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
               .find((i) => i.id === ajusteForm.item_id)
             if (!item) return null
-            const resultante = Number(item.estoque_atual) + parseFloat(ajusteForm.novo_saldo)
-            return (
-              <div className="bg-primary/10 border border-primary/30 rounded-lg p-3">
-                <p className="text-sm text-primary dark:text-primary-light">
-                  Saldo resultante:{' '}
-                  <span className={`font-bold ${resultante < 0 ? 'text-red-500' : ''}`}>
-                    {resultante.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
-                  </span>
-                </p>
-              </div>
-            )
-          })()}
-          <Input
-            label="Custo unitário (R$/kg)"
-            type="number"
-            step="0.0001"
-            min="0"
-            placeholder="Ex: 0,85"
-            value={ajusteForm.custo_unitario}
-            onChange={(e) => setAjusteForm({ ...ajusteForm, custo_unitario: e.target.value })}
-            required
-          />
-          {ajusteForm.custo_unitario !== '' && ajusteForm.item_id && ajusteForm.novo_saldo && (() => {
-            const custo = parseFloat(ajusteForm.custo_unitario)
-            if (isNaN(custo)) return null
-            const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
-              .find((i) => i.id === ajusteForm.item_id)
-            const saldoAtual = item ? Number(item.estoque_atual) : 0
-            const resultante = ajusteForm.modo === 'delta'
-              ? saldoAtual + parseFloat(ajusteForm.novo_saldo)
-              : parseFloat(ajusteForm.novo_saldo)
-            if (isNaN(resultante)) return null
             return (
               <p className="text-xs text-content-muted">
-                Valor em estoque resultante:{' '}
+                O saldo permanecerá em{' '}
                 <span className="font-semibold text-content-strong">
-                  R$ {(resultante * custo).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {Number(item.estoque_atual).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
                 </span>
-                {' '}(o custo médio do item passa a ser R$ {custo.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg)
+                ; apenas o custo médio será redefinido.
+              </p>
+            )
+          })()}
+          {(ajusteForm.escopo === 'saldo' || ajusteForm.escopo === 'saldo_custo') && (
+            <>
+              <Select
+                label="Modo de ajuste"
+                options={[
+                  { value: 'absoluto', label: 'Contagem física (substitui o atual)' },
+                  { value: 'delta', label: 'Levantamento bruto (soma ao atual)' },
+                ]}
+                value={ajusteForm.modo}
+                onChange={(val) => {
+                  const modo = val as 'absoluto' | 'delta'
+                  const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
+                    .find((i) => i.id === ajusteForm.item_id)
+                  setAjusteForm({
+                    ...ajusteForm,
+                    modo,
+                    novo_saldo: modo === 'absoluto' && item ? String(Number(item.estoque_atual)) : '',
+                  })
+                }}
+                required
+              />
+              <Input
+                label={ajusteForm.modo === 'delta' ? 'Levantamento bruto (kg)' : 'Novo Saldo (kg)'}
+                type="number"
+                placeholder="Ex: 850"
+                value={ajusteForm.novo_saldo}
+                onChange={(e) => setAjusteForm({ ...ajusteForm, novo_saldo: e.target.value })}
+                required
+              />
+              {ajusteForm.modo === 'delta' && ajusteForm.item_id && ajusteForm.novo_saldo && (() => {
+                const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
+                  .find((i) => i.id === ajusteForm.item_id)
+                if (!item) return null
+                const resultante = Number(item.estoque_atual) + parseFloat(ajusteForm.novo_saldo)
+                return (
+                  <div className="bg-primary/10 border border-primary/30 rounded-lg p-3">
+                    <p className="text-sm text-primary dark:text-primary-light">
+                      Saldo resultante:{' '}
+                      <span className={`font-bold ${resultante < 0 ? 'text-red-500' : ''}`}>
+                        {resultante.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
+                      </span>
+                    </p>
+                  </div>
+                )
+              })()}
+            </>
+          )}
+          {(ajusteForm.escopo === 'custo' || ajusteForm.escopo === 'saldo_custo') && (
+            <>
+              <Input
+                label="Custo unitário (R$/kg)"
+                type="number"
+                step="0.0001"
+                min="0"
+                placeholder="Ex: 0,85"
+                value={ajusteForm.custo_unitario}
+                onChange={(e) => setAjusteForm({ ...ajusteForm, custo_unitario: e.target.value })}
+                required
+              />
+              {ajusteForm.custo_unitario !== '' && ajusteForm.item_id && (ajusteForm.novo_saldo || ajusteForm.escopo === 'custo') && (() => {
+                const custo = parseFloat(ajusteForm.custo_unitario)
+                if (isNaN(custo)) return null
+                const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
+                  .find((i) => i.id === ajusteForm.item_id)
+                const saldoAtual = item ? Number(item.estoque_atual) : 0
+                const resultante = ajusteForm.escopo === 'custo'
+                  ? saldoAtual
+                  : ajusteForm.modo === 'delta'
+                    ? saldoAtual + parseFloat(ajusteForm.novo_saldo)
+                    : parseFloat(ajusteForm.novo_saldo)
+                if (isNaN(resultante)) return null
+                return (
+                  <p className="text-xs text-content-muted">
+                    Valor em estoque resultante:{' '}
+                    <span className="font-semibold text-content-strong">
+                      R$ {(resultante * custo).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    {' '}(o custo médio do item passa a ser R$ {custo.toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg)
+                  </p>
+                )
+              })()}
+            </>
+          )}
+          {ajusteForm.item_id && ajusteForm.escopo !== '' && ajusteForm.novo_saldo !== '' && (() => {
+            const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
+              .find((i) => i.id === ajusteForm.item_id)
+            if (!item) return null
+            const saldoAtual = Number(item.estoque_atual)
+            const custoAtual = Number(item.custo_unitario) || 0
+            const novoSaldo = ajusteForm.escopo === 'custo'
+              ? saldoAtual
+              : ajusteForm.modo === 'delta'
+                ? saldoAtual + parseFloat(ajusteForm.novo_saldo)
+                : parseFloat(ajusteForm.novo_saldo)
+            const custoInformado = ajusteForm.escopo !== 'saldo' && ajusteForm.custo_unitario !== ''
+              ? parseFloat(ajusteForm.custo_unitario)
+              : null
+            if (isNaN(novoSaldo)) return null
+            if (novoSaldo !== saldoAtual || (custoInformado !== null && custoInformado !== custoAtual)) return null
+            return (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Nenhuma alteração: saldo e custo médio permanecem iguais aos valores atuais.
               </p>
             )
           })()}
           <p className="text-xs text-content-muted">
-            {ajusteForm.modo === 'delta'
-              ? 'Informe o estoque total existente antes das saídas: o valor é somado ao saldo atual. O custo informado passa a ser o custo médio do item.'
-              : 'O ajuste define o saldo absoluto e o custo informado passa a ser o custo médio do item. Use para correções de inventário.'}
+            {ajusteForm.escopo === ''
+              ? 'Escolha acima o que deseja ajustar neste item.'
+              : ajusteForm.escopo === 'custo'
+              ? 'O custo informado passa a ser o custo médio do item. O saldo em kg não é alterado.'
+              : ajusteForm.modo === 'delta'
+                ? `Informe o estoque total existente antes das saídas: o valor é somado ao saldo atual.${ajusteForm.escopo === 'saldo' ? ' O custo médio não será alterado.' : ' O custo informado passa a ser o custo médio do item.'}`
+                : `O ajuste define o saldo absoluto${ajusteForm.escopo === 'saldo' ? '. O custo médio não será alterado.' : ' e o custo informado passa a ser o custo médio do item. Use para correções de inventário.'}`}
           </p>
           <Input
             label="Observação"
@@ -897,7 +985,7 @@ export function EstoqueSuplementacao() {
           />
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="secondary" onClick={() => setModalAjuste(false)}>Cancelar</Button>
-            <Button onClick={salvarAjuste} disabled={submitting || !ajusteForm.item_id || !ajusteForm.novo_saldo || ajusteForm.custo_unitario === ''}>
+            <Button onClick={salvarAjuste} disabled={submitting || !ajusteForm.item_id || !ajusteForm.escopo || (ajusteForm.escopo !== 'custo' && !ajusteForm.novo_saldo) || (ajusteForm.escopo !== 'saldo' && ajusteForm.custo_unitario === '')}>
               {submitting ? 'Salvando...' : 'Aplicar Ajuste'}
             </Button>
           </div>
@@ -917,6 +1005,28 @@ export function EstoqueSuplementacao() {
           const ajustes = historicoMovs.filter((m) => m.tipo_movimentacao === 'ajuste')
           const totalEntradas = entradas.reduce((sum, m) => sum + Number(m.quantidade), 0)
           const totalSaidas = saidas.reduce((sum, m) => sum + Number(m.quantidade), 0)
+          // Replay do WAC (mesma regra de recalcular_custo_medio_item) para saber
+          // o custo médio imediatamente antes de cada movimentação
+          const custoAntesPorMov = new Map<string, number>()
+          let wacSaldo = 0
+          let wacCusto = 0
+          for (const m of [...historicoMovs].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())) {
+            custoAntesPorMov.set(m.id, wacCusto)
+            const qtd = Number(m.quantidade)
+            if (m.tipo_movimentacao === 'entrada' || m.tipo_movimentacao === 'producao') {
+              const custoEntrada = m.valor_total != null
+                ? (qtd !== 0 ? Number(m.valor_total) / qtd : Number(m.custo_unitario || 0))
+                : Number(m.custo_unitario || 0)
+              const valorEntrada = m.valor_total != null ? Number(m.valor_total) : qtd * custoEntrada
+              wacCusto = wacSaldo <= 0 ? custoEntrada : (wacSaldo * wacCusto + valorEntrada) / (wacSaldo + qtd)
+              wacSaldo += qtd
+            } else if (m.tipo_movimentacao === 'baixa' || m.tipo_movimentacao === 'consumo') {
+              wacSaldo -= qtd
+            } else if (m.tipo_movimentacao === 'ajuste') {
+              wacSaldo = qtd
+              if (m.custo_unitario != null && Number(m.custo_unitario) > 0) wacCusto = Number(m.custo_unitario)
+            }
+          }
 
           return (
             <div className="space-y-4">
@@ -947,6 +1057,12 @@ export function EstoqueSuplementacao() {
                       const isEntrada = mov.tipo_movimentacao === 'entrada' || mov.tipo_movimentacao === 'producao'
                       const isAjuste = mov.tipo_movimentacao === 'ajuste'
                       const valor = Number(mov.valor_total || (Number(mov.quantidade) * Number(mov.custo_unitario || 0)))
+                      const saldoIgual = mov.saldo_anterior != null && mov.saldo_posterior != null
+                        && Number(mov.saldo_anterior) === Number(mov.saldo_posterior)
+                      const tituloAjuste = !isAjuste ? null
+                        : saldoIgual
+                          ? (mov.custo_unitario != null ? 'Ajuste de custo' : 'Ajuste de estoque')
+                          : mov.custo_unitario != null ? 'Ajuste de saldo e custo' : 'Ajuste de saldo'
                       return (
                         <div
                           key={mov.id}
@@ -964,15 +1080,20 @@ export function EstoqueSuplementacao() {
                               <div>
                                 <p className="text-sm font-semibold text-content-strong">
                                   {isAjuste
-                                    ? 'Ajuste de estoque'
+                                    ? tituloAjuste
                                     : `${TIPO_MOV_LABEL[mov.tipo_movimentacao] || mov.tipo_movimentacao} — ${Number(mov.quantidade).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg`}
                                 </p>
                                 <p className="text-xs text-content-muted">
                                   {mov.data ? formatDate(mov.data) : '-'} {new Date(mov.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · {ORIGEM_LABEL[mov.origem || ''] || mov.origem || '-'}{mov.autor_nome ? ` · por ${mov.autor_nome}` : ''}
                                 </p>
-                                {mov.saldo_anterior != null && mov.saldo_posterior != null && (
+                                {(!isAjuste || !saldoIgual) && mov.saldo_anterior != null && mov.saldo_posterior != null && (
                                   <p className="text-xs text-content-muted">
                                     Saldo: {Number(mov.saldo_anterior).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} → {Number(mov.saldo_posterior).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
+                                  </p>
+                                )}
+                                {isAjuste && mov.custo_unitario != null && custoAntesPorMov.get(mov.id) !== Number(mov.custo_unitario) && (
+                                  <p className="text-xs text-content-muted">
+                                    Custo: R$ {(custoAntesPorMov.get(mov.id) ?? 0).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg → R$ {Number(mov.custo_unitario).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg
                                   </p>
                                 )}
                               </div>
