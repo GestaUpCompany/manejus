@@ -65,7 +65,6 @@ const TIPO_MOV_LABEL: Record<string, string> = {
   producao: 'Produção',
   consumo: 'Consumo',
   ajuste: 'Ajuste',
-  estorno: 'Estorno',
 }
 
 export function EstoqueSuplementacao() {
@@ -165,9 +164,6 @@ export function EstoqueSuplementacao() {
           c.total += Number(m.quantidade)
           if (m.data < c.primeira) c.primeira = m.data
           consumoPorItem.set(m.item_id, c)
-        } else if (m.tipo_movimentacao === 'estorno') {
-          const c = consumoPorItem.get(m.item_id)
-          if (c) c.total -= Number(m.quantidade)
         }
       }
       const consumoDiario = new Map<string, number>()
@@ -917,7 +913,7 @@ export function EstoqueSuplementacao() {
       >
         {modalHistorico && (() => {
           const entradas = historicoMovs.filter((m) => m.tipo_movimentacao === 'entrada' || m.tipo_movimentacao === 'producao')
-          const saidas = historicoMovs.filter((m) => ['baixa', 'consumo', 'estorno'].includes(m.tipo_movimentacao))
+          const saidas = historicoMovs.filter((m) => ['baixa', 'consumo'].includes(m.tipo_movimentacao))
           const ajustes = historicoMovs.filter((m) => m.tipo_movimentacao === 'ajuste')
           const totalEntradas = entradas.reduce((sum, m) => sum + Number(m.quantidade), 0)
           const totalSaidas = saidas.reduce((sum, m) => sum + Number(m.quantidade), 0)
