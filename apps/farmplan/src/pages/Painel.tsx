@@ -26,10 +26,6 @@ const STATUS_PILL: Record<FpStatusSemana, string> = {
   5: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
 }
 
-const MES_ABREV = [
-  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-  'jul', 'ago', 'set', 'out', 'nov', 'dez',
-] as const
 
 export function Painel() {
   const { user } = useAuth()
@@ -207,7 +203,7 @@ export function Painel() {
   } = derivados
 
   const ehAtual = semana === plano.semanaAtual
-  const intervalo = `${datas[0].getDate()} ${MES_ABREV[datas[0].getMonth()]} – ${datas[6].getDate()} ${MES_ABREV[datas[6].getMonth()]}`
+  const intervalo = `${datas[0].getDate()} de ${datas[0].toLocaleDateString('pt-BR', { month: 'long' })} a ${datas[6].getDate()} de ${datas[6].toLocaleDateString('pt-BR', { month: 'long' })}`
   const eyebrow = ehAtual
     ? `Painel · ${hoje.toLocaleDateString('pt-BR', { weekday: 'long' })}, ${hoje.getDate()} de ${hoje.toLocaleDateString('pt-BR', { month: 'long' })} de ${hoje.getFullYear()}`
     : `Painel · semana ${semana}`
@@ -345,7 +341,7 @@ export function Painel() {
                           </span>
                           {s?.carry_from != null && (
                             <span className="inline-block ml-1.5 bg-red-600 text-white rounded px-1.5 text-[10.5px] font-bold leading-6 align-middle">
-                              atrasada
+                              Atrasada da sem. {s.carry_from}
                             </span>
                           )}
                           <p className="text-xs text-content-muted">

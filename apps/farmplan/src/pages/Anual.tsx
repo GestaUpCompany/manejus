@@ -90,6 +90,17 @@ export function Anual() {
     mostrar: '',
   })
   const paintingRef = useRef(false)
+  const gridScrollRef = useRef<HTMLDivElement>(null)
+  // Fila serializa as RPCs: cada mudança só vai ao servidor depois da
+  // anterior terminar, então undo/redo e drag ficam determinísticos.
+  const filaRef = useRef<Promise<void>>(Promise.resolve())
+
+  // Posiciona a grade na semana atual ao abrir (como o modelo).
+  useEffect(() => {
+    const el = gridScrollRef.current
+    const sem = plano?.semanaAtual
+    if (el && sem) el.scrollLeft = Math.max(0, (sem - 4) * 28)
+  }, [plano?.semanaAtual, semanas])
 
   const semanasMap = useMemo(() => {
     const m = new Map<string, { status: FpStatusSemana; carry_from: number | null }>()
@@ -203,9 +214,6 @@ export function Anual() {
     semanasMap.get(`${atividadeId}:${semana}`)?.status ??
     0
 
-  // Fila serializa as RPCs: cada mudança só vai ao servidor depois da
-  // anterior terminar, então undo/redo e drag ficam determinísticos.
-  const filaRef = useRef<Promise<void>>(Promise.resolve())
   const enfileirar = (atividadeId: string, semana: number, status: number, key: string) => {
     filaRef.current = filaRef.current.then(async () => {
       try {
@@ -422,7 +430,7 @@ export function Anual() {
           </div>
 
           {/* grade */}
-          <div className="overflow-auto max-h-[calc(100vh-250px)] min-h-[360px] select-none">
+          <div ref={gridScrollRef} className="overflow-auto max-h-[calc(100vh-250px)] min-h-[360px] select-none">
             <div
               className="grid text-[13px] w-max min-w-full"
               style={{ gridTemplateColumns: '240px 34px repeat(53,28px) 48px' }}

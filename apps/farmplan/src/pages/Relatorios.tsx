@@ -605,7 +605,7 @@ export function Relatorios() {
               <small className="text-xs text-content-muted">Escore médio da equipe</small>
               <b className="num block text-2xl font-bold text-content-strong">{nf(avgEquipe)}</b>
               <span className="text-[11px] text-content-faint">
-                {ev.length} colaboradores com nota no período
+                {ev.length} {ev.length === 1 ? 'colaborador' : 'colaboradores'} com nota no período
               </span>
             </Card>
             <Card className="p-4" disableHover>

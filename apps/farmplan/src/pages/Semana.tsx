@@ -46,10 +46,6 @@ const CHIP_DOT: Record<number, string> = {
 
 type WTab = 'pessoa' | 'setor' | 'lista'
 
-const MES_ABREV = [
-  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-  'jul', 'ago', 'set', 'out', 'nov', 'dez',
-] as const
 
 export function Semana() {
   const { user } = useAuth()
@@ -171,7 +167,7 @@ export function Semana() {
   const hoje = new Date()
   const idxHoje = datas.findIndex((d) => d.toDateString() === hoje.toDateString())
   const ehAtual = semana === cur
-  const intervalo = `${datas[0].getDate()} ${MES_ABREV[datas[0].getMonth()]} – ${datas[6].getDate()} ${MES_ABREV[datas[6].getMonth()]}`
+  const intervalo = `${datas[0].getDate()} de ${datas[0].toLocaleDateString('pt-BR', { month: 'long' })} a ${datas[6].getDate()} de ${datas[6].toLocaleDateString('pt-BR', { month: 'long' })}`
   const concluidas = todasDaSemana.filter(
     (a) => semanasMap.get(a.id)?.status === 2,
   ).length
@@ -582,7 +578,7 @@ export function Semana() {
                                 <span className="truncate flex-1">{a.nome}</span>
                                 {carry && (
                                   <span className="bg-red-600 text-white rounded px-1 text-[10px] font-bold flex-none">
-                                    atrasada
+                                    ↻{s?.carry_from}
                                   </span>
                                 )}
                               </button>

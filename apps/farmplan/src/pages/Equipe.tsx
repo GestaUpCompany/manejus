@@ -17,7 +17,7 @@ import {
 import type { FpAvaliacao, FuncionarioFp } from '../types/farmplan'
 
 const nf = (v: number | null | undefined, casas = 1) =>
-  v == null ? '—' : v.toFixed(casas)
+  v == null ? '—' : v.toFixed(casas).replace('.', ',')
 
 // farol do escore: verde >= 8.5, âmbar >= 7, vermelho abaixo
 const scCls = (v: number | null | undefined) =>

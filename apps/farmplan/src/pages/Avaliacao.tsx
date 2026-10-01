@@ -28,10 +28,6 @@ import {
 import type { FpAvaliacao, FpContratoItem, FuncionarioFp } from '../types/farmplan'
 import { datasDaSemana } from '../types/farmplan'
 
-const MES_ABREV = [
-  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-  'jul', 'ago', 'set', 'out', 'nov', 'dez',
-] as const
 
 const scCls = (v: number | null | undefined) =>
   v == null
@@ -43,7 +39,7 @@ const scCls = (v: number | null | undefined) =>
         : 'text-red-600 dark:text-red-400'
 
 const nf = (v: number | null | undefined, casas = 1) =>
-  v == null ? '—' : v.toFixed(casas)
+  v == null ? '—' : v.toFixed(casas).replace('.', ',')
 
 // ---------- Modal de contrato ----------
 
@@ -388,7 +384,7 @@ export function Avaliacao() {
   if (!sel) return null
 
   const datas = datasDaSemana(plano.semana1_inicio, semana)
-  const intervalo = `${datas[0].getDate()} ${MES_ABREV[datas[0].getMonth()]} – ${datas[6].getDate()} ${MES_ABREV[datas[6].getMonth()]}`
+  const intervalo = `${datas[0].getDate()} de ${datas[0].toLocaleDateString('pt-BR', { month: 'long' })} a ${datas[6].getDate()} de ${datas[6].toLocaleDateString('pt-BR', { month: 'long' })}`
   const nAvaliados = P.filter(avaliado).length
   const [dn, tt] = cargaSemana(sel)
   const tarefas = (itensPorFunc.get(sel.id) ?? []).filter((i) => i.tipo === 'tarefa')

@@ -356,18 +356,18 @@ export function Hoje() {
               <table className="w-full">
                 <thead>
                   <tr>
-                    <th className="w-11 px-3 py-2.5 border-b border-border-base" />
+                    <th className="w-11 px-2 py-2.5 border-b border-border-base" />
                     {['O que fazer hoje?', 'Local / observação', 'Quem faz', 'Setor'].map(
                       (h) => (
                         <th
                           key={h}
-                          className="text-[11px] uppercase tracking-wide text-content-muted font-semibold px-3 py-2.5 border-b border-border-base text-left whitespace-nowrap"
+                          className="text-[11px] uppercase tracking-wide text-content-muted font-semibold px-2 py-2.5 border-b border-border-base text-left whitespace-nowrap"
                         >
                           {h}
                         </th>
                       ),
                     )}
-                    <th className="text-[11px] uppercase tracking-wide text-content-muted font-semibold px-3 py-2.5 border-b border-border-base text-right">
+                    <th className="text-[11px] uppercase tracking-wide text-content-muted font-semibold px-2 py-2.5 border-b border-border-base text-right">
                       Status
                     </th>
                   </tr>
@@ -381,7 +381,7 @@ export function Hoje() {
                     const carry = s?.carry_from != null
                     return (
                       <tr key={a.id}>
-                        <td className="px-3 py-2.5 border-b border-border-subtle">
+                        <td className="px-2 py-2.5 border-b border-border-subtle">
                           <button
                             onClick={() => toggle(a)}
                             aria-label={ok ? 'Desmarcar' : 'Marcar como feito'}
@@ -400,7 +400,7 @@ export function Hoje() {
                             )}
                           </button>
                         </td>
-                        <td className="px-3 py-2.5 border-b border-border-subtle">
+                        <td className="px-2 py-2.5 border-b border-border-subtle">
                           <b
                             className={`text-sm ${ok ? 'text-content-muted' : 'text-content-strong'}`}
                           >
@@ -408,7 +408,7 @@ export function Hoje() {
                           </b>
                           {carry && !ok && (
                             <span className="inline-block whitespace-nowrap align-middle bg-red-600 text-white rounded px-1 ml-1.5 text-[10px] font-bold">
-                              atrasada
+                              Atrasada da sem. {s?.carry_from}
                             </span>
                           )}
                           {bx?.observacao && (
@@ -417,16 +417,16 @@ export function Hoje() {
                             </p>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 border-b border-border-subtle text-xs text-content-muted max-w-[200px]">
+                        <td className="px-2 py-2.5 border-b border-border-subtle text-xs text-content-muted max-w-[200px]">
                           {s?.observacao || a.local || '—'}
                         </td>
-                        <td className="px-3 py-2.5 border-b border-border-subtle text-sm text-content whitespace-nowrap">
+                        <td className="px-2 py-2.5 border-b border-border-subtle text-sm text-content">
                           {quemFaz(a)}
                         </td>
-                        <td className="px-3 py-2.5 border-b border-border-subtle text-xs text-content-muted whitespace-nowrap">
+                        <td className="px-2 py-2.5 border-b border-border-subtle text-xs text-content-muted">
                           {setorNome(a)}
                         </td>
-                        <td className="px-3 py-2.5 border-b border-border-subtle text-right">
+                        <td className="px-2 py-2.5 border-b border-border-subtle text-right">
                           {ok ? (
                             <span className="inline-block text-[11.5px] font-semibold rounded-full px-2.5 py-0.5 bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
                               Feito hoje
@@ -447,29 +447,29 @@ export function Hoje() {
                   })}
                   {extrasDia.map((e) => (
                     <tr key={e.id}>
-                      <td className="px-3 py-2.5 border-b border-border-subtle">
+                      <td className="px-2 py-2.5 border-b border-border-subtle">
                         <span className="w-[34px] h-[34px] rounded-full bg-green-600 text-white grid place-items-center">
                           <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                           </svg>
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 border-b border-border-subtle">
+                      <td className="px-2 py-2.5 border-b border-border-subtle">
                         <b className="text-sm text-content-strong">{e.nome}</b>
                         <span className="inline-block whitespace-nowrap align-middle bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded px-1.5 ml-1.5 text-[10.5px] font-bold">
                           fora do plano
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 border-b border-border-subtle text-xs text-content-muted max-w-[200px]">
+                      <td className="px-2 py-2.5 border-b border-border-subtle text-xs text-content-muted max-w-[200px]">
                         {e.observacao || '—'}
                       </td>
-                      <td className="px-3 py-2.5 border-b border-border-subtle text-sm text-content whitespace-nowrap">
+                      <td className="px-2 py-2.5 border-b border-border-subtle text-sm text-content whitespace-nowrap">
                         {extraNomePessoa(e)}
                       </td>
-                      <td className="px-3 py-2.5 border-b border-border-subtle text-xs text-content-muted whitespace-nowrap">
+                      <td className="px-2 py-2.5 border-b border-border-subtle text-xs text-content-muted whitespace-nowrap">
                         {setores?.find((s) => s.id === e.setor_id)?.nome ?? '—'}
                       </td>
-                      <td className="px-3 py-2.5 border-b border-border-subtle text-right">
+                      <td className="px-2 py-2.5 border-b border-border-subtle text-right">
                         <button
                           onClick={() =>
                             deleteExtra.mutate(e.id, {
