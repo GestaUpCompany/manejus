@@ -203,25 +203,36 @@ export function Anual() {
     semanasMap.get(`${atividadeId}:${semana}`)?.status ??
     0
 
+  // Fila serializa as RPCs: cada mudança só vai ao servidor depois da
+  // anterior terminar, então undo/redo e drag ficam determinísticos.
+  const filaRef = useRef<Promise<void>>(Promise.resolve())
+  const enfileirar = (atividadeId: string, semana: number, status: number, key: string) => {
+    filaRef.current = filaRef.current.then(async () => {
+      try {
+        await setStatus.mutateAsync({
+          atividadeId,
+          semana,
+          status,
+          usuarioId: user?.id,
+        })
+      } catch {
+        setOverrides((prev) => {
+          const next = new Map(prev)
+          next.delete(key)
+          return next
+        })
+        toast.error('Erro ao atualizar semana')
+      }
+    })
+  }
+
   const aplicarStatus = (atividadeId: string, semana: number, status: number) => {
     const key = `${atividadeId}:${semana}`
     const atual = statusDe(atividadeId, semana)
     if (atual === status) return
     setUndoStack((st) => [...st, { atividadeId, semana, anterior: atual }])
     setOverrides((prev) => new Map(prev).set(key, status))
-    setStatus.mutate(
-      { atividadeId, semana, status, usuarioId: user?.id },
-      {
-        onError: () => {
-          setOverrides((prev) => {
-            const next = new Map(prev)
-            next.delete(key)
-            return next
-          })
-          toast.error('Erro ao atualizar semana')
-        },
-      },
-    )
+    enfileirar(atividadeId, semana, status, key)
   }
 
   const pintar = (atividadeId: string, semana: number) => {
@@ -235,20 +246,8 @@ export function Anual() {
     setUndoStack((st) => st.slice(0, -1))
     const key = `${ult.atividadeId}:${ult.semana}`
     setOverrides((prev) => new Map(prev).set(key, ult.anterior))
-    setStatus.mutate(
-      { atividadeId: ult.atividadeId, semana: ult.semana, status: ult.anterior, usuarioId: user?.id },
-      {
-        onSuccess: () => toast.success('Alteração desfeita'),
-        onError: () => {
-          setOverrides((prev) => {
-            const next = new Map(prev)
-            next.delete(key)
-            return next
-          })
-          toast.error('Erro ao desfazer')
-        },
-      },
-    )
+    enfileirar(ult.atividadeId, ult.semana, ult.anterior, key)
+    toast.success('Alteração desfeita')
   }
 
   const clicarCelula = (a: FpAtividade, semana: number, e: React.MouseEvent) => {
