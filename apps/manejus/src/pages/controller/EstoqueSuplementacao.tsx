@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
-import { Button, Card, Input, Select, Modal, CardSkeleton, EmptyState } from '@gestaup/ui'
+import { Button, Card, Input, Select, Modal, CardSkeleton, EmptyState, NumericInput } from '@gestaup/ui'
 import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
-import { formatDate } from '@gestaup/shared'
+import { formatDate, parseValorBR } from '@gestaup/shared'
 
 interface InsumoItem {
   id: string
@@ -228,7 +228,7 @@ export function EstoqueSuplementacao() {
 
   // Handlers
   const salvarEstoqueMinimo = async (itemTipo: ItemTipo, itemId: string) => {
-    const novoMinimo = parseFloat(valorMinimoEditando) || 0
+    const novoMinimo = parseValorBR(valorMinimoEditando) || 0
     setSalvandoMinimo(true)
     try {
       const tabela = itemTipo === 'insumo' ? 'insumos' : 'formulacoes'
@@ -261,8 +261,8 @@ export function EstoqueSuplementacao() {
     setSubmitting(true)
     setError(null)
     try {
-      const qtd = parseFloat(entradaForm.quantidade)
-      const custo = parseFloat(entradaForm.custo_unitario)
+      const qtd = parseValorBR(entradaForm.quantidade)
+      const custo = parseValorBR(entradaForm.custo_unitario)
       const valorTotal = Math.round(qtd * custo * 100) / 100
 
       const { error: movError } = await supabase.from('movimentacoes_estoque_suplementos').insert({
@@ -317,13 +317,13 @@ export function EstoqueSuplementacao() {
         .find((i) => i.id === ajusteForm.item_id)
       const saldoAtual = itemAjuste ? Number(itemAjuste.estoque_atual) : 0
       const custoAtual = itemAjuste ? Number(itemAjuste.custo_unitario) : 0
-      const valorInformado = ajusteForm.novo_saldo !== '' ? parseFloat(ajusteForm.novo_saldo) : 0
+      const valorInformado = ajusteForm.novo_saldo !== '' ? parseValorBR(ajusteForm.novo_saldo) : 0
       const novoSaldo = ajusteForm.escopo === 'custo'
         ? saldoAtual
         : ajusteForm.modo === 'delta' ? saldoAtual + valorInformado : valorInformado
       const custoInformado = ajusteForm.escopo === 'saldo' || ajusteForm.custo_unitario === ''
         ? null
-        : parseFloat(ajusteForm.custo_unitario)
+        : parseValorBR(ajusteForm.custo_unitario)
 
       const mudouSaldo = novoSaldo !== saldoAtual
       const mudouCusto = custoInformado !== null && custoInformado !== custoAtual
@@ -502,9 +502,10 @@ export function EstoqueSuplementacao() {
             {editandoEste ? (
               <div className="flex items-center gap-1">
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={valorMinimoEditando}
-                  onChange={(e) => setValorMinimoEditando(e.target.value)}
+                  onChange={(e) => setValorMinimoEditando(e.target.value.replace(/[^\d,]/g, ''))}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') salvarEstoqueMinimo(tipo, item.id)
                     if (e.key === 'Escape') setEditandoMinimoId(null)
@@ -737,25 +738,25 @@ export function EstoqueSuplementacao() {
             placeholder="Selecione o item..."
             required
           />
-          <Input
+          <NumericInput
             label="Quantidade (kg)"
-            type="number"
             placeholder="Ex: 500"
             value={entradaForm.quantidade}
-            onChange={(e) => setEntradaForm({ ...entradaForm, quantidade: e.target.value })}
+            onChange={(v) => setEntradaForm({ ...entradaForm, quantidade: v })}
+            decimalPlaces={3}
             required
           />
-          <Input
+          <NumericInput
             label="Custo Unitário (R$/kg)"
-            type="number"
-            placeholder="Ex: 3.20"
+            placeholder="Ex: 3,20"
             value={entradaForm.custo_unitario}
-            onChange={(e) => setEntradaForm({ ...entradaForm, custo_unitario: e.target.value })}
+            onChange={(v) => setEntradaForm({ ...entradaForm, custo_unitario: v })}
+            decimalPlaces={4}
             required
           />
           {entradaForm.quantidade && entradaForm.custo_unitario && (() => {
-            const qtd = parseFloat(entradaForm.quantidade) || 0
-            const custo = parseFloat(entradaForm.custo_unitario) || 0
+            const qtd = parseValorBR(entradaForm.quantidade) || 0
+            const custo = parseValorBR(entradaForm.custo_unitario) || 0
             const total = qtd * custo
             if (total > 0) {
               return (
@@ -884,19 +885,19 @@ export function EstoqueSuplementacao() {
                 }}
                 required
               />
-              <Input
+              <NumericInput
                 label={ajusteForm.modo === 'delta' ? 'Levantamento bruto (kg)' : 'Novo Saldo (kg)'}
-                type="number"
                 placeholder="Ex: 850"
                 value={ajusteForm.novo_saldo}
-                onChange={(e) => setAjusteForm({ ...ajusteForm, novo_saldo: e.target.value })}
+                onChange={(v) => setAjusteForm({ ...ajusteForm, novo_saldo: v })}
+                decimalPlaces={3}
                 required
               />
               {ajusteForm.modo === 'delta' && ajusteForm.item_id && ajusteForm.novo_saldo && (() => {
                 const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
                   .find((i) => i.id === ajusteForm.item_id)
                 if (!item) return null
-                const resultante = Number(item.estoque_atual) + parseFloat(ajusteForm.novo_saldo)
+                const resultante = Number(item.estoque_atual) + (parseValorBR(ajusteForm.novo_saldo) || 0)
                 return (
                   <div className="bg-primary/10 border border-primary/30 rounded-lg p-3">
                     <p className="text-sm text-primary dark:text-primary-light">
@@ -912,18 +913,16 @@ export function EstoqueSuplementacao() {
           )}
           {(ajusteForm.escopo === 'custo' || ajusteForm.escopo === 'saldo_custo') && (
             <>
-              <Input
+              <NumericInput
                 label="Custo unitário (R$/kg)"
-                type="number"
-                step="0.0001"
-                min="0"
                 placeholder="Ex: 0,85"
                 value={ajusteForm.custo_unitario}
-                onChange={(e) => setAjusteForm({ ...ajusteForm, custo_unitario: e.target.value })}
+                onChange={(v) => setAjusteForm({ ...ajusteForm, custo_unitario: v })}
+                decimalPlaces={4}
                 required
               />
               {ajusteForm.custo_unitario !== '' && ajusteForm.item_id && (ajusteForm.novo_saldo || ajusteForm.escopo === 'custo') && (() => {
-                const custo = parseFloat(ajusteForm.custo_unitario)
+                const custo = parseValorBR(ajusteForm.custo_unitario)
                 if (isNaN(custo)) return null
                 const item = (ajusteForm.item_tipo === 'insumo' ? insumos : formulacoes)
                   .find((i) => i.id === ajusteForm.item_id)
@@ -931,8 +930,8 @@ export function EstoqueSuplementacao() {
                 const resultante = ajusteForm.escopo === 'custo'
                   ? saldoAtual
                   : ajusteForm.modo === 'delta'
-                    ? saldoAtual + parseFloat(ajusteForm.novo_saldo)
-                    : parseFloat(ajusteForm.novo_saldo)
+                    ? saldoAtual + parseValorBR(ajusteForm.novo_saldo)
+                    : parseValorBR(ajusteForm.novo_saldo)
                 if (isNaN(resultante)) return null
                 return (
                   <p className="text-xs text-content-muted">
@@ -955,10 +954,10 @@ export function EstoqueSuplementacao() {
             const novoSaldo = ajusteForm.escopo === 'custo'
               ? saldoAtual
               : ajusteForm.modo === 'delta'
-                ? saldoAtual + parseFloat(ajusteForm.novo_saldo)
-                : parseFloat(ajusteForm.novo_saldo)
+                ? saldoAtual + parseValorBR(ajusteForm.novo_saldo)
+                : parseValorBR(ajusteForm.novo_saldo)
             const custoInformado = ajusteForm.escopo !== 'saldo' && ajusteForm.custo_unitario !== ''
-              ? parseFloat(ajusteForm.custo_unitario)
+              ? parseValorBR(ajusteForm.custo_unitario)
               : null
             if (isNaN(novoSaldo)) return null
             if (novoSaldo !== saldoAtual || (custoInformado !== null && custoInformado !== custoAtual)) return null
@@ -1008,10 +1007,12 @@ export function EstoqueSuplementacao() {
           // Replay do WAC (mesma regra de recalcular_custo_medio_item) para saber
           // o custo médio imediatamente antes de cada movimentação
           const custoAntesPorMov = new Map<string, number>()
+          const saldoAntesPorMov = new Map<string, number>()
           let wacSaldo = 0
           let wacCusto = 0
           for (const m of [...historicoMovs].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())) {
             custoAntesPorMov.set(m.id, wacCusto)
+            saldoAntesPorMov.set(m.id, wacSaldo)
             const qtd = Number(m.quantidade)
             if (m.tipo_movimentacao === 'entrada' || m.tipo_movimentacao === 'producao') {
               const custoEntrada = m.valor_total != null
@@ -1057,12 +1058,13 @@ export function EstoqueSuplementacao() {
                       const isEntrada = mov.tipo_movimentacao === 'entrada' || mov.tipo_movimentacao === 'producao'
                       const isAjuste = mov.tipo_movimentacao === 'ajuste'
                       const valor = Number(mov.valor_total || (Number(mov.quantidade) * Number(mov.custo_unitario || 0)))
-                      const saldoIgual = mov.saldo_anterior != null && mov.saldo_posterior != null
-                        && Number(mov.saldo_anterior) === Number(mov.saldo_posterior)
+                      const saldoAntesAjuste = saldoAntesPorMov.get(mov.id)
+                      const saldoMudouAjuste = isAjuste && saldoAntesAjuste != null
+                        && saldoAntesAjuste !== Number(mov.quantidade)
                       const tituloAjuste = !isAjuste ? null
-                        : saldoIgual
-                          ? (mov.custo_unitario != null ? 'Ajuste de custo' : 'Ajuste de estoque')
-                          : mov.custo_unitario != null ? 'Ajuste de saldo e custo' : 'Ajuste de saldo'
+                        : saldoMudouAjuste
+                          ? (mov.custo_unitario != null ? 'Ajuste de saldo e custo' : 'Ajuste de saldo')
+                          : (mov.custo_unitario != null ? 'Ajuste de custo' : 'Ajuste de estoque')
                       return (
                         <div
                           key={mov.id}
@@ -1086,11 +1088,17 @@ export function EstoqueSuplementacao() {
                                 <p className="text-xs text-content-muted">
                                   {mov.data ? formatDate(mov.data) : '-'} {new Date(mov.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · {ORIGEM_LABEL[mov.origem || ''] || mov.origem || '-'}{mov.autor_nome ? ` · por ${mov.autor_nome}` : ''}
                                 </p>
-                                {(!isAjuste || !saldoIgual) && mov.saldo_anterior != null && mov.saldo_posterior != null && (
-                                  <p className="text-xs text-content-muted">
-                                    Saldo: {Number(mov.saldo_anterior).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} → {Number(mov.saldo_posterior).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
-                                  </p>
-                                )}
+                                {isAjuste
+                                  ? saldoMudouAjuste && saldoAntesAjuste != null && (
+                                    <p className="text-xs text-content-muted">
+                                      Saldo: {saldoAntesAjuste.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} → {Number(mov.quantidade).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
+                                    </p>
+                                  )
+                                  : mov.saldo_anterior != null && mov.saldo_posterior != null && (
+                                    <p className="text-xs text-content-muted">
+                                      Saldo: {Number(mov.saldo_anterior).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} → {Number(mov.saldo_posterior).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg
+                                    </p>
+                                  )}
                                 {isAjuste && mov.custo_unitario != null && custoAntesPorMov.get(mov.id) !== Number(mov.custo_unitario) && (
                                   <p className="text-xs text-content-muted">
                                     Custo: R$ {(custoAntesPorMov.get(mov.id) ?? 0).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg → R$ {Number(mov.custo_unitario).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}/kg
