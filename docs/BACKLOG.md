@@ -162,3 +162,9 @@ Decisões já tomadas com o usuário:
 Plano completo, schema proposto (tabelas `fp_*`), mapeamento de migração e fases: `PLANO_IMPLEMENTACAO_FARMPLAN.md` na raiz. Decisões abertas listadas lá (catálogo de critérios/indicadores por fazenda, overlap com FarmMetrics, time tracking, templates, RBAC).
 
 Disparador: quando mencionar "Farm Plan", "farmplan", "plano anual de atividades", "avaliação semanal", "contrato de resultados", "5M", ou retomar a implementação, ler esta seção e o plano na raiz.
+
+## Farm Plan — cutover do módulo de atividades do Manejus
+
+O Farm Plan (app `apps/farmplan`, branch `feat/farmplan-fase0`) substitui o módulo legado de atividades do Manejus. O inventário completo do que sai, muda ou permanece está em `docs/FARMPLAN_CUTOVER_MANEJUS.md` (escrito 2026-10-02): duas rotas do controller (`/controller/atividades`, `/controller/monitoramento-atividades`), `services/atividadesService.ts`, relatório público de atividades, e do lado do PWA a `AtividadesPage` + filas de sync das tabelas legadas. A telemetria de uso (`get_registros_atividades`, `RelatorioAtividades` admin, "Atividades Recentes" do Dashboard) **permanece** — não é o módulo de atividades. Tabelas legadas ficam congeladas como histórico até fechar o ciclo; não dropar na hora do cutover.
+
+Disparador: quando mencionar "cutover", "aposentar atividades do Manejus", "migração Farm Plan" ou "módulo Farm Plan no PWA", ler `docs/FARMPLAN_CUTOVER_MANEJUS.md`.
