@@ -78,6 +78,8 @@ export function Anual() {
   const [pincel, setPincel] = useState<number | null>(null)
   const [pop, setPop] = useState<PopState | null>(null)
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([])
+  // Overrides otimistas: pintura aparece na hora, sem esperar o refetch.
+  const [overrides, setOverrides] = useState<Map<string, number>>(new Map())
   const [filtros, setFiltros] = useState({
     q: '',
     setor: '',
@@ -102,6 +104,19 @@ export function Anual() {
     window.addEventListener('pointerup', up)
     return () => window.removeEventListener('pointerup', up)
   }, [])
+
+  // Limpa overrides quando o servidor reflete o mesmo valor (pós-refetch).
+  useEffect(() => {
+    setOverrides((prev) => {
+      if (prev.size === 0) return prev
+      const next = new Map(prev)
+      for (const [key, status] of prev) {
+        const srv = semanasMap.get(key)?.status ?? 0
+        if (srv === status) next.delete(key)
+      }
+      return next.size === prev.size ? prev : next
+    })
+  }, [semanasMap])
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => {
@@ -183,26 +198,55 @@ export function Anual() {
   const { carga, cargaMax, meses } = derivados
   const cur = plano.semanaAtual
 
+  const statusDe = (atividadeId: string, semana: number) =>
+    overrides.get(`${atividadeId}:${semana}`) ??
+    semanasMap.get(`${atividadeId}:${semana}`)?.status ??
+    0
+
+  const aplicarStatus = (atividadeId: string, semana: number, status: number) => {
+    const key = `${atividadeId}:${semana}`
+    const atual = statusDe(atividadeId, semana)
+    if (atual === status) return
+    setUndoStack((st) => [...st, { atividadeId, semana, anterior: atual }])
+    setOverrides((prev) => new Map(prev).set(key, status))
+    setStatus.mutate(
+      { atividadeId, semana, status, usuarioId: user?.id },
+      {
+        onError: () => {
+          setOverrides((prev) => {
+            const next = new Map(prev)
+            next.delete(key)
+            return next
+          })
+          toast.error('Erro ao atualizar semana')
+        },
+      },
+    )
+  }
+
   const pintar = (atividadeId: string, semana: number) => {
     if (pincel == null) return
-    const atual = semanasMap.get(`${atividadeId}:${semana}`)?.status ?? 0
-    if (atual === pincel) return
-    setUndoStack((st) => [...st, { atividadeId, semana, anterior: atual }])
-    setStatus.mutate(
-      { atividadeId, semana, status: pincel, usuarioId: user?.id },
-      { onError: () => toast.error('Erro ao atualizar semana') },
-    )
+    aplicarStatus(atividadeId, semana, pincel)
   }
 
   const desfazer = () => {
     const ult = undoStack[undoStack.length - 1]
     if (!ult) return
     setUndoStack((st) => st.slice(0, -1))
+    const key = `${ult.atividadeId}:${ult.semana}`
+    setOverrides((prev) => new Map(prev).set(key, ult.anterior))
     setStatus.mutate(
       { atividadeId: ult.atividadeId, semana: ult.semana, status: ult.anterior, usuarioId: user?.id },
       {
         onSuccess: () => toast.success('Alteração desfeita'),
-        onError: () => toast.error('Erro ao desfazer'),
+        onError: () => {
+          setOverrides((prev) => {
+            const next = new Map(prev)
+            next.delete(key)
+            return next
+          })
+          toast.error('Erro ao desfazer')
+        },
       },
     )
   }
@@ -437,7 +481,8 @@ export function Anual() {
 
               {/* linhas */}
               {lista.map((a) => {
-                const total = (semanas ?? []).filter((s) => s.atividade_id === a.id).length
+                let total = 0
+                for (let w = 1; w <= 53; w++) if (statusDe(a.id, w) !== 0) total++
                 return (
                   <div key={a.id} className="contents group">
                     <button
@@ -461,7 +506,8 @@ export function Anual() {
                     </div>
                     {Array.from({ length: 53 }, (_, i) => {
                       const w = i + 1
-                      const s = semanasMap.get(`${a.id}:${w}`)
+                      const st = statusDe(a.id, w)
+                      const carry = semanasMap.get(`${a.id}:${w}`)?.carry_from
                       return (
                         <div
                           key={w}
@@ -471,15 +517,15 @@ export function Anual() {
                           onPointerEnter={(e) => {
                             if (paintingRef.current && e.buttons === 1) pintar(a.id, w)
                           }}
-                          title={`Sem. ${w}: ${s ? FP_STATUS_LABEL[s.status] : '—'}${s?.carry_from ? ` · veio da sem. ${s.carry_from}` : ''}`}
+                          title={`Sem. ${w}: ${st ? FP_STATUS_LABEL[st as FpStatusSemana] : '—'}${carry ? ` · veio da sem. ${carry}` : ''}`}
                           className={`border-b border-border-subtle h-[42px] flex items-center justify-center ${
                             meses[w] !== '' ? 'border-l border-border-subtle' : ''
                           } ${w === cur ? 'bg-primary/10' : ''} ${pincel != null ? 'cursor-crosshair' : 'cursor-pointer'}`}
                         >
                           <b
-                            className={`block w-5 h-6 rounded-[3px] ${
-                              s ? COR_CELULA[s.status] : 'bg-surface-2'
-                            }`}
+                            className={`block w-5 h-6 rounded-[3px] transition-colors duration-75 ${
+                              st ? COR_CELULA[st as FpStatusSemana] : 'bg-surface-2'
+                            } ${pincel != null ? 'hover:outline hover:outline-2 hover:outline-content-muted' : ''}`}
                           />
                         </div>
                       )
@@ -532,24 +578,12 @@ export function Anual() {
               Semana {pop.semana}
             </div>
             {[1, 3, 2, 4, 5].map((v) => {
-              const atual = semanasMap.get(`${pop.atividade.id}:${pop.semana}`)?.status
+              const atual = statusDe(pop.atividade.id, pop.semana)
               return (
                 <button
                   key={v}
                   onClick={() => {
-                    setUndoStack((st) => [
-                      ...st,
-                      { atividadeId: pop.atividade.id, semana: pop.semana, anterior: atual ?? 0 },
-                    ])
-                    setStatus.mutate(
-                      {
-                        atividadeId: pop.atividade.id,
-                        semana: pop.semana,
-                        status: v,
-                        usuarioId: user?.id,
-                      },
-                      { onError: () => toast.error('Erro ao atualizar status') },
-                    )
+                    aplicarStatus(pop.atividade.id, pop.semana, v)
                     setPop(null)
                   }}
                   className={`flex w-full gap-2 items-center px-2 py-1.5 rounded-md text-[13px] text-left hover:bg-surface-2 ${
@@ -563,18 +597,7 @@ export function Anual() {
             })}
             <button
               onClick={() => {
-                setUndoStack((st) => [
-                  ...st,
-                  {
-                    atividadeId: pop.atividade.id,
-                    semana: pop.semana,
-                    anterior: semanasMap.get(`${pop.atividade.id}:${pop.semana}`)?.status ?? 0,
-                  },
-                ])
-                setStatus.mutate(
-                  { atividadeId: pop.atividade.id, semana: pop.semana, status: 0, usuarioId: user?.id },
-                  { onError: () => toast.error('Erro ao remover semana') },
-                )
+                aplicarStatus(pop.atividade.id, pop.semana, 0)
                 setPop(null)
               }}
               className="flex w-full gap-2 items-center px-2 py-1.5 rounded-md text-[13px] text-left hover:bg-surface-2"
