@@ -211,3 +211,23 @@ Ambos apontam para o mesmo projeto Supabase. A sessão de auth pode ser comparti
 Novas tabelas financeiras do Vision seriam criadas no mesmo projeto Supabase, com `fazenda_id` e RLS seguindo o mesmo padrão do Manejus. Tabelas existentes de manejo (`lotes`, `registros_suplementacao`, `lote_categorias`, etc.) são lidas pelo Vision para cálculo de custos, sem necessidade de duplicação.
 
 Migrations continuam em `supabase/migrations/` na raiz do monorepo, compartilhadas entre ambos os apps.
+
+## Decisões tomadas (módulo de relatórios — fase "upload da planilha")
+
+> Atualização 01/10/2026. A primeira função do Vision é gerar o relatório PDF zootécnico-financeiro (modelo documentado em `vision-relatorio/`) a partir do upload da própria planilha Vision. Nessa fase o sistema ainda não tem o domínio financeiro implementado; a planilha é a fonte de dados.
+
+### Ler as abas de agregação prontas, não recomputar
+
+**Decisão:** para gerar o PDF a partir do upload, ler diretamente as abas de agregação da planilha (`Estoque`, `Diárias_Categoria`, `FC_Mensal` etc.) que já contêm os cálculos, em vez de recomputar os eventos a partir das abas de lançamento.
+
+**Por quê:** fidelidade 1:1 com o que o Power BI exibia (o PBIX lia essas mesmas abas), zero superfície de divergência numérica, e implementação muito menor — parsear uma aba pronta é trivial comparado a reproduzir a cadeia de SUMIFS encadeados da planilha.
+
+**Validado em:** cruzamento da p.2 (Estoque de Rebanho), reconciliação exata valor a valor — ver `vision-relatorio/paginas/02-estoque-de-rebanho.md`.
+
+**Revisitar quando:** no backend definitivo do Vision (dados vivos no Supabase), as agregações serão recomputadas de eventos e lançamentos reais — aí essa decisão deixa de valer e as abas de agregação viram views/RPCs.
+
+### Pendências relacionadas já identificadas
+
+- **Inputs manuais da planilha**: peso vivo de referência por categoria, rendimento de carcaça e preço da arroba por mês são digitados na aba `Estoque` (colunas X, Y, AB). Ao ler a aba pronta eles vêm junto, sem custo; se um dia recomputar, precisam virar parametrização da fazenda.
+- **Escopo de páginas**: o pbix tem 21 páginas; o relatório gerado terá 20 — "Desmama" (pbix p10) está oculta e sem dados (confirmado pelo usuário); "Vendas Animais Vivos" (pbix p6) entra mesmo ausente do PDF de agosto.
+- **Fórmulas DAX do modelo** estão no blob `DataModel` comprimido (não legível em plaintext). Até aqui desnecessário: a p.2 reconciliou só com colunas + medidas simples de filtro; se páginas futuras divergirem, extrair via `pbi-tools`.
