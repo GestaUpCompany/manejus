@@ -9,44 +9,45 @@ interface NumericInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   prefix?: string
 }
 
-export function NumericInput({ 
-  value = '', 
-  onChange, 
-  label, 
-  error, 
+// Agrupa a parte inteira com ponto de milhar para exibição pt-BR
+function groupThousands(intPart: string): string {
+  return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+
+export function NumericInput({
+  value = '',
+  onChange,
+  label,
+  error,
   decimalPlaces = 3,
   prefix,
   className = '',
-  ...props 
+  ...props
 }: NumericInputProps) {
   const [displayValue, setDisplayValue] = useState('')
   const isFocusedRef = useRef(false)
 
-  // Format value to specified decimal places with padding
+  // Format value to specified decimal places with padding.
+  // Pontos são sempre tratados como separador de milhar visual e removidos;
+  // a vírgula é o único separador decimal aceito.
   const formatValue = (val: string): string => {
     if (!val) return ''
-    
-    // Remove non-numeric characters except comma (no negative signs or letters)
-    const cleaned = val.replace(/[^\d,]/g, '').replace('.', ',')
-    
+
+    const cleaned = val.replace(/\./g, '').replace(/[^\d,]/g, '')
+
     if (cleaned === '') return cleaned
-    
-    // Split by comma
+
     const parts = cleaned.split(',')
     const integerPart = parts[0] || '0'
     const decimalPart = parts[1] || ''
-    
-    // Handle zero decimal places: return only integer part
+
     if (decimalPlaces === 0) {
-      return integerPart
+      return groupThousands(integerPart)
     }
-    
-    // Limit decimal places
+
     const limitedDecimal = decimalPart.slice(0, decimalPlaces)
-    
-    // Always pad to the required number of places
     const paddedDecimal = limitedDecimal.padEnd(decimalPlaces, '0')
-    return `${integerPart},${paddedDecimal}`
+    return `${groupThousands(integerPart)},${paddedDecimal}`
   }
 
   // Update display value when prop value changes (only if not focused)
@@ -64,41 +65,44 @@ export function NumericInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
-    
+
     // For zero decimal places, reject commas entirely
     if (decimalPlaces === 0) {
-      const cleaned = newValue.replace(/[^\d]/g, '')
-      setDisplayValue(cleaned)
+      const cleaned = newValue.replace(/\D/g, '')
+      setDisplayValue(groupThousands(cleaned))
       onChange?.(cleaned)
       return
     }
-    
-    // Allow typing freely, just replace dots with commas
-    const withComma = newValue.replace('.', ',')
-    
-    // Remove any non-numeric characters except comma (no negative signs or letters)
-    const cleaned = withComma.replace(/[^\d,]/g, '')
-    
+
+    // Ponto nunca entra como dígito: no campo ele só existe como separador
+    // de milhar visual. Removemos todos antes de interpretar, então
+    // "9.540" digitado é sempre nove mil quinhentos e quarenta.
+    const cleaned = newValue.replace(/\./g, '').replace(/[^\d,]/g, '')
+
     if (cleaned === '') {
-      setDisplayValue(cleaned)
-      onChange?.(cleaned)
+      setDisplayValue('')
+      onChange?.('')
       return
     }
-    
-    // Split by comma to check decimal places
-    const parts = cleaned.split(',')
-    const integerPart = parts[0] || '0'
-    const decimalPart = parts[1] || ''
-    
+
+    const commaIdx = cleaned.indexOf(',')
+    const hasComma = commaIdx !== -1
+    const integerPart = hasComma ? cleaned.slice(0, commaIdx) : cleaned
+    let decimalPart = hasComma ? cleaned.slice(commaIdx + 1).replace(/,/g, '') : ''
+
     // Strictly limit decimal places while typing
     if (decimalPart.length > decimalPlaces) {
-      const limited = `${integerPart},${decimalPart.slice(0, decimalPlaces)}`
-      setDisplayValue(limited)
-      onChange?.(limited)
-    } else {
-      setDisplayValue(cleaned)
-      onChange?.(cleaned)
+      decimalPart = decimalPart.slice(0, decimalPlaces)
     }
+
+    const intOut = hasComma && integerPart === '' ? '0' : integerPart
+    const emit = hasComma ? `${intOut},${decimalPart}` : intOut
+    const display = hasComma
+      ? `${groupThousands(intOut)},${decimalPart}`
+      : groupThousands(intOut)
+
+    setDisplayValue(display)
+    onChange?.(emit)
   }
 
   const handleFocus = () => {
@@ -107,10 +111,10 @@ export function NumericInput({
 
   const handleBlur = () => {
     isFocusedRef.current = false
-    // Format on blur to ensure proper padding
+    // Format on blur to ensure proper padding; emit sem milhar
     const formatted = formatValue(displayValue)
     setDisplayValue(formatted)
-    onChange?.(formatted)
+    onChange?.(formatted.replace(/\./g, ''))
   }
 
   const inputElement = (

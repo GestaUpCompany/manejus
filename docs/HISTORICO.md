@@ -1,5 +1,18 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Inputs numéricos pt-BR sem ambiguidade de ponto (2026-10-01)
+
+Origem: uma entrada de insumo na Fazenda Chibata foi lançada no PWA como "9.540" (o operador pretendia 9.540 kg, com ponto de milhar). O campo era `type="number"` (convenção americana: ponto = decimal) e o sync mandava a string crua para o Postgres, que gravou `numeric` 9,54 kg. Fator de erro de 1000 silencioso.
+
+Correção sistematizada nos dois repos: campos de valor numérico agora aceitam somente dígitos e vírgula (decimal pt-BR). O ponto nunca entra como dígito; aparece apenas como separador de milhar na exibição enquanto o usuário digita ("9540" → "9.540").
+
+- **`packages/ui/src/NumericInput.tsx`**: reescrito com agrupamento de milhar visual e remoção de todos os pontos antes de interpretar. Mantido o contrato com os callers existentes: `onChange` emite string de dígitos com vírgula decimal, sem milhar ("9540,5"), e `value` aceita número ou string canônica. Vale para todos os consumidores do pacote (Lotes, IndividuoNovo, planos nutricionais etc.), que fazem `parseFloat(v.replace(',', '.'))` ou equivalente.
+- **`EstoqueSuplementacao.tsx`**: inputs "Quantidade", "Custo Unitário", "Novo Saldo/Levantamento bruto", "Custo unitário do ajuste" trocados de `Input type="number"` para `NumericInput`; todos os `parseFloat` do arquivo viraram `parseValorBR` (já existente em `@gestaup/shared`, com heurística pt-BR: ponto com 3 dígitos após = milhar, vírgula = decimal). O input inline de estoque mínimo (HTML nativo) virou `type="text"` sanitizado com `[^\d,]` + `parseValorBR` no save.
+- **PWA**: `NumericInput` mascarado novo em `components/ui`, aplicado na Entrada de Insumos, e o mapping de sync de `entrada-insumos-itens` convertido para número antes do upsert. Detalhes no HISTORICO do repo do PWA.
+- Débito conhecido: outras telas do PWA (saída de insumos, movimentação, comunicados, pesagem, clima, pastagens, rodeio) ainda usam `type="number"` e têm a mesma exposição; o componente novo está pronto para o rollout.
+
+Disparador: quando mencionar "input numérico", "ponto de milhar", "vírgula decimal", `NumericInput`, `parseValorBR`, ou erro de 1000x em quantidade/custo, ler esta seção.
+
 ## Relatório de Estoque: link público, PDF e seção no Infográfico Mensal (2026-10-01)
 
 Snapshot de estoque de insumos e formulações (sem filtro de período), seguindo o padrão dos demais relatórios: RPC pública por token, página pública, PDF Puppeteer e seção opcional no infográfico.
