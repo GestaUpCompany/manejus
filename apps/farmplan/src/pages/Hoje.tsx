@@ -86,6 +86,7 @@ export function Hoje() {
   const deleteExtra = useDeleteExtra()
 
   const [pop, setPop] = useState<PopState | null>(null)
+  const [baixaOv, setBaixaOv] = useState<Map<string, boolean>>(new Map())
   const [extraForm, setExtraForm] = useState({
     nome: '',
     quem: '',
@@ -110,6 +111,24 @@ export function Hoje() {
     return m
   }, [data?.baixas])
 
+  // reconcilia overrides otimistas com o que voltou do servidor
+  useEffect(() => {
+    if (!data?.baixas) return
+    setBaixaOv((prev) => {
+      if (prev.size === 0) return prev
+      const server = new Map(data.baixas.map((b) => [`${b.atividade_id}:${b.dia}`, b.feita]))
+      const next = new Map(prev)
+      for (const [k, v] of next) {
+        const sv = server.get(k)
+        if (sv === v || (sv === undefined && v === false)) next.delete(k)
+      }
+      return next.size === prev.size ? prev : next
+    })
+  }, [data?.baixas])
+
+  const diaFeito = (a: FpAtividade, diaIdx: number) =>
+    baixaOv.get(`${a.id}:${diaIdx}`) ?? baixasMap.get(`${a.id}:${diaIdx}`)?.feita ?? false
+
   const nomePessoa = (id: string | null) =>
     funcionarios?.find((f) => f.id === id)?.apelido ??
     funcionarios?.find((f) => f.id === id)?.nome ??
@@ -130,19 +149,19 @@ export function Hoje() {
       const s = semanasMap.get(a.id)
       return s && a.dias_semana[d] && s.status !== 5
     })
-    const feita = (a: FpAtividade) => baixasMap.get(`${a.id}:${d}`)?.feita ?? false
     return t.sort(
       (a, b) =>
-        Number(feita(a)) - Number(feita(b)) ||
+        Number(diaFeito(a, d)) - Number(diaFeito(b, d)) ||
         (b.urgencia ?? 0) - (a.urgencia ?? 0) ||
         a.nome.localeCompare(b.nome, 'pt-BR'),
     )
-  }, [data?.atividades, semanasMap, baixasMap, d])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.atividades, semanasMap, baixasMap, baixaOv, d])
 
   const extrasDia = (data?.extras ?? []).filter((e) => e.dia === d)
-  const feitas = tarefasDia.filter((a) => baixasMap.get(`${a.id}:${d}`)?.feita).length
+  const feitas = tarefasDia.filter((a) => diaFeito(a, d)).length
   const emAndamento = tarefasDia.filter(
-    (a) => !baixasMap.get(`${a.id}:${d}`)?.feita && semanasMap.get(a.id)?.status === 3,
+    (a) => !diaFeito(a, d) && semanasMap.get(a.id)?.status === 3,
   ).length
   const pessoasEnvolvidas = new Set(
     tarefasDia.map(quemFaz).concat(
@@ -212,13 +231,23 @@ export function Hoje() {
   }
 
   const toggle = (a: FpAtividade) => {
-    const atual = baixasMap.get(`${a.id}:${d}`)?.feita ?? false
+    const atual = diaFeito(a, d)
+    const v = !atual
+    const key = `${a.id}:${d}`
+    setBaixaOv((prev) => new Map(prev).set(key, v))
     setDia.mutate(
-      { atividadeId: a.id, semana: sem, dia: d, feita: !atual, usuarioId: user?.id },
+      { atividadeId: a.id, semana: sem, dia: d, feita: v, usuarioId: user?.id },
       {
         onSuccess: () =>
-          toast.success(`${a.nome}${!atual ? ' concluída' : ' desmarcada'}`),
-        onError: () => toast.error('Erro ao atualizar baixa'),
+          toast.success(`${a.nome}${v ? ' concluída' : ' desmarcada'}`),
+        onError: () => {
+          setBaixaOv((prev) => {
+            const n = new Map(prev)
+            n.delete(key)
+            return n
+          })
+          toast.error('Erro ao atualizar baixa')
+        },
       },
     )
   }
@@ -347,7 +376,7 @@ export function Hoje() {
                   {tarefasDia.map((a) => {
                     const s = semanasMap.get(a.id)
                     const bx = baixasMap.get(`${a.id}:${d}`)
-                    const ok = bx?.feita ?? false
+                    const ok = diaFeito(a, d)
                     const st = (s?.status ?? 1) as FpStatusSemana
                     const carry = s?.carry_from != null
                     return (
@@ -378,7 +407,7 @@ export function Hoje() {
                             {a.nome}
                           </b>
                           {carry && !ok && (
-                            <span className="bg-red-600 text-white rounded px-1 ml-1.5 text-[10px] font-bold">
+                            <span className="inline-block whitespace-nowrap align-middle bg-red-600 text-white rounded px-1 ml-1.5 text-[10px] font-bold">
                               atrasada
                             </span>
                           )}
@@ -427,7 +456,7 @@ export function Hoje() {
                       </td>
                       <td className="px-3 py-2.5 border-b border-border-subtle">
                         <b className="text-sm text-content-strong">{e.nome}</b>
-                        <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded px-1.5 ml-1.5 text-[10.5px] font-bold">
+                        <span className="inline-block whitespace-nowrap align-middle bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded px-1.5 ml-1.5 text-[10.5px] font-bold">
                           fora do plano
                         </span>
                       </td>
@@ -491,7 +520,7 @@ export function Hoje() {
                 <b className="block text-2xl font-extrabold text-green-700 dark:text-green-300 tabular-nums">
                   {feitas + extrasDia.length}
                 </b>
-                <small className="text-xs font-semibold text-content-muted">
+                <small className="block text-[11px] leading-tight font-semibold text-content-muted break-words">
                   concluídas
                 </small>
               </div>
@@ -499,7 +528,7 @@ export function Hoje() {
                 <b className="block text-2xl font-extrabold text-blue-700 dark:text-blue-300 tabular-nums">
                   {tarefasDia.length - feitas}
                 </b>
-                <small className="text-xs font-semibold text-content-muted">
+                <small className="block text-[11px] leading-tight font-semibold text-content-muted break-words">
                   a fazer{emAndamento ? ` · ${emAndamento} em and.` : ''}
                 </small>
               </div>
@@ -507,8 +536,8 @@ export function Hoje() {
                 <b className="block text-2xl font-extrabold text-content-strong tabular-nums">
                   {pessoasEnvolvidas}
                 </b>
-                <small className="text-xs font-semibold text-content-muted">
-                  pessoas/equipes
+                <small className="block text-[11px] leading-tight font-semibold text-content-muted break-words">
+                  pessoas/ equipes
                 </small>
               </div>
             </div>
@@ -555,12 +584,13 @@ export function Hoje() {
                   ))}
                 </datalist>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 [&_label]:!mb-1 [&>div]:!mb-0">
                 <Select
                   label="Quem fez?"
                   options={doers}
                   value={extraForm.quem}
                   onChange={(v) => setExtraForm((f) => ({ ...f, quem: v }))}
+                  className="!min-h-0 !py-2 !px-3 !text-[13px] pr-8 [&>span]:block [&>span]:truncate"
                 />
                 <Select
                   label="Setor"
@@ -569,6 +599,7 @@ export function Hoje() {
                     .map((s) => ({ value: s.id, label: s.nome }))}
                   value={extraForm.setor_id}
                   onChange={(v) => setExtraForm((f) => ({ ...f, setor_id: v }))}
+                  className="!min-h-0 !py-2 !px-3 !text-[13px] pr-8 [&>span]:block [&>span]:truncate"
                 />
               </div>
               <Input

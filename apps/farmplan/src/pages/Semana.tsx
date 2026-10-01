@@ -66,6 +66,7 @@ export function Semana() {
   const [expand, setExpand] = useState<Record<string, boolean>>({})
   const [gerandoPdf, setGerandoPdf] = useState(false)
   const [obsEdit, setObsEdit] = useState<{ id: string; txt: string } | null>(null)
+  const [baixaOv, setBaixaOv] = useState<Map<string, boolean>>(new Map())
 
   const { data, isLoading } = useSemanaDados(fazendaId, plano?.id, semana)
   const { data: funcionarios } = useFuncionariosFp(fazendaId)
@@ -79,7 +80,25 @@ export function Semana() {
   useEffect(() => {
     setExpand({})
     setObsEdit(null)
+    setBaixaOv(new Map())
   }, [semana])
+
+  // reconcilia overrides otimistas com o que voltou do servidor
+  useEffect(() => {
+    if (!data?.baixas) return
+    setBaixaOv((prev) => {
+      if (prev.size === 0) return prev
+      const server = new Map(
+        data.baixas.map((b) => [`${b.atividade_id}:${b.dia}`, b.feita]),
+      )
+      const next = new Map(prev)
+      for (const [k, v] of next) {
+        const sv = server.get(k)
+        if (sv === v || (sv === undefined && v === false)) next.delete(k)
+      }
+      return next.size === prev.size ? prev : next
+    })
+  }, [data?.baixas])
 
   const semanasMap = useMemo(
     () => new Map(data?.semanas.map((s) => [s.atividade_id, s]) ?? []),
@@ -160,15 +179,26 @@ export function Semana() {
     ? Math.round((concluidas / todasDaSemana.length) * 100)
     : 0
 
-  const diaFeito = (a: FpAtividade, d: number) => baixasMap.get(`${a.id}:${d}`) ?? false
+  const diaFeito = (a: FpAtividade, d: number) =>
+    baixaOv.get(`${a.id}:${d}`) ?? baixasMap.get(`${a.id}:${d}`) ?? false
 
   const toggleDia = (a: FpAtividade, d: number) => {
     const v = !diaFeito(a, d)
+    const key = `${a.id}:${d}`
+    setBaixaOv((prev) => new Map(prev).set(key, v))
     setDia.mutate(
       { atividadeId: a.id, semana, dia: d, feita: v, usuarioId: user?.id },
       {
-        onSuccess: () => toast.success(`${a.nome} · ${DIAS_SEMANA_CURTO[d]}: ${v ? 'feito' : 'desmarcado'}`),
-        onError: () => toast.error('Erro ao atualizar baixa'),
+        onSuccess: () =>
+          toast.success(`${a.nome} · ${DIAS_SEMANA_CURTO[d]}: ${v ? 'feito' : 'desmarcado'}`),
+        onError: () => {
+          setBaixaOv((prev) => {
+            const n = new Map(prev)
+            n.delete(key)
+            return n
+          })
+          toast.error('Erro ao atualizar baixa')
+        },
       },
     )
   }

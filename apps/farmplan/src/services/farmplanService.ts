@@ -172,27 +172,40 @@ export function usePlanoSemanas(
 
 // ============ Mutations ============
 
+/**
+ * Fila de escrita serializada: baixas e mudanças de status interagem no
+ * servidor (baixa promove status; "Concluído" marca baixas em massa), então
+ * todas passam pela mesma corrente e chegam ao Supabase na ordem dos cliques.
+ */
+let filaEscrita: Promise<unknown> = Promise.resolve()
+function enfileirar<T>(fn: () => Promise<T>): Promise<T> {
+  const p = filaEscrita.then(fn)
+  filaEscrita = p.catch(() => {})
+  return p
+}
+
 export function useFpSetDia() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (params: {
+    mutationFn: (params: {
       atividadeId: string
       semana: number
       dia: number
       feita: boolean
       observacao?: string
       usuarioId?: string
-    }) => {
-      const { error } = await supabase.rpc('fp_set_dia', {
-        p_atividade_id: params.atividadeId,
-        p_semana: params.semana,
-        p_dia: params.dia,
-        p_feita: params.feita,
-        p_observacao: params.observacao ?? null,
-        p_feita_por_usuario_id: params.usuarioId ?? null,
-      })
-      if (error) throw error
-    },
+    }) =>
+      enfileirar(async () => {
+        const { error } = await supabase.rpc('fp_set_dia', {
+          p_atividade_id: params.atividadeId,
+          p_semana: params.semana,
+          p_dia: params.dia,
+          p_feita: params.feita,
+          p_observacao: params.observacao ?? null,
+          p_feita_por_usuario_id: params.usuarioId ?? null,
+        })
+        if (error) throw error
+      }),
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ['fp_semana'] })
       qc.invalidateQueries({ queryKey: ['fp_atividade', v.atividadeId] })
@@ -203,20 +216,21 @@ export function useFpSetDia() {
 export function useFpSetStatusSemana() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (params: {
+    mutationFn: (params: {
       atividadeId: string
       semana: number
       status: number
       usuarioId?: string
-    }) => {
-      const { error } = await supabase.rpc('fp_set_status_semana', {
-        p_atividade_id: params.atividadeId,
-        p_semana: params.semana,
-        p_status: params.status,
-        p_feita_por_usuario_id: params.usuarioId ?? null,
-      })
-      if (error) throw error
-    },
+    }) =>
+      enfileirar(async () => {
+        const { error } = await supabase.rpc('fp_set_status_semana', {
+          p_atividade_id: params.atividadeId,
+          p_semana: params.semana,
+          p_status: params.status,
+          p_feita_por_usuario_id: params.usuarioId ?? null,
+        })
+        if (error) throw error
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fp_semana'] })
       qc.invalidateQueries({ queryKey: ['fp_plano_anual'] })
