@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E;
+  --blue-deep: #082F56;
+  --green: #17A34A;
+  --green-dark: #0F7A38;
+  --ink: #12263A;
+  --muted: #5B6B7B;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page {
+  width: 1280px; height: 720px; position: relative; overflow: hidden;
+  background: #fff;
+}
+/* banda verde superior com curva suave */
+.band {
+  position: absolute; top: -165px; left: -5%; width: 115%; height: 215px;
+  background: linear-gradient(90deg, #2FBF63 0%, var(--green) 40%, var(--green-dark) 100%);
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+}
+/* foto diagonal à esquerda (espelho da capa): régua dupla verde+azul */
+.photo-wrap-blue {
+  position: absolute; top: 0; left: 0; width: 592px; height: 728px;
+  background: var(--blue);
+  clip-path: polygon(0 0, 78% 0, 100% 100%, 0 100%);
+}
+.photo-wrap {
+  position: absolute; top: 0; left: 0; width: 580px; height: 728px;
+  background: var(--green);
+  clip-path: polygon(0 0, 78% 0, 100% 100%, 0 100%);
+}
+/* clip no pai, flip só na img (senão o transform espelha o recorte) */
+.photo-clip {
+  position: absolute; top: 0; left: 0; width: 560px; height: 720px;
+  clip-path: polygon(0 0, 78% 0, 100% 100%, 0 100%);
+}
+.photo {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+/* logos no topo, alinhadas à direita nesta página */
+.brands {
+  position: absolute; top: 56px; right: 72px;
+  display: flex; align-items: center; gap: 26px;
+}
+.brands .gestaup { height: 148px; }
+.brands .divider { width: 1.5px; height: 104px; background: #D5DCE3; }
+.brands .fazenda { height: 100px; }
+/* encerramento: resumido, alinhado à direita */
+.content {
+  position: absolute; right: 72px; top: 300px; width: 620px;
+  text-align: right;
+}
+h1 {
+  font-size: 80px; line-height: 1.0; font-weight: 800; color: var(--blue);
+  letter-spacing: -2px;
+}
+/* rodapé */
+.footer {
+  position: absolute; left: 660px; right: 72px; bottom: 40px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.social { display: flex; align-items: center; gap: 10px; color: var(--blue); font-weight: 700; font-size: 18px; }
+.social svg { width: 22px; height: 22px; }
+.product { font-size: 16px; color: var(--muted); font-weight: 500; }
+.product b { color: var(--blue); font-weight: 800; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 5px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:5px; left:0; right:0; height:3px; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="band"></div>
+  <div class="photo-wrap-blue"></div>
+  <div class="photo-wrap"></div>
+  <div class="photo-clip"><img class="photo" src="../../apps/vision/public/assets/capa-default.png" alt=""></div>
+  <div class="brands">
+    <img class="fazenda" src="logo-guanabara.jpg" alt="Fazenda Nova Guanabara">
+    <div class="divider"></div>
+    <img class="gestaup" src="../../tmp_pbix/Report/StaticResources/RegisteredResources/Gestaup_Intelligence-0127124017850949067.png" alt="Gesta'Up Intelligence">
+  </div>
+  <div class="content">
+    <h1>Atenciosamente</h1>
+  </div>
+  <div class="footer">
+    <div class="product"><b>Vision'Up</b></div>
+    <div class="social">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.6" cy="6.4" r="1.3" fill="currentColor" stroke="none"/></svg>
+      @gestaup.company
+    </div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

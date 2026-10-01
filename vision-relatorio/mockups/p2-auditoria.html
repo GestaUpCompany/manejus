@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E;
+  --green: #17A34A;
+  --green-dark: #0F7A38;
+  --ink: #12263A;
+  --muted: #5B6B7B;
+  --line: #E3E8EE;
+  --soft: #F4F7F9;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page {
+  width: 1280px; height: 720px; position: relative; overflow: hidden;
+  background: #fff; display: flex; flex-direction: column;
+}
+
+/* ===== header de página ===== */
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 26px 48px 14px 48px;
+}
+.title-block .kicker {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  color: var(--green-dark); text-transform: uppercase; margin-bottom: 6px;
+}
+.title-block h1 {
+  font-size: 30px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px;
+}
+.page-logo { height: 62px; }
+
+/* ===== cards KPI ===== */
+.kpis {
+  display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px;
+  padding: 14px 48px 8px 48px;
+}
+.kpi {
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px 9px 12px; background: #fff;
+}
+.kpi .lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 4px;
+  white-space: nowrap;
+}
+.kpi .val { font-size: 20px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size: 11px; font-weight: 600; color: var(--muted); }
+.kpi.grp-end { position: relative; }
+.kpi.seg { border-top: 3px solid var(--green); }
+.kpi.seg2 { border-top: 3px solid var(--blue); }
+
+/* ===== tabela dupla ===== */
+.table-wrap { padding: 0 48px; flex: 1; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+thead .grp th {
+  font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 8px 10px 6px 10px; text-align: center;
+}
+thead .grp th.ini { color: #fff; background: var(--blue); border-radius: 8px 0 0 0; }
+thead .grp th.fim { color: #fff; background: var(--green-dark); border-radius: 0 8px 0 0; }
+thead .grp th.blank { background: transparent; }
+thead .cols th {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+  color: var(--muted); padding: 8px 12px; border-bottom: 2px solid var(--ink);
+  text-align: right; white-space: nowrap;
+}
+thead .cols th:first-child, thead .cols th.desc2 { text-align: left; }
+tbody td {
+  padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: right;
+  color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+tbody td.cat { text-align: left; font-weight: 600; }
+tbody tr.zero td { color: #9AA8B5; }
+tbody tr.total td {
+  font-weight: 800; color: var(--blue); border-top: 2px solid var(--ink);
+  border-bottom: none; background: var(--soft); font-size: 13px;
+}
+tbody tr.total td:first-child { border-radius: 0 0 0 8px; }
+tbody tr.total td:last-child { border-radius: 0 0 8px 0; }
+
+/* divisória vertical entre os dois blocos */
+td.sep, th.sep { border-left: 2px solid var(--line); }
+tbody td.sep, tbody td.sep ~ td { background: #F7FBF8; }
+tbody tr.total td.sep ~ td { background: #EAF4EE; }
+thead .cols th.sep ~ th { background: #F7FBF8; }
+
+/* ===== rodapé de página ===== */
+.page-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 48px 22px 48px; font-size: 11px; color: var(--muted);
+}
+.page-foot .num { font-weight: 800; color: var(--blue); font-size: 13px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="title-block">
+      <div class="kicker">Ago · 2026</div>
+      <h1>Auditoria Mensal de Estoque</h1>
+    </div>
+    <img class="page-logo" src="../../tmp_pbix/Report/StaticResources/RegisteredResources/Gestaup_Intelligence-0127124017850949067.png" alt="Gesta'Up Intelligence">
+  </div>
+
+
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr class="grp">
+          <th class="blank" colspan="5"></th>
+          <th class="ini" colspan="4">Saldo Inicial · Janeiro</th>
+          <th class="fim" colspan="4">Saldo Final · Agosto</th>
+        </tr>
+        <tr class="cols">
+          <th>Categoria</th>
+          <th colspan="4"></th>
+          <th>Cabeças</th><th>Total @</th><th>Valor @</th><th>Total R$</th>
+          <th class="sep">Cabeças</th><th>Total @</th><th>Valor @</th><th>Total R$</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="zero"><td class="cat">0 a 4 meses · Fêmea</td><td colspan="4"></td><td>0</td><td>0</td><td>383,92</td><td>—</td><td class="sep">0</td><td>0</td><td>420,56</td><td>—</td></tr>
+        <tr><td class="cat">0 a 4 meses · Macho</td><td colspan="4"></td><td>37</td><td>99</td><td>413,45</td><td>40.793,54</td><td class="sep">35</td><td>93</td><td>452,91</td><td>42.271,97</td></tr>
+        <tr class="zero"><td class="cat">5 a 12 meses · Fêmea</td><td colspan="4"></td><td>0</td><td>0</td><td>338,45</td><td>—</td><td class="sep">0</td><td>0</td><td>389,09</td><td>—</td></tr>
+        <tr><td class="cat">5 a 12 meses · Macho</td><td colspan="4"></td><td>835</td><td>5.845</td><td>428,06</td><td>2.501.985,65</td><td class="sep">1.493</td><td>10.451</td><td>468,65</td><td>4.897.905,94</td></tr>
+        <tr><td class="cat">13 a 24 meses · Fêmea</td><td colspan="4"></td><td>4</td><td>35</td><td>318,74</td><td>11.304,48</td><td class="sep">4</td><td>35</td><td>351,04</td><td>12.450,14</td></tr>
+        <tr><td class="cat">13 a 24 meses · Macho</td><td colspan="4"></td><td>625</td><td>7.208</td><td>396,89</td><td>2.860.949,56</td><td class="sep">58</td><td>669</td><td>390,26</td><td>261.054,58</td></tr>
+        <tr class="zero"><td class="cat">25 a 36 meses · Fêmea</td><td colspan="4"></td><td>0</td><td>0</td><td>302,90</td><td>—</td><td class="sep">0</td><td>0</td><td>328,40</td><td>—</td></tr>
+        <tr><td class="cat">25 a 36 meses · Macho</td><td colspan="4"></td><td>21</td><td>459</td><td>366,96</td><td>168.406,05</td><td class="sep">0</td><td>0</td><td>390,26</td><td>—</td></tr>
+        <tr><td class="cat">Acima 36 meses · Fêmea</td><td colspan="4"></td><td>9</td><td>145</td><td>269,75</td><td>39.125,62</td><td class="sep">9</td><td>145</td><td>301,51</td><td>43.732,22</td></tr>
+        <tr class="zero"><td class="cat">Acima 36 meses · Macho</td><td colspan="4"></td><td>0</td><td>0</td><td>295,32</td><td>—</td><td class="sep">0</td><td>0</td><td>323,51</td><td>—</td></tr>
+        <tr class="total"><td class="cat">Total do Rebanho</td><td colspan="4"></td><td>1.531</td><td>13.791</td><td>407,69</td><td>5.622.564,89</td><td class="sep">1.599</td><td>11.394</td><td>461,43</td><td>5.257.414,84</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi seg"><div class="lbl">Saldo Inicial</div><div class="val">1.531 <small>cab</small></div></div>
+    <div class="kpi seg"><div class="lbl">Total @ Inicial</div><div class="val">13.791 <small>@</small></div></div>
+    <div class="kpi seg"><div class="lbl">Valor @ Inicial</div><div class="val"><small>R$</small> 407,69</div></div>
+    <div class="kpi seg"><div class="lbl">Valor Inicial R$</div><div class="val"><small>R$</small> 5,62 <small>mi</small></div></div>
+    <div class="kpi seg2"><div class="lbl">Saldo Final</div><div class="val">1.599 <small>cab</small></div></div>
+    <div class="kpi seg2"><div class="lbl">Total @</div><div class="val">11.394 <small>@</small></div></div>
+    <div class="kpi seg2"><div class="lbl">Valor @</div><div class="val"><small>R$</small> 461,43</div></div>
+    <div class="kpi seg2"><div class="lbl">Valor Final R$</div><div class="val"><small>R$</small> 5,26 <small>mi</small></div></div>
+  </div>
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">02</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E;
+  --green: #17A34A;
+  --green-dark: #0F7A38;
+  --ink: #12263A;
+  --muted: #5B6B7B;
+  --line: #E3E8EE;
+  --soft: #F4F7F9;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page {
+  width: 1280px; height: 720px; position: relative; overflow: hidden;
+  background: #fff; display: flex; flex-direction: column;
+}
+
+/* ===== header de página ===== */
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px 10px 48px;
+}
+.title-block .kicker {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  color: var(--green-dark); text-transform: uppercase; margin-bottom: 6px;
+}
+.title-block h1 {
+  font-size: 30px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px;
+}
+.page-logo { height: 62px; }
+
+/* ===== 3 cards resumo ===== */
+.kpis {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  padding: 6px 48px 14px 48px;
+}
+.kpi {
+  border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green);
+  padding: 9px 14px 8px 14px; background: #fff;
+}
+.kpi .lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 3px;
+}
+.kpi .val { font-size: 22px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+/* ===== matriz de movimentação ===== */
+.table-wrap { padding: 0 48px; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+thead .cols th {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
+  color: var(--muted); padding: 6px 8px; border-bottom: 2px solid var(--ink);
+  text-align: right; white-space: nowrap;
+}
+thead .cols th:first-child { text-align: left; }
+thead .grp th {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
+  padding: 5px 8px; text-align: right; color: var(--ink);
+}
+thead .grp th.ent { color: var(--green-dark); }
+thead .grp th.sai { color: #B0443C; }
+tbody td {
+  padding: 5.5px 8px; border-bottom: 1px solid var(--line); text-align: right;
+  color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+tbody td.cat { text-align: left; font-weight: 600; }
+tbody tr.zero td { color: #9AA8B5; }
+tbody td.in  { color: var(--green-dark); }
+tbody td.out { color: #B0443C; }
+tbody tr.total td {
+  font-weight: 800; color: var(--blue); border-top: 2px solid var(--ink);
+  border-bottom: none; background: var(--soft);
+}
+tbody tr.total td:first-child { border-radius: 0 0 0 8px; }
+tbody tr.total td:last-child { border-radius: 0 0 8px 0; }
+td.strong { font-weight: 700; }
+
+/* ===== combo chart ===== */
+.chart-wrap { padding: 12px 48px 0 48px; flex: 1; }
+.chart-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 4px;
+  display: flex; align-items: center; gap: 18px;
+}
+.legend { display: flex; gap: 16px; font-size: 11px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
+.legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.legend .sw.bar { background: var(--blue); }
+.legend .sw.line { background: var(--green); border-radius: 50%; height: 4px; width: 16px; vertical-align: 2px; }
+svg { display: block; width: 100%; height: 175px; }
+.axis text { font-family: 'Archivo'; font-size: 10.5px; fill: var(--muted); font-weight: 600; }
+.barlbl { font-family: 'Archivo'; font-size: 10.5px; fill: var(--blue); font-weight: 700; }
+.linelbl { font-family: 'Archivo'; font-size: 10px; fill: #fff; font-weight: 600; }
+
+/* ===== rodapé de página ===== */
+.page-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 48px 20px 48px; font-size: 11px; color: var(--muted);
+}
+.page-foot .num { font-weight: 800; color: var(--blue); font-size: 13px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="title-block">
+      <div class="kicker">Jan – Ago · 2026</div>
+      <h1>Movimentação do Rebanho no Período</h1>
+    </div>
+    <img class="page-logo" src="../../tmp_pbix/Report/StaticResources/RegisteredResources/Gestaup_Intelligence-0127124017850949067.png" alt="Gesta'Up Intelligence">
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">Saldo Final do Período</div><div class="val">1.599 <small>cab</small></div></div>
+    <div class="kpi"><div class="lbl">Peso Vivo Médio (referência)</div><div class="val">332,2 <small>kg/cab</small></div></div>
+    <div class="kpi"><div class="lbl">UA/ha Média</div><div class="val">1,38 <small>UA/ha</small></div></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr class="grp">
+          <th></th>
+          <th></th>
+          <th class="ent" colspan="4">Entradas</th>
+          <th class="sai" colspan="5">Saídas</th>
+          <th></th>
+        </tr>
+        <tr class="cols">
+          <th>Categoria</th>
+          <th>Saldo Ini.</th>
+          <th>Compras</th><th>Nascim.</th><th>Transf. E</th><th>Evol. E</th>
+          <th>Vendas</th><th>Mortes</th><th>Consumo</th><th>Transf. S</th><th>Evol. S</th>
+          <th>Saldo Final</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="zero"><td class="cat">0 a 4 meses · Fêmea</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="strong">0</td></tr>
+        <tr><td class="cat">0 a 4 meses · Macho</td><td>37</td><td class="in">0</td><td class="in">2</td><td class="in">0</td><td class="in">0</td><td class="out">0</td><td class="out">4</td><td class="out">0</td><td class="out">0</td><td class="out">0</td><td class="strong">35</td></tr>
+        <tr class="zero"><td class="cat">5 a 12 meses · Fêmea</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="strong">0</td></tr>
+        <tr><td class="cat">5 a 12 meses · Macho</td><td>835</td><td class="in">744</td><td class="in">0</td><td class="in">0</td><td class="in">0</td><td class="out">0</td><td class="out">6</td><td class="out">0</td><td class="out">0</td><td class="out">80</td><td class="strong">1.493</td></tr>
+        <tr><td class="cat">13 a 24 meses · Fêmea</td><td>4</td><td class="in">0</td><td class="in">0</td><td class="in">0</td><td class="in">0</td><td class="out">0</td><td class="out">0</td><td class="out">0</td><td class="out">0</td><td class="out">0</td><td class="strong">4</td></tr>
+        <tr><td class="cat">13 a 24 meses · Macho</td><td>625</td><td class="in">39</td><td class="in">0</td><td class="in">0</td><td class="in">80</td><td class="out">393</td><td class="out">3</td><td class="out">5</td><td class="out">0</td><td class="out">285</td><td class="strong">58</td></tr>
+        <tr class="zero"><td class="cat">25 a 36 meses · Fêmea</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="strong">0</td></tr>
+        <tr><td class="cat">25 a 36 meses · Macho</td><td>21</td><td>0</td><td>0</td><td>0</td><td class="in">285</td><td class="out">306</td><td class="out">0</td><td class="out">0</td><td class="out">0</td><td class="out">0</td><td class="strong">0</td></tr>
+        <tr><td class="cat">Acima 36 meses · Fêmea</td><td>9</td><td class="in">0</td><td class="in">0</td><td class="in">0</td><td class="in">0</td><td class="out">0</td><td class="out">0</td><td class="out">0</td><td class="out">0</td><td class="out">0</td><td class="strong">9</td></tr>
+        <tr class="zero"><td class="cat">Acima 36 meses · Macho</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="strong">0</td></tr>
+        <tr class="total"><td class="cat">Total do Rebanho</td><td>1.531</td><td class="in">783</td><td class="in">2</td><td class="in">0</td><td class="in">365</td><td class="out">699</td><td class="out">13</td><td class="out">5</td><td class="out">0</td><td class="out">365</td><td>1.599</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart-title">
+      Rebanho Médio × UA/ha por mês
+      <span class="legend"><span><span class="sw bar"></span>Rebanho Médio (cab)</span><span><span class="sw line"></span>UA/ha</span></span>
+    </div>
+    <svg viewBox="0 0 1184 175" preserveAspectRatio="none">
+      <!-- barras: rebanho médio jan–ago {1522,1469,1415,1365,1311,1361,1426,1503}, escala max 1600 -> h = v/1600*128 -->
+      <g class="axis">
+        <line x1="0" y1="140" x2="1184" y2="140" stroke="#C9D2DB" stroke-width="1"/>
+        <line x1="0" y1="80" x2="1184" y2="80" stroke="#EDF1F5" stroke-width="1"/>
+        <line x1="0" y1="20" x2="1184" y2="20" stroke="#EDF1F5" stroke-width="1"/>
+      </g>
+      <g>
+        <rect x="50"  y="18"  width="80" height="122" rx="4" fill="#0B3D6E" opacity="0.92"/>
+        <rect x="196" y="22"  width="80" height="118" rx="4" fill="#0B3D6E" opacity="0.92"/>
+        <rect x="342" y="27"  width="80" height="113" rx="4" fill="#0B3D6E" opacity="0.92"/>
+        <rect x="489" y="31"  width="80" height="109" rx="4" fill="#0B3D6E" opacity="0.92"/>
+        <rect x="635" y="35"  width="80" height="105" rx="4" fill="#0B3D6E" opacity="0.92"/>
+        <rect x="781" y="31"  width="80" height="109" rx="4" fill="#0B3D6E" opacity="0.92"/>
+        <rect x="928" y="26"  width="80" height="114" rx="4" fill="#0B3D6E" opacity="0.92"/>
+        <rect x="1074" y="19" width="80" height="121" rx="4" fill="#0B3D6E" opacity="0.92"/>
+      </g>
+      <g class="barlbl" text-anchor="middle">
+        <text x="90"   y="12">1.522</text>
+        <text x="236"  y="16">1.469</text>
+        <text x="382"  y="21">1.415</text>
+        <text x="529"  y="25">1.365</text>
+        <text x="675"  y="29">1.311</text>
+        <text x="821"  y="25">1.361</text>
+        <text x="968"  y="20">1.426</text>
+        <text x="1114" y="13">1.503</text>
+      </g>
+      <!-- linha UA/ha {1.46,1.41,1.36,1.31,1.26,1.30,1.37,1.44} mapeada 1.0→140, 1.7→20 -->
+      <polyline points="90,60.6 236,69.4 382,78.1 529,86.9 675,95.7 821,88.9 968,80.0 1114,62.0"
+        fill="none" stroke="#17A34A" stroke-width="3" stroke-linejoin="round"/>
+      <g fill="#17A34A">
+        <circle cx="90" cy="60.6" r="4.5"/><circle cx="236" cy="69.4" r="4.5"/><circle cx="382" cy="78.1" r="4.5"/><circle cx="529" cy="86.9" r="4.5"/>
+        <circle cx="675" cy="95.7" r="4.5"/><circle cx="821" cy="88.9" r="4.5"/><circle cx="968" cy="80.0" r="4.5"/><circle cx="1114" cy="62.0" r="4.5"/>
+      </g>
+      <g class="linelbl" text-anchor="middle"><text x="90" y="77.6">1,46</text><text x="236" y="86.4">1,41</text><text x="382" y="95.1">1,36</text><text x="529" y="103.9">1,31</text><text x="675" y="112.7">1,26</text><text x="821" y="105.9">1,30</text><text x="968" y="97.0">1,37</text><text x="1114" y="79.0">1,44</text></g>
+      <g class="axis" text-anchor="middle">
+        <text x="90"   y="162">Jan</text><text x="236"  y="162">Fev</text><text x="382"  y="162">Mar</text><text x="529"  y="162">Abr</text>
+        <text x="675"  y="162">Mai</text><text x="821"  y="162">Jun</text><text x="968"  y="162">Jul</text><text x="1114" y="162">Ago</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">03</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>
