@@ -413,6 +413,17 @@ export function useSaveExtra() {
   })
 }
 
+export function useDeleteExtra() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('fp_extras').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fp_semana'] }),
+  })
+}
+
 export function useRecado(planoId: string | undefined, semana: number | undefined) {
   return useQuery({
     queryKey: ['fp_recado', planoId, semana],
