@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth, useFazenda } from '@gestaup/shared'
 import {
   Card,
@@ -10,16 +11,39 @@ import {
   PageSkeleton,
   useToast,
 } from '@gestaup/ui'
-import { usePlanoAtivo, useFuncionariosFp } from '../services/farmplanService'
+import {
+  usePlanoAtivo,
+  useFuncionariosFp,
+  useEquipesFp,
+  useSemanaDados,
+} from '../services/farmplanService'
 import {
   useCriterios,
   useContratosFazenda,
-  useAvaliacoesSemana,
+  useAvaliacoesAno,
   useSaveAvaliacao,
   useSaveContratoItem,
   useDeleteContratoItem,
 } from '../services/equipeService'
-import type { FpContratoItem, FuncionarioFp } from '../types/farmplan'
+import type { FpAvaliacao, FpContratoItem, FuncionarioFp } from '../types/farmplan'
+import { datasDaSemana } from '../types/farmplan'
+
+const MES_ABREV = [
+  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+  'jul', 'ago', 'set', 'out', 'nov', 'dez',
+] as const
+
+const scCls = (v: number | null | undefined) =>
+  v == null
+    ? 'text-content-muted'
+    : v >= 8.5
+      ? 'text-green-600 dark:text-green-400'
+      : v >= 7
+        ? 'text-amber-600 dark:text-amber-400'
+        : 'text-red-600 dark:text-red-400'
+
+const nf = (v: number | null | undefined, casas = 1) =>
+  v == null ? '—' : v.toFixed(casas)
 
 // ---------- Modal de contrato ----------
 
@@ -145,60 +169,74 @@ function ContratoModal({
   )
 }
 
-// ---------- Item avaliável ----------
+// ---------- Linha de item avaliável ----------
 
-function ItemAvaliacao({
+interface NotaLocal {
+  nota: number | null
+  nsa: boolean
+}
+
+function LinhaItem({
   item,
-  avaliacao,
-  onSave,
-  salvando,
+  valor,
+  media,
+  onCommit,
 }: {
   item: FpContratoItem
-  avaliacao: { nota: number | null; nsa: boolean } | undefined
-  onSave: (nota: number | null, nsa: boolean) => void
-  salvando: boolean
+  valor: NotaLocal | undefined
+  media: number | null
+  onCommit: (v: NotaLocal | null) => void
 }) {
-  const [notaTxt, setNotaTxt] = useState(avaliacao?.nota != null ? String(avaliacao.nota) : '')
-  const nsa = avaliacao?.nsa ?? false
+  const inicial = valor?.nsa ? 'NSA' : valor?.nota != null ? String(valor.nota) : ''
+  const [txt, setTxt] = useState(inicial)
 
-  const commitNota = () => {
-    if (notaTxt === '') return
-    const v = Number(notaTxt.replace(',', '.'))
-    if (Number.isNaN(v) || v < 0 || v > 10) return
-    if (v === avaliacao?.nota) return
-    onSave(v, false)
+  useEffect(() => {
+    setTxt(valor?.nsa ? 'NSA' : valor?.nota != null ? String(valor.nota) : '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valor?.nota, valor?.nsa])
+
+  const commit = () => {
+    const v = txt.trim().replace(',', '.')
+    if (v === inicial) return
+    if (!v) {
+      onCommit(null)
+      return
+    }
+    if (/^nsa$/i.test(v)) {
+      onCommit({ nota: null, nsa: true })
+      setTxt('NSA')
+      return
+    }
+    const n = Math.max(0, Math.min(10, parseFloat(v)))
+    if (Number.isNaN(n)) {
+      setTxt(inicial)
+      return
+    }
+    setTxt(String(n))
+    onCommit({ nota: n, nsa: false })
   }
 
+  const isNsa = /^nsa$/i.test(txt.trim())
   return (
-    <div className="flex items-center gap-2 py-1.5">
-      <span className="flex-1 text-sm text-content min-w-0 truncate" title={item.descricao}>
-        {item.descricao}
+    <div className="grid grid-cols-[1fr_44px_64px] gap-2.5 items-center py-[7px] border-b border-border-subtle text-[13px]">
+      <span className="text-content">{item.descricao}</span>
+      <span className="text-right text-content-muted tabular-nums">
+        {media == null ? '—' : nf(media)}
       </span>
       <input
-        type="number"
-        min={0}
-        max={10}
-        step={0.5}
-        value={nsa ? '' : notaTxt}
-        disabled={nsa}
-        onChange={(e) => setNotaTxt(e.target.value)}
-        onBlur={commitNota}
-        onKeyDown={(e) => e.key === 'Enter' && commitNota()}
-        placeholder="0-10"
-        className="w-16 px-2 py-1 text-sm text-center border rounded-md bg-surface-1 text-content-strong border-border-base disabled:opacity-40"
-      />
-      <button
-        onClick={() => onSave(null, !nsa)}
-        disabled={salvando}
-        title="Sem avaliação (NSA)"
-        className={`px-2 py-1 text-xs rounded-md border transition-colors ${
-          nsa
-            ? 'bg-amber-100 border-amber-400 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-            : 'border-border-base text-content-faint hover:border-amber-400'
+        value={txt}
+        inputMode="decimal"
+        placeholder={media == null ? 'NSA' : '—'}
+        aria-label={`Nota: ${item.descricao}`}
+        onChange={(e) => setTxt(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+        className={`w-16 text-center font-bold text-base px-1.5 py-1.5 rounded-lg border bg-surface-1 focus:outline-none focus:ring-2 focus:ring-primary ${
+          isNsa
+            ? 'border-dashed border-border-base text-content-muted text-xs'
+            : 'border-border-base text-content-strong'
         }`}
-      >
-        NSA
-      </button>
+      />
     </div>
   )
 }
@@ -209,22 +247,30 @@ export function Avaliacao() {
   const { user } = useAuth()
   const { data: fazenda } = useFazenda(user?.id)
   const fazendaId = fazenda?.id
+  const [params] = useSearchParams()
   const { data: plano, isLoading: loadingPlano } = usePlanoAtivo(fazendaId)
   const [semanaSel, setSemanaSel] = useState<number | null>(null)
   const semana = semanaSel ?? plano?.semanaAtual ?? 1
   const ano = plano?.ano
 
   const { data: funcionarios, isLoading: loadingFuncs } = useFuncionariosFp(fazendaId)
+  const { data: equipes } = useEquipesFp(fazendaId)
   const { data: contratos, isLoading: loadingContratos } = useContratosFazenda(fazendaId)
-  const { data: avaliacoes } = useAvaliacoesSemana(fazendaId, ano, semana)
+  const { data: avaliacoes } = useAvaliacoesAno(fazendaId, ano)
+  const { data: semanaDados } = useSemanaDados(fazendaId, plano?.id, semana)
   const saveAvaliacao = useSaveAvaliacao()
   const toast = useToast()
 
+  const [selId, setSelId] = useState<string | null>(params.get('pessoa'))
+  const [edits, setEdits] = useState<Map<string, NotaLocal>>(new Map())
   const [editandoContrato, setEditandoContrato] = useState<FuncionarioFp | null>(null)
+
+  useEffect(() => setEdits(new Map()), [selId, semana])
 
   const itensPorFunc = useMemo(() => {
     const m = new Map<string, FpContratoItem[]>()
     for (const c of contratos ?? []) {
+      if (!c.ativo) continue
       const arr = m.get(c.funcionario_id) ?? []
       arr.push(c)
       m.set(c.funcionario_id, arr)
@@ -232,25 +278,95 @@ export function Avaliacao() {
     return m
   }, [contratos])
 
-  const avalMap = useMemo(
-    () => new Map((avaliacoes ?? []).map((a) => [a.contrato_item_id, a])),
-    [avaliacoes],
+  // avaliações indexadas por (item, semana)
+  const avalPor = useMemo(() => {
+    const m = new Map<string, FpAvaliacao>()
+    for (const a of avaliacoes ?? []) m.set(`${a.contrato_item_id}:${a.semana}`, a)
+    return m
+  }, [avaliacoes])
+
+  const P = useMemo(
+    () =>
+      (funcionarios ?? [])
+        .filter((f) => f.ativo && (itensPorFunc.get(f.id) ?? []).length > 0)
+        .sort((a, b) => (a.apelido || a.nome).localeCompare(b.apelido || b.nome, 'pt-BR')),
+    [funcionarios, itensPorFunc],
   )
 
-  const avaliavies = (funcionarios ?? []).filter((f) => f.ativo)
+  const sel = P.find((f) => f.id === selId) ?? P[0] ?? null
 
-  const progresso = useMemo(() => {
-    let feitos = 0
-    let total = 0
-    for (const itens of itensPorFunc.values()) {
-      for (const i of itens) {
-        const a = avalMap.get(i.id)
-        total++
-        if (a && (a.nsa || a.nota !== null)) feitos++
-      }
+  const valorDe = (itemId: string): NotaLocal | undefined => {
+    if (edits.has(itemId)) return edits.get(itemId)
+    const a = avalPor.get(`${itemId}:${semana}`)
+    if (!a) return undefined
+    return { nota: a.nota, nsa: a.nsa }
+  }
+
+  const avaliado = (f: FuncionarioFp) => {
+    const itens = itensPorFunc.get(f.id) ?? []
+    return (
+      itens.length > 0 &&
+      itens.every((i) => {
+        const v =
+          f.id === sel?.id && edits.has(i.id)
+            ? edits.get(i.id)
+            : avalPor.get(`${i.id}:${semana}`)
+        return !!v && (v.nsa || v.nota !== null)
+      })
+    )
+  }
+
+  /** Média de um item até a semana anterior. */
+  const mediaAnterior = (itemId: string): number | null => {
+    const notas = (avaliacoes ?? []).filter(
+      (a) => a.contrato_item_id === itemId && a.semana < semana && !a.nsa && a.nota !== null,
+    )
+    return notas.length
+      ? notas.reduce((s, a) => s + Number(a.nota), 0) / notas.length
+      : null
+  }
+
+  /** Escore do ano = média das médias semanais até a semana anterior. */
+  const escoreAno = (f: FuncionarioFp): number | null => {
+    const porSem = new Map<number, { s: number; n: number }>()
+    for (const a of avaliacoes ?? []) {
+      if (a.funcionario_id !== f.id || a.semana >= semana || a.nsa || a.nota === null)
+        continue
+      const acc = porSem.get(a.semana) ?? { s: 0, n: 0 }
+      acc.s += Number(a.nota)
+      acc.n += 1
+      porSem.set(a.semana, acc)
     }
-    return { feitos, total }
-  }, [itensPorFunc, avalMap])
+    const medias = [...porSem.values()].map((x) => x.s / x.n)
+    return medias.length ? medias.reduce((a, b) => a + b, 0) / medias.length : null
+  }
+
+  /** Escore desta semana (local + servidor). */
+  const escoreSemana = (): number | null => {
+    if (!sel) return null
+    const itens = itensPorFunc.get(sel.id) ?? []
+    const notas: number[] = []
+    for (const i of itens) {
+      const v = valorDe(i.id)
+      if (v && !v.nsa && v.nota !== null) notas.push(v.nota)
+    }
+    return notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : null
+  }
+
+  const semanasMap = useMemo(
+    () => new Map(semanaDados?.semanas.map((s) => [s.atividade_id, s]) ?? []),
+    [semanaDados?.semanas],
+  )
+  const cargaSemana = (f: FuncionarioFp): [number, number] => {
+    const eqs = (equipes ?? []).filter((e) => e.membros.includes(f.id)).map((e) => e.id)
+    const minhas = (semanaDados?.atividades ?? []).filter(
+      (a) =>
+        semanasMap.has(a.id) &&
+        (a.executor_funcionario_id === f.id ||
+          (a.executor_equipe_id && eqs.includes(a.executor_equipe_id))),
+    )
+    return [minhas.filter((a) => semanasMap.get(a.id)?.status === 2).length, minhas.length]
+  }
 
   if (loadingPlano || loadingFuncs || loadingContratos) return <PageSkeleton />
   if (!plano) {
@@ -261,9 +377,33 @@ export function Avaliacao() {
       />
     )
   }
+  if (!P.length) {
+    return (
+      <EmptyState
+        title="Nenhum contrato de resultados"
+        description="Monte o contrato das pessoas em Cadastros > Pessoas ou pela ficha na Equipe."
+      />
+    )
+  }
+  if (!sel) return null
 
-  const salvarNota = (item: FpContratoItem, nota: number | null, nsa: boolean) => {
+  const datas = datasDaSemana(plano.semana1_inicio, semana)
+  const intervalo = `${datas[0].getDate()} ${MES_ABREV[datas[0].getMonth()]} – ${datas[6].getDate()} ${MES_ABREV[datas[6].getMonth()]}`
+  const nAvaliados = P.filter(avaliado).length
+  const [dn, tt] = cargaSemana(sel)
+  const tarefas = (itensPorFunc.get(sel.id) ?? []).filter((i) => i.tipo === 'tarefa')
+  const comportamentos = (itensPorFunc.get(sel.id) ?? []).filter(
+    (i) => i.tipo === 'comportamento',
+  )
+
+  const commitNota = (item: FpContratoItem, v: NotaLocal | null) => {
     if (!fazendaId || !ano || !user) return
+    setEdits((prev) => {
+      const n = new Map(prev)
+      if (v === null) n.delete(item.id)
+      else n.set(item.id, v)
+      return n
+    })
     saveAvaliacao.mutate(
       {
         contratoItemId: item.id,
@@ -271,87 +411,210 @@ export function Avaliacao() {
         fazendaId,
         ano,
         semana,
-        nota,
-        nsa,
+        nota: v?.nota ?? null,
+        nsa: v?.nsa ?? false,
         avaliadorUsuarioId: user.id,
       },
       { onError: () => toast.error('Erro ao salvar avaliação') },
     )
   }
 
+  const repetirSemanaAnterior = () => {
+    if (semana <= 1) return
+    const itens = itensPorFunc.get(sel.id) ?? []
+    let copiados = 0
+    for (const i of itens) {
+      const prev = avalPor.get(`${i.id}:${semana - 1}`)
+      if (!prev || (prev.nota === null && !prev.nsa)) continue
+      copiados++
+      commitNota(i, { nota: prev.nota, nsa: prev.nsa })
+    }
+    toast.success(
+      copiados
+        ? `${copiados} nota(s) copiadas da semana ${semana - 1}`
+        : `Semana ${semana - 1} não tem notas para copiar`,
+    )
+  }
+
+  const proximo = () => {
+    const idx = P.findIndex((f) => f.id === sel.id)
+    if (idx < P.length - 1) setSelId(P[idx + 1].id)
+    else toast.success('Último da lista')
+  }
+
+  const bloco = (
+    titulo: string,
+    sub: string,
+    itens: FpContratoItem[],
+  ) => (
+    <Card className="p-4" disableHover>
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="text-base font-bold text-content-strong">{titulo}</h3>
+          <p className="text-xs text-content-muted">{sub}</p>
+        </div>
+        <small className="text-xs text-content-muted font-semibold self-end">
+          MÉDIA · NOTA
+        </small>
+      </div>
+      <div className="mt-2">
+        {itens.length === 0 ? (
+          <p className="py-2 text-xs text-content-muted">Sem itens no contrato.</p>
+        ) : (
+          itens.map((it) => (
+            <LinhaItem
+              key={`${it.id}:${semana}`}
+              item={it}
+              valor={valorDe(it.id)}
+              media={mediaAnterior(it.id)}
+              onCommit={(v) => commitNota(it, v)}
+            />
+          ))
+        )}
+      </div>
+    </Card>
+  )
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      {/* phead */}
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-content-strong">Avaliação semanal</h1>
-          <p className="text-content-muted mt-1">
-            Semana {semana} de {ano} · {progresso.feitos}/{progresso.total} itens avaliados
+          <p className="text-[13px] text-content-muted">
+            Semana {semana} · {intervalo}
           </p>
+          <h1 className="text-3xl font-extrabold text-content-strong mt-0.5 tracking-tight">
+            Avaliação semanal de desempenho
+          </h1>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setSemanaSel(Math.max(1, semana - 1))}
+        <div className="flex gap-2 flex-wrap items-center">
+          <label className="flex items-center gap-1.5 text-[13px] text-content-muted">
+            Semana
+            <select
+              value={semana}
+              onChange={(e) => setSemanaSel(Number(e.target.value))}
+              className="border border-border-base bg-surface-1 rounded-lg px-2 py-1.5 text-[13px] text-content-strong"
+            >
+              {Array.from({ length: plano.semanaAtual }, (_, i) => i + 1).map((s) => (
+                <option key={s} value={s}>
+                  Semana {s}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            variant="secondary"
+            size="sm"
             disabled={semana <= 1}
-            className="px-3 py-1.5 rounded-lg bg-surface-1 border border-border-base text-sm text-content disabled:opacity-40"
+            onClick={repetirSemanaAnterior}
           >
-            ← Sem. {semana - 1}
-          </button>
-          <button
-            onClick={() => setSemanaSel(Math.min(53, semana + 1))}
-            disabled={semana >= 53}
-            className="px-3 py-1.5 rounded-lg bg-surface-1 border border-border-base text-sm text-content disabled:opacity-40"
-          >
-            Sem. {semana + 1} →
-          </button>
+            Repetir notas da semana {semana - 1}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={proximo}>
+            Salvar e ir para o próximo
+          </Button>
         </div>
       </div>
 
-      <p className="text-xs text-content-faint">
-        Regra do plano: quem avalia é o superior direto (ou gestor/admin, que tem override). Esta tela
-        web opera como gestor.
-      </p>
+      <div className="grid gap-4 md:grid-cols-[minmax(200px,260px)_1fr] items-start">
+        {/* lista de colaboradores */}
+        <Card className="p-0 overflow-hidden" disableHover>
+          <div className="px-3.5 pt-3.5 pb-2">
+            <h3 className="text-sm font-bold text-content-strong">Colaboradores</h3>
+            <p className="text-xs text-content-muted">
+              {nAvaliados} de {P.length} avaliados nesta semana
+            </p>
+          </div>
+          <div>
+            {P.map((f) => {
+              const on = f.id === sel.id
+              const ok = avaliado(f)
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setSelId(f.id)}
+                  className={`w-full flex justify-between items-center gap-2 border-t border-border-subtle px-3.5 py-2.5 text-left transition-colors ${
+                    on ? 'bg-primary/10' : 'hover:bg-surface-2'
+                  }`}
+                >
+                  <span className="min-w-0">
+                    <b className="block text-[13.5px] text-content-strong truncate">
+                      {f.apelido || f.nome}
+                    </b>
+                    <small className="text-[11.5px] text-content-muted">
+                      {f.cargo || '—'}
+                    </small>
+                  </span>
+                  {on ? (
+                    <small className="text-blue-500 font-bold text-[11px]">agora</small>
+                  ) : (
+                    <span
+                      className={`w-5 h-5 rounded-full border-2 grid place-items-center flex-none ${
+                        ok
+                          ? 'bg-green-600 border-green-600 text-white'
+                          : 'border-slate-400'
+                      }`}
+                    >
+                      {ok && (
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </Card>
 
-      {avaliavies.length === 0 ? (
-        <EmptyState title="Nenhuma pessoa ativa" description="Cadastre pessoas em Cadastros > Pessoas." />
-      ) : (
-        <div className="space-y-3">
-          {avaliavies.map((f) => {
-            const itens = itensPorFunc.get(f.id) ?? []
-            return (
-              <Card key={f.id} className="p-4" disableHover>
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <div>
-                    <p className="font-semibold text-content-strong">
-                      {f.apelido ? `${f.apelido} — ${f.nome}` : f.nome}
-                    </p>
-                    {f.cargo && <p className="text-xs text-content-faint">{f.cargo}</p>}
-                  </div>
-                  <Button variant="secondary" size="sm" onClick={() => setEditandoContrato(f)}>
-                    Contrato ({itens.length})
-                  </Button>
-                </div>
-                {itens.length === 0 ? (
-                  <p className="text-sm text-content-faint">
-                    Sem contrato de resultados. Clique em Contrato para montar.
-                  </p>
-                ) : (
-                  <div className="divide-y divide-border-subtle">
-                    {itens.map((item) => (
-                      <ItemAvaliacao
-                        key={`${item.id}:${semana}`}
-                        item={item}
-                        avaliacao={avalMap.get(item.id)}
-                        onSave={(nota, nsa) => salvarNota(item, nota, nsa)}
-                        salvando={saveAvaliacao.isPending}
-                      />
-                    ))}
-                  </div>
-                )}
-              </Card>
-            )
-          })}
+        {/* painel da pessoa */}
+        <div className="grid gap-4">
+          <Card className="px-4 py-4 flex justify-between gap-3 flex-wrap items-center" disableHover>
+            <div>
+              <h3 className="text-[19px] font-bold text-content-strong">{sel.nome}</h3>
+              <p className="text-[12.5px] text-content-muted">
+                {sel.cargo || '—'} · na semana: {dn} de {tt} tarefas do plano
+                concluídas
+              </p>
+            </div>
+            <div className="flex gap-5 text-[13px] text-content-muted items-center">
+              <span>
+                Escore no ano{' '}
+                <b className="text-base font-extrabold text-content-strong tabular-nums">
+                  {nf(escoreAno(sel))}
+                </b>
+              </span>
+              <span>
+                Esta semana{' '}
+                <b className={`text-base font-extrabold tabular-nums ${scCls(escoreSemana())}`}>
+                  {nf(escoreSemana())}
+                </b>
+              </span>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setEditandoContrato(sel)}
+              >
+                Contrato
+              </Button>
+            </div>
+          </Card>
+
+          <div className="grid gap-4 xl:grid-cols-2 items-start">
+            {bloco(
+              'Atribuições e tarefas',
+              'Nota de 0 a 10 · NSA quando não se aplica',
+              tarefas,
+            )}
+            {bloco(
+              'Comportamentos e atitudes',
+              'Critérios escolhidos no contrato de resultados',
+              comportamentos,
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
       {editandoContrato && fazendaId && (
         <ContratoModal
