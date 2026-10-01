@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useAuth, useFazenda } from '@gestaup/shared'
-import { Card, PageSkeleton, EmptyState, useToast } from '@gestaup/ui'
+import { Card, PageSkeleton, EmptyState, Select, useToast } from '@gestaup/ui'
 import { usePlanoAtivo, usePlanoSemanas } from '../services/farmplanService'
 import { useAtividades } from '../services/cadastrosService'
 import { useAvaliacoesAno } from '../services/equipeService'
@@ -12,74 +12,132 @@ import {
 import { semanasIntersectamMes } from '../types/farmplan'
 import type { FpIndicador } from '../types/farmplan'
 
-const MESES_CURTO = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+const MESES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
 
-type Farol = 'verde' | 'amarelo' | 'vermelho' | 'cinza'
+type Farol = 0 | 1 | 2 | 3 // sem lançamento, dentro, atenção, fora
 
 function farol(ind: FpIndicador, valor: number | null): Farol {
-  if (valor === null) return 'cinza'
+  if (valor === null) return 0
   const meta = ind.meta_valor
   const atencao = ind.atencao_valor
-  if (meta === null || atencao === null) return 'cinza'
+  if (meta === null || atencao === null) return 0
   if (ind.direcao === 'up') {
-    if (valor >= meta) return 'verde'
-    if (valor >= atencao) return 'amarelo'
-    return 'vermelho'
+    if (valor >= meta) return 1
+    if (valor >= atencao) return 2
+    return 3
   }
-  if (valor <= meta) return 'verde'
-  if (valor <= atencao) return 'amarelo'
-  return 'vermelho'
+  if (valor <= meta) return 1
+  if (valor <= atencao) return 2
+  return 3
 }
 
-const COR_FAROL: Record<Farol, string> = {
-  verde: 'bg-green-500',
-  amarelo: 'bg-amber-400',
-  vermelho: 'bg-red-500',
-  cinza: 'bg-surface-3',
+const FAROL_ROTULO = ['Sem lançamento', 'Dentro da meta', 'Zona de atenção', 'Fora da meta']
+const FAROL_PILL = [
+  'bg-surface-3 text-content-muted',
+  'bg-green-100 text-green-800',
+  'bg-amber-100 text-amber-800',
+  'bg-red-100 text-red-700',
+]
+const FAROL_TXT = ['text-content-strong', 'text-green-600', 'text-amber-500', 'text-red-500']
+
+function nf(v: number, dec = 0): string {
+  return v.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec })
 }
 
-function CelulaValor({
+function CardIndicador({
   ind,
   valor,
+  historico,
+  metaLabel,
   onSave,
-  editavel,
 }: {
   ind: FpIndicador
   valor: number | null
+  historico: (number | null)[]
+  metaLabel: string
   onSave: (v: number | null) => void
-  editavel: boolean
 }) {
-  const [txt, setTxt] = useState(valor !== null ? valor.toFixed(ind.casas_decimais) : '')
-  const cor = COR_FAROL[farol(ind, valor)]
+  const f = farol(ind, valor)
+  const [txt, setTxt] = useState(
+    valor !== null ? String(valor.toFixed(ind.casas_decimais)).replace('.', ',') : '',
+  )
+  const auto = ind.origem !== 'manual'
 
   const commit = () => {
-    if (txt.trim() === '') {
+    const raw = txt.trim()
+    if (raw === '') {
       if (valor !== null) onSave(null)
       return
     }
-    const v = Number(txt.replace(',', '.'))
+    const v = Number(raw.replace(/\./g, '').replace(',', '.'))
     if (Number.isNaN(v)) return
     if (valor !== null && v === valor) return
     onSave(v)
   }
 
+  const vals = historico.filter((x): x is number => x !== null)
+  const mx = Math.max(...vals, 0.0001)
+
   return (
-    <div className="flex items-center gap-1 justify-center">
-      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cor}`} aria-hidden="true" />
-      {editavel ? (
+    <Card className="p-4 flex flex-col gap-1.5 min-h-[170px]" disableHover>
+      <h4 className="m-0 text-sm font-bold text-content-strong">{ind.nome}</h4>
+      <div className="text-xs text-content-faint -mt-1">{ind.unidade}</div>
+
+      {auto ? (
+        <>
+          <b className={`font-display text-[34px] leading-tight ${FAROL_TXT[f]}`}>
+            {valor === null ? '—' : nf(valor, ind.casas_decimais)}
+          </b>
+          <small className="text-content-faint font-semibold">calculado pelo sistema</small>
+        </>
+      ) : (
         <input
           value={txt}
           onChange={(e) => setTxt(e.target.value)}
           onBlur={commit}
-          onKeyDown={(e) => e.key === 'Enter' && commit()}
-          className="w-14 px-1 py-0.5 text-xs text-center border rounded bg-surface-1 text-content-strong border-border-base"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              commit()
+              e.currentTarget.blur()
+            }
+          }}
+          inputMode="decimal"
+          placeholder="Lançar resultado"
+          aria-label={`Resultado: ${ind.nome}`}
+          className={`w-[130px] px-2 py-1 rounded-lg border border-border-base bg-surface-1 font-display font-bold outline-none focus:border-brand-500 ${
+            valor === null ? 'text-sm' : 'text-[26px]'
+          } ${FAROL_TXT[f]}`}
         />
-      ) : (
-        <span className="text-xs text-content-strong min-w-14 text-center">
-          {valor !== null ? valor.toFixed(ind.casas_decimais) : '—'}
-        </span>
       )}
-    </div>
+
+      {vals.length > 1 && (
+        <svg viewBox="0 0 120 26" className="w-[120px] h-[26px] mt-auto" aria-hidden="true">
+          {historico.map((x, k) =>
+            x === null ? null : (
+              <rect
+                key={k}
+                x={k * 20 + 2}
+                y={24 - (x / mx) * 22}
+                width={14}
+                height={(x / mx) * 22}
+                rx={2}
+                className={k === historico.length - 1 ? 'fill-brand-800' : 'fill-surface-3'}
+              />
+            ),
+          )}
+        </svg>
+      )}
+
+      <div className="mt-auto flex justify-between items-center gap-2 text-xs text-content-muted">
+        <span>Meta: {metaLabel}</span>
+        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${FAROL_PILL[f]}`}>
+          {FAROL_ROTULO[f]}
+        </span>
+      </div>
+    </Card>
   )
 }
 
@@ -99,30 +157,32 @@ export function Indicadores() {
   const saveValor = useSaveIndicadorValor()
   const toast = useToast()
 
+  const [mes, setMes] = useState(() => new Date().getMonth())
+
   const valoresMap = useMemo(
     () => new Map((valores ?? []).map((v) => [`${v.indicador_id}:${v.mes}`, v.valor])),
     [valores],
   )
 
-  // Pré-computa os valores automáticos por mês (0-11)
+  // Valores automáticos por mês (0-11)
   const autoPorMes = useMemo(() => {
     if (!plano) return { escore: new Map<number, number>(), atividades: new Map<number, number>() }
     const escore = new Map<number, number>()
     const ativ = new Map<number, number>()
-    for (let mes = 0; mes < 12; mes++) {
-      const semanasDoMes = new Set(semanasIntersectamMes(plano.semana1_inicio, plano.ano, mes))
+    for (let m = 0; m < 12; m++) {
+      const semanasDoMes = new Set(semanasIntersectamMes(plano.semana1_inicio, plano.ano, m))
 
       const notasMes = (avaliacoes ?? []).filter(
         (a) => !a.nsa && a.nota !== null && semanasDoMes.has(a.semana),
       )
       if (notasMes.length) {
-        escore.set(mes, notasMes.reduce((s, a) => s + Number(a.nota), 0) / notasMes.length)
+        escore.set(m, notasMes.reduce((s, a) => s + Number(a.nota), 0) / notasMes.length)
       }
 
       const semMes = (semanas ?? []).filter((s) => semanasDoMes.has(s.semana))
       if (semMes.length) {
         const concluidas = semMes.filter((s) => s.status === 2).length
-        ativ.set(mes, (concluidas / semMes.length) * 100)
+        ativ.set(m, (concluidas / semMes.length) * 100)
       }
     }
     return { escore, atividades: ativ }
@@ -144,77 +204,90 @@ export function Indicadores() {
     return valoresMap.get(`${ind.id}:${mesIdx + 1}`) ?? null
   }
 
+  const farois = (indicadores ?? []).map((ind) => farol(ind, valorDo(ind, mes)))
+  const conta = (f: Farol) => farois.filter((x) => x === f).length
+
+  const historicoDe = (ind: FpIndicador): (number | null)[] => {
+    const h: (number | null)[] = []
+    for (let k = Math.max(0, mes - 5); k <= mes; k++) h.push(valorDo(ind, k))
+    return h
+  }
+
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-content-strong">Painel de bordo {ano}</h1>
-        <p className="text-content-muted mt-1">
-          Indicadores mensais de gente e execução. Células editáveis são lançamento manual; as demais
-          são calculadas pelo sistema.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="eyebrow">
+            {indicadores?.length ?? 0} indicadores mensais · meta, resultado e farol
+          </p>
+          <h1 className="text-[28px] font-bold font-display text-content-strong tracking-tight leading-tight">
+            Painel de bordo
+          </h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-content-muted">Mês</span>
+          <div className="min-w-[170px] [&>div]:mb-0">
+            <Select
+              value={String(mes)}
+              onChange={(v) => setMes(Number(v))}
+              options={MESES.map((m, i) => ({ value: String(i), label: `${m} ${ano}` }))}
+            />
+          </div>
+        </div>
       </div>
 
       {!indicadores?.length ? (
-        <EmptyState title="Nenhum indicador" description="Os indicadores padrão são criados com a fazenda." />
+        <EmptyState
+          title="Nenhum indicador"
+          description="Os indicadores padrão são criados com a fazenda."
+        />
       ) : (
-        <Card className="p-0 overflow-x-auto" disableHover>
-          <table className="border-collapse text-xs w-full">
-            <thead>
-              <tr>
-                <th className="sticky left-0 z-10 bg-surface-1 text-left px-3 py-2 font-semibold text-content-strong min-w-[220px] border-b border-r border-border-base">
-                  Indicador
-                </th>
-                <th className="px-2 py-2 text-left border-b border-border-base text-content-faint font-normal">
-                  Meta
-                </th>
-                {MESES_CURTO.map((m) => (
-                  <th key={m} className="px-2 py-2 border-b border-border-base text-content-faint font-normal">
-                    {m}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {indicadores.map((ind) => (
-                <tr key={ind.id} className="group">
-                  <td className="sticky left-0 z-10 bg-surface-1 group-hover:bg-surface-2 px-3 py-2 border-r border-b border-border-subtle">
-                    <p className="font-medium text-content-strong">{ind.nome}</p>
-                    <p className="text-[10px] text-content-faint">
-                      {ind.unidade} · {ind.origem === 'manual' ? 'manual' : `auto (${ind.origem})`}
-                    </p>
-                  </td>
-                  <td className="px-2 py-2 border-b border-border-subtle text-content-muted whitespace-nowrap">
-                    {ind.meta_label ?? ''}
-                  </td>
-                  {MESES_CURTO.map((_, mesIdx) => (
-                    <td key={mesIdx} className="px-1 py-1 border-b border-border-subtle">
-                      <CelulaValor
-                        key={`${ind.id}:${mesIdx}:${valorDo(ind, mesIdx)}`}
-                        ind={ind}
-                        valor={valorDo(ind, mesIdx)}
-                        editavel={ind.origem === 'manual'}
-                        onSave={(v) => {
-                          if (!fazendaId || !ano || !user) return
-                          saveValor.mutate(
-                            {
-                              indicadorId: ind.id,
-                              fazendaId,
-                              ano,
-                              mes: mesIdx + 1,
-                              valor: v,
-                              usuarioId: user.id,
-                            },
-                            { onError: () => toast.error('Erro ao salvar valor') },
-                          )
-                        }}
-                      />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <>
+          <div className="flex flex-wrap justify-between gap-2 text-xs text-content-muted font-medium">
+            <span>
+              {conta(1)} dentro da meta · {conta(2)} em atenção · {conta(3)} fora da meta ·{' '}
+              {conta(0)} sem lançamento
+            </span>
+            <span>Mini-gráfico = últimos 6 meses</span>
+          </div>
+
+          <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(230px,1fr))' }}>
+            {indicadores.map((ind) => {
+              const v = valorDo(ind, mes)
+              return (
+                <CardIndicador
+                  key={`${ind.id}:${mes}:${v}`}
+                  ind={ind}
+                  valor={v}
+                  historico={historicoDe(ind)}
+                  metaLabel={ind.meta_label ?? '—'}
+                  onSave={(nv) => {
+                    if (!fazendaId || !ano || !user) return
+                    saveValor.mutate(
+                      {
+                        indicadorId: ind.id,
+                        fazendaId,
+                        ano,
+                        mes: mes + 1,
+                        valor: nv,
+                        usuarioId: user.id,
+                      },
+                      {
+                        onSuccess: () => toast.success('Resultado lançado'),
+                        onError: () => toast.error('Erro ao salvar valor'),
+                      },
+                    )
+                  }}
+                />
+              )
+            })}
+          </div>
+
+          <p className="eyebrow pt-1">
+            Escore da equipe e atividades concluídas saem direto das avaliações e do plano semanal,
+            sem digitação. Os demais: digite o resultado e tecle Enter.
+          </p>
+        </>
       )}
     </div>
   )
