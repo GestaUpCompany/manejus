@@ -12,7 +12,7 @@ import {
   PageSkeleton,
   useToast,
 } from '@gestaup/ui'
-import { usePlanoAtivo, useFuncionariosFp, useEquipesFp } from '../../services/farmplanService'
+import { usePlanoAtivo, useFuncionariosFp, useEquipesFp, usePlanoSemanas } from '../../services/farmplanService'
 import { useSetores, useAtividades, useSaveAtividade, useDeleteAtividade } from '../../services/cadastrosService'
 import type { AtividadeInput } from '../../services/cadastrosService'
 import { DIAS_SEMANA_CURTO, FP_TIPO_LABEL } from '../../types/farmplan'
@@ -47,6 +47,13 @@ export function AtividadesTab() {
   const { data: funcionarios } = useFuncionariosFp(fazendaId)
   const { data: equipes } = useEquipesFp(fazendaId)
   const { data: setores } = useSetores(fazendaId)
+  const atividadeIds = useMemo(() => atividades?.map((a) => a.id), [atividades])
+  const { data: semanas } = usePlanoSemanas(fazendaId, plano?.id, atividadeIds)
+  const semanasPorAtividade = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const s of semanas ?? []) m.set(s.atividade_id, (m.get(s.atividade_id) ?? 0) + 1)
+    return m
+  }, [semanas])
   const save = useSaveAtividade()
   const del = useDeleteAtividade()
   const toast = useToast()
@@ -145,11 +152,15 @@ export function AtividadesTab() {
     })
   }
 
+  const nomeFuncionario = (id: string | null) => {
+    if (!id) return null
+    const f = funcionarios?.find((x) => x.id === id)
+    return f?.apelido || f?.nome || null
+  }
+
   const nomeExecutor = (a: FpAtividade) => {
-    if (a.executor_funcionario_id) {
-      const f = funcionarios?.find((x) => x.id === a.executor_funcionario_id)
-      return f?.apelido || f?.nome || '—'
-    }
+    const p = nomeFuncionario(a.executor_funcionario_id)
+    if (p) return p
     if (a.executor_equipe_id) {
       const n = equipes?.find((e) => e.id === a.executor_equipe_id)?.nome ?? ''
       return /^equipe/i.test(n.trim()) ? n : `Equipe ${n}`
@@ -157,8 +168,11 @@ export function AtividadesTab() {
     return '—'
   }
 
-  const diasLabel = (dias: boolean[]) =>
-    DIAS_SEMANA_CURTO.filter((_, i) => dias[i]).join(', ')
+  const nomeSetor = (a: FpAtividade) =>
+    (a.setor_id ? setores?.find((s) => s.id === a.setor_id)?.nome : null) ?? '—'
+
+  const completos5M = (a: FpAtividade) =>
+    [a.metodologia, a.maquinas, a.materiais, a.meta].filter(Boolean).length
 
   if (!plano) {
     return (
@@ -171,13 +185,10 @@ export function AtividadesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-content-muted">
-          {atividades?.length ?? 0} atividade(s) no plano {plano.ano}. As semanas de execução são
-          distribuídas no Plano anual.
-        </p>
-        <Button onClick={abrirNovo}>+ Nova atividade</Button>
-      </div>
+      <p className="text-sm text-content-muted">
+        {atividades?.length ?? 0} atividade(s) no plano {plano.ano}. As semanas de execução são
+        distribuídas no Plano anual.
+      </p>
 
       {isLoading ? (
         <PageSkeleton />
@@ -187,31 +198,65 @@ export function AtividadesTab() {
           description="Cadastre a primeira atividade do plano."
         />
       ) : (
-        <div className="space-y-2">
-          {atividades.map((a) => (
-            <Card key={a.id} className="p-4" disableHover>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-content-strong">{a.nome}</p>
-                  <p className="text-xs text-content-muted mt-0.5">
-                    {nomeExecutor(a)} · {FP_TIPO_LABEL[a.tipo as FpTipoAtividade]} · Urgência{' '}
-                    {URGENCIA_LABEL[a.urgencia]}
-                    {a.local ? ` · ${a.local}` : ''}
-                  </p>
-                  <p className="text-xs text-content-faint mt-0.5">{diasLabel(a.dias_semana)}</p>
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <Button variant="secondary" size="sm" onClick={() => abrirEdicao(a)}>
-                    Editar
-                  </Button>
-                  <Button variant="danger" size="sm" onClick={() => setConfirmId(a.id)}>
-                    Excluir
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+        <Card className="p-0 overflow-x-auto" disableHover>
+          <table className="w-full text-sm border-collapse min-w-[760px]">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-wide text-content-faint border-b border-border-base">
+                <th className="py-2.5 pl-4 pr-3 font-semibold">Atividade</th>
+                <th className="py-2.5 pr-3 font-semibold">Setor</th>
+                <th className="py-2.5 pr-3 font-semibold">Tipo</th>
+                <th className="py-2.5 pr-3 font-semibold">Coordena</th>
+                <th className="py-2.5 pr-3 font-semibold">Quem faz</th>
+                <th className="py-2.5 pr-3 font-semibold text-center">Semanas</th>
+                <th className="py-2.5 pr-3 font-semibold text-center">5M</th>
+                <th className="py-2.5 pr-4 font-semibold text-right" />
+              </tr>
+            </thead>
+            <tbody>
+              {[...atividades]
+                .sort((x, y) => x.nome.localeCompare(y.nome, 'pt'))
+                .map((a) => (
+                  <tr key={a.id} className="border-b border-border-subtle last:border-0 hover:bg-surface-2/50">
+                    <td className="py-2.5 pl-4 pr-3 font-semibold text-content-strong">{a.nome}</td>
+                    <td className="py-2.5 pr-3 text-content-muted">{nomeSetor(a)}</td>
+                    <td className="py-2.5 pr-3 text-content-muted">
+                      {FP_TIPO_LABEL[a.tipo as FpTipoAtividade]}
+                    </td>
+                    <td className="py-2.5 pr-3">{nomeFuncionario(a.coordenador_id) ?? '—'}</td>
+                    <td className="py-2.5 pr-3">{nomeExecutor(a)}</td>
+                    <td className="py-2.5 pr-3 text-center tabular-nums">
+                      {semanasPorAtividade.get(a.id) ?? 0}
+                    </td>
+                    <td className="py-2.5 pr-3 text-center tabular-nums text-content-muted">
+                      {completos5M(a)}/4
+                    </td>
+                    <td className="py-2.5 pr-4 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => abrirEdicao(a)}
+                        className="text-xs font-semibold text-primary hover:underline mr-3"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => setConfirmId(a.id)}
+                        className="text-xs font-semibold text-red-600 hover:underline"
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border-base text-xs text-content-muted">
+            <span>
+              {atividades.length} atividades ·{' '}
+              {atividades.filter((a) => completos5M(a) === 0).length} ainda sem o "como fazer" (5M)
+              preenchido
+            </span>
+            <Button size="sm" onClick={abrirNovo}>Nova atividade</Button>
+          </div>
+        </Card>
       )}
 
       <Modal

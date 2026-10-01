@@ -170,6 +170,32 @@ export function usePlanoSemanas(
   })
 }
 
+/** Contagens gerais da fazenda (aba Dados em Cadastros). */
+export function useFpContagens(fazendaId: string | undefined) {
+  return useQuery({
+    queryKey: ['fp_contagens', fazendaId],
+    enabled: !!fazendaId,
+    queryFn: async () => {
+      const [ativs, sems, baixas, extras, funcs] = await Promise.all([
+        supabase.from('fp_atividades').select('id', { count: 'exact', head: true }).eq('fazenda_id', fazendaId!),
+        supabase.from('fp_atividade_semanas').select('id', { count: 'exact', head: true }).eq('fazenda_id', fazendaId!),
+        supabase.from('fp_atividade_baixas').select('id', { count: 'exact', head: true }).eq('fazenda_id', fazendaId!),
+        supabase.from('fp_extras').select('id', { count: 'exact', head: true }).eq('fazenda_id', fazendaId!),
+        supabase.from('funcionarios').select('id', { count: 'exact', head: true }).eq('fazenda_id', fazendaId!).is('deleted_at', null),
+      ])
+      const err = ativs.error || sems.error || baixas.error || extras.error || funcs.error
+      if (err) throw err
+      return {
+        atividades: ativs.count ?? 0,
+        semanasMarcadas: sems.count ?? 0,
+        baixas: baixas.count ?? 0,
+        extras: extras.count ?? 0,
+        colaboradores: funcs.count ?? 0,
+      }
+    },
+  })
+}
+
 // ============ Mutations ============
 
 /**

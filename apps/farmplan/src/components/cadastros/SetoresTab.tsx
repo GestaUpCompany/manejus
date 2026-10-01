@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useAuth, useFazenda } from '@gestaup/shared'
 import {
-  Card,
   Input,
   Select,
   Button,
@@ -10,16 +9,28 @@ import {
   PageSkeleton,
   useToast,
 } from '@gestaup/ui'
-import { useFuncionariosFp } from '../../services/farmplanService'
-import { useSetores, useSaveSetor } from '../../services/cadastrosService'
+import {
+  useFuncionariosFp,
+  usePlanoAtivo,
+  usePlanoSemanas,
+} from '../../services/farmplanService'
+import {
+  useSetores,
+  useAtividades,
+  useSaveSetor,
+} from '../../services/cadastrosService'
 import type { SetorFp } from '../../services/cadastrosService'
 
 export function SetoresTab() {
   const { user } = useAuth()
   const { data: fazenda } = useFazenda(user?.id)
   const fazendaId = fazenda?.id
+  const { data: plano } = usePlanoAtivo(fazendaId)
   const { data: setores, isLoading } = useSetores(fazendaId)
   const { data: funcionarios } = useFuncionariosFp(fazendaId)
+  const { data: atividades } = useAtividades(plano?.id)
+  const atividadeIds = useMemo(() => atividades?.map((a) => a.id), [atividades])
+  const { data: semanas } = usePlanoSemanas(fazendaId, plano?.id, atividadeIds)
   const save = useSaveSetor()
   const toast = useToast()
 
@@ -32,15 +43,22 @@ export function SetoresTab() {
     () =>
       (funcionarios ?? [])
         .filter((f) => f.ativo)
-        .map((f) => ({ value: f.id, label: f.nome })),
+        .map((f) => ({ value: f.id, label: f.apelido || f.nome })),
     [funcionarios],
   )
 
-  const nomeDe = (id: string | null) => {
-    if (!id) return null
-    const f = funcionarios?.find((x) => x.id === id)
-    return f?.apelido || f?.nome
-  }
+  const cur = plano?.semanaAtual ?? 0
+  const ativNaSemanaPorSetor = useMemo(() => {
+    const semanasAtivas = new Set(
+      (semanas ?? []).filter((s) => s.semana === cur).map((s) => s.atividade_id),
+    )
+    const m = new Map<string, number>()
+    for (const a of atividades ?? []) {
+      if (!a.setor_id || !semanasAtivas.has(a.id)) continue
+      m.set(a.setor_id, (m.get(a.setor_id) ?? 0) + 1)
+    }
+    return m
+  }, [semanas, atividades, cur])
 
   const abrirNovo = () => {
     setEditId(null)
@@ -74,39 +92,70 @@ export function SetoresTab() {
     )
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-content-muted">
-          Setores compartilhados com o Manejus. O responsável é o dono do setor no Farm Plan.
-        </p>
-        <Button onClick={abrirNovo}>+ Novo setor</Button>
-      </div>
+  const trocarDono = (s: SetorFp, responsavel_id: string) => {
+    if (!fazendaId) return
+    save.mutate(
+      { id: s.id, fazendaId, nome: s.nome, responsavel_id: responsavel_id || null },
+      {
+        onSuccess: () => toast.success('Dono do setor atualizado'),
+        onError: () => toast.error('Erro ao atualizar'),
+      },
+    )
+  }
 
+  return (
+    <div className="space-y-3">
       {isLoading ? (
         <PageSkeleton />
       ) : !setores?.length ? (
         <EmptyState title="Nenhum setor" description="Cadastre os setores da fazenda." />
       ) : (
-        <div className="space-y-2">
-          {setores.map((s) => (
-            <Card key={s.id} className="p-4 flex items-center justify-between gap-3" disableHover>
-              <div className="min-w-0">
-                <p className="font-semibold text-content-strong">
-                  {s.nome}
-                  {!s.ativo && <span className="text-xs text-content-faint ml-2">(inativo)</span>}
-                </p>
-                <p className="text-xs text-content-muted mt-0.5">
-                  {nomeDe(s.responsavel_id) ? `Dono: ${nomeDe(s.responsavel_id)}` : 'Sem responsável'}
-                </p>
-              </div>
-              <Button variant="secondary" size="sm" onClick={() => abrirEdicao(s)}>
-                Editar
-              </Button>
-            </Card>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-wide text-content-faint border-b border-border-base">
+                <th className="py-2 pr-3 font-semibold">Setor</th>
+                <th className="py-2 pr-3 font-semibold">Dono do setor</th>
+                <th className="py-2 pr-3 font-semibold text-right">Na semana {cur}</th>
+                <th className="py-2 font-semibold text-right w-16" />
+              </tr>
+            </thead>
+            <tbody>
+              {setores.map((s) => (
+                <tr key={s.id} className="border-b border-border-subtle last:border-0">
+                  <td className="py-2.5 pr-3 font-semibold text-content-strong">
+                    {s.nome}
+                    {!s.ativo && <span className="text-xs text-content-faint ml-2">(inativo)</span>}
+                  </td>
+                  <td className="py-1.5 pr-3 min-w-[180px] [&>div]:mb-0">
+                    <Select
+                      options={funcOptions}
+                      value={s.responsavel_id ?? ''}
+                      onChange={(v) => trocarDono(s, v)}
+                      placeholder="Sem dono"
+                    />
+                  </td>
+                  <td className="py-2.5 pr-3 text-right tabular-nums text-content-muted">
+                    {ativNaSemanaPorSetor.get(s.id) ?? 0}
+                  </td>
+                  <td className="py-2.5 text-right">
+                    <button
+                      onClick={() => abrirEdicao(s)}
+                      className="text-xs font-semibold text-primary hover:underline"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
+
+      <div className="flex justify-end">
+        <Button size="sm" onClick={abrirNovo}>+ Novo setor</Button>
+      </div>
 
       <Modal
         isOpen={modalOpen}

@@ -1,37 +1,39 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { PlanoTab } from '../components/cadastros/PlanoTab'
+import { GeralTab } from '../components/cadastros/GeralTab'
 import { AtividadesTab } from '../components/cadastros/AtividadesTab'
-import { TemplatesTab } from '../components/cadastros/TemplatesTab'
-import { PessoasTab } from '../components/cadastros/PessoasTab'
+import { CriteriosTab } from '../components/cadastros/CriteriosTab'
 import { EquipesTab } from '../components/cadastros/EquipesTab'
-import { SetoresTab } from '../components/cadastros/SetoresTab'
+import { PessoasTab } from '../components/cadastros/PessoasTab'
+import { TemplatesTab } from '../components/cadastros/TemplatesTab'
+import { DadosTab } from '../components/cadastros/DadosTab'
 
-type Aba = 'plano' | 'atividades' | 'templates' | 'pessoas' | 'equipes' | 'setores'
+type Aba = 'geral' | 'atividades' | 'criterios' | 'equipes' | 'pessoas' | 'templates' | 'dados'
 
 const ABAS: { id: Aba; label: string }[] = [
-  { id: 'plano', label: 'Plano anual' },
-  { id: 'atividades', label: 'Atividades' },
-  { id: 'templates', label: 'Templates' },
+  { id: 'geral', label: 'Geral e setores' },
+  { id: 'atividades', label: 'Biblioteca de atividades' },
+  { id: 'criterios', label: 'Critérios de comportamento' },
+  { id: 'equipes', label: 'Equipes do app' },
   { id: 'pessoas', label: 'Pessoas' },
-  { id: 'equipes', label: 'Equipes' },
-  { id: 'setores', label: 'Setores' },
+  { id: 'templates', label: 'Templates' },
+  { id: 'dados', label: 'Dados' },
 ]
 
 export function Cadastros() {
   const [searchParams] = useSearchParams()
   const abaParam = searchParams.get('aba') as Aba | null
   const [aba, setAba] = useState<Aba>(
-    abaParam && ABAS.some((a) => a.id === abaParam) ? abaParam : 'plano',
+    abaParam && ABAS.some((a) => a.id === abaParam) ? abaParam : 'geral',
   )
 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-content-strong">Cadastros</h1>
-        <p className="text-content-muted mt-1">
-          Plano anual, atividades, pessoas, equipes e setores do Farm Plan.
-        </p>
+        <p className="eyebrow">O que hoje fica nas abas Cadastros, Equipe e Cargos e Funções</p>
+        <h1 className="text-[28px] font-bold font-display text-content-strong tracking-tight leading-tight">
+          Cadastros gerais
+        </h1>
       </div>
 
       <div className="flex gap-1 border-b border-border-base overflow-x-auto" role="tablist">
@@ -52,12 +54,13 @@ export function Cadastros() {
         ))}
       </div>
 
-      {aba === 'plano' && <PlanoTab />}
+      {aba === 'geral' && <GeralTab />}
       {aba === 'atividades' && <AtividadesTab />}
-      {aba === 'templates' && <TemplatesTab />}
-      {aba === 'pessoas' && <PessoasTab />}
+      {aba === 'criterios' && <CriteriosTab />}
       {aba === 'equipes' && <EquipesTab />}
-      {aba === 'setores' && <SetoresTab />}
+      {aba === 'pessoas' && <PessoasTab />}
+      {aba === 'templates' && <TemplatesTab />}
+      {aba === 'dados' && <DadosTab />}
     </div>
   )
 }
