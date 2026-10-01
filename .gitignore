@@ -42,3 +42,23 @@ doc.kml
 
 # Imagens temporarias
 *.webp
+
+# Artefatos de analise Vision (planilhas/relatorios locais, nao versionar)
+*.xlsm
+*.pbix
+tmp_pbix/
+tmp_pbix_map.txt
+tmp_pbix_extract.py
+smoke-*.pdf
+tmp-*.pdf
+tools/
+Relatorio Vision - Guanabara II 2026/
+
+# Scripts de auditoria one-off (nao versionar)
+__*.cjs
+smoke-*.mjs
+smoke-*.png
+screenshot-*.mjs
+tmp_*.png
+nul
+vision-relatorio/mockups/*.pdf
