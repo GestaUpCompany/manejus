@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E;
+  --green: #17A34A;
+  --green-dark: #0F7A38;
+  --ink: #12263A;
+  --muted: #5B6B7B;
+  --line: #E3E8EE;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page {
+  width: 1280px; height: 720px; position: relative; overflow: hidden;
+  background: #fff; display: flex; flex-direction: column;
+}
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px 8px 48px;
+}
+.title-block .kicker {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  color: var(--green-dark); text-transform: uppercase; margin-bottom: 6px;
+}
+.title-block h1 { font-size: 30px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.page-logo { height: 62px; }
+
+.kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  padding: 4px 48px 12px 48px;
+}
+.kpi {
+  border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green);
+  padding: 9px 14px 8px 14px; background: #fff;
+}
+.kpi .lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 3px;
+}
+.kpi .val { font-size: 22px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.chart1 { padding: 2px 48px 4px 48px; }
+.chart-row { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; padding: 6px 48px 0 48px; flex: 1; }
+.chart-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 2px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
+.legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.legend .sw.b { background: var(--blue); }
+.legend .sw.g { background: var(--green); }
+svg { display: block; width: 100%; }
+.axis text { font-family: 'Archivo'; font-size: 10.5px; fill: var(--muted); font-weight: 600; }
+.vlbl { font-family: 'Archivo'; font-size: 10.5px; font-weight: 700; }
+.vlbl.b { fill: var(--blue); }
+.vlbl.g { fill: var(--green-dark); }
+.vlbl.w { fill: #fff; }
+.axis-note { font-size: 9.5px; color: var(--muted); font-style: italic; margin-top: -4px; }
+
+.mini-table { font-size: 11.5px; border-collapse: collapse; width: 100%; margin-top: 6px; }
+.mini-table th {
+  font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+  font-weight: 700; text-align: right; padding: 4px 6px; border-bottom: 1.5px solid var(--blue);
+}
+.mini-table th:first-child { text-align: left; }
+.mini-table td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); }
+.mini-table td:first-child { text-align: left; font-weight: 600; }
+.mini-table .bar { height: 5px; border-radius: 3px; background: var(--green); display: inline-block; vertical-align: 1px; }
+
+.page-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 48px 20px 48px; font-size: 11px; color: var(--muted);
+}
+.page-foot .num { font-weight: 800; color: var(--blue); font-size: 13px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="title-block">
+      <div class="kicker">Jan – Ago · 2026</div>
+      <h1>Vendas de Animais · Abate</h1>
+    </div>
+    <img class="page-logo" src="../../tmp_pbix/Report/StaticResources/RegisteredResources/Gestaup_Intelligence-0127124017850949067.png" alt="Gesta'Up Intelligence">
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">N° de Cabeças</div><div class="val">699 <small>cab</small></div></div>
+    <div class="kpi"><div class="lbl">Média R$/@</div><div class="val"><small>R$</small> 347,98</div></div>
+    <div class="kpi"><div class="lbl">Média R$/kg</div><div class="val"><small>R$</small> 12,95</div></div>
+  </div>
+
+  <div class="chart1">
+    <div class="chart-title">
+      Cabeças vendidas e preço médio por mês
+      <span class="legend"><span><span class="sw b"></span>Cabeças</span><span><span class="sw g"></span>Média R$/@</span></span>
+    </div>
+    <!-- barras: cab/170*130. base y=172. linha R$/@: 300->168, 370->33 -->
+    <svg viewBox="0 0 1184 195" preserveAspectRatio="none">
+      <line x1="0" y1="172" x2="1184" y2="172" stroke="#C9D2DB" stroke-width="1"/>
+      <line x1="0" y1="115" x2="1184" y2="115" stroke="#EDF1F5" stroke-width="1"/>
+      <line x1="0" y1="58"  x2="1184" y2="58"  stroke="#EDF1F5" stroke-width="1"/>
+      <g fill="#0B3D6E" opacity="0.92">
+        <rect x="29"  y="131" width="90" height="41" rx="4"/>
+        <rect x="177" y="103" width="90" height="69" rx="4"/>
+        <rect x="473" y="48"  width="90" height="124" rx="4"/>
+        <rect x="621" y="76"  width="90" height="96"  rx="4"/>
+        <rect x="769" y="81"  width="90" height="91"  rx="4"/>
+        <rect x="917" y="119" width="90" height="53"  rx="4"/>
+        <rect x="1065" y="112" width="90" height="60" rx="4"/>
+      </g>
+      <!-- linha AVG R$/@ (mar sem venda = gap) -->
+      <polyline points="74,156 222,95" fill="none" stroke="#17A34A" stroke-width="2.5" stroke-linejoin="round"/>
+      <polyline points="518,59 666,40 814,50 962,101 1110,90" fill="none" stroke="#17A34A" stroke-width="2.5" stroke-linejoin="round"/>
+      <g fill="#17A34A">
+        <circle cx="74" cy="156" r="3.5"/><circle cx="222" cy="95" r="3.5"/>
+        <circle cx="518" cy="59" r="3.5"/><circle cx="666" cy="40" r="3.5"/><circle cx="814" cy="50" r="3.5"/>
+        <circle cx="962" cy="101" r="3.5"/><circle cx="1110" cy="90" r="3.5"/>
+      </g>
+      <g class="vlbl w" text-anchor="middle">
+        <text x="74" y="145">54</text><text x="222" y="117">90</text><text x="518" y="62">162</text><text x="666" y="90">126</text>
+        <text x="814" y="95">119</text><text x="962" y="133">69</text><text x="1110" y="126">79</text>
+      </g>
+      <g class="vlbl g" text-anchor="middle" font-size="9.5" font-weight="600">
+        <text x="222" y="85">R$ 337</text><text x="518" y="49">R$ 355</text><text x="666" y="30">R$ 365</text>
+        <text x="814" y="40">R$ 360</text><text x="962" y="91">R$ 333</text><text x="1110" y="80">R$ 339</text>
+      </g>
+      <text x="74" y="168" text-anchor="middle" font-size="9.5" font-weight="600" fill="#fff">R$ 305</text>
+      <g class="axis" text-anchor="middle">
+        <text x="74" y="189">Jan</text><text x="222" y="189">Fev</text><text x="370" y="189">Mar</text><text x="518" y="189">Abr</text>
+        <text x="666" y="189">Mai</text><text x="814" y="189">Jun</text><text x="962" y="189">Jul</text><text x="1110" y="189">Ago</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="chart-row">
+    <div>
+      <div class="chart-title">
+        Preço e rendimento de carcaça por frigorífico
+        <span class="legend"><span><span class="sw b"></span>R$/@</span><span><span class="sw g"></span>RC%</span></span>
+      </div>
+      <!-- barras R$/@: (v-320)/40*120 sobre base 165. RC%: 50->165, 60->35 -->
+      <svg viewBox="0 0 620 195" preserveAspectRatio="none">
+        <line x1="0" y1="165" x2="620" y2="165" stroke="#C9D2DB" stroke-width="1"/>
+        <line x1="0" y1="105" x2="620" y2="105" stroke="#EDF1F5" stroke-width="1"/>
+        <line x1="0" y1="45"  x2="620" y2="45"  stroke="#EDF1F5" stroke-width="1"/>
+        <!-- corte de eixo -->
+        <path d="M8,158 l10,14 M18,158 l10,14" stroke="#9AA8B5" stroke-width="1.5"/>
+        <g fill="#0B3D6E" opacity="0.92">
+          <rect x="70"  y="90"  width="90" height="75" rx="4"/>
+          <rect x="265" y="98"  width="90" height="67" rx="4"/>
+          <rect x="460" y="107" width="90" height="58" rx="4"/>
+        </g>
+        <polyline points="115,87 310,99 505,84" fill="none" stroke="#17A34A" stroke-width="2.5" stroke-linejoin="round"/>
+        <g fill="#17A34A">
+          <circle cx="115" cy="87" r="3.5"/><circle cx="310" cy="99" r="3.5"/><circle cx="505" cy="84" r="3.5"/>
+        </g>
+        <g class="vlbl b" text-anchor="middle">
+          <text x="115" y="80">R$ 344,92</text><text x="310" y="88">R$ 342,52</text><text x="505" y="97">R$ 339,32</text>
+        </g>
+        <g class="vlbl w" text-anchor="middle" font-size="9.5" font-weight="600">
+          <text x="115" y="130">56,0%</text><text x="310" y="143">55,0%</text><text x="505" y="128">55,9%</text>
+        </g>
+        <g class="axis" text-anchor="middle">
+          <text x="115" y="184">Agra</text>
+          <text x="310" y="184">Vale Company</text>
+          <text x="505" y="184">Estrela</text>
+        </g>
+      </svg>
+      <div class="axis-note">Eixo R$/@ truncado em R$ 320 para evidenciar a diferença entre empresas.</div>
+    </div>
+    <div>
+      <div class="chart-title">Volume por empresa</div>
+      <table class="mini-table">
+        <thead>
+          <tr><th>Frigorífico</th><th>Cab.</th><th>%</th><th>R$/@</th><th>RC%</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Agra Agronindustrial</td><td>353</td><td><span class="bar" style="width:60px"></span> 51%</td><td>344,92</td><td>56,0%</td></tr>
+          <tr><td>Vale Company</td><td>213</td><td><span class="bar" style="width:36px"></span> 30%</td><td>342,52</td><td>55,0%</td></tr>
+          <tr><td>Frigorífico Estrela</td><td>133</td><td><span class="bar" style="width:23px"></span> 19%</td><td>339,32</td><td>55,9%</td></tr>
+        </tbody>
+      </table>
+      <div class="axis-note" style="margin-top:10px">699 cabeças em 9 lotes · 100% Abate Machos · RC% = rendimento de carcaça médio.</div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">06</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

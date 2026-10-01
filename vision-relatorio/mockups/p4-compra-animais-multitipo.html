@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E;
+  --green: #17A34A;
+  --green-dark: #0F7A38;
+  --ink: #12263A;
+  --muted: #5B6B7B;
+  --line: #E3E8EE;
+  --soft: #F4F7F9;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page {
+  width: 1280px; height: 720px; position: relative; overflow: hidden;
+  background: #fff; display: flex; flex-direction: column;
+}
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px 8px 48px;
+}
+.title-block .kicker {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  color: var(--green-dark); text-transform: uppercase; margin-bottom: 6px;
+}
+.title-block h1 { font-size: 30px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.page-logo { height: 62px; }
+
+.kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  padding: 4px 48px 12px 48px;
+}
+.kpi {
+  border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green);
+  padding: 9px 14px 8px 14px; background: #fff;
+}
+.kpi .lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 3px;
+}
+.kpi .val { font-size: 22px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.chart1 { padding: 2px 48px 4px 48px; }
+.chart-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; padding: 6px 48px 0 48px; flex: 1; }
+.chart-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 2px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+svg { display: block; width: 100%; }
+.axis text { font-family: 'Archivo'; font-size: 10.5px; fill: var(--muted); font-weight: 600; }
+.vlbl { font-family: 'Archivo'; font-size: 10.5px; fill: var(--blue); font-weight: 700; }
+
+.page-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 48px 20px 48px; font-size: 11px; color: var(--muted);
+}
+.page-foot .num { font-weight: 800; color: var(--blue); font-size: 13px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="title-block">
+      <div class="kicker">Jan – Ago · 2026</div>
+      <h1>Compra de Animais</h1>
+    </div>
+    <img class="page-logo" src="../../tmp_pbix/Report/StaticResources/RegisteredResources/Gestaup_Intelligence-0127124017850949067.png" alt="Gesta'Up Intelligence">
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">N° de Animais</div><div class="val">783 <small>cab</small></div></div>
+    <div class="kpi"><div class="lbl">Média R$/@</div><div class="val"><small>R$</small> 476,50</div></div>
+    <div class="kpi"><div class="lbl">Média R$/kg</div><div class="val"><small>R$</small> 15,88</div></div>
+    <div class="kpi"><div class="lbl">Média R$/cab</div><div class="val"><small>R$</small> 3.528,77</div></div>
+  </div>
+
+  <div class="chart1">
+    <div class="chart-title">N° de cabeças compradas por mês</div>
+    <svg viewBox="0 0 1184 190" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#17A34A" stop-opacity="0.35"/>
+          <stop offset="1" stop-color="#17A34A" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <line x1="0" y1="165" x2="1184" y2="165" stroke="#C9D2DB" stroke-width="1"/>
+      <line x1="0" y1="100" x2="1184" y2="100" stroke="#EDF1F5" stroke-width="1"/>
+      <line x1="0" y1="35"  x2="1184" y2="35"  stroke="#EDF1F5" stroke-width="1"/>
+      <path d="M74,165 L222,165 L370,144 L518,99 L666,59 L814,120 L962,107 L1110,36 L1110,165 L74,165 Z" fill="url(#ag)"/>
+      <polyline points="74,165 222,165 370,144 518,99 666,59 814,120 962,107 1110,36"
+        fill="none" stroke="#17A34A" stroke-width="3" stroke-linejoin="round"/>
+      <g fill="#17A34A">
+        <circle cx="370" cy="144" r="4"/><circle cx="518" cy="99" r="4"/><circle cx="666" cy="59" r="4"/>
+        <circle cx="814" cy="120" r="4"/><circle cx="962" cy="107" r="4"/><circle cx="1110" cy="36" r="4"/>
+      </g>
+      <g class="vlbl" text-anchor="middle">
+        <text x="370" y="134">39</text><text x="518" y="89">121</text><text x="666" y="49">196</text>
+        <text x="814" y="110">82</text><text x="962" y="97">107</text><text x="1110" y="26">238</text>
+      </g>
+      <g class="axis" text-anchor="middle">
+        <text x="74" y="184">Jan</text><text x="222" y="184">Fev</text><text x="370" y="184">Mar</text><text x="518" y="184">Abr</text>
+        <text x="666" y="184">Mai</text><text x="814" y="184">Jun</text><text x="962" y="184">Jul</text><text x="1110" y="184">Ago</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="chart-row">
+    <div>
+      <div class="chart-title">Cabeças por categoria</div>
+      <svg viewBox="0 0 660 190" preserveAspectRatio="none">
+        <line x1="0" y1="160" x2="660" y2="160" stroke="#C9D2DB" stroke-width="1"/>
+        <line x1="0" y1="95"  x2="660" y2="95"  stroke="#EDF1F5" stroke-width="1"/>
+        <line x1="0" y1="30"  x2="660" y2="30"  stroke="#EDF1F5" stroke-width="1"/>
+        <rect x="150" y="30"  width="130" height="130" rx="5" fill="#0B3D6E" opacity="0.92"/>
+        <rect x="390" y="150" width="130" height="10" rx="4" fill="#0B3D6E" opacity="0.92"/>
+        <g class="vlbl" text-anchor="middle">
+          <text x="215" y="20">744</text>
+          <text x="455" y="140">39</text>
+        </g>
+        <g class="axis" text-anchor="middle">
+          <text x="215" y="180">5 a 12 meses · Macho</text>
+          <text x="455" y="180">13 a 24 meses · Macho</text>
+        </g>
+      </svg>
+    </div>
+    <div>
+      <div class="chart-title">Distribuição por tipo de compra</div>
+      <!-- r=68, C=427,26. Fatias: Comercial 512 (65%), Boitel 165 (21%), Parceria 78 (10%), Transf Entrada 28 (4%) -->
+      <svg viewBox="0 0 480 190">
+        <g transform="rotate(-90 160 92)">
+          <circle cx="160" cy="92" r="68" fill="none" stroke="#17A34A" stroke-width="18"
+            stroke-dasharray="278.7 148.6"/>
+          <circle cx="160" cy="92" r="68" fill="none" stroke="#0B3D6E" stroke-width="18"
+            stroke-dasharray="89.8 337.5" stroke-dashoffset="-278.7"/>
+          <circle cx="160" cy="92" r="68" fill="none" stroke="#7FB98E" stroke-width="18"
+            stroke-dasharray="42.4 384.9" stroke-dashoffset="-368.5"/>
+          <circle cx="160" cy="92" r="68" fill="none" stroke="#9FB3C8" stroke-width="18"
+            stroke-dasharray="15.3 412" stroke-dashoffset="-410.9"/>
+        </g>
+        <text x="160" y="86" text-anchor="middle" font-family="Archivo" font-size="26" font-weight="800" fill="#0B3D6E">783</text>
+        <text x="160" y="106" text-anchor="middle" font-family="Archivo" font-size="11.5" font-weight="600" fill="#5B6B7B">cabeças</text>
+        <g font-family="Archivo" font-size="11.5" font-weight="600" fill="#12263A">
+          <rect x="290" y="30"  width="11" height="11" rx="3" fill="#17A34A"/>
+          <text x="307" y="40">Comercial<tspan fill="#5B6B7B" font-weight="500" dx="8">512 · 65%</tspan></text>
+          <rect x="290" y="66"  width="11" height="11" rx="3" fill="#0B3D6E"/>
+          <text x="307" y="76">Boitel<tspan fill="#5B6B7B" font-weight="500" dx="8">165 · 21%</tspan></text>
+          <rect x="290" y="102" width="11" height="11" rx="3" fill="#7FB98E"/>
+          <text x="307" y="112">Parceria<tspan fill="#5B6B7B" font-weight="500" dx="8">78 · 10%</tspan></text>
+          <rect x="290" y="138" width="11" height="11" rx="3" fill="#9FB3C8"/>
+          <text x="307" y="148">Transf. Entrada<tspan fill="#5B6B7B" font-weight="500" dx="8">28 · 4%</tspan></text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">04</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

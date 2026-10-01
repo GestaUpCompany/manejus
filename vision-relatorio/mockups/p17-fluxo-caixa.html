@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E;
+  --green: #17A34A;
+  --green-dark: #0F7A38;
+  --red: #B0443C;
+  --ink: #12263A;
+  --muted: #5B6B7B;
+  --line: #E3E8EE;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page {
+  width: 1280px; height: 720px; position: relative; overflow: hidden;
+  background: #fff; display: flex; flex-direction: column;
+}
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px 8px 48px;
+}
+.title-block .kicker {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  color: var(--green-dark); text-transform: uppercase; margin-bottom: 6px;
+}
+.title-block h1 { font-size: 30px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.page-logo { height: 62px; }
+
+.kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  padding: 4px 48px 12px 48px;
+}
+.kpi {
+  border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--blue);
+  padding: 9px 14px 8px 14px; background: #fff;
+}
+.kpi.g { border-top-color: var(--green); }
+.kpi.r { border-top-color: var(--red); }
+.kpi .lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 3px;
+}
+.kpi .val { font-size: 22px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.fc-wrap { padding: 0 48px; }
+.chart-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 4px;
+}
+.fctable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.fctable th {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted); text-align: right; padding: 5px 10px; border-bottom: 1.5px solid var(--blue);
+}
+.fctable th:first-child { text-align: left; }
+.fctable td { padding: 7px 10px; border-bottom: 1px solid var(--line); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.fctable td:first-child { text-align: left; font-weight: 700; }
+.fctable tr.ent td:not(:first-child) { color: var(--green-dark); }
+.fctable tr.sai td:not(:first-child) { color: var(--red); }
+.fctable tr.res td:not(:first-child) { font-weight: 700; }
+.fctable tr.res td.pos { color: var(--green-dark); }
+.fctable tr.res td.neg { color: var(--red); }
+.fctable tr.sf td { font-weight: 800; color: var(--blue); background: #F4F7FA; border-top: 2px solid var(--blue); }
+.fctable td.na { color: #B7C2CC; }
+.fc-note { font-size: 9.5px; color: var(--muted); font-style: italic; margin-top: 5px; padding-left: 2px; }
+
+.combo { padding: 10px 48px 0 48px; flex: 1; display: flex; flex-direction: column; }
+.legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink); font-weight: 600; }
+.legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.legend .sw.g { background: var(--green); }
+.legend .sw.r { background: var(--red); }
+.legend .sw.b { background: var(--blue); }
+.chart-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+svg { display: block; width: 100%; }
+.axis text { font-family: 'Archivo'; font-size: 10.5px; fill: var(--muted); font-weight: 600; }
+.vlbl { font-family: 'Archivo'; font-size: 9.5px; font-weight: 600; fill: var(--blue); }
+
+.page-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 48px 18px 48px; font-size: 11px; color: var(--muted);
+}
+.page-foot .num { font-weight: 800; color: var(--blue); font-size: 13px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="title-block">
+      <div class="kicker">Jan – Ago · 2026 · Recebimentos e pagamentos realizados</div>
+      <h1>Fluxo de Caixa</h1>
+    </div>
+    <img class="page-logo" src="../../tmp_pbix/Report/StaticResources/RegisteredResources/Gestaup_Intelligence-0127124017850949067.png" alt="Gesta'Up Intelligence">
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">Saldo Inicial (jan)</div><div class="val"><small>R$</small> 0,00</div></div>
+    <div class="kpi g"><div class="lbl">Entradas</div><div class="val"><small>R$</small> 5.151.805,27</div></div>
+    <div class="kpi r"><div class="lbl">Saídas</div><div class="val"><small>R$</small> 4.343.020,07</div></div>
+    <div class="kpi"><div class="lbl">Saldo Final (ago)</div><div class="val"><small>R$</small> 808.785,20</div></div>
+  </div>
+
+  <div class="fc-wrap">
+    <div class="chart-title">Fluxo de caixa realizado</div>
+    <table class="fctable">
+      <thead><tr><th></th><th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th><th>Jun</th><th>Jul</th><th>Ago</th></tr></thead>
+      <tbody>
+        <tr><td>Saldo Inicial</td><td>0,00</td><td>150.425,45</td><td>693.823,49</td><td>335.026,05</td><td>921.486,73</td><td>855.168,64</td><td>1.288.300,49</td><td>1.232.818,60</td></tr>
+        <tr class="ent"><td>Entrada</td><td>355.284,36</td><td>650.960,82</td><td class="na">—</td><td>1.229.121,54</td><td>978.212,16</td><td>913.580,85</td><td>453.943,22</td><td>570.702,32</td></tr>
+        <tr class="sai"><td>Saída</td><td>204.858,91</td><td>107.562,78</td><td>358.797,44</td><td>642.660,86</td><td>1.044.530,25</td><td>480.449,00</td><td>509.425,11</td><td>994.735,72</td></tr>
+        <tr class="res"><td>Resultado</td><td class="pos">150.425,45</td><td class="pos">543.398,04</td><td class="neg">−358.797,44</td><td class="pos">586.460,68</td><td class="neg">−66.318,09</td><td class="pos">433.131,85</td><td class="neg">−55.481,89</td><td class="neg">−424.033,40</td></tr>
+        <tr class="sf"><td>Saldo Final</td><td>150.425,45</td><td>693.823,49</td><td>335.026,05</td><td>921.486,73</td><td>855.168,64</td><td>1.288.300,49</td><td>1.232.818,60</td><td>808.785,20</td></tr>
+      </tbody>
+    </table>
+    <div class="fc-note">Saldo inicial de janeiro é um parâmetro da fazenda (R$ 0,00 neste relatório); os demais meses encadeiam o saldo final anterior.</div>
+  </div>
+
+  <div class="combo">
+    <div class="chart-head">
+      <span class="chart-title">Resultado do mês × saldo acumulado</span>
+      <span class="legend"><span><span class="sw g"></span>Resultado positivo</span><span><span class="sw r"></span>Resultado negativo</span><span><span class="sw b"></span>Saldo Final</span></span>
+    </div>
+    <!-- barras: resultado; escala comum: -450k..+1300k -> zero em y=166; +1300k -> y=10.
+         h = v/1300*156 acima/abaixo de 166. linha saldo: y = 166 - v/1300*156 -->
+    <svg viewBox="0 0 1184 240" preserveAspectRatio="none">
+      <line x1="0" y1="10"  x2="1184" y2="10"  stroke="#EDF1F5" stroke-width="1"/>
+      <line x1="0" y1="88"  x2="1184" y2="88"  stroke="#EDF1F5" stroke-width="1"/>
+      <line x1="0" y1="166" x2="1184" y2="166" stroke="#C9D2DB" stroke-width="1.5"/>
+      <line x1="0" y1="220" x2="1184" y2="220" stroke="#EDF1F5" stroke-width="1"/>
+      <g>
+        <rect x="29"   y="148" width="90" height="18" rx="3" fill="#17A34A" opacity="0.9"/>
+        <rect x="177"  y="101" width="90" height="65" rx="3" fill="#17A34A" opacity="0.9"/>
+        <rect x="325"  y="166" width="90" height="43" rx="3" fill="#B0443C" opacity="0.9"/>
+        <rect x="473"  y="96"  width="90" height="70" rx="3" fill="#17A34A" opacity="0.9"/>
+        <rect x="621"  y="166" width="90" height="8"  rx="3" fill="#B0443C" opacity="0.9"/>
+        <rect x="769"  y="114" width="90" height="52" rx="3" fill="#17A34A" opacity="0.9"/>
+        <rect x="917"  y="166" width="90" height="7"  rx="3" fill="#B0443C" opacity="0.9"/>
+        <rect x="1065" y="166" width="90" height="51" rx="3" fill="#B0443C" opacity="0.9"/>
+      </g>
+      <!-- saldo final: 150.425 | 693.823 | 335.026 | 921.487 | 855.169 | 1.288.300 | 1.232.819 | 808.785
+           y = 166 - v/1300000*156 -->
+      <polyline points="74,148 222,83 370,126 518,55 666,63 814,11 962,18 1110,69"
+        fill="none" stroke="#0B3D6E" stroke-width="3" stroke-linejoin="round"/>
+      <g fill="#0B3D6E">
+        <circle cx="74" cy="148" r="4"/><circle cx="222" cy="83" r="4"/><circle cx="370" cy="126" r="4"/><circle cx="518" cy="55" r="4"/>
+        <circle cx="666" cy="63" r="4"/><circle cx="814" cy="11" r="4"/><circle cx="962" cy="18" r="4"/><circle cx="1110" cy="69" r="4"/>
+      </g>
+      <g class="axis" text-anchor="middle">
+        <text x="74" y="236">Jan</text><text x="222" y="236">Fev</text><text x="370" y="236">Mar</text><text x="518" y="236">Abr</text>
+        <text x="666" y="236">Mai</text><text x="814" y="236">Jun</text><text x="962" y="236">Jul</text><text x="1110" y="236">Ago</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">17</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

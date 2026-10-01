@@ -126,3 +126,8 @@ Categorias: `5 a 12 meses - Macho` = 744; `13 a 24 meses - Macho` = 39. Tipo: `C
 4. Série mensal: agrupar por mês de `B`.
 5. Grupos: `H` (categoria), `F` (tipo compra), `I` (fornecedor para o slicer).
 6. Não precisa tocar `Diárias_Categoria`, `Desembolsos Realizados` ou as colunas auxiliares — a página é 100% `Compra_Gado`.
+
+## 7. Design aprovado (mockup `p4-compra-animais.html`)
+
+- 4 cards KPI no topo; gráfico de área full-width jan–ago (eixo fixo do período, meses zerados inclusos); base dividida em barras por categoria + donut por tipo.
+- **Donut condicional**: com 1 tipo dominante, anel inteiro verde sem legenda e centro `N · Tipo · 100%`. Com 2+ tipos, anel segmentado (paleta verde → azul → verde-claro → cinza-azulado) com legenda lateral `nome — cabeças · %` e centro só com o total. Variante de referência: `p4-compra-animais-multitipo.html`.

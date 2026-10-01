@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E;
+  --green: #17A34A;
+  --green-dark: #0F7A38;
+  --ink: #12263A;
+  --muted: #5B6B7B;
+  --line: #E3E8EE;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page {
+  width: 1280px; height: 720px; position: relative; overflow: hidden;
+  background: #fff; display: flex; flex-direction: column;
+}
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px 8px 48px;
+}
+.title-block .kicker {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  color: var(--green-dark); text-transform: uppercase; margin-bottom: 6px;
+}
+.title-block h1 { font-size: 30px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.page-logo { height: 62px; }
+
+.kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  padding: 4px 48px 12px 48px;
+}
+.kpi {
+  border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green);
+  padding: 9px 14px 8px 14px; background: #fff;
+}
+.kpi .lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 3px;
+}
+.kpi .val { font-size: 22px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.chart1 { padding: 0 48px 4px 48px; }
+.chart-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 2px;
+}
+svg { display: block; width: 100%; }
+.axis text { font-family: 'Archivo'; font-size: 10.5px; fill: var(--muted); font-weight: 600; }
+.vlbl { font-family: 'Archivo'; font-size: 9.5px; font-weight: 600; fill: var(--blue); }
+.vlbl.w { fill: #fff; }
+
+.bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; padding: 4px 48px 24px 48px; flex: 1; align-items: center; }
+.ring-wrap { display: flex; align-items: center; gap: 10px; }
+.ring-note { font-size: 10.5px; color: var(--muted); font-style: italic; margin-top: 4px; }
+.cat-legend { display: flex; flex-direction: column; gap: 9px; }
+.cat { display: flex; align-items: flex-start; gap: 8px; }
+.cat .dot { width: 11px; height: 11px; border-radius: 3px; margin-top: 2px; flex: none; }
+.cat b { display: block; font-size: 12px; font-weight: 700; color: var(--ink); line-height: 1.15; }
+.cat small { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+.mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; padding-top: 4px; }
+.mini {
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px;
+}
+.mini .lbl { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+.mini .val { font-size: 16px; font-weight: 800; color: var(--ink); }
+.mini .val small { font-size: 11px; font-weight: 600; color: var(--muted); }
+
+.page-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 48px 18px 48px; font-size: 11px; color: var(--muted);
+}
+.page-foot .num { font-weight: 800; color: var(--blue); font-size: 13px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="title-block">
+      <div class="kicker">Jan – Ago · 2026 · Recebimentos realizados</div>
+      <h1>Relatório de Receitas</h1>
+    </div>
+    <img class="page-logo" src="../../tmp_pbix/Report/StaticResources/RegisteredResources/Gestaup_Intelligence-0127124017850949067.png" alt="Gesta'Up Intelligence">
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">Receita Total</div><div class="val"><small>R$</small> 5.151.805,27</div></div>
+    <div class="kpi"><div class="lbl">Faturamento Médio Mensal</div><div class="val"><small>R$</small> 643.975,66</div></div>
+    <div class="kpi"><div class="lbl">Faturamento por ha</div><div class="val"><small>R$</small> 9.183,25</div></div>
+    <div class="kpi"><div class="lbl">Faturamento por cab.</div><div class="val"><small>R$</small> 3.624,54</div></div>
+  </div>
+
+  <div class="chart1">
+    <div class="chart-title">Faturamento por mês</div>
+    <!-- série: 355.284,36 | 650.960,82 | 0 | 1.229.121,54 | 978.212,16 | 913.580,85 | 453.943,22 | 570.702,32
+         max 1.230.000 -> h=v/1230000*118; base y=158 -->
+    <svg viewBox="0 0 1184 180" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="rg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#17A34A" stop-opacity="0.30"/>
+          <stop offset="1" stop-color="#17A34A" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <line x1="0" y1="158" x2="1184" y2="158" stroke="#C9D2DB" stroke-width="1"/>
+      <line x1="0" y1="105" x2="1184" y2="105" stroke="#EDF1F5" stroke-width="1"/>
+      <line x1="0" y1="52"  x2="1184" y2="52"  stroke="#EDF1F5" stroke-width="1"/>
+      <path d="M74,124 L222,96 L370,158 L518,40 L666,64 L814,70 L962,114 L1110,103 L1110,158 L74,158 Z" fill="url(#rg)"/>
+      <polyline points="74,124 222,96 370,158 518,40 666,64 814,70 962,114 1110,103"
+        fill="none" stroke="#17A34A" stroke-width="3" stroke-linejoin="round"/>
+      <g fill="#17A34A">
+        <circle cx="74" cy="124" r="4"/><circle cx="222" cy="96" r="4"/><circle cx="370" cy="158" r="4"/>
+        <circle cx="518" cy="40" r="4"/><circle cx="666" cy="64" r="4"/><circle cx="814" cy="70" r="4"/>
+        <circle cx="962" cy="114" r="4"/><circle cx="1110" cy="103" r="4"/>
+      </g>
+      <g class="vlbl" text-anchor="middle">
+        <text x="74" y="114">R$ 355.284,36</text><text x="222" y="86">R$ 650.960,82</text>
+        <text x="370" y="148" style="paint-order:stroke;stroke:#fff;stroke-width:4">R$ 0,00</text><text x="518" y="30">R$ 1.229.121,54</text>
+        <text x="666" y="54">R$ 978.212,16</text><text x="814" y="60">R$ 913.580,85</text>
+        <text x="962" y="104">R$ 453.943,22</text><text x="1110" y="93">R$ 570.702,32</text>
+      </g>
+      <g class="axis" text-anchor="middle">
+        <text x="74" y="176">Jan</text><text x="222" y="176">Fev</text><text x="370" y="176">Mar</text><text x="518" y="176">Abr</text>
+        <text x="666" y="176">Mai</text><text x="814" y="176">Jun</text><text x="962" y="176">Jul</text><text x="1110" y="176">Ago</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="bottom-row">
+    <div>
+      <div class="chart-title">Faturamento por categoria</div>
+      <div class="ring-wrap">
+        <svg viewBox="0 0 200 200" style="width: 170px; flex: none;">
+          <!-- circunf. 2π·68 = 427,26; segmentos: 62,1% | 29,1% | 5,8% | 3,0% -->
+          <circle cx="100" cy="100" r="68" fill="none" stroke="#17A34A" stroke-width="18" stroke-dasharray="265.3 161.96" transform="rotate(-90 100 100)"/>
+          <circle cx="100" cy="100" r="68" fill="none" stroke="#0B3D6E" stroke-width="18" stroke-dasharray="124.3 302.96" transform="rotate(133.6 100 100)"/>
+          <circle cx="100" cy="100" r="68" fill="none" stroke="#8FD3A8" stroke-width="18" stroke-dasharray="24.8 402.46" transform="rotate(238.3 100 100)"/>
+          <circle cx="100" cy="100" r="68" fill="none" stroke="#8896A6" stroke-width="18" stroke-dasharray="12.8 414.46" transform="rotate(259.2 100 100)"/>
+          <text x="100" y="96" text-anchor="middle" font-family="Archivo" font-size="12.5" font-weight="800" fill="#0B3D6E">R$ 5.151.805,27</text>
+          <text x="100" y="114" text-anchor="middle" font-family="Archivo" font-size="10" font-weight="600" fill="#5B6B7B">4 categorias</text>
+        </svg>
+        <div class="cat-legend">
+          <div class="cat"><span class="dot" style="background:#17A34A"></span><div><b>13 a 24 meses · Macho</b><small>R$ 3.200.000,00 · 62,1%</small></div></div>
+          <div class="cat"><span class="dot" style="background:#0B3D6E"></span><div><b>25 a 36 meses · Macho</b><small>R$ 1.500.000,00 · 29,1%</small></div></div>
+          <div class="cat"><span class="dot" style="background:#8FD3A8"></span><div><b>0 a 4 meses · Fêmea</b><small>R$ 300.000,00 · 5,8%</small></div></div>
+          <div class="cat"><span class="dot" style="background:#8896A6"></span><div><b>13 a 24 meses · Fêmea</b><small>R$ 151.805,27 · 2,9%</small></div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="chart-title">Leitura do período</div>
+      <div class="mini-stats">
+        <div class="mini"><div class="lbl">Recebimentos</div><div class="val">9 <small>lançamentos</small></div></div>
+        <div class="mini"><div class="lbl">Tipo de receita</div><div class="val">100% <small>Venda de Gado</small></div></div>
+        <div class="mini"><div class="lbl">Maior mês</div><div class="val">Abril <small>R$ 1.229.121,54</small></div></div>
+        <div class="mini"><div class="lbl">Meses sem receita</div><div class="val">1 <small>março</small></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">15</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

@@ -39,7 +39,9 @@
 | `80% Desembolso` | **Σ dos planos cujo acumulado ≤ 80%** (os 4 primeiros aqui: 72,62% — o 5º cruzaria para 81,40% e fica fora) | R$ 1.147.353,33 ✓ |
 | `% Plano de Contas` | **nº de planos dentro do corte de 80% ÷ nº total de planos de contas distintos no dataset** (excl. Compra de Gado): 4 ÷ 31 = **12,90%** ✓ | 12,90% |
 
-Nota: o denominador 31 conta planos distintos da aba inteira (não só do período: no período há 26). O "corte de 80%" são os planos cujo acumulado permanece ≤80% — os 4 primeiros (não inclui o plano que cruza a marca).
+Nota: o denominador 31 conta planos distintos da aba inteira (não só do período: no período há 26).
+
+**Decisão de redesign (aprovada) — convenção do corte ≥80%:** o modelo PBIX usa "acumulado ≤ 80%" (exclui o plano que cruza a marca: 4 planos, R$ 1.147.353,33, 12,90%). O mockup Vision adota a convenção clássica do Pareto/ABC: **o conjunto mínimo que atinge ≥80%**, incluindo o plano que cruza. Com isso os valores passam a ser: 5 planos (até Instalações e Benfeitorias · Sede/Moradias), `80% Desembolso` = **R$ 1.286.069,22** (81,40% da base), `% Plano de Contas` = 5 ÷ 31 = **16,13%**. Justificativa: o card "80% do Desembolso" deve representar ~80% real; pela regra antiga o valor exibido cobria só 72,62%. A linha destacada na tabela passa a ser o 5º plano.
 
 ## 4. Checklist Vision
 

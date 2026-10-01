@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E;
+  --green: #17A34A;
+  --green-dark: #0F7A38;
+  --ink: #12263A;
+  --muted: #5B6B7B;
+  --line: #E3E8EE;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page {
+  width: 1280px; height: 720px; position: relative; overflow: hidden;
+  background: #fff; display: flex; flex-direction: column;
+}
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px 8px 48px;
+}
+.title-block .kicker {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  color: var(--green-dark); text-transform: uppercase; margin-bottom: 6px;
+}
+.title-block h1 { font-size: 30px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.page-logo { height: 62px; }
+
+.kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  padding: 4px 48px 14px 48px;
+}
+.kpi {
+  border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green);
+  padding: 9px 14px 8px 14px; background: #fff;
+}
+.kpi .lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 3px;
+}
+.kpi .val { font-size: 22px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.table-wrap { padding: 0 48px; flex: 1; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted); padding: 8px 10px 10px 10px; border-bottom: 2px solid var(--blue);
+  text-align: right; white-space: nowrap;
+}
+thead th:first-child, thead th:nth-child(2) { text-align: left; }
+tbody td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); font-size: 12.5px; }
+tbody td:first-child, tbody td:nth-child(2) { text-align: left; }
+tbody td:nth-child(2) { color: var(--muted); font-size: 11.5px; font-weight: 500; }
+
+tr.tipo td { background: #0B3D6E; color: #fff; font-weight: 800; border-bottom: none; }
+tr.tipo td:first-child { border-radius: 6px 0 0 6px; }
+tr.tipo td:last-child { border-radius: 0 6px 6px 0; }
+tr.tipo td:nth-child(2) { color: #BCD3E8; }
+tr.tipo .twist { display: inline-block; margin-right: 8px; font-size: 10px; }
+
+tr.cat td { background: #EFF6F1; font-weight: 700; color: var(--ink); }
+tr.cat td:first-child { padding-left: 26px; }
+tr.cat td:first-child::before {
+  content: ''; display: inline-block; width: 10px; height: 2px;
+  background: var(--green); margin-right: 8px; vertical-align: 3px;
+}
+tr.cat td:nth-child(2) { color: var(--muted); font-weight: 600; }
+
+tr.lot td { color: #3D4F61; }
+tr.lot td:first-child { padding-left: 52px; color: var(--muted); font-weight: 500; }
+
+tr.total td {
+  font-weight: 800; color: var(--blue); border-top: 2px solid var(--blue);
+  border-bottom: none; font-size: 12.5px;
+}
+tr.total td:nth-child(2) { color: var(--muted); font-weight: 700; }
+tr.spacer td { padding: 2px; border: none; }
+
+.footnote {
+  padding: 8px 48px 0 48px; font-size: 10px; color: var(--muted); font-style: italic;
+}
+
+.page-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 48px 20px 48px; font-size: 11px; color: var(--muted);
+}
+.page-foot .num { font-weight: 800; color: var(--blue); font-size: 13px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="title-block">
+      <div class="kicker">Jan – Ago · 2026</div>
+      <h1>Resumo de Vendas</h1>
+    </div>
+    <img class="page-logo" src="../../tmp_pbix/Report/StaticResources/RegisteredResources/Gestaup_Intelligence-0127124017850949067.png" alt="Gesta'Up Intelligence">
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">N° de Cabeças</div><div class="val">699 <small>cab</small></div></div>
+    <div class="kpi"><div class="lbl">Giro de Estoque</div><div class="val">5,02<small>%</small></div></div>
+    <div class="kpi"><div class="lbl">Valor Total Líquido</div><div class="val"><small>R$</small> 5.151.805,27</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Tipo · Categoria · Data</th>
+          <th>Frigorífico / Comprador</th>
+          <th>N° Cabeças</th>
+          <th>Total @</th>
+          <th>Média R$/@</th>
+          <th>Total R$</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="tipo"><td><span class="twist">▾</span>Abate Machos</td><td>Vários</td><td>699</td><td>14.804,80</td><td>342,87</td><td>5.151.805,27</td></tr>
+        <tr class="cat"><td>13 a 24 meses · Macho</td><td>Vários</td><td>393</td><td>8.263,35</td><td>349,36</td><td>2.916.438,55</td></tr>
+        <tr class="lot"><td>01/05/2026</td><td>Agra Agronindustrial</td><td>126</td><td>2.680,02</td><td>365,00</td><td>978.212,16</td></tr>
+        <tr class="lot"><td>08/06/2026</td><td>Agra Agronindustrial</td><td>119</td><td>2.540,09</td><td>359,66</td><td>913.580,85</td></tr>
+        <tr class="lot"><td>01/07/2026</td><td>Frigorífico Vale Company</td><td>69</td><td>1.361,32</td><td>333,46</td><td>453.943,22</td></tr>
+        <tr class="lot"><td>19/08/2026</td><td>Frigorífico Estrela</td><td>79</td><td>1.681,91</td><td>339,32</td><td>570.702,32</td></tr>
+        <tr class="cat"><td>25 a 36 meses · Macho</td><td>Vários</td><td>306</td><td>6.541,45</td><td>337,69</td><td>2.235.366,72</td></tr>
+        <tr class="lot"><td>27/01/2026</td><td>Agra Agronindustrial</td><td>54</td><td>1.164,85</td><td>305,00</td><td>355.284,36</td></tr>
+        <tr class="lot"><td>26/02/2026</td><td>Frigorífico Vale Company</td><td>36</td><td>776,81</td><td>334,33</td><td>259.714,08</td></tr>
+        <tr class="lot"><td>27/02/2026</td><td>Frigorífico Estrela</td><td>54</td><td>1.153,04</td><td>339,32</td><td>391.246,74</td></tr>
+        <tr class="lot"><td>02/04/2026</td><td>Agra Agronindustrial</td><td>54</td><td>1.118,48</td><td>350,00</td><td>391.474,62</td></tr>
+        <tr class="lot"><td>05/04/2026</td><td>Frigorífico Vale Company</td><td>108</td><td>2.328,26</td><td>359,77</td><td>837.646,92</td></tr>
+        <tr class="spacer"><td colspan="6"></td></tr>
+        <tr class="total"><td>Total Geral</td><td>Vários</td><td>699</td><td>14.804,80</td><td>342,87</td><td>5.151.805,27</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footnote">
+    Giro de Estoque = cabeças vendidas ÷ soma dos saldos iniciais mensais do ano-base 2025 (13.924 cabeças). Média R$/@ é aritmética por lote.
+  </div>
+
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">07</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

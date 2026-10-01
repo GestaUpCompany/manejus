@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E;
+  --green: #17A34A;
+  --green-dark: #0F7A38;
+  --ink: #12263A;
+  --muted: #5B6B7B;
+  --line: #E3E8EE;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page {
+  width: 1280px; height: 720px; position: relative; overflow: hidden;
+  background: #fff; display: flex; flex-direction: column;
+}
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px 8px 48px;
+}
+.title-block .kicker {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  color: var(--green-dark); text-transform: uppercase; margin-bottom: 6px;
+}
+.title-block h1 { font-size: 30px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.page-logo { height: 62px; }
+
+.kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  padding: 4px 48px 12px 48px;
+}
+.kpi {
+  border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green);
+  padding: 9px 14px 8px 14px; background: #fff;
+}
+.kpi .lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 3px;
+}
+.kpi .val { font-size: 22px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.content { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 30px; padding: 0 48px; flex: 1; }
+.chart-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 4px;
+}
+svg { display: block; width: 100%; }
+.axis text { font-family: 'Archivo'; font-size: 10.5px; fill: var(--muted); font-weight: 600; }
+.vlbl { font-family: 'Archivo'; font-size: 9.5px; font-weight: 600; fill: var(--blue); }
+
+.rtable { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.rtable th {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted); text-align: left; padding: 5px 8px; border-bottom: 1.5px solid var(--blue);
+}
+.rtable th.num { text-align: right; }
+.rtable td { padding: 5.5px 8px; border-bottom: 1px solid var(--line); color: var(--ink); }
+.rtable td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.rtable tr.emp td {
+  background: #EAF6EE; font-weight: 700; color: var(--blue);
+  border-left: 3px solid var(--green);
+}
+.rtable tr.rec td:first-child { padding-left: 24px; color: var(--muted); }
+.rtable tr.total td {
+  font-weight: 800; color: var(--blue); border-top: 2px solid var(--blue); border-bottom: none;
+}
+
+.tipo-panel {
+  margin-top: 22px; border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px 18px; display: flex; align-items: center; gap: 14px;
+}
+.tipo-panel .t-lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; }
+.tipo-panel .t-name { font-size: 13.5px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+.tipo-panel .t-val { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+
+.page-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 48px 18px 48px; font-size: 11px; color: var(--muted);
+}
+.page-foot .num { font-weight: 800; color: var(--blue); font-size: 13px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="title-block">
+      <div class="kicker">Jan – Ago · 2026 · Recebimentos realizados</div>
+      <h1>Receitas por Tipo e Empresa</h1>
+    </div>
+    <img class="page-logo" src="../../tmp_pbix/Report/StaticResources/RegisteredResources/Gestaup_Intelligence-0127124017850949067.png" alt="Gesta'Up Intelligence">
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">Receita Total</div><div class="val"><small>R$</small> 5.151.805,27</div></div>
+    <div class="kpi"><div class="lbl">Faturamento Médio Mensal</div><div class="val"><small>R$</small> 643.975,66</div></div>
+    <div class="kpi"><div class="lbl">Faturamento por ha</div><div class="val"><small>R$</small> 9.183,25</div></div>
+    <div class="kpi"><div class="lbl">Faturamento por cab.</div><div class="val"><small>R$</small> 3.624,54</div></div>
+  </div>
+
+  <div class="content">
+    <div>
+      <div class="chart-title">Faturamento por hectare por mês</div>
+      <!-- série: 633,31 | 1.160,36 | 0 | 2.190,95 | 1.743,69 | 1.628,49 | 809,17 | 1.017,29
+           max 2.191 -> h = v/2191*185; base y=245 -->
+      <svg viewBox="0 0 640 285" preserveAspectRatio="none">
+        <line x1="16" y1="245" x2="624" y2="245" stroke="#C9D2DB" stroke-width="1"/>
+        <line x1="16" y1="184" x2="624" y2="184" stroke="#EDF1F5" stroke-width="1"/>
+        <line x1="16" y1="123" x2="624" y2="123" stroke="#EDF1F5" stroke-width="1"/>
+        <line x1="16" y1="62"  x2="624" y2="62"  stroke="#EDF1F5" stroke-width="1"/>
+        <g fill="#17A34A" opacity="0.92">
+          <rect x="22"  y="192" width="44" height="53"  rx="3"/>
+          <rect x="98"  y="147" width="44" height="98"  rx="3"/>
+          <rect x="174" y="244" width="44" height="1"   rx="1"/>
+          <rect x="250" y="60"  width="44" height="185" rx="3"/>
+          <rect x="326" y="98"  width="44" height="147" rx="3"/>
+          <rect x="402" y="107" width="44" height="138" rx="3"/>
+          <rect x="478" y="177" width="44" height="68"  rx="3"/>
+          <rect x="554" y="159" width="44" height="86"  rx="3"/>
+        </g>
+        <g class="vlbl" text-anchor="middle">
+          <text x="44"  y="184">R$ 633,31</text>
+          <text x="120" y="139">R$ 1.160,36</text>
+          <text x="196" y="235">R$ 0,00</text>
+          <text x="272" y="52">R$ 2.190,95</text>
+          <text x="348" y="90">R$ 1.743,69</text>
+          <text x="424" y="99">R$ 1.628,49</text>
+          <text x="500" y="169">R$ 809,17</text>
+          <text x="576" y="151">R$ 1.017,29</text>
+        </g>
+        <g class="axis" text-anchor="middle">
+          <text x="44" y="266">Jan</text><text x="120" y="266">Fev</text><text x="196" y="266">Mar</text><text x="272" y="266">Abr</text>
+          <text x="348" y="266">Mai</text><text x="424" y="266">Jun</text><text x="500" y="266">Jul</text><text x="576" y="266">Ago</text>
+        </g>
+      </svg>
+
+      <div class="tipo-panel">
+        <svg viewBox="0 0 200 200" style="width: 92px; flex: none;">
+          <circle cx="100" cy="100" r="66" fill="none" stroke="#17A34A" stroke-width="20"/>
+          <text x="100" y="96" text-anchor="middle" font-family="Archivo" font-size="14" font-weight="800" fill="#0B3D6E">100%</text>
+          <text x="100" y="114" text-anchor="middle" font-family="Archivo" font-size="10" font-weight="600" fill="#5B6B7B">do período</text>
+        </svg>
+        <div>
+          <div class="t-lbl">Faturamento por tipo de receita</div>
+          <div class="t-name">Venda de Gado</div>
+          <div class="t-val">R$ 5.151.805,27 · única classificação no período</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="chart-title">Recebimentos por empresa pagante</div>
+      <table class="rtable">
+        <thead><tr><th>Empresa · Data</th><th class="num">Valor R$</th><th class="num">%</th></tr></thead>
+        <tbody>
+          <tr class="emp"><td>Agra Agroindustrial</td><td class="num">2.638.551,99</td><td class="num">51,2%</td></tr>
+          <tr class="rec"><td>27/01/2026</td><td class="num">355.284,36</td><td class="num">6,9%</td></tr>
+          <tr class="rec"><td>02/04/2026</td><td class="num">391.474,62</td><td class="num">7,6%</td></tr>
+          <tr class="rec"><td>01/05/2026</td><td class="num">978.212,16</td><td class="num">19,0%</td></tr>
+          <tr class="rec"><td>08/06/2026</td><td class="num">913.580,85</td><td class="num">17,7%</td></tr>
+          <tr class="emp"><td>Frigorífico Vale Company</td><td class="num">1.551.304,22</td><td class="num">30,1%</td></tr>
+          <tr class="rec"><td>26/02/2026</td><td class="num">259.714,08</td><td class="num">5,0%</td></tr>
+          <tr class="rec"><td>05/04/2026</td><td class="num">837.646,92</td><td class="num">16,3%</td></tr>
+          <tr class="rec"><td>01/07/2026</td><td class="num">453.943,22</td><td class="num">8,8%</td></tr>
+          <tr class="emp"><td>Frigorífico Estrela</td><td class="num">961.949,06</td><td class="num">18,7%</td></tr>
+          <tr class="rec"><td>27/02/2026</td><td class="num">391.246,74</td><td class="num">7,6%</td></tr>
+          <tr class="rec"><td>19/08/2026</td><td class="num">570.702,32</td><td class="num">11,1%</td></tr>
+          <tr class="total"><td>Total Geral</td><td class="num">5.151.805,27</td><td class="num">100%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">16</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

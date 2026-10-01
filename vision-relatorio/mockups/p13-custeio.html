@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E;
+  --green: #17A34A;
+  --green-dark: #0F7A38;
+  --ink: #12263A;
+  --muted: #5B6B7B;
+  --line: #E3E8EE;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page {
+  width: 1280px; height: 720px; position: relative; overflow: hidden;
+  background: #fff; display: flex; flex-direction: column;
+}
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px 8px 48px;
+}
+.title-block .kicker {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  color: var(--green-dark); text-transform: uppercase; margin-bottom: 6px;
+}
+.title-block h1 { font-size: 30px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.page-logo { height: 62px; }
+
+.kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  padding: 4px 48px 12px 48px;
+}
+.kpi {
+  border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green);
+  padding: 9px 14px 8px 14px; background: #fff;
+}
+.kpi .lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 3px;
+}
+.kpi .val { font-size: 22px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.chart1 { padding: 0 48px 4px 48px; }
+.chart2 { padding: 4px 48px 0 48px; flex: 1; }
+.chart-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 2px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
+.legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.legend .sw.b { background: var(--blue); }
+.legend .sw.g { background: var(--green); }
+svg { display: block; width: 100%; }
+.axis text { font-family: 'Archivo'; font-size: 10.5px; fill: var(--muted); font-weight: 600; }
+.vlbl { font-family: 'Archivo'; font-size: 9.5px; font-weight: 600; fill: var(--blue); }
+.vlbl.w { fill: #fff; }
+
+.page-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 48px 18px 48px; font-size: 11px; color: var(--muted);
+}
+.page-foot .num { font-weight: 800; color: var(--blue); font-size: 13px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="title-block">
+      <div class="kicker">Jan – Ago · 2026 · Somente Custos Fixos e Variáveis</div>
+      <h1>Relatório de Custeio</h1>
+    </div>
+    <img class="page-logo" src="../../tmp_pbix/Report/StaticResources/RegisteredResources/Gestaup_Intelligence-0127124017850949067.png" alt="Gesta'Up Intelligence">
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">Desembolso Total (CF+CV)</div><div class="val"><small>R$</small> 1.342.866,84</div></div>
+    <div class="kpi"><div class="lbl">Despesa Média Mensal</div><div class="val"><small>R$</small> 167.858,36</div></div>
+    <div class="kpi"><div class="lbl">Custeio por ha</div><div class="val"><small>R$</small> 2.393,70</div></div>
+    <div class="kpi"><div class="lbl">Custo Diária/cab</div><div class="val"><small>R$</small> 3,89</div></div>
+  </div>
+
+  <div class="chart1">
+    <div class="chart-title">Custeio por hectare por mês</div>
+    <!-- R$/ha: 253,33 | 144,83 | 267,36 | 345,44 | 380,25 | 379,79 | 268,86 | 353,84; max ~390 -> y=158-v/390*118 -->
+    <svg viewBox="0 0 1184 178" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#17A34A" stop-opacity="0.30"/>
+          <stop offset="1" stop-color="#17A34A" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <line x1="0" y1="158" x2="1184" y2="158" stroke="#C9D2DB" stroke-width="1"/>
+      <line x1="0" y1="105" x2="1184" y2="105" stroke="#EDF1F5" stroke-width="1"/>
+      <line x1="0" y1="52"  x2="1184" y2="52"  stroke="#EDF1F5" stroke-width="1"/>
+      <path d="M74,81 L222,114 L370,77 L518,53 L666,43 L814,43 L962,77 L1110,51 L1110,158 L74,158 Z" fill="url(#cg)"/>
+      <polyline points="74,81 222,114 370,77 518,53 666,43 814,43 962,77 1110,51"
+        fill="none" stroke="#17A34A" stroke-width="3" stroke-linejoin="round"/>
+      <g fill="#17A34A">
+        <circle cx="74" cy="81" r="4"/><circle cx="222" cy="114" r="4"/><circle cx="370" cy="77" r="4"/><circle cx="518" cy="53" r="4"/>
+        <circle cx="666" cy="43" r="4"/><circle cx="814" cy="43" r="4"/><circle cx="962" cy="77" r="4"/><circle cx="1110" cy="51" r="4"/>
+      </g>
+      <g class="vlbl" text-anchor="middle">
+        <text x="74" y="71">R$ 253,33</text><text x="222" y="104">R$ 144,83</text><text x="370" y="67">R$ 267,36</text>
+        <text x="518" y="43">R$ 345,44</text><text x="666" y="33">R$ 380,25</text><text x="814" y="33">R$ 379,79</text>
+        <text x="962" y="67">R$ 268,86</text><text x="1110" y="41">R$ 353,84</text>
+      </g>
+      <g class="axis" text-anchor="middle">
+        <text x="74" y="174">Jan</text><text x="222" y="174">Fev</text><text x="370" y="174">Mar</text><text x="518" y="174">Abr</text>
+        <text x="666" y="174">Mai</text><text x="814" y="174">Jun</text><text x="962" y="174">Jul</text><text x="1110" y="174">Ago</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="chart2">
+    <div class="chart-title">
+      Custo diário por cabeça × rebanho médio
+      <span class="legend"><span><span class="sw b"></span>Custo Diária/cab</span><span><span class="sw g"></span>Rebanho Médio</span></span>
+    </div>
+    <!-- barras: custo diário 3,01|1,97|3,42|4,73|5,25|5,22|3,41|4,26; max 5,5 -> h=v/5.5*150. base y=160.
+         linha: rebanho médio 1522|1469|1415|1365|1311|1361|1426|1503; 1300->150, 1550->60 (y=150-(v-1300)/250*90) -->
+    <svg viewBox="0 0 1184 240" preserveAspectRatio="none">
+      <line x1="0" y1="200" x2="1184" y2="200" stroke="#C9D2DB" stroke-width="1"/>
+      <line x1="0" y1="137" x2="1184" y2="137" stroke="#EDF1F5" stroke-width="1"/>
+      <line x1="0" y1="74"  x2="1184" y2="74"  stroke="#EDF1F5" stroke-width="1"/>
+      <g fill="#0B3D6E" opacity="0.92">
+        <rect x="29"   y="96"  width="90" height="104" rx="4"/>
+        <rect x="177"  y="132" width="90" height="68"  rx="4"/>
+        <rect x="325"  y="82"  width="90" height="118" rx="4"/>
+        <rect x="473"  y="37"  width="90" height="163" rx="4"/>
+        <rect x="621"  y="19"  width="90" height="181" rx="4"/>
+        <rect x="769"  y="20"  width="90" height="180" rx="4"/>
+        <rect x="917"  y="82"  width="90" height="118" rx="4"/>
+        <rect x="1065" y="53"  width="90" height="147" rx="4"/>
+      </g>
+      <polyline points="74,92 222,116 370,139 518,161 666,185 814,163 962,135 1110,101"
+        fill="none" stroke="#17A34A" stroke-width="3" stroke-linejoin="round"/>
+      <g fill="#17A34A">
+        <circle cx="74" cy="92" r="4"/><circle cx="222" cy="116" r="4"/><circle cx="370" cy="139" r="4"/><circle cx="518" cy="161" r="4"/>
+        <circle cx="666" cy="185" r="4"/><circle cx="814" cy="163" r="4"/><circle cx="962" cy="135" r="4"/><circle cx="1110" cy="101" r="4"/>
+      </g>
+      <g class="vlbl w" text-anchor="middle" font-size="9.5" font-weight="700">
+        <text x="74" y="113">R$ 3,01</text><text x="222" y="149">R$ 1,97</text><text x="370" y="99">R$ 3,42</text>
+        <text x="518" y="54">R$ 4,73</text><text x="666" y="36">R$ 5,25</text><text x="814" y="37">R$ 5,22</text>
+        <text x="962" y="99">R$ 3,41</text><text x="1110" y="70">R$ 4,26</text>
+      </g>
+      <g text-anchor="middle" font-family="Archivo" font-size="9" font-weight="600">
+        <text x="74" y="83" fill="#0F7A38">1.522</text><text x="222" y="107" fill="#0F7A38">1.469</text>
+        <text x="370" y="130" fill="#fff">1.415</text><text x="518" y="152" fill="#fff">1.365</text>
+        <text x="666" y="176" fill="#fff">1.311</text><text x="814" y="154" fill="#fff">1.361</text>
+        <text x="962" y="126" fill="#fff">1.426</text><text x="1110" y="92" fill="#fff">1.503</text>
+      </g>
+      <g class="axis" text-anchor="middle">
+        <text x="74" y="222">Jan</text><text x="222" y="222">Fev</text><text x="370" y="222">Mar</text><text x="518" y="222">Abr</text>
+        <text x="666" y="222">Mai</text><text x="814" y="222">Jun</text><text x="962" y="222">Jul</text><text x="1110" y="222">Ago</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">13</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

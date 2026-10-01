@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E;
+  --green: #17A34A;
+  --green-dark: #0F7A38;
+  --ink: #12263A;
+  --muted: #5B6B7B;
+  --line: #E3E8EE;
+  --soft: #F4F7F9;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page {
+  width: 1280px; height: 720px; position: relative; overflow: hidden;
+  background: #fff; display: flex; flex-direction: column;
+}
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px 8px 48px;
+}
+.title-block .kicker {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  color: var(--green-dark); text-transform: uppercase; margin-bottom: 6px;
+}
+.title-block h1 { font-size: 30px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.page-logo { height: 62px; }
+
+.kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  padding: 4px 48px 14px 48px;
+}
+.kpi {
+  border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green);
+  padding: 9px 14px 8px 14px; background: #fff;
+}
+.kpi .lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 3px;
+}
+.kpi .val { font-size: 22px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.table-wrap { padding: 0 48px; flex: 1; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted); padding: 8px 10px 10px 10px; border-bottom: 2px solid var(--blue);
+  text-align: right; white-space: nowrap;
+}
+thead th:first-child { text-align: left; }
+tbody td { padding: 11px 10px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); font-size: 12.5px; }
+tbody td:first-child { text-align: left; }
+
+tr.tipo td {
+  background: #0B3D6E; color: #fff; font-weight: 800; border-bottom: none;
+}
+tr.tipo td:first-child { border-radius: 6px 0 0 6px; }
+tr.tipo td:last-child { border-radius: 0 6px 6px 0; }
+tr.tipo .twist { display: inline-block; margin-right: 8px; font-size: 10px; }
+
+tr.cat td {
+  background: #EFF6F1; font-weight: 700; color: var(--ink);
+}
+tr.cat td:first-child { padding-left: 26px; }
+tr.cat td:first-child::before {
+  content: ''; display: inline-block; width: 10px; height: 2px;
+  background: var(--green); margin-right: 8px; vertical-align: 3px;
+}
+
+tr.lot td { color: #3D4F61; }
+tr.lot td:first-child { padding-left: 52px; color: var(--muted); font-weight: 500; }
+
+tr.total td {
+  font-weight: 800; color: var(--blue); border-top: 2px solid var(--blue);
+  border-bottom: none; font-size: 12.5px;
+}
+tr.spacer td { padding: 2px; border: none; }
+
+.footnote {
+  padding: 8px 48px 0 48px; font-size: 10px; color: var(--muted);
+  font-style: italic;
+}
+
+.page-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 48px 20px 48px; font-size: 11px; color: var(--muted);
+}
+.page-foot .num { font-weight: 800; color: var(--blue); font-size: 13px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="title-block">
+      <div class="kicker">Jan – Ago · 2026</div>
+      <h1>Resumo de Compras</h1>
+    </div>
+    <img class="page-logo" src="../../tmp_pbix/Report/StaticResources/RegisteredResources/Gestaup_Intelligence-0127124017850949067.png" alt="Gesta'Up Intelligence">
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">N° de Animais</div><div class="val">783 <small>cab</small></div></div>
+    <div class="kpi"><div class="lbl">Total da Compra</div><div class="val"><small>R$</small> 2.763.028,00</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Tipo · Categoria · Data</th>
+          <th>N° Cabeças</th>
+          <th>Total @</th>
+          <th>Peso Médio kg/cab</th>
+          <th>Média R$/@</th>
+          <th>Média R$/cab</th>
+          <th>Total R$</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="tipo"><td><span class="twist">▾</span>Comercial</td><td>783</td><td>5.798,60</td><td>207,97</td><td>503,40</td><td>3.423,69</td><td>2.763.028,00</td></tr>
+        <tr class="cat"><td>13 a 24 meses · Macho</td><td>39</td><td>278,20</td><td>214,00</td><td>499,07</td><td>3.560,00</td><td>138.840,00</td></tr>
+        <tr class="lot"><td>10/03/2026</td><td>39</td><td>278,20</td><td>214,00</td><td>499,07</td><td>3.560,00</td><td>138.840,00</td></tr>
+        <tr class="cat"><td>5 a 12 meses · Macho</td><td>744</td><td>5.520,40</td><td>207,36</td><td>503,83</td><td>3.410,06</td><td>2.624.188,00</td></tr>
+        <tr class="lot"><td>10/04/2026 · 2 lotes</td><td>121</td><td>806,67</td><td>200,00</td><td>520,50</td><td>3.470,00</td><td>437.250,00</td></tr>
+        <tr class="lot"><td>14/05/2026</td><td>36</td><td>240,00</td><td>200,00</td><td>539,35</td><td>3.595,64</td><td>129.443,00</td></tr>
+        <tr class="lot"><td>26/05/2026</td><td>160</td><td>1.847,07</td><td>346,33</td><td>377,68</td><td>4.360,00</td><td>697.600,00</td></tr>
+        <tr class="lot"><td>29/06/2026 · 2 lotes</td><td>82</td><td>556,67</td><td>203,66</td><td>459,74</td><td>3.120,00</td><td>255.840,00</td></tr>
+        <tr class="lot"><td>06/07/2026</td><td>107</td><td>642,00</td><td>180,00</td><td>516,67</td><td>3.100,00</td><td>331.700,00</td></tr>
+        <tr class="lot"><td>19/08/2026 · 2 lotes</td><td>118</td><td>708,00</td><td>180,00</td><td>572,08</td><td>3.432,50</td><td>412.355,00</td></tr>
+        <tr class="lot"><td>20/08/2026</td><td>120</td><td>720,00</td><td>180,00</td><td>500,00</td><td>3.000,00</td><td>360.000,00</td></tr>
+        <tr class="spacer"><td colspan="7"></td></tr>
+        <tr class="total"><td>Total Geral</td><td>783</td><td>5.798,60</td><td>207,97</td><td>503,40</td><td>3.423,69</td><td>2.763.028,00</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footnote">
+    Peso médio, R$/@ e R$/cab são médias aritméticas por lote de compra; para os indicadores ponderados por volume, ver Compra de Animais.
+  </div>
+
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">05</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

@@ -68,7 +68,11 @@ Tabela estruturada `Tabela1`, header na **linha 7**, dados a partir da linha 8 (
 
 Principais planos de contas: CF — Manut. Máquinas 264.056,06; Terceirizados 165.644,33; Mão de Obra 139.292,59; Consultoria 31.025,00. CV — Insumos Nutrição 578.360,35; Medicamentos/Vacinas 26.194,00; Fretes 14.895,08; Combustíveis 13.691,87. Investimentos — Benfeitorias Sede 138.715,89; Cercas 63.875,03; Implementos 30.000,00.
 
-## 5. Checklist Vision
+## 5. Regra de apresentação (decisão do usuário)
+
+**Não abreviar valores monetários nos rótulos de dados** — usar sempre o valor completo em pt-BR (`R$ 204.858,91`, `R$ 1.044.530,25`), nunca "R$ 205 mil" ou "R$ 1,04 mi". Vale para esta página e para todas as demais do relatório.
+
+## 6. Checklist Vision
 
 1. Ler `Desembolsos Realizados` (linhas 8+): C, D, F, G, H, N, R.
 2. Filtrar período por C (Data Pagamento); status 'Pago' (verificar se modelo filtra ou se a fonte só traz realizados).

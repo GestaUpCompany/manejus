@@ -65,3 +65,8 @@ Consistente com `Diárias_Categoria` (p.3): Nascimentos jan–ago = 2 na matriz 
 3. ΣC (card/donut/coluna), AVG(D) — média simples por registro, não ponderada pela Quant. (neste caso idêntico; registre a semântica como AVG por linha).
 4. Mensal: ΣC e AVG(D) por mês de B, exibindo só meses com dados.
 5. Slicers: G, H, B.
+
+## 6. Design aprovado (mockup `p8-nascimentos.html`)
+
+- 2 cards + três painéis: combo mensal (só meses com registro), coluna raça × sexo e donut de sexo com a mesma regra da p.4.
+- O combo mensal é **dinâmico**: com nascimentos em mais meses o eixo cresce e as barras se acomodam; não fixar largura de barra nem posições absolutas na implementação.
