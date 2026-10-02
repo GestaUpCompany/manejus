@@ -51,16 +51,16 @@ export function render({ model, ctx }) {
   }).join('');
 
   const extraCss = `
-    thead th { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); padding: 8px 10px 10px 10px; border-bottom: 2px solid var(--blue); }
+    thead th { font-size:11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); padding: 8px 10px 10px 10px; border-bottom: 2px solid var(--blue); }
     thead th:first-child, thead th:nth-child(2) { text-align: left; }
     tbody td { text-align: right; }
     tbody td:first-child, tbody td.comp { text-align: left; }
-    tbody td.comp { color: var(--muted); font-size: 11.5px; font-weight: 500; }
+    tbody td.comp { color: var(--muted); font-size:12.5px; font-weight: 500; }
     tr.tipo td { background: var(--blue); color: #fff; font-weight: 800; border-bottom: none; }
     tr.tipo td.comp { color: #BCD3E8; }
     tr.tipo td:first-child { border-radius: 6px 0 0 6px; }
     tr.tipo td:last-child { border-radius: 0 6px 6px 0; }
-    tr.tipo .twist { display: inline-block; margin-right: 8px; font-size: 10px; }
+    tr.tipo .twist { display: inline-block; margin-right: 8px; font-size:11px; }
     tr.cat td { background: #EFF6F1; font-weight: 700; }
     tr.cat td.comp { color: var(--muted); font-weight: 600; }
     tr.cat td:first-child { padding-left: 26px; }
@@ -69,10 +69,10 @@ export function render({ model, ctx }) {
     tr.lot td:first-child { padding-left: 52px; color: var(--muted); font-weight: 500; }
     tr.spacer td { padding: 3px; border: none; }
     .table-wrap { flex: 1; padding: 0 48px; }
-    table.dense { font-size: 11px; }
+    table.dense { font-size:12px; }
     table.dense tbody td { padding: 3.5px 8px; }
     table.dense thead th { padding: 5px 8px 7px 8px; }
-    .footnote { padding: 6px 48px 0 48px; font-size: 10px; color: var(--muted); font-style: italic; }
+    .footnote { padding: 6px 48px 0 48px; font-size:11px; color: var(--muted); font-style: italic; }
   `;
 
   const allLotes = v.pivot.flatMap(t => t.categorias.flatMap(c => c.lotes));
@@ -109,6 +109,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Resumo de Vendas',
-    pageNum: 7, logoSrc: ctx.logoSrc, body, extraCss,
+    pageNum: 7, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

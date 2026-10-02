@@ -24,7 +24,7 @@ export function render({ model, ctx }) {
   const area = areaChart({
     labels: d.mensal.map(m => mesLbl(m.mes)),
     values: d.mensal.map(m => m.valor),
-    W: 1184, H: 185, color: C.blue, labelFmt: fmtMoney,
+    W: 1184, H: 185, color: C.blue, labelFmt: fmtMoney, labelScale: 1.3,
   });
 
   const palette = [C.blue, C.green, C.greenLight, C.slate, C.muted];
@@ -49,19 +49,19 @@ export function render({ model, ctx }) {
 
   const extraCss = `
     .kpi { border-top-color: var(--blue); }
-    .chart1 { padding: 0 48px 2px 48px; }
-    .chart-row { display: grid; grid-template-columns: 1fr 1.25fr; gap: 24px; padding: 4px 48px 0 48px; flex: 1; }
+    .chart1 { padding: 0 48px 10px 48px; }
+    .chart-row { display: grid; grid-template-columns: 1fr 1.25fr; gap: 24px; padding: 14px 48px 0 48px; flex: 1; }
     .donut-wrap { display: flex; align-items: center; gap: 18px; }
-    .dlegend { display: flex; flex-direction: column; gap: 8px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+    .dlegend { display: flex; flex-direction: column; gap: 8px; font-size:12.5px; font-weight: 600; color: var(--ink); }
     .dlegend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
     .dlegend em { font-style: normal; color: var(--muted); font-weight: 500; margin-left: 7px; }
-    .rank-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-    .rank-table th { font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: right; padding: 4px 8px; border-bottom: 1.5px solid var(--blue); }
+    .rank-table { width: 100%; border-collapse: collapse; font-size:12.5px; }
+    .rank-table th { font-size:10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: right; padding: 4px 8px; border-bottom: 1.5px solid var(--blue); }
     .rank-table th:first-child, .rank-table th:nth-child(2) { text-align: left; }
     .rank-table td { padding: 4.5px 8px; border-bottom: 1px solid var(--line); color: var(--ink); }
     .rank-table td:first-child { text-align: center; color: var(--muted); font-weight: 700; width: 24px; }
     .rank-table td:nth-child(4), .rank-table td:last-child { text-align: right; }
-    .tag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.6px; padding: 1px 6px; border-radius: 4px; color: #fff; }
+    .tag { display: inline-block; font-size:10px; font-weight: 700; letter-spacing: 0.6px; padding: 1px 6px; border-radius: 4px; color: #fff; }
     .tag.cg { background: #0B3D6E; } .tag.cf { background: #17A34A; } .tag.cv { background: #7CC98A; }
     .tag.inv { background: #8FA3B5; } .tag.imp { background: #C9D2DB; color: #3D4F61; } .tag.fin { background: #5B6B7B; } .tag.x { background: #5B6B7B; }
     .rank-table tr.demais td { color: var(--muted); font-style: italic; }
@@ -97,6 +97,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Relatório de Desembolso',
-    pageNum: 11, logoSrc: ctx.logoSrc, body, extraCss,
+    pageNum: 11, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

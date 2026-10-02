@@ -35,7 +35,7 @@ export const ceilTo = (v, step) => Math.ceil(v / step) * step;
 /**
  * Combo chart: barras + linha + eixo de rótulos.
  * spec: {
- *   labels: ['Jan',...], W, H,
+ *   labels: ['Jan',...], W, H, labelScale (escala só os rótulos de dados, ex.: 1.3),
  *   bars: { values: [n], color, labelFmt: v=>str, labelInside: bool|'auto', topPad, bottomAxis, niceMax },
  *   line: { values: [n|null], color, labelFmt, domain: [lo,hi], labelBelow: bool }
  * }
@@ -43,7 +43,7 @@ export const ceilTo = (v, step) => Math.ceil(v / step) * step;
  * rótulo da linha em branco quando o ponto cai sobre a barra, na cor da linha quando fora.
  */
 export function comboChart(spec) {
-  const { labels, W = 1184, H = 175, bars, line } = spec;
+  const { labels, W = 1184, H = 175, bars, line, labelScale = 1 } = spec;
   const topPad = 22, axisY = H - 35, labelY = H - 12;
   const xb = xBand(labels.length, W);
   const bw = xb.barW;
@@ -53,7 +53,14 @@ export function comboChart(spec) {
   // calculado por série (números de barra são curtos; rótulos da linha são longos)
   const n = labels.length;
   const dense = n > 14;
-  const estW = (list) => Math.max(4, ...list.map(s => String(s).length)) * (dense ? 4.8 : 5.6) + 6;
+  // fontes efetivas dos rótulos de dados (inline style vence a classe CSS);
+  // estimativas de largura/colisão escalam junto para não rotular além do que cabe
+  const fsV = f((dense ? 8 : 10.5) * labelScale, 1);
+  const fsL = f((dense ? 7.5 : 10) * labelScale, 1);
+  // halo e peso não escalam: halo é recurso de legibilidade, não de ênfase, e
+  // halo/peso 700 em fonte maior dá aparência de negrito excessivo (CONVENCOES)
+  const stl = (px, extra = '') => labelScale === 1 ? '' : ` style="font-size:${px}px${extra}"`;
+  const estW = (list) => Math.max(4, ...list.map(s => String(s).length)) * (dense ? 4.8 : 5.6) * labelScale + 6;
   const barEvery = bars?.labelFmt
     ? Math.max(1, Math.ceil(estW(bVals.filter(v => v != null).map(v => bars.labelFmt(v))) / xb.step))
     : 1;
@@ -90,8 +97,13 @@ export function comboChart(spec) {
   const bLbl = bars ? bVals.map((v, i) => {
     if (!v || !bars.labelFmt || (i % barEvery !== 0 && v !== bPeak)) return null;
     const h = axisY - by(v);
-    const inside = bars.labelInside === true || (bars.labelInside !== false && h >= 26);
-    return { y: inside ? by(v) + 15 : by(v) - 6, inside, x: xb.cx(i), txt: bars.labelFmt(v) };
+    const txt = bars.labelFmt(v);
+    // rótulo interno exige largura além de altura: texto branco mais largo que a
+    // barra vaza para o fundo branco e fica invisível. Avaliado só quando a página
+    // adota labelScale ≠ 1, para não mudar o layout das demais nesta etapa.
+    const fitsW = labelScale === 1 || String(txt).length * (dense ? 4.4 : 5.6) * labelScale <= bw - 4;
+    const inside = fitsW && (bars.labelInside === true || (bars.labelInside !== false && h >= 26 * labelScale));
+    return { y: inside ? by(v) + Math.round(15 * labelScale) : by(v) - Math.round(6 * labelScale), inside, x: xb.cx(i), txt };
   }) : [];
 
   // linha: por padrão liga através dos meses sem dado (connectNulls);
@@ -125,19 +137,31 @@ export function comboChart(spec) {
       const [px, py] = pts[i];
       const bt = barTops[i];
       const txt = line.labelFmt(v);
-      const lw = String(txt).length * (dense ? 4.4 : 5.2);
-      let ty = py + 17;
-      if (ty > axisY - 8) ty = py - 10;
+      const lw = String(txt).length * (dense ? 4.4 : 5.2) * labelScale;
+      let ty = py + Math.round(16 * labelScale + 1);
+      if (ty > axisY - 8) ty = py - Math.round(10 * labelScale);
       const bl = bLbl[i];
-      if (bl && Math.abs(ty - bl.y) < 12) ty = ty >= py ? bl.y + 16 : bl.y - 14;
+      if (bl && Math.abs(ty - bl.y) < 12 * labelScale) ty = ty >= py ? bl.y + Math.round(16 * labelScale) : bl.y - Math.round(14 * labelScale);
       // colide com outro rótulo da linha já posicionado? pula (o pico nunca pula)
-      const hit = placed.some(p => Math.abs(p.x - px) < (p.w + lw) / 2 + 3 && Math.abs(p.y - ty) < 11);
+      const hit = placed.some(p => Math.abs(p.x - px) < (p.w + lw) / 2 + 3 && Math.abs(p.y - ty) < 11 * labelScale);
       if (hit && v !== lPeak) continue;
       // branco só quando o rótulo cabe inteiro dentro da barra; se estreita,
       // fica na cor da linha com halo, legível sobre qualquer fundo
       const fitsBar = lw <= bw - 4;
       const cls = fitsBar && ty > bt - 4 && ty < axisY - 4 ? 'llbl w' : 'llbl';
       placed.push({ x: px, y: ty, w: lw });
+      if (labelScale !== 1) {
+        // mesma técnica do areaChart: halo por cópias brancas deslocadas ±1px
+        // (fill only); rótulo .w dentro de barra não precisa de halo
+        const base = `text-anchor="middle" font-family="Archivo" font-size="${fsL}" font-weight="600"`;
+        if (cls !== 'llbl w') {
+          for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+            out.push(`<text x="${f(px + dx)}" y="${f(ty + dy)}" ${base} fill="#fff">${esc(txt)}</text>`);
+          }
+        }
+        out.push(`<text x="${f(px)}" y="${f(ty)}" ${base} fill="${cls === 'llbl w' ? '#fff' : C.greenDark}">${esc(txt)}</text>`);
+        continue;
+      }
       out.push(`<text class="${cls}${dense ? ' dense' : ''}" x="${f(px)}" y="${f(ty)}" text-anchor="middle">${esc(txt)}</text>`);
     }
   }
@@ -145,7 +169,7 @@ export function comboChart(spec) {
   // emite rótulos de barra (pós-resolução de colisão com a linha)
   for (const bl of bLbl) {
     if (!bl) continue;
-    out.push(`<text class="${bl.inside ? 'vlbl w' : 'vlbl'}${bars?.labelCls ? ' ' + bars.labelCls : ''}${dense ? ' dense' : ''}" x="${f(bl.x)}" y="${f(bl.y)}" text-anchor="middle">${esc(bl.txt)}</text>`);
+    out.push(`<text class="${bl.inside ? 'vlbl w' : 'vlbl'}${bars?.labelCls ? ' ' + bars.labelCls : ''}${dense ? ' dense' : ''}" x="${f(bl.x)}" y="${f(bl.y)}" text-anchor="middle"${stl(fsV, ';font-weight:600')}>${esc(bl.txt)}</text>`);
   }
 
   // eixo x — rótulo longo demais para o slot quebra em duas linhas no separador;
@@ -177,7 +201,7 @@ export function comboChart(spec) {
 
 // Área com linha + preenchimento em gradiente. Rótulos só em pontos > 0.
 let __gid = 0;
-export function areaChart({ labels, values, W = 1184, H = 190, color = C.green, labelFmt = (v) => v }) {
+export function areaChart({ labels, values, W = 1184, H = 190, color = C.green, labelFmt = (v) => v, labelScale = 1 }) {
   const topPad = 20, axisY = H - 25, labelY = H - 6;
   const n = labels.length;
   const xb = xBand(n, W);
@@ -200,17 +224,32 @@ export function areaChart({ labels, values, W = 1184, H = 190, color = C.green, 
   out.push(`<polyline points="${linePts}" fill="none" stroke="${color}" stroke-width="3" stroke-linejoin="round"/>`);
   // densidade de rótulos por largura estimada; máximo sempre rotulado; anti-colisão por proximidade
   const maxV = Math.max(...values, 0);
-  const cw = dense ? 4.8 : 6.4;
+  const fsV = f((dense ? 8 : 10.5) * labelScale, 1);
+  const cw = (dense ? 4.8 : 6.4) * labelScale;
   const lblW = Math.max(...values.filter(v => v).map(v => labelFmt(v).length), 1) * cw + 10;
   const slot = n > 1 ? xb.cx(1) - xb.cx(0) : W;
   const step = Math.max(1, Math.ceil(lblW / slot));
   const placed = [];
   const tryLabel = (i) => {
     const [x, y] = pts[i];
-    if (placed.some(p => Math.abs(p[0] - x) < lblW * 0.92 && Math.abs(p[1] - y) < 14)) return;
+    if (placed.some(p => Math.abs(p[0] - x) < lblW * 0.92 && Math.abs(p[1] - y) < 14 * labelScale)) return;
     placed.push([x, y]);
     const tx = Math.min(Math.max(x, lblW / 2), W - lblW / 2);
-    out.push(`<text class="vlbl h${dense ? ' dense' : ''}" x="${f(tx)}" y="${f(y - 10)}" text-anchor="middle">${esc(labelFmt(values[i]))}</text>`);
+    const ty = f(y - Math.round(10 * labelScale));
+    const txt = esc(labelFmt(values[i]));
+    if (labelScale === 1) {
+      out.push(`<text class="vlbl h${dense ? ' dense' : ''}" x="${f(tx)}" y="${ty}" text-anchor="middle">${txt}</text>`);
+      return;
+    }
+    // halo sem stroke: cópias brancas deslocadas ±1px por trás. O stroke branco
+    // da classe `.h` vaza para o miolo dos glifos na rasterização do PDF
+    // (texto vazado), e cópia ampliada por scale vira "sombra" visível.
+    const base = `text-anchor="middle" font-family="Archivo" font-size="${fsV}" font-weight="600"`;
+    const yNum = y - Math.round(10 * labelScale);
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      out.push(`<text x="${f(tx + dx)}" y="${f(yNum + dy)}" ${base} fill="#fff">${txt}</text>`);
+    }
+    out.push(`<text x="${f(tx)}" y="${f(yNum)}" ${base} fill="${C.blue}">${txt}</text>`);
   };
   const iMax = values.indexOf(maxV);
   for (let i = 0; i < n; i++) {
@@ -234,8 +273,9 @@ export function areaChart({ labels, values, W = 1184, H = 190, color = C.green, 
  * rows: [{ label, a, b }] — a e b em valores absolutos; normaliza a/(a+b).
  * Rótulo % dentro do segmento quando h >= 16px; meses sem CF+CV viram slot vazio.
  */
-export function stackedPctChart({ rows, W = 720, H = 190, colors = [C.green, C.greenLight] }) {
+export function stackedPctChart({ rows, W = 720, H = 190, colors = [C.green, C.greenLight], labelScale = 1 }) {
   const topPad = 14, axisY = H - 26, labelY = H - 8, barH = axisY - topPad;
+  const segStl = labelScale === 1 ? '' : ` style="font-size:${f(9.5 * labelScale, 1)}px"`;
   const n = rows.length;
   const xb = xBand(n, W, { padL: 18, padR: 18, barRatio: 0.42, maxBarW: 56 });
   const out = [`<line x1="0" y1="${axisY}" x2="${W}" y2="${axisY}" stroke="#C9D2DB" stroke-width="1"/>`];
@@ -249,10 +289,11 @@ export function stackedPctChart({ rows, W = 720, H = 190, colors = [C.green, C.g
     out.push(`<rect x="${x}" y="${f(axisY - hA)}" width="${w}" height="${f(hA)}" fill="${colors[0]}"/>`);
     out.push(`<rect x="${x}" y="${f(topPad)}" width="${w}" height="${f(hB)}" fill="${colors[1]}"/>`);
     const cx = f(xb.cx(i));
-    const fit = hA >= 16 && xb.barW >= 28;
-    const fitB = hB >= 16 && xb.barW >= 28;
-    if (fit) out.push(`<text class="seglbl" x="${cx}" y="${f(axisY - hA / 2 + 3)}" text-anchor="middle">${fmtPct0(pctA)}</text>`);
-    if (fitB) out.push(`<text class="seglbl" x="${cx}" y="${f(topPad + hB / 2 + 3)}" text-anchor="middle">${fmtPct0(b / tot)}</text>`);
+    const fit = hA >= 16 * labelScale && xb.barW >= 28;
+    const fitB = hB >= 16 * labelScale && xb.barW >= 28;
+    const dyo = 3 * labelScale;
+    if (fit) out.push(`<text class="seglbl" x="${cx}" y="${f(axisY - hA / 2 + dyo)}" text-anchor="middle"${segStl}>${fmtPct0(pctA)}</text>`);
+    if (fitB) out.push(`<text class="seglbl" x="${cx}" y="${f(topPad + hB / 2 + dyo)}" text-anchor="middle"${segStl}>${fmtPct0(b / tot)}</text>`);
   }
   const dense = n > 14;
   const lbls = rows.map(r => r.label);
@@ -275,7 +316,7 @@ const fmtPct0 = (v) => `${Math.round(v * 100)}%`;
  * linhas: [{valor, pct(acumulado 0..1)}]; corteIdx = índice do plano que fecha ≥80%.
  * Eixo ordinal (1º, 5º, 10º...). Rótulos de % no 1º, no corte (e anterior) e no último.
  */
-export function paretoChart({ linhas, corteIdx, W = 640, H = 400 }) {
+export function paretoChart({ linhas, corteIdx, W = 640, H = 400, labelScale = 1 }) {
   const top = 30, axisY = H - 30, labelY = H - 8, chartH = axisY - top;
   const n = linhas.length;
   const xb = xBand(n, W, { padL: 30, padR: 30, barRatio: 0.75, maxBarW: 16 });
@@ -288,7 +329,7 @@ export function paretoChart({ linhas, corteIdx, W = 640, H = 400 }) {
     `<line x1="30" y1="${f(py(0.5))}" x2="${W - 10}" y2="${f(py(0.5))}" stroke="${C.grid}" stroke-width="1"/>`,
     `<line x1="30" y1="${f(py(1))}" x2="${W - 10}" y2="${f(py(1))}" stroke="${C.grid}" stroke-width="1"/>`,
     `<line x1="30" y1="${f(cutY)}" x2="${W - 10}" y2="${f(cutY)}" stroke="${C.red}" stroke-width="1.5" stroke-dasharray="6 4"/>`,
-    `<text x="${W - 14}" y="${f(cutY - 6)}" text-anchor="end" font-family="Archivo" font-size="9.5" font-weight="700" fill="${C.red}">80%</text>`,
+    `<text x="${W - 14}" y="${f(cutY - 6)}" text-anchor="end" font-family="Archivo" font-size="10.5" font-weight="700" fill="${C.red}">80%</text>`,
   ];
   for (let i = 0; i < n; i++) {
     const v = linhas[i].valor;
@@ -301,7 +342,8 @@ export function paretoChart({ linhas, corteIdx, W = 640, H = 400 }) {
   for (const i of lblIdx) {
     out.push(`<circle cx="${f(pts[i][0])}" cy="${f(pts[i][1])}" r="3.5" fill="${C.green}"/>`);
     const pctTxt = `${(linhas[i].pct * 100).toFixed(1).replace('.', ',').replace(',0', '')}%`;
-    out.push(`<text class="vlbl g" x="${f(pts[i][0])}" y="${f(pts[i][1] - 9)}" text-anchor="middle">${pctTxt}</text>`);
+    const stl = labelScale === 1 ? '' : ` style="font-size:${f(10.5 * labelScale, 1)}px;font-weight:600"`;
+    out.push(`<text class="vlbl g" x="${f(pts[i][0])}" y="${f(pts[i][1] - Math.round(9 * labelScale))}" text-anchor="middle"${stl}>${pctTxt}</text>`);
   }
   // eixo ordinal: marcos a cada 5 + último (se não colidir com o marco anterior)
   for (let i = 0; i < n; i++) {
@@ -376,10 +418,10 @@ export function donut({ items, size = 150, stroke = 34, center = [], palette = [
   }
   // centro: fonte do valor cai se o texto for longo demais para o furo do anel
   const hole = size - 2 * stroke;
-  const fs0 = Math.min(17, (hole - 12) / (String(center[0] ?? '').length * 0.58 || 1));
+  const fs0 = Math.min(18.5, (hole - 12) / (String(center[0] ?? '').length * 0.58 || 1));
   const cx = center.map((t, i) => {
-    const fs = i === 0 ? f(fs0, 1) : 9.5;
-    const dy = c - (center.length - 1) * 8 + i * 17;
+    const fs = i === 0 ? f(fs0, 1) : 10.5;
+    const dy = c - (center.length - 1) * 8 + i * 18;
     return `<text x="${c}" y="${dy}" text-anchor="middle" font-size="${fs}" font-weight="${i === 0 ? 800 : 600}" fill="${i === 0 ? C.blue : C.muted}">${esc(t)}</text>`;
   }).join('');
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${arcs}${cx}</svg>`;

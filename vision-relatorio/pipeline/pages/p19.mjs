@@ -16,28 +16,28 @@ export function render({ model, ctx }) {
   const empty = `
     <div style="flex:1;display:flex;align-items:center;justify-content:center">
       <div style="text-align:center;color:var(--muted)">
-        <div style="font-size:15px;font-weight:700;color:var(--blue)">Sem vendas de animais vivos no período</div>
-        <div style="font-size:11.5px;margin-top:4px">A página considera apenas lotes do tipo "Comercial Vivo".</div>
+        <div style="font-size:16.5px;font-weight:700;color:var(--blue)">Sem vendas de animais vivos no período</div>
+        <div style="font-size:12.5px;margin-top:4px">A página considera apenas lotes do tipo "Comercial Vivo".</div>
       </div>
     </div>`;
 
   const extraCss = `
     .kpi { border-top-color: var(--green); }
-    .chart1 { padding: 0 48px 4px 48px; }
+    .chart1 { padding: 0 48px 10px 48px; }
     .chart-title { display: flex; align-items: center; justify-content: space-between; }
-    .legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
+    .legend { display: flex; gap: 14px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
     .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
     .legend .sw.b { background: var(--blue); }
     .legend .sw.g { background: var(--green); }
-    .bottom-row { display: grid; grid-template-columns: 1fr 0.95fr; gap: 30px; padding: 4px 48px 0 48px; flex: 1; }
-    .btable { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 2px; }
-    .btable th { font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: left; padding: 4px 8px; border-bottom: 1.5px solid var(--blue); }
+    .bottom-row { display: grid; grid-template-columns: 1fr 0.95fr; gap: 30px; padding: 14px 48px 0 48px; flex: 1; }
+    .btable { width: 100%; border-collapse: collapse; font-size:12.5px; margin-top: 2px; }
+    .btable th { font-size:10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: left; padding: 4px 8px; border-bottom: 1.5px solid var(--blue); }
     .btable th.num { text-align: right; }
     .btable td { padding: 4.8px 8px; border-bottom: 1px solid var(--line); color: var(--ink); }
     .btable td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .btable td.pct { color: var(--muted); }
     .btable tr.total td { font-weight: 800; color: var(--blue); border-top: 2px solid var(--blue); border-bottom: none; }
-    .b-note { font-size: 9.5px; color: var(--muted); font-style: italic; margin-top: 6px; padding-left: 2px; }
+    .b-note { font-size:10.5px; color: var(--muted); font-style: italic; margin-top: 6px; padding-left: 2px; }
   `;
 
   let body = empty;
@@ -45,12 +45,12 @@ export function render({ model, ctx }) {
     const area = areaChart({
       labels: v.mensal.map(m => mesLbl(m.mes)),
       values: v.mensal.map(m => m.cab),
-      W: 1184, H: 185, color: C.green, labelFmt: (x) => fmtInt(x),
+      W: 1184, H: 185, color: C.green, labelFmt: (x) => fmtInt(x), labelScale: 1.3,
     });
 
     const combo = comboChart({
       labels: v.porCategoria.map(c => c.categoria),
-      W: 560, H: 235,
+      W: 560, H: 235, labelScale: 1.3,
       bars: { values: v.porCategoria.map(c => c.cab), color: C.blue, labelFmt: (x) => fmtInt(x) },
       line: { values: v.porCategoria.map(c => c.rsAt), color: C.green, labelFmt: (x) => `R$ ${fmtInt(x)}` },
     });
@@ -106,8 +106,8 @@ export function render({ model, ctx }) {
   }
 
   return pageShell({
-    kicker: `${kickerPeriodo(meta.ini, meta.fim)} · Tipo: Comercial Vivo`,
-    title: 'Vendas de Animais Vivos',
-    pageNum: 19, logoSrc: ctx.logoSrc, body, extraCss,
+    kicker: kickerPeriodo(meta.ini, meta.fim),
+    title: 'Vendas de Animais Vivos · Comercial Vivo',
+    pageNum: 19, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

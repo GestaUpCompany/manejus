@@ -51,12 +51,12 @@ export function render({ model, ctx }) {
   }).join('');
 
   const extraCss = `
-    thead th { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); padding: 8px 10px 10px 10px; border-bottom: 2px solid var(--blue); }
+    thead th { font-size:11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); padding: 8px 10px 10px 10px; border-bottom: 2px solid var(--blue); }
     tbody td:first-child { text-align: left; }
     tr.tipo td { background: var(--blue); color: #fff; font-weight: 800; border-bottom: none; }
     tr.tipo td:first-child { border-radius: 6px 0 0 6px; }
     tr.tipo td:last-child { border-radius: 0 6px 6px 0; }
-    tr.tipo .twist { display: inline-block; margin-right: 8px; font-size: 10px; }
+    tr.tipo .twist { display: inline-block; margin-right: 8px; font-size:11px; }
     tr.cat td { background: #EFF6F1; font-weight: 700; }
     tr.cat td.cat, tr.cat td:first-child { padding-left: 26px; }
     tr.cat td:first-child::before { content: ''; display: inline-block; width: 10px; height: 2px; background: var(--green); margin-right: 8px; vertical-align: 3px; }
@@ -64,10 +64,10 @@ export function render({ model, ctx }) {
     tr.lot td:first-child { padding-left: 52px; color: var(--muted); font-weight: 500; }
     tr.spacer td { padding: 3px; border: none; }
     .table-wrap { flex: 1; }
-    table.dense { font-size: 11px; }
+    table.dense { font-size:12px; }
     table.dense tbody td { padding: 3.5px 8px; }
     table.dense thead th { padding: 5px 8px 7px 8px; }
-    .footnote { padding: 6px 48px 0 48px; font-size: 10px; color: var(--muted); font-style: italic; }
+    .footnote { padding: 6px 48px 0 48px; font-size:11px; color: var(--muted); font-style: italic; }
   `;
 
   const t = compras.pivotTotal;
@@ -95,6 +95,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Resumo de Compras',
-    pageNum: 5, logoSrc: ctx.logoSrc, body, extraCss,
+    pageNum: 5, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

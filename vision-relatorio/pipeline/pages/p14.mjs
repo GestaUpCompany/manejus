@@ -18,21 +18,21 @@ export function render({ model, ctx }) {
     .kpi { border-top-color: var(--blue); }
     .content { display: grid; grid-template-columns: 0.95fr 1.3fr; gap: 26px; padding: 4px 48px 0 48px; flex: 1; }
     .chart-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-    .legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
+    .legend { display: flex; gap: 14px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
     .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
     .legend .sw.b { background: var(--blue); }
     .legend .sw.g { background: var(--green); }
     .legend .sw.cut { background: transparent; border-top: 2px dashed var(--red); height: 0; width: 16px; border-radius: 0; }
     .vlbl.g { fill: var(--green-dark); }
-    .ptable { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-    .ptable th { font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: right; padding: 5px 8px; border-bottom: 1.5px solid var(--blue); }
+    .ptable { width: 100%; border-collapse: collapse; font-size:12.5px; }
+    .ptable th { font-size:10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: right; padding: 5px 8px; border-bottom: 1.5px solid var(--blue); }
     .ptable th:first-child, .ptable th:nth-child(2) { text-align: left; }
     .ptable td { padding: 6.5px 8px; border-bottom: 1px solid var(--line); color: var(--ink); }
     .ptable td:first-child { text-align: center; color: var(--muted); font-weight: 700; width: 24px; }
     .ptable td:nth-child(3), .ptable td:nth-child(4), .ptable td:last-child { text-align: right; }
     .ptable tr.cut td { background: #FDF3F2; }
     .ptable tr.demais td { color: var(--muted); font-style: italic; }
-    .cut-note { font-size: 9.5px; color: var(--muted); font-style: italic; margin-top: 6px; padding-left: 4px; }
+    .cut-note { font-size:10.5px; color: var(--muted); font-style: italic; margin-top: 6px; padding-left: 4px; }
   `;
 
   const body = `
@@ -57,13 +57,13 @@ export function render({ model, ctx }) {
         Desembolso × % acumulado
         <span class="legend"><span><span class="sw b"></span>Desembolso</span><span><span class="sw g"></span>% Pareto</span><span><span class="sw cut"></span>Corte 80%</span></span>
       </div>
-      ${paretoChart({ linhas: p.linhas, corteIdx: p.corteIdx })}
+      ${paretoChart({ linhas: p.linhas, corteIdx: p.corteIdx, labelScale: 1.3 })}
     </div>
   </div>`;
 
   return pageShell({
-    kicker: `${kickerPeriodo(meta.ini, meta.fim)} · Exceto Compra de Gado`,
-    title: 'Análise de Pareto',
-    pageNum: 14, logoSrc: ctx.logoSrc, body, extraCss,
+    kicker: kickerPeriodo(meta.ini, meta.fim),
+    title: 'Análise de Pareto · Exceto Compra de Gado',
+    pageNum: 14, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

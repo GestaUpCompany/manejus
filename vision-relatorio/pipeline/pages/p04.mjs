@@ -12,13 +12,13 @@ export function render({ model, ctx }) {
   const area = areaChart({
     labels: compras.mensal.map(m => mesAbrev(m.mes)),
     values: compras.mensal.map(m => m.cab),
-    W: 1184, H: 190, color: C.green, labelFmt: fmtInt,
+    W: 1184, H: 190, color: C.green, labelFmt: fmtInt, labelScale: 1.3,
   });
 
   const cats = compras.porCategoria;
   const bars = comboChart({
     labels: cats.map(c => catLabel(c.categoria)),
-    W: 690, H: 190,
+    W: 690, H: 190, labelScale: 1.3,
     bars: { values: cats.map(c => c.cab), color: C.blue, labelFmt: fmtInt, labelInside: false },
   });
 
@@ -37,11 +37,11 @@ export function render({ model, ctx }) {
   const donutBlock = `<div class="donut-wrap">${donutSvg}${donutLegend}</div>`;
 
   const extraCss = `
-    .chart1 { padding: 2px 48px 4px 48px; }
-    .chart-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; padding: 6px 48px 0 48px; flex: 1; }
+    .chart1 { padding: 2px 48px 10px 48px; }
+    .chart-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; padding: 14px 48px 0 48px; flex: 1; }
     .donut-wrap { display: flex; align-items: center; justify-content: center; gap: 18px; }
     .dlegend { display: flex; flex-direction: column; gap: 6px; }
-    .ditem { font-size: 11.5px; color: var(--ink); font-weight: 600; }
+    .ditem { font-size:12.5px; color: var(--ink); font-weight: 600; }
     .ditem .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 7px; }
     .ditem b { color: var(--blue); margin-left: 6px; }
   `;
@@ -73,6 +73,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Compra de Animais',
-    pageNum: 4, logoSrc: ctx.logoSrc, body, extraCss,
+    pageNum: 4, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

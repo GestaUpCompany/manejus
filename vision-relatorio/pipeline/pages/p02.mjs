@@ -1,6 +1,6 @@
 // p.2 — Auditoria Mensal de Estoque (jan do ano × mês de referência final)
 import { pageShell } from '../lib/shell.mjs';
-import { fmtInt, fmt2, mesAbrev, mesNome, esc } from '../lib/fmt.mjs';
+import { fmtInt, fmt2, mesNome, kickerPeriodo, esc } from '../lib/fmt.mjs';
 
 const catLabel = (c) => c.replace(' - ', ' · ');
 
@@ -38,7 +38,7 @@ export function render({ model, ctx }) {
     .table-wrap { flex: 1; }
     .kpis.k8 { grid-template-columns: repeat(8, 1fr); gap: 10px; padding-top: 0; }
     .kpis.k8 .kpi { padding: 10px 12px 9px 12px; }
-    .kpis.k8 .kpi .val { font-size: 19px; }
+    .kpis.k8 .kpi .val { font-size:21px; }
   `;
 
   const body = `
@@ -72,8 +72,8 @@ export function render({ model, ctx }) {
   </div>`;
 
   return pageShell({
-    kicker: `${mesAbrev(estoque.mesFim)} · ${estoque.mesFim.slice(0, 4)}`,
+    kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Auditoria Mensal de Estoque',
-    pageNum: 2, logoSrc: ctx.logoSrc, body, extraCss,
+    pageNum: 2, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

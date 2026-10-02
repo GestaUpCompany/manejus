@@ -18,7 +18,7 @@ export function render({ model, ctx }) {
     const wide = nasc.mensal.length > 12; // série longa: combo ocupa a largura toda
     const comboMes = comboChart({
       labels: nasc.mensal.map(m => mesLbl(m.mes)),
-      W: wide ? 1184 : 560, H: wide ? 230 : 300,
+      W: wide ? 1184 : 560, H: wide ? 230 : 300, labelScale: 1.3,
       bars: { values: nasc.mensal.map(m => m.quant), color: C.blue, labelFmt: fmtInt },
       line: { values: nasc.mensal.map(m => m.pesoMedio), color: C.green, labelFmt: (x) => `${fmt1(x)} kg` },
     });
@@ -30,7 +30,7 @@ export function render({ model, ctx }) {
     const rsLabels = rsTop.map(r => r.raca + (r.sexo ? ` · ${SEXO[r.sexo] ?? r.sexo}` : ''));
     const barRaca = comboChart({
       labels: rsLabels,
-      W: wide ? 660 : 340, H: wide ? 195 : 300,
+      W: wide ? 660 : 340, H: wide ? 195 : 300, labelScale: 1.3,
       bars: { values: rsTop.map(r => r.quant), color: C.green, labelFmt: fmtInt },
     });
     const porSexo = [...nasc.porSexo].sort((a, b) => b.quant - a.quant);
@@ -83,10 +83,10 @@ export function render({ model, ctx }) {
     .charts.wide { grid-template-columns: 1fr; gap: 8px; }
     .charts-bottom { display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; flex: 1; }
     .charts-bottom .donut-wrap { padding-top: 8px; flex-direction: row; gap: 24px; align-items: center; justify-content: center; }
-    .note { font-size: 10px; color: var(--muted); font-style: italic; padding: 6px 0 0 0; }
+    .note { font-size:11px; color: var(--muted); font-style: italic; padding: 6px 0 0 0; }
     .donut-wrap { display: flex; flex-direction: column; align-items: center; padding-top: 30px; }
-    .dlegend { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; font-size: 11px; font-weight: 600; color: var(--ink); }
-    .empty { display: flex; align-items: center; justify-content: center; flex: 1; color: var(--muted); font-size: 15px; font-style: italic; }
+    .dlegend { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; font-size:12px; font-weight: 600; color: var(--ink); }
+    .empty { display: flex; align-items: center; justify-content: center; flex: 1; color: var(--muted); font-size:16.5px; font-style: italic; }
   `;
 
   const body = `
@@ -99,6 +99,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Nascimentos',
-    pageNum: 8, logoSrc: ctx.logoSrc, body, extraCss,
+    pageNum: 8, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

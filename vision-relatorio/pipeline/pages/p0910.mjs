@@ -37,11 +37,11 @@ function makeRender(key) {
       const area = areaChart({
         labels: d.mensal.map(m => mesLbl(m.mes)),
         values: d.mensal.map(m => m.count),
-        W: 1184, H: 190, color: cfg.accent, labelFmt: fmtInt,
+        W: 1184, H: 190, color: cfg.accent, labelFmt: fmtInt, labelScale: 1.3,
       });
       const barsCausa = comboChart({
         labels: d.porCausa.map(c => c.causa),
-        W: 660, H: 190,
+        W: 660, H: 190, labelScale: 1.3,
         bars: { values: d.porCausa.map(c => c.count), color: cfg.accent, labelFmt: fmtInt, labelCls: cfg.lblCls },
       });
       const cats = d.porCategoria;
@@ -75,15 +75,15 @@ function makeRender(key) {
 
     const extraCss = `
       .kpi { border-top-color: ${cfg.accent}; }
-      .chart1 { padding: 2px 48px 4px 48px; }
-      .chart-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; padding: 6px 48px 0 48px; flex: 1; }
+      .chart1 { padding: 2px 48px 10px 48px; }
+      .chart-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; padding: 16px 48px 0 48px; flex: 1; }
       .vlbl.r { fill: ${cfg.accent}; }
       .vlbl.a { fill: #8F6708; }
       .donut-wrap { display: flex; align-items: center; gap: 24px; padding-top: 10px; }
-      .dlegend { display: flex; flex-direction: column; gap: 7px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+      .dlegend { display: flex; flex-direction: column; gap: 7px; font-size:12.5px; font-weight: 600; color: var(--ink); }
       .dlegend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; }
       .dlegend em { font-style: normal; color: var(--muted); font-weight: 500; margin-left: 8px; }
-      .empty { display: flex; align-items: center; justify-content: center; flex: 1; color: var(--muted); font-size: 15px; font-style: italic; }
+      .empty { display: flex; align-items: center; justify-content: center; flex: 1; color: var(--muted); font-size:16.5px; font-style: italic; }
     `;
 
     const body = `
@@ -97,7 +97,7 @@ function makeRender(key) {
 
     return pageShell({
       kicker: kickerPeriodo(meta.ini, meta.fim),
-      title: cfg.title, pageNum: cfg.pageNum, logoSrc: ctx.logoSrc, body, extraCss,
+      title: cfg.title, pageNum: cfg.pageNum, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
     });
   };
 }

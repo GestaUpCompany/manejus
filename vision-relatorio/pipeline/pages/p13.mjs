@@ -12,12 +12,12 @@ export function render({ model, ctx }) {
   const area = areaChart({
     labels: d.mensalCfCv.map(m => mesLbl(m.mes)),
     values: d.mensalCfCv.map(m => m.porHa),
-    W: 1184, H: 178, color: C.green, labelFmt: (v) => `R$ ${fmt2(v)}`,
+    W: 1184, H: 178, color: C.green, labelFmt: (v) => `R$ ${fmt2(v)}`, labelScale: 1.3,
   });
 
   const combo = comboChart({
     labels: d.mensalCfCv.map(m => mesLbl(m.mes)),
-    W: 1184, H: 240,
+    W: 1184, H: 240, labelScale: 1.3,
     bars: {
       values: d.mensalCfCv.map(m => m.custoDiariaCab),
       color: C.blue, labelFmt: (v) => `R$ ${fmt2(v)}`, labelInside: true,
@@ -30,10 +30,10 @@ export function render({ model, ctx }) {
 
   const extraCss = `
     .kpi { border-top-color: var(--green); }
-    .chart1 { padding: 0 48px 4px 48px; }
-    .chart2 { padding: 4px 48px 0 48px; flex: 1; }
+    .chart1 { padding: 0 48px 10px 48px; }
+    .chart2 { padding: 14px 48px 0 48px; flex: 1; }
     .chart-title { display: flex; align-items: center; justify-content: space-between; }
-    .legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
+    .legend { display: flex; gap: 14px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
     .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
     .legend .sw.b { background: var(--blue); }
     .legend .sw.g { background: var(--green); }
@@ -61,8 +61,8 @@ export function render({ model, ctx }) {
   </div>`;
 
   return pageShell({
-    kicker: `${kickerPeriodo(meta.ini, meta.fim)} · Somente Custos Fixos e Variáveis`,
-    title: 'Relatório de Custeio',
-    pageNum: 13, logoSrc: ctx.logoSrc, body, extraCss,
+    kicker: kickerPeriodo(meta.ini, meta.fim),
+    title: 'Relatório de Custeio · Somente Custos Fixos e Variáveis',
+    pageNum: 13, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

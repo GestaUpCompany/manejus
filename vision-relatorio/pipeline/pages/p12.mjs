@@ -11,33 +11,33 @@ export function render({ model, ctx }) {
   const area = areaChart({
     labels: d.mensal.map(m => mesLbl(m.mes)),
     values: d.mensal.map(m => m.porHa),
-    W: 1184, H: 185, color: C.blue, labelFmt: (v) => `R$ ${fmt2(v)}`,
+    W: 1184, H: 185, color: C.blue, labelFmt: (v) => `R$ ${fmt2(v)}`, labelScale: 1.3,
   });
 
   const stack = stackedPctChart({
     rows: d.mensalCfCv.map(m => ({ label: mesLbl(m.mes), a: m.cf, b: m.cv })),
-    W: 720, H: 190,
+    W: 720, H: 190, labelScale: 1.3,
   });
 
   const [pctCf, pctCv] = d.cf.relacao;
 
   const extraCss = `
     .kpi { border-top-color: var(--blue); }
-    .chart1 { padding: 0 48px 4px 48px; }
-    .chart-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 26px; padding: 4px 48px 0 48px; flex: 1; }
+    .chart1 { padding: 0 48px 10px 48px; }
+    .chart-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 26px; padding: 14px 48px 0 48px; flex: 1; }
     .chart-title { display: flex; align-items: center; justify-content: space-between; }
-    .legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
+    .legend { display: flex; gap: 14px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
     .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
     .legend .sw.g { background: ${C.green}; }
     .legend .sw.gl { background: ${C.greenLight}; }
-    .seglbl { font-family: 'Archivo'; font-size: 9.5px; font-weight: 700; fill: #fff; }
-    .comp-row { display: flex; align-items: center; gap: 10px; margin: 14px 6px 0 6px; font-size: 11.5px; }
+    .seglbl { font-family: 'Archivo'; font-size:10.5px; font-weight: 700; fill: #fff; }
+    .comp-row { display: flex; align-items: center; gap: 10px; margin: 14px 6px 0 6px; font-size:12.5px; }
     .comp-bar { flex: 1; height: 26px; border-radius: 6px; overflow: hidden; display: flex; }
     .comp-bar .cf { background: ${C.green}; }
     .comp-bar .cv { background: ${C.greenLight}; }
-    .comp-totals { display: flex; justify-content: space-between; margin: 8px 6px 0 6px; font-size: 11.5px; color: var(--ink); }
+    .comp-totals { display: flex; justify-content: space-between; margin: 8px 6px 0 6px; font-size:12.5px; color: var(--ink); }
     .comp-totals .cf-t, .comp-totals .cv-t { font-weight: 700; }
-    .comp-note { font-size: 9.5px; color: var(--muted); font-style: italic; margin: 8px 6px 0 6px; }
+    .comp-note { font-size:10.5px; color: var(--muted); font-style: italic; margin: 8px 6px 0 6px; }
   `;
 
   const body = `
@@ -82,6 +82,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Relatório de Desembolso · Custos por ha',
-    pageNum: 12, logoSrc: ctx.logoSrc, body, extraCss,
+    pageNum: 12, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

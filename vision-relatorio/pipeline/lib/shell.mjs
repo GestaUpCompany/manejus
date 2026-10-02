@@ -12,8 +12,8 @@ const BASE_CSS = `
 body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
 .page { width: 1280px; height: 720px; position: relative; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
 .page-head { display: flex; align-items: center; justify-content: space-between; padding: 24px 48px 10px 48px; }
-.title-block .kicker { font-size: 11px; font-weight: 700; letter-spacing: 3px; color: var(--green-dark); text-transform: uppercase; margin-bottom: 6px; }
-.title-block h1 { font-size: 30px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.title-block h1 { font-size:33px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.title-block .kicker { font-size:12px; font-weight: 700; letter-spacing: 3px; color: var(--green-dark); text-transform: uppercase; margin-top: 5px; }
 .page-logo { height: 62px; }
 
 .kpis { display: grid; gap: 12px; padding: 6px 48px 14px 48px; }
@@ -21,15 +21,15 @@ body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
 .kpi.blue-top { border-top-color: var(--blue); }
 .kpi.red-top { border-top-color: var(--red); }
 .kpi.amber-top { border-top-color: var(--amber); }
-.kpi .lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
-.kpi .val { font-size: 22px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
-.kpi .val small { font-size: 12px; font-weight: 600; color: var(--muted); }
+.kpi .lbl { font-size:10.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+.kpi .val { font-size:24px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size:13px; font-weight: 600; color: var(--muted); }
 
 .table-wrap { padding: 0 48px; }
-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-thead .cols th { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 2px solid var(--ink); text-align: right; white-space: nowrap; }
+table { width: 100%; border-collapse: collapse; font-size:14px; }
+thead .cols th { font-size:10.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 2px solid var(--ink); text-align: right; white-space: nowrap; }
 thead .cols th:first-child { text-align: left; }
-thead .grp th { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; padding: 5px 8px; text-align: right; color: var(--ink); }
+thead .grp th { font-size:11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; padding: 5px 8px; text-align: right; color: var(--ink); }
 thead .grp th.ent { color: var(--green-dark); }
 thead .grp th.sai { color: var(--red); }
 tbody td { padding: 5.5px 8px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -43,38 +43,39 @@ tbody tr.total td:last-child { border-radius: 0 0 8px 0; }
 td.strong { font-weight: 700; }
 
 .chart-wrap { padding: 12px 48px 0 48px; flex: 1; }
-.chart-title { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; display: flex; align-items: center; gap: 18px; }
-.legend { display: flex; gap: 16px; font-size: 11px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
+.chart-title { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; display: flex; align-items: center; gap: 18px; }
+.legend { display: flex; gap: 16px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
 .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 .legend .sw.bar { background: var(--blue); }
 .legend .sw.line { background: var(--green); border-radius: 50%; height: 4px; width: 16px; vertical-align: 2px; }
 
-svg text.axis, .axis text { font-family: 'Archivo'; font-size: 10.5px; fill: var(--muted); font-weight: 600; }
-text.axis.dense { font-size: 8px; }
-.vlbl { font-family: 'Archivo'; font-size: 10.5px; fill: var(--blue); font-weight: 700; }
+svg text.axis, .axis text { font-family: 'Archivo'; font-size:11.5px; fill: var(--muted); font-weight: 600; }
+text.axis.dense { font-size:9px; }
+.vlbl { font-family: 'Archivo'; font-size:11.5px; fill: var(--blue); font-weight: 700; }
 .vlbl.w { fill: #fff; }
 .vlbl.h { paint-order: stroke; stroke: #fff; stroke-width: 1.2px; stroke-linejoin: round; font-weight: 600; }
-.vlbl.dense { font-size: 8px; }
+.vlbl.dense { font-size:9px; }
 .vlbl.dense.h { stroke-width: 1px; }
-.llbl { font-family: 'Archivo'; font-size: 10px; fill: var(--green-dark); font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 1.5px; stroke-linejoin: round; }
+.llbl { font-family: 'Archivo'; font-size:11px; fill: var(--green-dark); font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 1.5px; stroke-linejoin: round; }
 .llbl.w { fill: #fff; stroke-width: 0; }
-.llbl.dense { font-size: 7.5px; stroke-width: 1.5px; }
+.llbl.dense { font-size:8.5px; stroke-width: 1.5px; }
 .llbl.dense.w { stroke-width: 0; }
-.barlbl { font-family: 'Archivo'; font-size: 10.5px; fill: var(--blue); font-weight: 700; }
-.linelbl { font-family: 'Archivo'; font-size: 10px; fill: #fff; font-weight: 600; }
+.barlbl { font-family: 'Archivo'; font-size:11.5px; fill: var(--blue); font-weight: 700; }
+.linelbl { font-family: 'Archivo'; font-size:11px; fill: #fff; font-weight: 600; }
 
 .panels { display: flex; gap: 16px; padding: 0 48px; }
 .panel { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fff; }
-.panel h3 { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-.caption { font-size: 10px; color: var(--muted); margin-top: 6px; }
+.panel h3 { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.caption { font-size:11px; color: var(--muted); margin-top: 6px; }
 
-.page-foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 48px 20px 48px; font-size: 11px; color: var(--muted); margin-top: auto; }
-.page-foot .num { font-weight: 800; color: var(--blue); font-size: 13px; }
+.page-foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 48px 20px 48px; font-size:12px; color: var(--muted); margin-top: auto; }
+.page-foot .num { font-weight: 800; color: var(--blue); font-size:14.5px; }
 .bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
 .bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
 `;
 
-export function pageShell({ kicker, title, pageNum, logoSrc, body, extraCss = '' }) {
+export function pageShell({ kicker, title, pageNum, logoSrc, fazenda, body, extraCss = '' }) {
+  const kickerTxt = fazenda ? `${kicker} · ${fazenda}` : kicker;
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -87,8 +88,8 @@ export function pageShell({ kicker, title, pageNum, logoSrc, body, extraCss = ''
 <div class="page">
   <div class="page-head">
     <div class="title-block">
-      <div class="kicker">${esc(kicker)}</div>
       <h1>${esc(title)}</h1>
+      <div class="kicker">${esc(kickerTxt)}</div>
     </div>
     ${logoSrc ? `<img class="page-logo" src="${esc(logoSrc)}" alt="">` : ''}
   </div>

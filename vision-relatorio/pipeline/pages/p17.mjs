@@ -18,8 +18,8 @@ export function render({ model, ctx }) {
     .kpi.g { border-top-color: var(--green); }
     .kpi.r { border-top-color: var(--red); }
     .fc-wrap { padding: 0 48px; }
-    .fctable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-    .fctable th { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: right; padding: 5px 10px; border-bottom: 1.5px solid var(--blue); }
+    .fctable { width: 100%; border-collapse: collapse; font-size:14px; }
+    .fctable th { font-size:11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: right; padding: 5px 10px; border-bottom: 1.5px solid var(--blue); }
     .fctable th:first-child { text-align: left; }
     .fctable td { padding: 7px 10px; border-bottom: 1px solid var(--line); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
     .fctable td:first-child { text-align: left; font-weight: 700; }
@@ -30,14 +30,14 @@ export function render({ model, ctx }) {
     .fctable tr.res td.neg { color: var(--red); }
     .fctable tr.sf td { font-weight: 800; color: var(--blue); background: #F4F7FA; border-top: 2px solid var(--blue); }
     .fctable td.na { color: #B7C2CC; }
-    .fctable.dense { font-size: 9.5px; table-layout: fixed; }
+    .fctable.dense { font-size:9.5px; table-layout: fixed; }
     .fctable.dense td { padding: 3.5px 4px; }
-    .fctable.dense th { font-size: 8px; padding: 3px 4px; }
+    .fctable.dense th { font-size:8px; padding: 3px 4px; }
     .fctable.dense td:first-child, .fctable.dense th:first-child { width: 92px; }
-    .fc-note { font-size: 9.5px; color: var(--muted); font-style: italic; margin-top: 5px; padding-left: 2px; }
+    .fc-note { font-size:10.5px; color: var(--muted); font-style: italic; margin-top: 5px; padding-left: 2px; }
     .combo { padding: 10px 48px 0 48px; flex: 1; display: flex; flex-direction: column; }
     .chart-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
-    .legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink); font-weight: 600; }
+    .legend { display: flex; gap: 14px; font-size:12px; color: var(--ink); font-weight: 600; }
     .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
     .legend .sw.g { background: var(--green); }
     .legend .sw.r { background: var(--red); }
@@ -83,8 +83,8 @@ export function render({ model, ctx }) {
   </div>`;
 
   return pageShell({
-    kicker: `${kickerPeriodo(meta.ini, meta.fim)} · Recebimentos e pagamentos realizados`,
-    title: 'Fluxo de Caixa',
-    pageNum: 17, logoSrc: ctx.logoSrc, body, extraCss,
+    kicker: kickerPeriodo(meta.ini, meta.fim),
+    title: 'Fluxo de Caixa · Recebimentos e Pagamentos Realizados',
+    pageNum: 17, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

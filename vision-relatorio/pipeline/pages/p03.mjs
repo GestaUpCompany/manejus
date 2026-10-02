@@ -31,10 +31,12 @@ export function render({ model, ctx }) {
 
   const labels = rebanho.serieMensal.map(s => mesAbrev(s.mes));
   const svg = comboChart({
-    labels, W: 1184, H: 175,
+    labels, W: 1184, H: 160, labelScale: 1.3,
     bars: { values: rebanho.serieMensal.map(s => Math.round(s.rebanhoMedio)), color: C.blue, labelFmt: fmtInt, labelInside: false },
     line: { values: rebanho.serieMensal.map(s => s.uaha), color: C.green, labelFmt: (v) => fmt2(v) },
   });
+
+  const extraCss = `.chart-wrap { padding-bottom: 14px; }`;
 
   const body = `
   <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
@@ -69,6 +71,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Movimentação do Rebanho no Período',
-    pageNum: 3, logoSrc: ctx.logoSrc, body,
+    pageNum: 3, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

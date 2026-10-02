@@ -8,7 +8,7 @@ export function render({ model, ctx }) {
 
   const comboMes = comboChart({
     labels: v.mensal.map(m => mesAbrev(m.mes)),
-    W: 1184, H: 195,
+    W: 1184, H: 195, labelScale: 1.3,
     bars: { values: v.mensal.map(m => m.cab), color: C.blue, labelFmt: fmtInt, labelInside: false },
     line: { values: v.mensal.map(m => m.rsAt), color: C.green, labelFmt: (x) => `R$ ${fmtInt(x)}` },
   });
@@ -21,7 +21,7 @@ export function render({ model, ctx }) {
   const domain = trunc ? [Math.floor((mn - (mx - mn)) / 10) * 10, Math.ceil(mx * 1.02 / 10) * 10] : null;
   const comboEmp = comboChart({
     labels: emps.map(e => e.empresa),
-    W: 620, H: 195,
+    W: 620, H: 195, labelScale: 1.3,
     bars: { values: rsVals, color: C.blue, labelFmt: (x) => `R$ ${fmt2(x)}`, labelInside: false, domain },
     line: { values: emps.map(e => e.rendCarc), color: C.green, labelFmt: (x) => fmtPct(x) },
   });
@@ -33,11 +33,11 @@ export function render({ model, ctx }) {
     `<td>${fmt2(e.rsAt)}</td><td>${fmtPct(e.rendCarc)}</td></tr>`).join('');
 
   const extraCss = `
-    .chart1 { padding: 2px 48px 4px 48px; }
-    .chart-row { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; padding: 6px 48px 0 48px; flex: 1; }
-    .axis-note { font-size: 9.5px; color: var(--muted); font-style: italic; margin-top: -2px; }
-    .mini-table { font-size: 11.5px; border-collapse: collapse; width: 100%; margin-top: 6px; }
-    .mini-table th { font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: 700; text-align: right; padding: 4px 6px; border-bottom: 1.5px solid var(--blue); }
+    .chart1 { padding: 2px 48px 10px 48px; }
+    .chart-row { display: grid; grid-template-columns: 1.15fr 1fr; gap: 48px; padding: 14px 48px 0 48px; flex: 1; }
+    .axis-note { font-size:10.5px; color: var(--muted); font-style: italic; margin-top: -2px; }
+    .mini-table { font-size:12.5px; border-collapse: collapse; width: 100%; margin-top: 6px; }
+    .mini-table th { font-size:10.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: 700; text-align: right; padding: 4px 6px; border-bottom: 1.5px solid var(--blue); }
     .mini-table th:first-child { text-align: left; }
     .mini-table td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); }
     .mini-table td:first-child { text-align: left; font-weight: 600; }
@@ -77,6 +77,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Vendas de Animais · Abate',
-    pageNum: 6, logoSrc: ctx.logoSrc, body, extraCss,
+    pageNum: 6, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

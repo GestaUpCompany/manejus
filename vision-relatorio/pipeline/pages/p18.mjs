@@ -12,19 +12,19 @@ export function render({ model, ctx }) {
   const extraCss = `
     .body { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding-bottom: 10px; }
     .section { padding: 0 48px; }
-    .section-title { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .section-title { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
     .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
     .kpi { padding: 13px 14px 11px 14px; }
     .kpi.g { border-top-color: var(--green); }
     .prod-strip { margin: 0 48px; border: 1px solid var(--line); border-left: 4px solid var(--green); border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; gap: 26px; background: #FAFCFB; }
-    .prod-strip .p-main .lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; }
-    .prod-strip .p-main .val { font-size: 26px; font-weight: 800; color: var(--green-dark); }
-    .prod-strip .p-main .val small { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .prod-strip .p-main .lbl { font-size:10.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; }
+    .prod-strip .p-main .val { font-size:28.5px; font-weight: 800; color: var(--green-dark); }
+    .prod-strip .p-main .val small { font-size:14.5px; font-weight: 600; color: var(--muted); }
     .prod-strip .p-formula { display: flex; align-items: center; gap: 14px; flex-wrap: nowrap; }
     .prod-strip .term { text-align: center; }
-    .prod-strip .term .t-val { font-size: 14px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
-    .prod-strip .term .t-lbl { font-size: 8.5px; font-weight: 700; letter-spacing: 0.6px; color: var(--muted); text-transform: uppercase; margin-top: 1px; }
-    .prod-strip .op { font-size: 16px; font-weight: 700; color: var(--muted); }
+    .prod-strip .term .t-val { font-size:15.5px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .prod-strip .term .t-lbl { font-size:9.5px; font-weight: 700; letter-spacing: 0.6px; color: var(--muted); text-transform: uppercase; margin-top: 1px; }
+    .prod-strip .op { font-size:17.5px; font-weight: 700; color: var(--muted); }
     .prod-strip .op.plus { color: var(--green-dark); }
     .prod-strip .op.minus { color: var(--red); }
   `;
@@ -81,6 +81,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Índices Técnicos e Econômicos',
-    pageNum: 18, logoSrc: ctx.logoSrc, body, extraCss,
+    pageNum: 18, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

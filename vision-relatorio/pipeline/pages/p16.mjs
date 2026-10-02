@@ -10,7 +10,7 @@ export function render({ model, ctx }) {
 
   const bars = comboChart({
     labels: r.mensal.map(m => mesLbl(m.mes)),
-    W: 640, H: 285,
+    W: 640, H: 285, labelScale: 1.3,
     bars: {
       values: r.mensal.map(m => m.porHa),
       color: C.green, labelFmt: (v) => `R$ ${fmt2(v)}`, labelInside: false,
@@ -49,8 +49,8 @@ export function render({ model, ctx }) {
   const extraCss = `
     .kpi { border-top-color: var(--green); }
     .content { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 30px; padding: 0 48px; flex: 1; }
-    .rtable { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-    .rtable th { font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: left; padding: 5px 8px; border-bottom: 1.5px solid var(--blue); }
+    .rtable { width: 100%; border-collapse: collapse; font-size:12.5px; }
+    .rtable th { font-size:10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: left; padding: 5px 8px; border-bottom: 1.5px solid var(--blue); }
     .rtable th.num { text-align: right; }
     .rtable td { padding: 5.5px 8px; border-bottom: 1px solid var(--line); color: var(--ink); }
     .rtable td.num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -58,9 +58,9 @@ export function render({ model, ctx }) {
     .rtable tr.rec td:first-child { padding-left: 24px; color: var(--muted); }
     .rtable tr.total td { font-weight: 800; color: var(--blue); border-top: 2px solid var(--blue); border-bottom: none; }
     .tipo-panel { margin-top: 22px; border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; }
-    .tipo-panel .t-lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; }
-    .tipo-panel .t-name { font-size: 13.5px; font-weight: 700; color: var(--ink); margin-top: 2px; }
-    .tipo-panel .t-val { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+    .tipo-panel .t-lbl { font-size:10.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; }
+    .tipo-panel .t-name { font-size:15px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+    .tipo-panel .t-val { font-size:12.5px; color: var(--muted); margin-top: 1px; }
   `;
 
   const body = `
@@ -83,13 +83,13 @@ export function render({ model, ctx }) {
         <thead><tr><th>Empresa${detalha ? ' · Data' : ''}</th><th class="num">Valor R$</th><th class="num">%</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      ${detalha ? '' : '<div style="font-size:9.5px;color:var(--muted);font-style:italic;margin-top:6px">Detalhe por data disponível no relatório interativo.</div>'}
+      ${detalha ? '' : '<div style="font-size:10.5px;color:var(--muted);font-style:italic;margin-top:6px">Detalhe por data disponível no relatório interativo.</div>'}
     </div>
   </div>`;
 
   return pageShell({
-    kicker: `${kickerPeriodo(meta.ini, meta.fim)} · Recebimentos realizados`,
-    title: 'Receitas por Tipo e Empresa',
-    pageNum: 16, logoSrc: ctx.logoSrc, body, extraCss,
+    kicker: kickerPeriodo(meta.ini, meta.fim),
+    title: 'Receitas por Tipo e Empresa · Recebimentos Realizados',
+    pageNum: 16, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

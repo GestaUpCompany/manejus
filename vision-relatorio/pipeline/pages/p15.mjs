@@ -11,7 +11,7 @@ export function render({ model, ctx }) {
   const area = areaChart({
     labels: r.mensal.map(m => mesLbl(m.mes)),
     values: r.mensal.map(m => m.valor),
-    W: 1184, H: 180, color: C.green, labelFmt: fmtMoney,
+    W: 1184, H: 180, color: C.green, labelFmt: fmtMoney, labelScale: 1.3,
   });
 
   const cats = r.porCategoria;
@@ -25,8 +25,8 @@ export function render({ model, ctx }) {
   const legenda = cats.length > 1
     ? `<div class="dlegend">${cats.map((c, i) =>
         `<span><i style="background:${palette[i % palette.length]}"></i>${esc(String(c.plano).replace(/_/g, ' '))}<em>${fmtPct(c.valor / r.total)}</em></span>`).join('')}</div>`
-    : `<div><div style="font-size:13px;font-weight:700;color:var(--ink)">${esc(String(cats[0].plano).replace(/_/g, ' ').replace(' - ', ' · '))}</div>
-       <div style="font-size:12px;color:var(--muted);margin-top:2px">${fmtMoney(r.total)} · 100% do faturamento</div></div>`;
+    : `<div><div style="font-size:14.5px;font-weight:700;color:var(--ink)">${esc(String(cats[0].plano).replace(/_/g, ' ').replace(' - ', ' · '))}</div>
+       <div style="font-size:13px;color:var(--muted);margin-top:2px">${fmtMoney(r.total)} · 100% do faturamento</div></div>`;
 
   const iMax = r.mensal.reduce((a, m, i) => m.valor > (r.mensal[a]?.valor ?? -1) ? i : a, 0);
   const semRec = r.mensal.filter(m => !m.valor);
@@ -34,17 +34,17 @@ export function render({ model, ctx }) {
 
   const extraCss = `
     .kpi { border-top-color: var(--green); }
-    .chart1 { padding: 0 48px 4px 48px; }
-    .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; padding: 4px 48px 0 48px; flex: 1; align-items: center; }
+    .chart1 { padding: 0 48px 10px 48px; }
+    .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; padding: 14px 48px 0 48px; flex: 1; align-items: center; }
     .ring-wrap { display: flex; align-items: center; gap: 14px; }
-    .dlegend { display: flex; flex-direction: column; gap: 8px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+    .dlegend { display: flex; flex-direction: column; gap: 8px; font-size:12.5px; font-weight: 600; color: var(--ink); }
     .dlegend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
     .dlegend em { font-style: normal; color: var(--muted); font-weight: 500; margin-left: 7px; }
     .mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; padding-top: 4px; }
     .mini { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
-    .mini .lbl { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
-    .mini .val { font-size: 16px; font-weight: 800; color: var(--ink); }
-    .mini .val small { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .mini .lbl { font-size:10px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+    .mini .val { font-size:17.5px; font-weight: 800; color: var(--ink); }
+    .mini .val small { font-size:12px; font-weight: 600; color: var(--muted); }
   `;
 
   const body = `
@@ -77,8 +77,8 @@ export function render({ model, ctx }) {
   </div>`;
 
   return pageShell({
-    kicker: `${kickerPeriodo(meta.ini, meta.fim)} · Recebimentos realizados`,
-    title: 'Relatório de Receitas',
-    pageNum: 15, logoSrc: ctx.logoSrc, body, extraCss,
+    kicker: kickerPeriodo(meta.ini, meta.fim),
+    title: 'Relatório de Receitas · Recebimentos Realizados',
+    pageNum: 15, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }
