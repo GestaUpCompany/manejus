@@ -10,6 +10,7 @@ export interface User {
   telefone?: string
   papel: 'admin' | 'super_admin' | 'controller'
   ativo: boolean
+  acesso_vision?: boolean
 }
 
 export interface Session {

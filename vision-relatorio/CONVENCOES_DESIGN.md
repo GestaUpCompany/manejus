@@ -20,14 +20,17 @@ Regras acumuladas durante o desenho dos mockups. Valem para todos os mockups em 
 - **Valores monetários sempre completos** em pt-BR (`R$ 204.858,91`, `R$ 1.044.530,25`). Nunca abreviar ("205 mil", "1,04 mi"). Decisão do usuário na p.11.
 - **Cor do rótulo via classe, nunca via atributo `fill` junto de `.vlbl`.** A regra CSS `.vlbl { fill: ... }` tem precedência sobre o atributo `fill="#fff"` do SVG — usar a classe `.vlbl.w` para texto branco dentro de barras. Bug corrigido nas páginas 6, 8 e 13.
 - Regra de contraste: rótulo sobre barra preenchida = branco; rótulo fora da barra = cor da série.
-- Rótulo de série de linha fica acima do ponto; quando o ponto cai dentro de uma barra, o rótulo também fica branco.
+- **Combo barras+linha (gerado): identidade por posição fixa.** Rótulo da barra sempre acima da barra, na cor da série. Rótulo da linha sempre abaixo do ponto, na cor da linha, ou branco quando cai dentro da barra **e cabe na largura dela** — se a barra é estreita demais para o texto, o rótulo fica na cor da linha com halo (legível sobre qualquer fundo). Nunca usar rótulo vertical/rotacionado. Nunca dois brancos disputando o mesmo espaço dentro da barra — decisão da p.3 após teste com 36 meses (Aruã), refinada na p.6.
+- Densidade de rótulos não é por contagem fixa de pontos: calcula-se a largura do maior rótulo **por série** (barras têm números curtos, linha tem "R$ xxx" longo) e só se salta rótulo quando ela não cabe no slot entre centros de barra. O pico de cada série é sempre rotulado, mesmo quando os vizinhos são suprimidos. Fonte reduz a 7.5px em modo denso, mesmo peso do normal.
+- Rótulo de linha fora de barra carrega halo branco fino (`paint-order: stroke`, ~1.5px) para atravessar a própria polilinha, barras e gridlines; rótulo dentro de barra vai sem halo (halo em glifo = aparência de negrito). Gráficos de área usam o mesmo halo (`.vlbl.h`) — sem ele, o rótulo "some" quando a polilinha passa por cima (caso real: Aruã p.4, "227" na subida do pico).
+- Rótulo de linha nunca invade a zona do eixo: se a posição abaixo do ponto cairia na linha de base ou nos rótulos de mês, ele sobe para acima do ponto. A resolução de colisão contra o rótulo da barra é direcional — label abaixo do ponto é empurrado para baixo do rótulo da barra, label acima é empurrado para cima (caso real: Aruã p.19, "R$ 188" da fêmea >36m).
 
 ## Gráficos
 
-- **Eixo mensal sempre completo** jan–ago (ou o período do relatório), incluindo meses zerados — exceção: páginas de evento esparso (Nascimentos) mostram só meses com dados, com nota explicativa.
+- **Eixo mensal: depende da natureza da medida.** Série contínua do rebanho (p.3, rebanho médio/UA) cobre o período completo, incluindo meses zerados. Série de eventos (vendas p.6/p.19, nascimentos) mostra **só meses com dado** — mês ausente no eixo significa sem movimento, e o eixo termina no último mês com dado mesmo quando o período do relatório continua.
 - Donut condicional: 1 fatia dominante única = anel pleno com `N · Nome · 100%` no centro; 2+ fatias = anel segmentado + legenda lateral `nome · valor · %`.
 - Eixo truncado só quando necessário para evidenciar diferenças pequenas (ex.: R$/@ por frigorífico) e sempre com marcador de corte + nota `Eixo truncado em ...`.
-- Linha do combo fica descontínua quando não há dado no mês (ex.: vendas de março zeradas na p.6) — não ligar pontos através do gap.
+- Linha do combo liga através dos meses sem dado por padrão (`connectNulls`); segmentos quebrados só quando a descontinuidade é a informação (opt-out explícito).
 
 ## Tabelas
 

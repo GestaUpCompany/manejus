@@ -1,0 +1,70 @@
+{
+  "fazenda": "Guanabara",
+  "periodo": { "ini": "2026-01-01", "fim": "2026-08-31" },
+  "meta": {
+    "nMeses": 8,
+    "areaHa": 561,
+    "rebanhoMedio": 1421.37,
+    "animalDias": 345392
+  },
+  "estoque": {
+    "totais": {
+      "inicial": { "cab": 1531, "at": 13791.43, "valorAt": 407.69, "valor": 5622564.89 },
+      "final": { "cab": 1599, "at": 11393.78, "valorAt": 461.43, "valor": 5257414.84 }
+    }
+  },
+  "rebanho": {
+    "saldoFinal": 1599,
+    "pesoVivoMedio": 332.20,
+    "uahaMedia": 1.38,
+    "serieMensal": [
+      { "mes": "2026-01", "rebanhoMedio": 1522 },
+      { "mes": "2026-02", "rebanhoMedio": 1469 },
+      { "mes": "2026-03", "rebanhoMedio": 1415 },
+      { "mes": "2026-04", "rebanhoMedio": 1365 },
+      { "mes": "2026-05", "rebanhoMedio": 1311 },
+      { "mes": "2026-06", "rebanhoMedio": 1361 },
+      { "mes": "2026-07", "rebanhoMedio": 1426 },
+      { "mes": "2026-08", "rebanhoMedio": 1503 }
+    ],
+    "matrizTotal": { "si": 1531, "compras": 783, "vendas": 699, "mortes": 13, "consumo": 5, "nasc": 2, "evolS": 365, "evolE": 365, "sf": 1599 }
+  },
+  "compras": {
+    "cab": 783, "total": 2763028.00, "rsAt": 476.50, "rsKg": 15.88, "rsCab": 3528.77,
+    "mensal": { "2026-01": 0, "2026-02": 0, "2026-03": 39, "2026-04": 121, "2026-05": 196, "2026-06": 82, "2026-07": 107, "2026-08": 238 }
+  },
+  "vendasAbate": {
+    "cab": 699, "at": 14804.80, "valor": 5151805.27, "rsAt": 347.98, "rsKg": 12.95
+  },
+  "vendas": {
+    "cab": 699, "valor": 5151805.27, "giroEstoque": 0.0502
+  },
+  "nascimentos": { "total": 2, "pesoMedio": 40.00 },
+  "mortes": { "count": 13, "at": 90, "valor": 37398.00, "taxa": 0.0091 },
+  "consumo": { "count": 5, "at": 60, "valor": 23903.00, "taxa": 0.0035 },
+  "desembolso": {
+    "total": 4343020.07, "mediaMensal": 542877.51, "porHa": 7741.57, "custoDiariaCab": 12.57,
+    "porTipo": [
+      { "tipo": "Compra_de_Gado", "valor": 2763028.00, "pct": 0.6363 },
+      { "tipo": "Custos_Fixos_Mensais", "valor": 691741.18, "pct": 0.1593 },
+      { "tipo": "Custos_Variáveis_Mensais", "valor": 651125.66, "pct": 0.1499 },
+      { "tipo": "Investimentos_e_Estruturação", "valor": 236960.92, "pct": 0.0546 },
+      { "tipo": "Impostos_e_Taxas", "valor": 164.31, "pct": 0.00004 }
+    ],
+    "cf": { "total": 691741.18, "cvTotal": 651125.66, "cfcvTotal": 1342866.84 },
+    "custeio": { "total": 1342866.84, "mediaMensal": 167858.36, "porHa": 2393.70, "custoDiariaCab": 3.89 }
+  },
+  "pareto": {
+    "base": 1579992.07, "corteIdx": 4, "val80": 1286069.22, "pctPlanos": 0.1613, "planosDistintos": 31
+  },
+  "receitas": {
+    "total": 5151805.27, "mediaMensal": 643975.66, "porHa": 9183.25, "porCab": 3624.54, "lancamentos": 9
+  },
+  "fluxoCaixa": {
+    "saldoInicial": 0, "entradas": 5151805.27, "saidas": 4343020.07, "saldoFinal": 808785.20
+  },
+  "indices": {
+    "atProduzida": 6608.55, "txDesfrute": 0.4918, "producaoAtHa": 11.78,
+    "custeioPorAt": 203.20, "desembolsoCab": 3055.52
+  }
+}

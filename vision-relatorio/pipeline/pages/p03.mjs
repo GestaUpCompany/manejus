@@ -1,0 +1,74 @@
+// p.3 — Movimentação do Rebanho no Período (Auditoria Período)
+import { pageShell } from '../lib/shell.mjs';
+import { comboChart, C } from '../lib/svg.mjs';
+import { fmtInt, fmt1, fmt2, mesAbrev, kickerPeriodo, esc } from '../lib/fmt.mjs';
+
+const catLabel = (c) => c.replace(' - ', ' · ');
+
+export function render({ model, ctx }) {
+  const { meta, rebanho } = model;
+  const cols = ['si', 'compras', 'nasc', 'transfE', 'evolE', 'vendas', 'mortes', 'consumo', 'transfS', 'evolS', 'sf'];
+  const isIn = (k) => ['compras', 'nasc', 'transfE', 'evolE'].includes(k);
+  const isOut = (k) => ['vendas', 'mortes', 'consumo', 'transfS', 'evolS'].includes(k);
+
+  const rows = rebanho.matriz.map(r => {
+    const zero = cols.every(k => !r[k]);
+    const tds = [
+      `<td class="cat">${esc(catLabel(r.categoria))}</td>`,
+      `<td>${fmtInt(r.si)}</td>`,
+      ...['compras', 'nasc', 'transfE', 'evolE'].map(k => `<td class="in">${fmtInt(r[k])}</td>`),
+      ...['vendas', 'mortes', 'consumo', 'transfS', 'evolS'].map(k => `<td class="out">${fmtInt(r[k])}</td>`),
+      `<td class="strong">${fmtInt(r.sf)}</td>`,
+    ];
+    return `<tr${zero ? ' class="zero"' : ''}>${tds.join('')}</tr>`;
+  }).join('\n');
+
+  const tot = (k) => rebanho.matriz.reduce((a, x) => a + x[k], 0);
+  const totalRow = `<tr class="total"><td class="cat">Total do Rebanho</td><td>${fmtInt(tot('si'))}</td>${
+    ['compras', 'nasc', 'transfE', 'evolE'].map(k => `<td class="in">${fmtInt(tot(k))}</td>`).join('')
+  }${['vendas', 'mortes', 'consumo', 'transfS', 'evolS'].map(k => `<td class="out">${fmtInt(tot(k))}</td>`).join('')
+  }<td>${fmtInt(tot('sf'))}</td></tr>`;
+
+  const labels = rebanho.serieMensal.map(s => mesAbrev(s.mes));
+  const svg = comboChart({
+    labels, W: 1184, H: 175,
+    bars: { values: rebanho.serieMensal.map(s => Math.round(s.rebanhoMedio)), color: C.blue, labelFmt: fmtInt, labelInside: false },
+    line: { values: rebanho.serieMensal.map(s => s.uaha), color: C.green, labelFmt: (v) => fmt2(v) },
+  });
+
+  const body = `
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi"><div class="lbl">Saldo Final do Período</div><div class="val">${fmtInt(rebanho.saldoFinal)} <small>cab</small></div></div>
+    <div class="kpi"><div class="lbl">Peso Vivo Médio (referência)</div><div class="val">${fmt1(rebanho.pesoVivoMedio)} <small>kg/cab</small></div></div>
+    <div class="kpi"><div class="lbl">UA/ha Média</div><div class="val">${fmt2(rebanho.uahaMedia)} <small>UA/ha</small></div></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr class="grp"><th></th><th></th><th class="ent" colspan="4">Entradas</th><th class="sai" colspan="5">Saídas</th><th></th></tr>
+        <tr class="cols">
+          <th>Categoria</th><th>Saldo Ini.</th>
+          <th>Compras</th><th>Nascim.</th><th>Transf. E</th><th>Evol. E</th>
+          <th>Vendas</th><th>Mortes</th><th>Consumo</th><th>Transf. S</th><th>Evol. S</th>
+          <th>Saldo Final</th>
+        </tr>
+      </thead>
+      <tbody>${rows}${totalRow}</tbody>
+    </table>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart-title">
+      Rebanho Médio × UA/ha por mês
+      <span class="legend"><span><span class="sw bar"></span>Rebanho Médio (cab)</span><span><span class="sw line"></span>UA/ha</span></span>
+    </div>
+    ${svg}
+  </div>`;
+
+  return pageShell({
+    kicker: kickerPeriodo(meta.ini, meta.fim),
+    title: 'Movimentação do Rebanho no Período',
+    pageNum: 3, logoSrc: ctx.logoSrc, body,
+  });
+}

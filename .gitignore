@@ -62,3 +62,9 @@ screenshot-*.mjs
 tmp_*.png
 nul
 vision-relatorio/mockups/*.pdf
+
+# Pipeline Vision: extratos e saidas geradas (relatorio.pdf, pngs, htmls)
+vision-relatorio/pipeline/out/
+vision-relatorio/pipeline/extract-*.json
+vision-relatorio/pipeline/model-*.json
+vision-relatorio/pipeline/_*

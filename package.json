@@ -11,5 +11,8 @@
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck"
+  },
+  "dependencies": {
+    "fflate": "0.8.2"
   }
 }

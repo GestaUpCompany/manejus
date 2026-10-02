@@ -1766,3 +1766,22 @@ Seis itens da auditoria crítica implementados:
 Validado com PDF real da Jacamim (25/08→30/09, 13 páginas). Typecheck limpo, 92 testes verdes.
 
 Disparador: quando mencionar "auditoria do relatório", "pluralização", "área utilizada", ler esta seção.
+
+### Relatório público interativo do Vision (pipeline + rota /r/:token) (2026-10-02)
+
+Pipeline `vision-relatorio/` gera as 20 páginas do relatório financeiro a partir do XLSM Vision (ou extrato JSON). O mesmo motor roda no browser: `pipeline/web/app.mjs` exporta `mountRelatorio(el, payload, config)` que reconstrói o modelo canônico a partir das linhas detalhadas (`lib/model.mjs::buildModelFromReads`), com filtro de data início/fim em granularidade de dia/mês/ano via querystring `?ini=&fim=` e cross-filter por clique nos eixos. `lib/payload.mjs` serializa {reads, ctx, defaults, range} em gzip+base64. `build-interativo.mjs` gera `interativo.html` autossuficiente (protótipo local, aceita `--ocultar p05,p06`).
+
+App Vision (`apps/vision`):
+
+- **Acesso por flag**: `usuarios.acesso_vision` (migration `20261002140000_vision_relatorios.sql`). Gate em `App.tsx::ProtectedRoute` — usuário autenticado sem a flag vê tela "Acesso restrito". No MVP só `controller.gestaup@gmail.com` tem `acesso_vision=true`.
+- **`/relatorios/vision`** (`pages/RelatorioVision.tsx`): seletor de qualquer fazenda ativa, upload do XLSM/extrato JSON (parse no browser com SheetJS), período ini/fim + saldo de caixa inicial + ano-base do giro, checklist de páginas a ocultar (`PAGE_TITLES`, p01–p20), botões "Gerar link público" e "Baixar PDF", e lista de links com copiar/ativar/excluir.
+- **`/r/:token`** (`pages/RelatorioPublicoVision.tsx`): rota pública fora do layout autenticado; lê metadados de `relatorios_publicos` (policy pública existente), baixa o payload via RPC `vision_relatorio_payload(token)` e monta o relatório com `public: true` (sem botão de PDF — o botão de imprimir só existe no modo autenticado).
+- **`/relatorios/imprimir`** (`pages/RelatorioImpressao.tsx`): recebe o job via `sessionStorage('vision-print-job')`, monta o relatório com `autoPrint` e as mesmas páginas ocultas; `window.print()` com `@page 1280×720` gera o PDF pelo navegador.
+
+RPCs SECURITY DEFINER gateadas por `vision_tem_acesso()` (flag + ativo): `vision_criar_relatorio` (insere em `relatorios_publicos` tipo='vision' + blob em `relatorio_publico_payloads`, valida fazenda ativa), `vision_listar_relatorios`, `vision_atualizar_relatorio`, `vision_excluir_relatorio`. A leitura pública é `vision_relatorio_payload`, que exige token ativo e não expirado. `relatorio_publico_payloads` tem RLS sem policies: só a RPC alcança o blob. `config.paginas_ocultas` (jsonb) guarda os IDs de página ocultos.
+
+Validado ponta a ponta com link de teste na fazenda Gesta'Up (id b1000000-0000-4000-8000-000000000001, payload Guanabara): 17 páginas renderizadas com p14/p15/p16 ocultas, sem botão de PDF, filtro de data recalculando o modelo, RPC pública OK e `vision_criar_relatorio` negando anon. Typecheck e build do Vision limpos.
+
+Disparador: quando mencionar "relatório Vision", "link público Vision", "abas ocultas", "gerar PDF no Vision", "acesso Vision", ler esta seção.
+
+Parse de XLSM de qualquer tamanho direto no browser: `pipeline/lib/xlsx-stream.mjs` é um leitor XLSX streaming próprio (fflate Unzip + scanner incremental de `<row>`, sem deps de Node/DOM). Os XLSMs Vision descompactam para >1GB de XML mas os dados úteis ficam no topo das abas; o parser infla só as abas em NEEDED_SHEETS e para após 200 linhas vazias seguidas (semântica do extract.py: max_col=60, serials numéricos para datas). Medido na Semente (111MB): 3,6s e ~240MB de RAM, `extractReads` byte-a-byte idêntico ao do extract.py nas 3 fazendas. SheetJS removido do app (bundle -320KB). `extract-json.mjs` virou wrapper do mesmo parser (sem Python). `_test-stream.cjs` é o harness de comparação contra o golden.
