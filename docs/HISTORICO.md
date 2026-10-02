@@ -1,5 +1,15 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Exclusão de abastecimento com estorno de estoque (2026-10-03)
+
+`RegistrosAbastecimentoDetalhes.tsx` ganhou ação "Excluir" (admin/controller/super_admin) com `ConfirmModal`, seguindo o padrão de `SuplementacaoDetalhes`. A exclusão chama a RPC `excluir_registro_abastecimento` (migration `20261003100000_excluir_registro_abastecimento.sql`, db push), que valida papel controller/admin em `usuario_fazenda`, injeta contexto de auditoria e faz soft-delete.
+
+O ajuste de estoque não é feito na RPC: a trigger `trg_sync_baixa_abastecimento` (AFTER UPDATE, migration `20260917150000`) detecta a transição `deleted_at` null→set, remove a `movimentacoes_combustivel` de baixa vinculada e a trigger de saldo recalcula o tanque. O modal de confirmação informa o estorno quando `baixa_estoque_id` existe. Também exibe o campo Tanque (`tanque_nome`) nos detalhes.
+
+Edge cases cobertos pela trigger existente: edição de `total_abastecido` ajusta a baixa; troca de `tanque_id` estorna no antigo e baixa no novo; restore recria a baixa; registro sem tanque ou sem baixa só faz soft-delete. Edge residual conhecido: o estorno usa `GREATEST(0, saldo + delta)` sem teto de capacidade, então devolver litros a um tanque que recebeu entradas posteriores pode deixar o saldo acima de `capacidade_maxima_l`.
+
+Disparador: quando mencionar "excluir abastecimento", "estorno de combustível", `excluir_registro_abastecimento`, ler esta seção.
+
 ## Inputs numéricos pt-BR sem ambiguidade de ponto (2026-10-01)
 
 Origem: uma entrada de insumo na Fazenda Chibata foi lançada no PWA como "9.540" (o operador pretendia 9.540 kg, com ponto de milhar). O campo era `type="number"` (convenção americana: ponto = decimal) e o sync mandava a string crua para o Postgres, que gravou `numeric` 9,54 kg. Fator de erro de 1000 silencioso.
