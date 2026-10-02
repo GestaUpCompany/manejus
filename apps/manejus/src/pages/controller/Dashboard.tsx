@@ -3,6 +3,7 @@ import { useAuth } from '@gestaup/shared'
 import { Card, Button, ErrorState, PageSkeleton } from '@gestaup/ui'
 import { CADERNETA_IMAGES, CADERNETA_TITLES } from '../../types/images'
 import { useFazenda, useDashboardStats, useGadoStats, useRecentActivities, useFormulacoesBackfillAlert } from '../../hooks/useDashboardQueries'
+import { CADERNETA_GRUPOS } from '../../utils/cadernetas'
 
 function StatCard({
   title,
@@ -193,37 +194,15 @@ export function ControllerDashboard() {
     ),
   }
 
-  const cadernetas = [
-    { key: 'maternidade', title: CADERNETA_TITLES.maternidade, count: cadernetaStats.maternidade, path: '/controller/cadernetas/maternidade' },
-    { key: 'pastagens', title: CADERNETA_TITLES.pastagens, count: cadernetaStats.pastagens, path: '/controller/cadernetas/pastagens' },
-    { key: 'rodeio', title: CADERNETA_TITLES.rodeio, count: cadernetaStats.rodeio, path: '/controller/cadernetas/rodeio' },
-    { key: 'suplementacao', title: CADERNETA_TITLES.suplementacao, count: cadernetaStats.suplementacao, path: '/controller/cadernetas/suplementacao' },
-    { key: 'bebedouros', title: CADERNETA_TITLES.bebedouros, count: cadernetaStats.bebedouros, path: '/controller/cadernetas/bebedouros' },
-    { key: 'movimentacao', title: CADERNETA_TITLES.movimentacao, count: cadernetaStats.movimentacao, path: '/controller/cadernetas/movimentacao' },
-    { key: 'enfermaria', title: CADERNETA_TITLES.enfermaria, count: cadernetaStats.enfermaria, path: '/controller/cadernetas/enfermaria' },
-    { key: 'morte', title: CADERNETA_TITLES.morte, count: cadernetaStats.morte, path: '/controller/cadernetas/morte' },
-    { key: 'clima', title: CADERNETA_TITLES.clima, count: cadernetaStats.clima, path: '/controller/cadernetas/clima' },
-    { key: 'abastecimento', title: CADERNETA_TITLES.abastecimento, count: cadernetaStats.abastecimento, path: '/controller/cadernetas/abastecimento' },
-    { key: 'cantina', title: CADERNETA_TITLES.cantina, count: cadernetaStats.cantina, path: '/controller/cadernetas/alimentacao' },
-    { key: 'limpeza', title: CADERNETA_TITLES.limpeza, count: cadernetaStats.limpeza, path: '/controller/cadernetas/limpeza' },
-    { key: 'operacoes-maquinas', title: CADERNETA_TITLES['operacoes-maquinas'], count: cadernetaStats['operacoes-maquinas'], path: '/controller/cadernetas/operacoes-maquinas' },
-    { key: 'almoxarifado', title: CADERNETA_TITLES.almoxarifado, count: cadernetaStats.almoxarifado, path: '/controller/cadernetas/almoxarifado' },
-    { key: 'manutencao-maquinas', title: CADERNETA_TITLES['manutencao-maquinas'], count: cadernetaStats['manutencao-maquinas'], path: '/controller/cadernetas/manutencao-maquinas' },
-    { key: 'problemas', title: CADERNETA_TITLES.problemas, count: cadernetaStats.problemas, path: '/controller/cadernetas/problemas' },
-    { key: 'leitura-cocho', title: CADERNETA_TITLES['leitura-cocho'], count: cadernetaStats['leitura-cocho'] ?? 0, path: '/controller/cadernetas/leitura-cocho' },
-    { key: 'trato-confinamento', title: CADERNETA_TITLES['trato-confinamento'], count: cadernetaStats['trato-confinamento'] ?? 0, path: '/controller/cadernetas/trato-confinamento' },
-    { key: 'fabrica-confinamento', title: CADERNETA_TITLES['fabrica-confinamento'], count: cadernetaStats['fabrica-confinamento'] ?? 0, path: '/controller/cadernetas/fabrica-confinamento' },
-    { key: 'pesagem', title: CADERNETA_TITLES.pesagem, count: cadernetaStats.pesagem ?? 0, path: '/controller/cadernetas/pesagem' },
-    { key: 'recebimento-compra', title: CADERNETA_TITLES['recebimento-compra'], count: cadernetaStats['recebimento-compra'] ?? 0, path: '/controller/cadernetas/recebimento-compra' },
-    { key: 'comunicado-venda', title: CADERNETA_TITLES['comunicado-venda'], count: cadernetaStats['comunicado-venda'] ?? 0, path: '/controller/cadernetas/comunicado-venda' },
-    { key: 'comunicado-compra', title: CADERNETA_TITLES['comunicado-compra'], count: cadernetaStats['comunicado-compra'] ?? 0, path: '/controller/cadernetas/comunicado-compra' },
-    { key: 'comunicado-transferencia', title: CADERNETA_TITLES['comunicado-transferencia'], count: cadernetaStats['comunicado-transferencia'] ?? 0, path: '/controller/cadernetas/comunicado-transferencia' },
-    { key: 'saida-insumos', title: CADERNETA_TITLES['saida-insumos'], count: cadernetaStats['saida-insumos'] ?? 0, path: '/controller/cadernetas/saida-insumos' },
-    { key: 'entrada-insumos', title: CADERNETA_TITLES['entrada-insumos'], count: cadernetaStats['entrada-insumos'] ?? 0, path: '/controller/cadernetas/entrada-insumos' },
-    { key: 'entrada-combustivel', title: CADERNETA_TITLES['entrada-combustivel'], count: cadernetaStats['entrada-combustivel'] ?? 0, path: '/controller/cadernetas/entrada-combustivel' },
-    { key: 'entrada-almoxarifado', title: CADERNETA_TITLES['entrada-almoxarifado'], count: cadernetaStats['entrada-almoxarifado'] ?? 0, path: '/controller/cadernetas/entrada-almoxarifado' },
-    { key: 'entrada-cantina', title: CADERNETA_TITLES['entrada-cantina'], count: cadernetaStats['entrada-cantina'] ?? 0, path: '/controller/cadernetas/entrada-cantina' },
-  ]
+  const cadernetaGrupos = CADERNETA_GRUPOS.map((grupo) => ({
+    ...grupo,
+    itens: grupo.itens.map((item) => ({
+      key: item.id,
+      title: CADERNETA_TITLES[item.id as keyof typeof CADERNETA_TITLES],
+      count: cadernetaStats[item.id] ?? 0,
+      path: item.path,
+    })),
+  }))
 
   const quickActions = [
     { label: 'Novo Pasto', path: '/controller/pastos', icon: (
@@ -419,19 +398,29 @@ export function ControllerDashboard() {
       </div>
 
       {/* Cadernetas */}
-      <div>
-        <h3 className="text-lg font-semibold text-content-strong mb-4">Cadernetas</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {cadernetas.map((caderneta) => (
-            <CadernetaCard
-              key={caderneta.key}
-              title={caderneta.title}
-              count={caderneta.count}
-              image={CADERNETA_IMAGES[caderneta.key as keyof typeof CADERNETA_IMAGES]}
-              onClick={() => navigate(caderneta.path)}
-            />
-          ))}
-        </div>
+      <div className="space-y-5">
+        <h3 className="text-lg font-semibold text-content-strong">Cadernetas</h3>
+        {cadernetaGrupos.map((grupo) => (
+          <div key={grupo.nome}>
+            <h4
+              className="text-xs font-semibold uppercase tracking-wide mb-2"
+              style={{ color: grupo.cor }}
+            >
+              {grupo.nome}
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {grupo.itens.map((caderneta) => (
+                <CadernetaCard
+                  key={caderneta.key}
+                  title={caderneta.title}
+                  count={caderneta.count}
+                  image={CADERNETA_IMAGES[caderneta.key as keyof typeof CADERNETA_IMAGES]}
+                  onClick={() => navigate(caderneta.path)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Atividades Recentes */}

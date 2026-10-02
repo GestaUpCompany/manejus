@@ -5,189 +5,13 @@ import { CADERNETA_IMAGES, CADERNETA_TITLES, CADERNETA_DESCRIPTIONS } from '../.
 import { useAuth } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import { exportAllCadernetas } from '../../utils/exportAllCadernetas'
+import { CADERNETA_GRUPOS } from '../../utils/cadernetas'
 
 export function Cadernetas() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const toast = useToast()
   const [exporting, setExporting] = useState(false)
-
-  const cadernetas = [
-    {
-      title: CADERNETA_TITLES.maternidade,
-      description: CADERNETA_DESCRIPTIONS.maternidade,
-      image: CADERNETA_IMAGES.maternidade,
-      path: '/controller/cadernetas/maternidade',
-    },
-    {
-      title: CADERNETA_TITLES.pastagens,
-      description: CADERNETA_DESCRIPTIONS.pastagens,
-      image: CADERNETA_IMAGES.pastagens,
-      path: '/controller/cadernetas/pastagens',
-    },
-    {
-      title: CADERNETA_TITLES.rodeio,
-      description: CADERNETA_DESCRIPTIONS.rodeio,
-      image: CADERNETA_IMAGES.rodeio,
-      path: '/controller/cadernetas/rodeio',
-    },
-    {
-      title: CADERNETA_TITLES.suplementacao,
-      description: CADERNETA_DESCRIPTIONS.suplementacao,
-      image: CADERNETA_IMAGES.suplementacao,
-      path: '/controller/cadernetas/suplementacao',
-    },
-    {
-      title: CADERNETA_TITLES.bebedouros,
-      description: CADERNETA_DESCRIPTIONS.bebedouros,
-      image: CADERNETA_IMAGES.bebedouros,
-      path: '/controller/cadernetas/bebedouros',
-    },
-    {
-      title: CADERNETA_TITLES.movimentacao,
-      description: CADERNETA_DESCRIPTIONS.movimentacao,
-      image: CADERNETA_IMAGES.movimentacao,
-      path: '/controller/cadernetas/movimentacao',
-    },
-    {
-      title: CADERNETA_TITLES.enfermaria,
-      description: CADERNETA_DESCRIPTIONS.enfermaria,
-      image: CADERNETA_IMAGES.enfermaria,
-      path: '/controller/cadernetas/enfermaria',
-    },
-    {
-      title: CADERNETA_TITLES.morte,
-      description: CADERNETA_DESCRIPTIONS.morte,
-      image: CADERNETA_IMAGES.morte,
-      path: '/controller/cadernetas/morte',
-    },
-    {
-      title: CADERNETA_TITLES.clima,
-      description: CADERNETA_DESCRIPTIONS.clima,
-      image: CADERNETA_IMAGES.clima,
-      path: '/controller/cadernetas/clima',
-    },
-    {
-      title: CADERNETA_TITLES.abastecimento,
-      description: CADERNETA_DESCRIPTIONS.abastecimento,
-      image: CADERNETA_IMAGES.abastecimento,
-      path: '/controller/cadernetas/abastecimento',
-    },
-    {
-      title: CADERNETA_TITLES.cantina,
-      description: CADERNETA_DESCRIPTIONS.cantina,
-      image: CADERNETA_IMAGES.cantina,
-      path: '/controller/cadernetas/alimentacao',
-    },
-    {
-      title: CADERNETA_TITLES.limpeza,
-      description: CADERNETA_DESCRIPTIONS.limpeza,
-      image: CADERNETA_IMAGES.limpeza,
-      path: '/controller/cadernetas/limpeza',
-    },
-    {
-      title: CADERNETA_TITLES['operacoes-maquinas'],
-      description: CADERNETA_DESCRIPTIONS['operacoes-maquinas'],
-      image: CADERNETA_IMAGES['operacoes-maquinas'],
-      path: '/controller/cadernetas/operacoes-maquinas',
-    },
-    {
-      title: CADERNETA_TITLES.almoxarifado,
-      description: CADERNETA_DESCRIPTIONS.almoxarifado,
-      image: CADERNETA_IMAGES.almoxarifado,
-      path: '/controller/cadernetas/almoxarifado',
-    },
-    {
-      title: CADERNETA_TITLES['manutencao-maquinas'],
-      description: CADERNETA_DESCRIPTIONS['manutencao-maquinas'],
-      image: CADERNETA_IMAGES['manutencao-maquinas'],
-      path: '/controller/cadernetas/manutencao-maquinas',
-    },
-    {
-      title: CADERNETA_TITLES.problemas,
-      description: CADERNETA_DESCRIPTIONS.problemas,
-      image: CADERNETA_IMAGES.problemas,
-      path: '/controller/cadernetas/problemas',
-    },
-    {
-      title: CADERNETA_TITLES['leitura-cocho'],
-      description: CADERNETA_DESCRIPTIONS['leitura-cocho'],
-      image: CADERNETA_IMAGES['leitura-cocho'],
-      path: '/controller/cadernetas/leitura-cocho',
-    },
-    {
-      title: CADERNETA_TITLES['trato-confinamento'],
-      description: CADERNETA_DESCRIPTIONS['trato-confinamento'],
-      image: CADERNETA_IMAGES['trato-confinamento'],
-      path: '/controller/cadernetas/trato-confinamento',
-    },
-    {
-      title: CADERNETA_TITLES['fabrica-confinamento'],
-      description: CADERNETA_DESCRIPTIONS['fabrica-confinamento'],
-      image: CADERNETA_IMAGES['fabrica-confinamento'],
-      path: '/controller/cadernetas/fabrica-confinamento',
-    },
-    {
-      title: CADERNETA_TITLES.pesagem,
-      description: CADERNETA_DESCRIPTIONS.pesagem,
-      image: CADERNETA_IMAGES.pesagem,
-      path: '/controller/cadernetas/pesagem',
-    },
-    {
-      title: CADERNETA_TITLES['recebimento-compra'],
-      description: CADERNETA_DESCRIPTIONS['recebimento-compra'],
-      image: CADERNETA_IMAGES['recebimento-compra'],
-      path: '/controller/cadernetas/recebimento-compra',
-    },
-    {
-      title: CADERNETA_TITLES['comunicado-venda'],
-      description: CADERNETA_DESCRIPTIONS['comunicado-venda'],
-      image: CADERNETA_IMAGES['comunicado-venda'],
-      path: '/controller/cadernetas/comunicado-venda',
-    },
-    {
-      title: CADERNETA_TITLES['comunicado-compra'],
-      description: CADERNETA_DESCRIPTIONS['comunicado-compra'],
-      image: CADERNETA_IMAGES['comunicado-compra'],
-      path: '/controller/cadernetas/comunicado-compra',
-    },
-    {
-      title: CADERNETA_TITLES['comunicado-transferencia'],
-      description: CADERNETA_DESCRIPTIONS['comunicado-transferencia'],
-      image: CADERNETA_IMAGES['comunicado-transferencia'],
-      path: '/controller/cadernetas/comunicado-transferencia',
-    },
-    {
-      title: CADERNETA_TITLES['saida-insumos'],
-      description: CADERNETA_DESCRIPTIONS['saida-insumos'],
-      image: CADERNETA_IMAGES['saida-insumos'],
-      path: '/controller/cadernetas/saida-insumos',
-    },
-    {
-      title: CADERNETA_TITLES['entrada-insumos'],
-      description: CADERNETA_DESCRIPTIONS['entrada-insumos'],
-      image: CADERNETA_IMAGES['entrada-insumos'],
-      path: '/controller/cadernetas/entrada-insumos',
-    },
-    {
-      title: CADERNETA_TITLES['entrada-combustivel'],
-      description: CADERNETA_DESCRIPTIONS['entrada-combustivel'],
-      image: CADERNETA_IMAGES['entrada-combustivel'],
-      path: '/controller/cadernetas/entrada-combustivel',
-    },
-    {
-      title: CADERNETA_TITLES['entrada-almoxarifado'],
-      description: CADERNETA_DESCRIPTIONS['entrada-almoxarifado'],
-      image: CADERNETA_IMAGES['entrada-almoxarifado'],
-      path: '/controller/cadernetas/entrada-almoxarifado',
-    },
-    {
-      title: CADERNETA_TITLES['entrada-cantina'],
-      description: CADERNETA_DESCRIPTIONS['entrada-cantina'],
-      image: CADERNETA_IMAGES['entrada-cantina'],
-      path: '/controller/cadernetas/entrada-cantina',
-    },
-  ]
 
   const handleExportAll = async () => {
     if (!user || exporting) return
@@ -221,26 +45,39 @@ export function Cadernetas() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {cadernetas.map((caderneta) => (
-          <Card
-            key={caderneta.path}
-            className="bg-surface-1 p-6 cursor-pointer  border-0 transition-all"
-            onClick={() => navigate(caderneta.path)}
+      {CADERNETA_GRUPOS.map((grupo) => (
+        <div key={grupo.nome}>
+          <h3
+            className="text-sm font-semibold uppercase tracking-wide mb-3"
+            style={{ color: grupo.cor }}
           >
-            <div className="flex flex-col items-center">
-              <img
-                src={caderneta.image}
-                alt={caderneta.title}
-                loading="lazy"
-                className="w-24 h-24 mb-4 rounded-[32px]"
-              />
-              <h3 className="text-xl font-semibold text-content-strong mb-2 text-center">{caderneta.title}</h3>
-              <p className="text-sm text-content-muted text-center">{caderneta.description}</p>
-            </div>
-          </Card>
-        ))}
-      </div>
+            {grupo.nome}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {grupo.itens.map((item) => {
+              const id = item.id as keyof typeof CADERNETA_TITLES
+              return (
+                <Card
+                  key={item.path}
+                  className="bg-surface-1 p-6 cursor-pointer  border-0 transition-all"
+                  onClick={() => navigate(item.path)}
+                >
+                  <div className="flex flex-col items-center">
+                    <img
+                      src={CADERNETA_IMAGES[id]}
+                      alt={CADERNETA_TITLES[id]}
+                      loading="lazy"
+                      className="w-24 h-24 mb-4 rounded-[32px]"
+                    />
+                    <h3 className="text-xl font-semibold text-content-strong mb-2 text-center">{CADERNETA_TITLES[id]}</h3>
+                    <p className="text-sm text-content-muted text-center">{CADERNETA_DESCRIPTIONS[id]}</p>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
