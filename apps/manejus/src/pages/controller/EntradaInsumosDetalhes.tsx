@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
-import { Card, DetailLayout, DetailSection, DetailField, formatValue, Table, Thead, Tbody, Tr, Th, Td } from '@gestaup/ui'
+import { Button, Card, ConfirmModal, DetailLayout, DetailSection, DetailField, formatValue, Table, Thead, Tbody, Tr, Th, Td, useToast } from '@gestaup/ui'
 import { formatDate } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
 
@@ -45,10 +45,15 @@ export function EntradaInsumosDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [registro, setRegistro] = useState<RegistroEntradaInsumos | null>(null)
   const [itens, setItens] = useState<EntradaInsumoItem[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const canDelete = user && (user.papel === 'admin' || user.papel === 'super_admin' || user.papel === 'controller')
 
   useEffect(() => {
     loadRegistro()
@@ -96,13 +101,60 @@ export function EntradaInsumosDetalhes() {
     setLoading(false)
   }
 
+  const handleConfirmDelete = async () => {
+    if (!registro || !user || isSubmitting) return
+
+    setIsSubmitting(true)
+    try {
+      const fazendaId = await getFazendaIdForUser(user.id)
+      if (!fazendaId) return
+
+      const { error } = await supabase.rpc('excluir_registro_entrada_insumos', {
+        p_id: registro.id,
+        p_fazenda_id: fazendaId,
+        p_usuario_id: user.id,
+        p_usuario_email: user.email,
+      })
+
+      if (error) {
+        console.error('Erro ao excluir registro:', error)
+        toast.error(error.message || 'Erro ao excluir registro')
+        return
+      }
+
+      toast.success('Registro excluído com sucesso.')
+      navigate('/controller/cadernetas/entrada-insumos')
+    } catch (err) {
+      console.error('Erro ao excluir registro:', err)
+      toast.error('Erro inesperado ao excluir registro')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const actions = (
+    <>
+      {canDelete && (
+        <Button
+          variant="danger"
+          onClick={() => setIsDeleteConfirmOpen(true)}
+          className="text-sm"
+        >
+          Excluir
+        </Button>
+      )}
+    </>
+  )
+
   return (
+    <>
     <DetailLayout
       loading={loading}
       loadError={loadError}
       notFound={!registro}
       onBack={() => navigate('/controller/cadernetas/entrada-insumos')}
       title="Detalhes da Entrada de Insumos"
+      actions={actions}
     >
       {() => (
         <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
@@ -159,5 +211,20 @@ export function EntradaInsumosDetalhes() {
         </Card>
       )}
     </DetailLayout>
+
+    {/* Confirm Modal de Exclusão */}
+    {registro && (
+      <ConfirmModal
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => !isSubmitting && setIsDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Excluir Entrada de Insumos"
+        message={`Tem certeza que deseja excluir a entrada de ${formatDate(registro.data_entrada)}?\n\nFornecedor: ${registro.fornecedor || '-'}\nNota Fiscal: ${registro.nota_fiscal || '-'}\nItens: ${itens.length}\n\nO registro será marcado como excluído. As movimentações de estoque vinculadas serão estornadas e o saldo/custo médio dos itens recalculado automaticamente.`}
+        confirmText={isSubmitting ? 'Excluindo...' : 'Excluir'}
+        cancelText="Cancelar"
+        variant="danger"
+      />
+    )}
+    </>
   )
 }

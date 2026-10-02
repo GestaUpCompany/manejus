@@ -1,5 +1,15 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Exclusão de entrada de insumos com estorno de estoque (2026-10-02)
+
+`EntradaInsumosDetalhes.tsx` ganhou ação "Excluir" (admin/controller/super_admin) com `ConfirmModal`. Chama a RPC `excluir_registro_entrada_insumos` (migration `20261003120000`, db push): valida papel, injeta contexto de auditoria, soft-deleta o cabeçalho e deleta fisicamente os itens (`entrada_insumos_itens` não tem `deleted_at`). O DELETE do item dispara `trg_entrada_insumos_itens_mov`, que soft-deleta a movimentação espelhada e recalcula saldo e custo médio do insumo/formulação.
+
+Na mesma migration, `trg_entrada_insumos_itens_mov` ganhou guard `r.deleted_at IS NULL` no lookup do cabeçalho (o branch de DELETE foi movido para antes do lookup, pois não depende do pai). Sem o guard, um re-sync tardio do PWA (upsert por `local_id`) recriaria item e movimentação de uma entrada já excluída. O mesmo guard ainda não existe em `trg_saida_insumos_itens_mov` e `trg_fabrica_confinamento_insumos_mov` — aplicar quando a exclusão dessas telas for implementada.
+
+Testado na fazenda de testes: entrada com 2 itens subiu `estoque_atual` (500 e 200) e criou 2 movimentações; exclusão pela UI zerou os saldos, removeu os itens e estornou as movimentações; re-insert de item em pai excluído não gerou movimentação; segunda exclusão falha com "Registro não encontrado ou já excluído".
+
+Disparador: quando mencionar "excluir entrada de insumos", "estorno de estoque de insumos", `excluir_registro_entrada_insumos`, ler esta seção.
+
 ## Fix: aprovação de solicitação de novo lote falhava com erro de INSERT (2026-10-03)
 
 Caso real: na Fazenda Marcon, a solicitação `fe382a1d-f7d0-42a9-a29c-0eb3989dec59` (lote "198" a partir do "Lote 175", 60 novilhas, enviada pela Karina via PWA em 02/10) não pôde ser aprovada; o usuário acabou rejeitando. O erro era Postgres 42601 "INSERT has more target columns than expressions".
