@@ -31,12 +31,12 @@ const lotesPorMes = (cat) => {
 export function render({ model, ctx }) {
   const { meta, compras } = model;
 
-  // orçamento de linhas: normal até ~20; denso até ~27; acima colapsa lotes→mês;
+  // orçamento de linhas: normal até ~18; denso até ~22; acima colapsa lotes→mês;
   // se mesmo agregado por mês estourar, o nível de detalhe some (só tipo→categoria)
   const nLoteRows = compras.pivot.reduce((a, tp) => a + 1 + tp.categorias.reduce((b, c) => b + 1 + c.lotes.length, 0), 0);
   const nMesRows = compras.pivot.reduce((a, tp) => a + 1 + tp.categorias.reduce((b, c) => b + 1 + lotesPorMes(c).length, 0), 0);
-  const detail = nLoteRows <= 27 ? 'dia' : nMesRows <= 27 ? 'mes' : 'nenhum';
-  const dense = detail !== 'dia' || nLoteRows > 19;
+  const detail = nLoteRows <= 22 ? 'dia' : nMesRows <= 22 ? 'mes' : 'nenhum';
+  const dense = detail !== 'dia' || nLoteRows > 17;
 
   const rows = compras.pivot.map(tp => {
     const catRows = tp.categorias.map(cat => {
@@ -64,9 +64,9 @@ export function render({ model, ctx }) {
     tr.lot td:first-child { padding-left: 52px; color: var(--muted); font-weight: 500; }
     tr.spacer td { padding: 3px; border: none; }
     .table-wrap { flex: 1; }
-    table.dense { font-size:12px; }
-    table.dense tbody td { padding: 3.5px 8px; }
-    table.dense thead th { padding: 5px 8px 7px 8px; }
+    table.dense { font-size:12.5px; }
+    table.dense tbody td { padding: 2.5px 8px; }
+    table.dense thead th { padding: 4px 8px 6px 8px; }
     .footnote { padding: 6px 48px 0 48px; font-size:11px; color: var(--muted); font-style: italic; }
   `;
 

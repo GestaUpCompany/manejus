@@ -31,12 +31,12 @@ export function render({ model, ctx }) {
 
   const labels = rebanho.serieMensal.map(s => mesAbrev(s.mes));
   const svg = comboChart({
-    labels, W: 1184, H: 160, labelScale: 1.3,
+    labels, W: 1184, H: 148, labelScale: 1.3,
     bars: { values: rebanho.serieMensal.map(s => Math.round(s.rebanhoMedio)), color: C.blue, labelFmt: fmtInt, labelInside: false },
     line: { values: rebanho.serieMensal.map(s => s.uaha), color: C.green, labelFmt: (v) => fmt2(v) },
   });
 
-  const extraCss = `.chart-wrap { padding-bottom: 14px; }`;
+  const extraCss = `.chart-wrap { padding-bottom: 6px; }`;
 
   const body = `
   <div class="kpis" style="grid-template-columns:repeat(3,1fr)">

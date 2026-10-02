@@ -105,17 +105,22 @@ try {
     }
     console.log(`[render] ${base}.pdf + .png`);
   }
-  // PDF consolidado: concatena estilos + .page de cada HTML num único documento
+  // PDF consolidado: concatena estilos + .page de cada HTML num único documento.
+  // Os estilos são escopados por página (.pg-<id>): nomes de classe se repetem
+  // entre páginas e, sem escopo, a última regra venceria para todas.
   if (htmlFiles.length > 1) {
+    const { scopeCss } = await import('./lib/scope.mjs');
     const styles = [], pages = [];
     for (const f of htmlFiles) {
+      const id = path.basename(f, '.html');
       const html = inlineImages(fs.readFileSync(f, 'utf8'), f);
-      styles.push(...[...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]));
-      pages.push(html.match(/<body[^>]*>([\s\S]*?)<\/body>/)?.[1] ?? '');
+      for (const m of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) styles.push(scopeCss(m[1], `.pg-${id}`));
+      const body = html.match(/<body[^>]*>([\s\S]*?)<\/body>/)?.[1] ?? '';
+      pages.push(`<div class="pgwrap pg-${id}">${body}</div>`);
     }
     const merged = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>${styles.join('\n')}\n.page { break-after: page; } .page:last-of-type { break-after: auto; }</style>
+<style>body { margin: 0; }\n${styles.join('\n')}\n.pgwrap { break-after: page; } .pgwrap:last-of-type { break-after: auto; }</style>
 </head><body>${pages.join('\n')}</body></html>`;
     const out = path.join(outDir, 'relatorio.pdf');
     fs.writeFileSync(out, await generatePdf({ html: merged, format: 'A4', landscape: true }));

@@ -118,14 +118,24 @@ function createSheetParser(sst, onRow) {
   let buf = '';
   let emptyRun = 0;
   let aborted = false;
+  let earlyStop = false;
+  let dimLastRow = 0;
+  let lastRowNum = 0;
   const td = new TextDecoder('utf-8');
 
   return {
     get aborted() { return aborted; },
+    get earlyStop() { return earlyStop; },
+    get dimLastRow() { return dimLastRow; },
+    get lastRowNum() { return lastRowNum; },
     feed(u8, final) {
       if (aborted) return;
       buf += td.decode(u8, { stream: !final });
       if (final) buf += td.decode();
+      if (!dimLastRow) {
+        const dm = /<dimension[^>]*ref="[^"]*?[A-Z]+(\d+)"/.exec(buf.slice(0, 2000));
+        if (dm) dimLastRow = Number(dm[1]);
+      }
       for (;;) {
         const i = buf.indexOf('<row');
         if (i === -1) { buf = buf.slice(-8); return; }
@@ -134,6 +144,9 @@ function createSheetParser(sst, onRow) {
         if (!BOUNDARY.has(nxt)) { buf = buf.slice(i + 1); continue; }
         const gt = buf.indexOf('>', i);
         if (gt === -1) { buf = buf.slice(i); return; }
+        // nº real da linha no Excel (atributo r do <row>) — a auditoria usa
+        // para apontar a linha exata mesmo se o XML omitir linhas vazias.
+        const rowNum = Number(/\br="(\d+)"/.exec(buf.slice(i, gt + 1))?.[1]) || undefined;
         let row;
         if (buf[gt - 1] === '/') {
           row = [];
@@ -144,11 +157,13 @@ function createSheetParser(sst, onRow) {
           row = parseCells(buf.slice(gt + 1, close), sst);
           buf = buf.slice(close + 6);
         }
+        if (rowNum) { row._r = rowNum; lastRowNum = rowNum; }
         const empty = row.every((v) => v == null);
         emptyRun = empty ? emptyRun + 1 : 0;
         onRow(row);
         if (emptyRun >= EMPTY_STOP) {
           aborted = true;
+          earlyStop = !final;
           return;
         }
       }
@@ -227,7 +242,14 @@ export async function sheetsFromXlsxBlob(blob, needed) {
     sheets[sheetName] = rows;
     const parser = createSheetParser(sst, (r) => rows.push(r));
     return {
-      onData: (u8, final) => { if (!parser.aborted) parser.feed(u8, final); },
+      onData: (u8, final) => {
+        if (!parser.aborted) parser.feed(u8, final);
+        // Parou cedo e a planilha declara linhas além do ponto de parada:
+        // pode haver dados reais abaixo de um trecho de 200+ linhas vazias.
+        if (final && parser.earlyStop && parser.dimLastRow > parser.lastRowNum) {
+          rows._truncado = { ultimaLida: parser.lastRowNum, declarada: parser.dimLastRow };
+        }
+      },
     };
   });
   return { sheets, missing };

@@ -342,8 +342,16 @@ export function paretoChart({ linhas, corteIdx, W = 640, H = 400, labelScale = 1
   for (const i of lblIdx) {
     out.push(`<circle cx="${f(pts[i][0])}" cy="${f(pts[i][1])}" r="3.5" fill="${C.green}"/>`);
     const pctTxt = `${(linhas[i].pct * 100).toFixed(1).replace('.', ',').replace(',0', '')}%`;
-    const stl = labelScale === 1 ? '' : ` style="font-size:${f(10.5 * labelScale, 1)}px;font-weight:600"`;
-    out.push(`<text class="vlbl g" x="${f(pts[i][0])}" y="${f(pts[i][1] - Math.round(9 * labelScale))}" text-anchor="middle"${stl}>${pctTxt}</text>`);
+    // Fundo branco: quando a 1ª barra domina o gráfico o rótulo verde fica
+    // por cima dela e some. Usa o halo por cópias ±1px (mesma técnica dos
+    // rótulos de linha acima) — stroke branco vazaria no miolo do glifo no PDF.
+    const fsPct = f(10.5 * labelScale, 1);
+    const ty = pts[i][1] - Math.round(9 * labelScale);
+    const base = `text-anchor="middle" font-family="Archivo" font-size="${fsPct}" font-weight="700"`;
+    for (const [dx, dy] of [[-1.5, 0], [1.5, 0], [0, -1.5], [0, 1.5]]) {
+      out.push(`<text x="${f(pts[i][0] + dx)}" y="${f(ty + dy)}" ${base} fill="#fff">${pctTxt}</text>`);
+    }
+    out.push(`<text class="vlbl g" x="${f(pts[i][0])}" y="${f(ty)}" text-anchor="middle"${labelScale === 1 ? '' : ` style="font-size:${fsPct}px;font-weight:600"`}>${pctTxt}</text>`);
   }
   // eixo ordinal: marcos a cada 5 + último (se não colidir com o marco anterior)
   for (let i = 0; i < n; i++) {

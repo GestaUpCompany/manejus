@@ -1,10 +1,12 @@
 import { NEEDED_SHEETS } from '../../../../vision-relatorio/pipeline/lib/core.mjs'
 import { sheetsFromXlsxBlob } from '../../../../vision-relatorio/pipeline/lib/xlsx-stream.mjs'
-import { extractReads } from '../../../../vision-relatorio/pipeline/lib/model.mjs'
+import { buildModelFromReads, extractReads } from '../../../../vision-relatorio/pipeline/lib/model.mjs'
 import { buildPayload, compressPayload, computeRange, decompressPayload } from '../../../../vision-relatorio/pipeline/lib/payload.mjs'
-import { mountRelatorio, PAGE_TITLES, SHELL_CSS } from '../../../../vision-relatorio/pipeline/web/app.mjs'
+import { mountRelatorio, buildMergedHtml, PAGE_TITLES, SHELL_CSS } from '../../../../vision-relatorio/pipeline/web/app.mjs'
+import { auditSheets, fmtLinhas } from '../../../../vision-relatorio/pipeline/lib/audit.mjs'
+import { supabase } from '@gestaup/supabase'
 
-export { mountRelatorio, PAGE_TITLES, SHELL_CSS, decompressPayload, computeRange, extractReads }
+export { mountRelatorio, buildMergedHtml, PAGE_TITLES, SHELL_CSS, decompressPayload, computeRange, extractReads, buildModelFromReads, auditSheets, fmtLinhas }
 
 export interface FazendaRef {
   id: string
@@ -63,4 +65,43 @@ export function payloadFromReads(
 
 export function payloadToB64(payload: RelatorioPayload): Promise<string> {
   return compressPayload(payload)
+}
+
+// Gera o PDF no servidor (Puppeteer) a partir do mesmo documento renderizado
+// no link público: saída idêntica às lâminas 1280x720, sem diálogo de
+// impressão do navegador (que fatiava as páginas e injetava cabeçalho/rodapé).
+export async function baixarPdfRelatorio(
+  payload: RelatorioPayload,
+  opts: { hiddenPages?: string[]; titulo?: string } = {},
+): Promise<void> {
+  const html = buildMergedHtml(payload, { hiddenPages: opts.hiddenPages })
+  // compressPayload aceita qualquer valor JSON-serializável: aqui o HTML vira
+  // uma string JSON comprimida (o merge de ~2MB baixa para ~300KB no POST).
+  const htmlGz = await compressPayload(html)
+  const { data: { session } } = await supabase.auth.getSession()
+  const resp = await fetch('/api/pdf/vision', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session?.access_token ?? ''}`,
+    },
+    body: JSON.stringify({
+      htmlGz,
+      nomeArquivo: (opts.titulo ?? 'relatorio-vision').toLowerCase(),
+    }),
+  })
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`
+    try { msg = (await resp.json()).error || msg } catch { /* corpo não-JSON */ }
+    throw new Error(msg)
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${(opts.titulo ?? 'relatorio-vision').replace(/[^\w.-]+/g, '-')}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }

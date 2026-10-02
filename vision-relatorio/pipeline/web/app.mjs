@@ -10,6 +10,7 @@ import { buildModelFromReads } from '../lib/model.mjs';
 import { parseISODate } from '../lib/core.mjs';
 import { decompressPayload } from '../lib/payload.mjs';
 import { esc } from '../lib/fmt.mjs';
+import { scopeCss } from '../lib/scope.mjs';
 
 import { renderCapa, renderFinal } from '../pages/p01.mjs';
 import { render as p02 } from '../pages/p02.mjs';
@@ -181,10 +182,15 @@ export function mountRelatorio(el, payload, config = {}) {
   }
 
   function setPageContent(rec, htmlDoc) {
-    const styles = [...htmlDoc.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
+    // :root não existe dentro de shadow root — as variáveis de cor das páginas
+    // (--blue, --green…) precisam ir para :host, senão var(--*) fica vazio e
+    // bandas, pills e KPIs perdem a cor.
+    const styles = [...htmlDoc.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
+      .map((m) => m[1].replace(/:root\b/g, ':host'))
+      .join('\n');
     const body = htmlDoc.match(/<body[^>]*>([\s\S]*?)<\/body>/)?.[1] ?? htmlDoc;
     rec.sr.innerHTML = `<style>
-      :host { display: block; font-family: 'Archivo', 'Segoe UI', sans-serif; }
+      :host { display: block; font-family: 'Archivo', 'Segoe UI', sans-serif; line-height: normal; letter-spacing: normal; word-spacing: normal; }
       .zoomwrap { transform-origin: top left; }
       @media print { .zoomwrap { transform: none !important; } }
       ${styles}
@@ -230,7 +236,7 @@ export function mountRelatorio(el, payload, config = {}) {
     else apply(`${y}-01-01`, `${y}-12-31`);
   });
   sr.getElementById('clear').addEventListener('click', () => apply(defaults.ini, defaults.fim));
-  if (!isPublic) sr.getElementById('print').addEventListener('click', () => window.print());
+  if (!isPublic) sr.getElementById('print').addEventListener('click', () => config.onPdf ? config.onPdf() : window.print());
 
   // cross-filter: clique num rótulo de mês do eixo filtra o relatório para aquele mês
   const ABREV = { Jan: 1, Fev: 2, Mar: 3, Abr: 4, Mai: 5, Jun: 6, Jul: 7, Ago: 8, Set: 9, Out: 10, Nov: 11, Dez: 12 };
@@ -271,9 +277,43 @@ export function mountRelatorio(el, payload, config = {}) {
   new ResizeObserver(() => { for (const rec of hosts.values()) fitZoom(rec); }).observe(pagesEl);
 
   renderAll();
-  if (config.autoPrint) setTimeout(() => window.print(), 600);
+  if (config.autoPrint && config.onPdf) setTimeout(() => config.onPdf(), 600);
+  else if (config.autoPrint) setTimeout(() => window.print(), 600);
 
   return { apply, getRange: () => [ini, fim] };
+}
+
+// Monta o documento único de impressão (mesma estratégia do merge do
+// compose.mjs): estilos escopados por página (.pg-<id>, via scopeCss) + os
+// .page concatenados, cada um virando uma lâmina 1280x720 no PDF via
+// @page + break-after. O escopo é obrigatório: nomes de classe se repetem
+// entre páginas e, sem ele, o último <style> vence para todas.
+export function buildMergedHtml(payload, config = {}) {
+  const { reads, ctx, defaults } = payload;
+  const ini = config.ini ?? defaults.ini;
+  const fim = config.fim ?? defaults.fim;
+  const hidden = new Set(config.hiddenPages ?? []);
+  const model = buildModelFromReads(reads, {
+    ini: parseISODate(ini), fim: parseISODate(fim),
+    saldoCaixaInicial: defaults.saldoCaixaInicial ?? 0,
+    anoBaseGiro: defaults.anoBaseGiro,
+  });
+  const styles = [], pages = [];
+  for (const id of PAGE_ORDER) {
+    if (hidden.has(id)) continue;
+    const html = registry[id]({ model, ctx });
+    const scope = `.pg-${id}`;
+    for (const m of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) styles.push(scopeCss(m[1], scope));
+    const body = html.match(/<body[^>]*>([\s\S]*?)<\/body>/)?.[1] ?? '';
+    pages.push(`<div class="pgwrap ${scope.slice(1)}">${body}</div>`);
+  }
+  // <base> resolve os src relativos (ex.: /assets/logo.png) contra a origem
+  // do app: o Chrome do Puppeteer, que roda fora da SPA, consegue carregá-los.
+  const base = typeof location !== 'undefined' ? `<base href="${location.origin}/">` : '';
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">${base}
+<link href="${FONT_HREF}" rel="stylesheet">
+<style>body { margin: 0; }\n${styles.join('\n')}\n.pgwrap { break-after: page; } .pgwrap:last-of-type { break-after: auto; }</style>
+</head><body>${pages.join('\n')}</body></html>`;
 }
 
 // ---------- boot standalone (interativo.html gerado pelo pipeline) ----------

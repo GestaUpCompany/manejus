@@ -311,9 +311,18 @@ importers:
       '@gestaup/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@sparticuz/chromium':
+        specifier: ^152.0.0
+        version: 152.0.0
+      '@supabase/supabase-js':
+        specifier: ^2.105.1
+        version: 2.105.1
       '@tanstack/react-query':
         specifier: ^5.100.9
         version: 5.100.9(react@18.3.1)
+      puppeteer-core:
+        specifier: ^25.10.0
+        version: 25.10.0
       react:
         specifier: ^18.2.0
         version: 18.3.1

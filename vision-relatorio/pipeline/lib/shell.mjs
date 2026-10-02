@@ -11,13 +11,13 @@ const BASE_CSS = `
 }
 body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
 .page { width: 1280px; height: 720px; position: relative; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
-.page-head { display: flex; align-items: center; justify-content: space-between; padding: 24px 48px 10px 48px; }
+.page-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 48px 8px 48px; }
 .title-block h1 { font-size:33px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
 .title-block .kicker { font-size:12px; font-weight: 700; letter-spacing: 3px; color: var(--green-dark); text-transform: uppercase; margin-top: 5px; }
 .page-logo { height: 62px; }
 
-.kpis { display: grid; gap: 12px; padding: 6px 48px 14px 48px; }
-.kpi { border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green); padding: 9px 14px 8px 14px; background: #fff; }
+.kpis { display: grid; gap: 12px; padding: 4px 48px 10px 48px; }
+.kpi { border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green); padding: 7px 12px 6px 12px; background: #fff; }
 .kpi.blue-top { border-top-color: var(--blue); }
 .kpi.red-top { border-top-color: var(--red); }
 .kpi.amber-top { border-top-color: var(--amber); }
@@ -27,12 +27,12 @@ body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
 
 .table-wrap { padding: 0 48px; }
 table { width: 100%; border-collapse: collapse; font-size:14px; }
-thead .cols th { font-size:10.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 2px solid var(--ink); text-align: right; white-space: nowrap; }
+thead .cols th { font-size:10.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); padding: 5px 8px; border-bottom: 2px solid var(--ink); text-align: right; white-space: nowrap; }
 thead .cols th:first-child { text-align: left; }
-thead .grp th { font-size:11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; padding: 5px 8px; text-align: right; color: var(--ink); }
+thead .grp th { font-size:11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; padding: 4px 8px; text-align: right; color: var(--ink); }
 thead .grp th.ent { color: var(--green-dark); }
 thead .grp th.sai { color: var(--red); }
-tbody td { padding: 5.5px 8px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+tbody td { padding: 4.5px 8px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
 tbody td.cat { text-align: left; font-weight: 600; }
 tbody tr.zero td { color: #9AA8B5; }
 tbody td.in { color: var(--green-dark); }
@@ -42,8 +42,8 @@ tbody tr.total td:first-child { border-radius: 0 0 0 8px; }
 tbody tr.total td:last-child { border-radius: 0 0 8px 0; }
 td.strong { font-weight: 700; }
 
-.chart-wrap { padding: 12px 48px 0 48px; flex: 1; }
-.chart-title { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; display: flex; align-items: center; gap: 18px; }
+.chart-wrap { padding: 8px 48px 0 48px; flex: 1; }
+.chart-title { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; display: flex; align-items: center; gap: 18px; }
 .legend { display: flex; gap: 16px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
 .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 .legend .sw.bar { background: var(--blue); }
@@ -68,7 +68,7 @@ text.axis.dense { font-size:9px; }
 .panel h3 { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
 .caption { font-size:11px; color: var(--muted); margin-top: 6px; }
 
-.page-foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 48px 20px 48px; font-size:12px; color: var(--muted); margin-top: auto; }
+.page-foot { display: flex; align-items: center; justify-content: space-between; padding: 6px 48px 14px 48px; font-size:12px; color: var(--muted); margin-top: auto; }
 .page-foot .num { font-weight: 800; color: var(--blue); font-size:14.5px; }
 .bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
 .bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }

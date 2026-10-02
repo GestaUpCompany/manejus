@@ -10,6 +10,8 @@ Regras acumuladas durante o desenho dos mockups. Valem para todos os mockups em 
 - Cards KPI: grid de 4 colunas (mesmo quando há menos cards — a grade mantém a régua visual), borda superior de 3px na cor temática da página.
 - Rodapé: `Vision'Up · Gesta'Up Intelligence` à esquerda, `@gestaup.company` ao centro, número de página à direita; régua dupla azul (4px) + verde (2px) no bottom absoluto.
 - Margem lateral padrão: 48px.
+- **Orçamento vertical: o conteúdo precisa caber em 720px** — o que excede é clipado pelo `overflow:hidden` tanto no PDF quanto no link interativo (o `fitZoom` só escala largura). Verificar com `pipeline/_measure-overflow.cjs <farm>`: reporta `+Npx` por página que estoura. Os +8px de capa/encerramento são a sangria intencional da foto, não defeito.
+- **No shell interativo (shadow DOM), `line-height` e demais propriedades herdáveis do app pai atravessam o host** — o `:host` do `app.mjs` reseta `line-height/letter-spacing/word-spacing` para `normal`, senão o `line-height:1.5` do app infla cada linha de texto e estoura páginas que cabem no standalone. Novas páginas devem ser medidas no contexto interativo também.
 
 ## Cores temáticas por página
 

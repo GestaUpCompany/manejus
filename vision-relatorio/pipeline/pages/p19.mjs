@@ -23,17 +23,17 @@ export function render({ model, ctx }) {
 
   const extraCss = `
     .kpi { border-top-color: var(--green); }
-    .chart1 { padding: 0 48px 10px 48px; }
+    .chart1 { padding: 0 48px 6px 48px; }
+    .bottom-row { display: grid; grid-template-columns: 1fr 0.95fr; gap: 30px; padding: 10px 48px 0 48px; flex: 1; }
     .chart-title { display: flex; align-items: center; justify-content: space-between; }
     .legend { display: flex; gap: 14px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
     .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
     .legend .sw.b { background: var(--blue); }
     .legend .sw.g { background: var(--green); }
-    .bottom-row { display: grid; grid-template-columns: 1fr 0.95fr; gap: 30px; padding: 14px 48px 0 48px; flex: 1; }
     .btable { width: 100%; border-collapse: collapse; font-size:12.5px; margin-top: 2px; }
     .btable th { font-size:10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: left; padding: 4px 8px; border-bottom: 1.5px solid var(--blue); }
     .btable th.num { text-align: right; }
-    .btable td { padding: 4.8px 8px; border-bottom: 1px solid var(--line); color: var(--ink); }
+    .btable td { padding: 4px 8px; border-bottom: 1px solid var(--line); color: var(--ink); }
     .btable td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .btable td.pct { color: var(--muted); }
     .btable tr.total td { font-weight: 800; color: var(--blue); border-top: 2px solid var(--blue); border-bottom: none; }
@@ -45,7 +45,7 @@ export function render({ model, ctx }) {
     const area = areaChart({
       labels: v.mensal.map(m => mesLbl(m.mes)),
       values: v.mensal.map(m => m.cab),
-      W: 1184, H: 185, color: C.green, labelFmt: (x) => fmtInt(x), labelScale: 1.3,
+      W: 1184, H: 168, color: C.green, labelFmt: (x) => fmtInt(x), labelScale: 1.3,
     });
 
     const combo = comboChart({
@@ -65,8 +65,8 @@ export function render({ model, ctx }) {
       g.cab += c.cab; g.valor += c.valor;
     }
     const compradores = [...grupos.values()].sort((a, b) => b.cab - a.cab);
-    const top = compradores.slice(0, 12);
-    const demais = compradores.slice(12);
+    const top = compradores.slice(0, 10);
+    const demais = compradores.slice(10);
     const tRows = top.map(c =>
       `<tr><td>${esc(c.nome)}</td><td class="num">${fmtInt(c.cab)}</td><td class="num">${fmt2(c.valor)}</td><td class="num pct">${fmtPct(c.valor / v.valor)}</td></tr>`
     ).join('')

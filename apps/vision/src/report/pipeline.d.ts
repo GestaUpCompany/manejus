@@ -4,18 +4,29 @@ declare module '*pipeline/web/app.mjs' {
   export function mountRelatorio(
     el: HTMLElement,
     payload: unknown,
-    config?: { public?: boolean; hiddenPages?: string[]; autoPrint?: boolean; titulo?: string },
+    config?: { public?: boolean; hiddenPages?: string[]; autoPrint?: boolean; titulo?: string; onPdf?: () => void },
   ): { apply: (ini: string, fim: string) => void; getRange: () => [string, string] }
+  export function buildMergedHtml(
+    payload: unknown,
+    config?: { hiddenPages?: string[]; ini?: string; fim?: string },
+  ): string
 }
 
 declare module '*pipeline/lib/model.mjs' {
   export function extractReads(sheets: Record<string, unknown[][]>): Record<string, unknown[]>
   export function buildModelFromReads(
     reads: Record<string, unknown[]>,
-    ctx: Record<string, unknown>,
-    ini: string,
-    fim: string,
-  ): Record<string, unknown>
+    params?: { ini?: Date; fim?: Date; saldoCaixaInicial?: number; anoBaseGiro?: number },
+  ): {
+    meta: Record<string, unknown>
+    rebanho: { saldoFinal: number }
+    compras: { cab: number; total: number }
+    vendas: { cab: number; valor: number }
+    desembolso: { total: number }
+    receitas: { total: number }
+    fluxoCaixa: { saldoFinal: number; entradas: number; saidas: number }
+    [k: string]: unknown
+  }
 }
 
 declare module '*pipeline/lib/payload.mjs' {
@@ -44,4 +55,18 @@ declare module '*pipeline/lib/xlsx-stream.mjs' {
 
 declare module '*pipeline/lib/core.mjs' {
   export const NEEDED_SHEETS: string[]
+}
+
+declare module '*pipeline/lib/audit.mjs' {
+  export interface AuditIssue {
+    sev: 'erro' | 'aviso'
+    aba: string
+    coluna: string | null
+    campo: string | null
+    linhas: number[]
+    msg: string
+    impacto: string
+  }
+  export function auditSheets(sheets: Record<string, unknown[][]>): AuditIssue[]
+  export function fmtLinhas(linhas: number[]): string
 }
