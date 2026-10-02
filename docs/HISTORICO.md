@@ -1,5 +1,17 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Fix: aprovação de solicitação de novo lote falhava com erro de INSERT (2026-10-03)
+
+Caso real: na Fazenda Marcon, a solicitação `fe382a1d-f7d0-42a9-a29c-0eb3989dec59` (lote "198" a partir do "Lote 175", 60 novilhas, enviada pela Karina via PWA em 02/10) não pôde ser aprovada; o usuário acabou rejeitando. O erro era Postgres 42601 "INSERT has more target columns than expressions".
+
+Causa-raiz: na migration `20260925100000_lote_curral_historico_ocupacao.sql` (reescrita da RPC `aprovar_solicitacao_novo_lote` para suportar curral), a lista de colunas do INSERT em `lote_categorias` ficou com 49 campos mas o VALUES com 48 expressões: faltava `NULLIF(v_cat_item->>'custo_total_entrada_reais_lote', '')::numeric` entre `custo_total_entrada_reais_cab` e `preco_entrada_reais_kg`. A versão anterior (`20260921150000`) tinha a linha. Como a função roda em transação única sem exception handler, a falha aborta tudo sem dados parciais.
+
+Correção na migration `20261003110000_fix_aprovar_novo_lote_custo_total_lote.sql` (db push): `CREATE OR REPLACE FUNCTION` idêntica, apenas recolocando a expressão faltante. Nenhum dado da Marcon foi tocado; a solicitação continua `rejeitada` e precisaria ser reaberta (status → 'pendente') ou recriada pelo PWA para ser aprovada.
+
+Comportamento ainda pendente de decisão: a data gravada em `registros_movimentacao.data` é `created_at do lote + 1s`, ignorando `dados_movimentacao.data` do PWA; se a data da movimentação deve honrar a data solicitada/editada, é ajuste separado.
+
+Disparador: quando mencionar "aprovar novo lote", "solicitação de novo lote", `aprovar_solicitacao_novo_lote`, erro "INSERT has more target columns than expressions" ou `custo_total_entrada_reais_lote`, ler esta seção.
+
 ## Exclusão de abastecimento com estorno de estoque (2026-10-03)
 
 `RegistrosAbastecimentoDetalhes.tsx` ganhou ação "Excluir" (admin/controller/super_admin) com `ConfirmModal`, seguindo o padrão de `SuplementacaoDetalhes`. A exclusão chama a RPC `excluir_registro_abastecimento` (migration `20261003100000_excluir_registro_abastecimento.sql`, db push), que valida papel controller/admin em `usuario_fazenda`, injeta contexto de auditoria e faz soft-delete.
