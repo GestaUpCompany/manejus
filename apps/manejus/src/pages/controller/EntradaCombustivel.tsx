@@ -214,7 +214,7 @@ export function EntradaCombustivel() {
                   >
                     <Td>{formatDate(registro.data)}</Td>
                     <Td>{registro.tanque?.nome || '-'}</Td>
-                    <Td>{Number(registro.quantidade_l).toLocaleString('pt-BR')} L</Td>
+                    <Td>{Number(registro.quantidade_l).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} L</Td>
                     <Td>{registro.fornecedor || '-'}</Td>
                     <Td>{registro.placa_veiculo || '-'}</Td>
                     <Td>{registro.nome_motorista || '-'}</Td>

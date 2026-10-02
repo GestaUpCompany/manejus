@@ -172,7 +172,7 @@ export function FabricaConfinamento() {
                   <div className="flex justify-between">
                     <span className="text-content-muted">Produzido:</span>
                     <span className="text-content-strong font-medium">
-                      {Number(registro.total_produzido).toLocaleString('pt-BR')} / {Number(registro.total_previsto).toLocaleString('pt-BR')} kg
+                      {Number(registro.total_produzido).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} / {Number(registro.total_previsto).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg
                     </span>
                   </div>
                 </div>
@@ -212,8 +212,8 @@ export function FabricaConfinamento() {
                     <Td>{vagaoLabel(registro.vagao)}</Td>
                     <Td>{registro.formulacao?.nome || '-'}</Td>
                     <Td>{registro.ordem_trato}º · {registro.tipo}</Td>
-                    <Td>{Number(registro.total_previsto).toLocaleString('pt-BR')}</Td>
-                    <Td>{Number(registro.total_produzido).toLocaleString('pt-BR')}</Td>
+                    <Td>{Number(registro.total_previsto).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</Td>
+                    <Td>{Number(registro.total_produzido).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}</Td>
                     <Td>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${registro.concluido ? 'bg-green-500/10 text-green-700' : 'bg-amber-500/10 text-amber-700'}`}>
                         {registro.concluido ? 'Concluído' : 'Em aberto'}

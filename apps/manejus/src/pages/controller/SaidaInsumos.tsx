@@ -170,7 +170,7 @@ export function SaidaInsumos() {
                   <div className="flex justify-between">
                     <span className="text-content-muted">Total Produzido:</span>
                     <span className="text-content-strong font-medium">
-                      {registro.total_produzido != null ? `${Number(registro.total_produzido).toLocaleString('pt-BR')} kg` : '-'}
+                      {registro.total_produzido != null ? `${Number(registro.total_produzido).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg` : '-'}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -212,7 +212,7 @@ export function SaidaInsumos() {
                     <Td>{registro.nome_usuario || '-'}</Td>
                     <Td>{registro.dieta_produzida || '-'}</Td>
                     <Td>{registro.formulacao?.nome || '-'}</Td>
-                    <Td>{registro.total_produzido != null ? Number(registro.total_produzido).toLocaleString('pt-BR') : '-'}</Td>
+                    <Td>{registro.total_produzido != null ? Number(registro.total_produzido).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '-'}</Td>
                     <Td>{registro.destino_producao || '-'}</Td>
                     <Td>{registro.saida_insumos_itens ? `${registro.saida_insumos_itens.length} item(s)` : '-'}</Td>
                   </Tr>

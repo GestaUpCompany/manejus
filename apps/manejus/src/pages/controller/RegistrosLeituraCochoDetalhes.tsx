@@ -101,7 +101,7 @@ export function RegistrosLeituraCochoDetalhes() {
                 <DetailField label="Descrição" value={formatValue(notaDescricao)} />
                 <DetailField
                   label="Ajuste (%)"
-                  value={registro!.nota_config ? `${registro!.nota_config.percentual_ajuste}%` : '-'}
+                  value={registro!.nota_config ? `${Number(registro!.nota_config.percentual_ajuste).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%` : '-'}
                 />
               </div>
             </DetailSection>

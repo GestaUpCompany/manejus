@@ -95,10 +95,7 @@ export function RegistrosPesagem() {
     return <PageSkeleton variant="list" />
   }
 
-  const exportData = filteredRegistros.map((r) => ({
-    ...r,
-    lote_nome: loteLabel(r),
-  }))
+  const exportData = filteredRegistros.map((r) => ({ ...r }))
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
@@ -180,7 +177,7 @@ export function RegistrosPesagem() {
                   <div className="flex justify-between">
                     <span className="text-content-muted">Peso:</span>
                     <span className="text-content-strong font-medium">
-                      {registro.peso_kg != null ? `${Number(registro.peso_kg).toLocaleString('pt-BR')} kg` : '-'}
+                      {registro.peso_kg != null ? `${Number(registro.peso_kg).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg` : '-'}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -226,7 +223,7 @@ export function RegistrosPesagem() {
                     <Td>{registro.id_chip || '-'}</Td>
                     <Td>{loteLabel(registro)}</Td>
                     <Td>{registro.categoria || '-'}</Td>
-                    <Td>{registro.peso_kg != null ? Number(registro.peso_kg).toLocaleString('pt-BR') : '-'}</Td>
+                    <Td>{registro.peso_kg != null ? Number(registro.peso_kg).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '-'}</Td>
                     <Td>{registro.tipo_manejo || '-'}</Td>
                     <Td>{registro.ordem_servico?.numero_os || '-'}</Td>
                   </Tr>

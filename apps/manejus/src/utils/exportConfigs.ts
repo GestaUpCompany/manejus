@@ -604,15 +604,38 @@ export const RODEIO_EXPORT_CONFIG: TableExportConfig = {
   ]
 }
 
+function round2(value: any): number | '' {
+  if (value === null || value === undefined || value === '') return ''
+  const n = Number(value)
+  return isNaN(n) ? '' : Math.round(n * 100) / 100
+}
+
+function formatItensEntrada(value: any): string {
+  if (!value) return ''
+  if (!Array.isArray(value)) return String(value)
+  return value
+    .map((item: any) => {
+      if (typeof item === 'string') return item
+      if (!item || typeof item !== 'object') return String(item)
+      const nome = item.nome || item.tipo || item.item || 'Item'
+      const classificacao = item.classificacao ? ` (${item.classificacao})` : ''
+      const qtd = item.quantidade ?? ''
+      const unidade = item.unidade_medida || item.unidade || ''
+      const obs = item.observacao ? ` — ${item.observacao}` : ''
+      return `${nome}${classificacao}: ${qtd} ${unidade}${obs}`.trim()
+    })
+    .join(' | ')
+}
+
 export const ENTRADA_COMBUSTIVEL_EXPORT_CONFIG: TableExportConfig = {
   tableName: 'movimentacoes_combustivel',
   sheetName: 'Entrada Combustível',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
     { source: 'tanque', header: 'Tanque', transform: (value: any) => value?.nome || '' },
-    { source: 'quantidade_l', header: 'Quantidade (L)', format: 'number' },
-    { source: 'valor_total', header: 'Valor Total (R$)', format: 'number' },
-    { source: 'preco_por_litro', header: 'Preço por Litro (R$)', format: 'number' },
+    { source: 'quantidade_l', header: 'Quantidade (L)', transform: (value) => round2(value) },
+    { source: 'valor_total', header: 'Valor Total (R$)', transform: (value) => round2(value) },
+    { source: 'preco_por_litro', header: 'Preço por Litro (R$)', transform: (value) => round2(value) },
     { source: 'fornecedor', header: 'Fornecedor' },
     { source: 'placa_veiculo', header: 'Placa' },
     { source: 'nome_motorista', header: 'Motorista' },
@@ -628,7 +651,7 @@ export const ENTRADA_ALMOXARIFADO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'data', header: 'Data', format: 'datetime' },
     { source: 'nome_usuario', header: 'Usuário' },
     { source: 'quem_recebeu', header: 'Quem Recebeu' },
-    { source: 'itens', header: 'Itens', transform: (value) => Array.isArray(value) ? value.map((i: any) => typeof i === 'object' ? JSON.stringify(i) : String(i)).join(' | ') : value },
+    { source: 'itens', header: 'Itens', transform: (value) => formatItensEntrada(value) },
     { source: 'observacao', header: 'Observação' }
   ]
 }
@@ -640,7 +663,7 @@ export const ENTRADA_CANTINA_EXPORT_CONFIG: TableExportConfig = {
     { source: 'data', header: 'Data', format: 'datetime' },
     { source: 'nome_usuario', header: 'Usuário' },
     { source: 'quem_recebeu', header: 'Quem Recebeu' },
-    { source: 'itens_detalhe', header: 'Itens', transform: (value) => Array.isArray(value) ? value.map((i: any) => typeof i === 'object' ? JSON.stringify(i) : String(i)).join(' | ') : value },
+    { source: 'itens_detalhe', header: 'Itens', transform: (value) => formatItensEntrada(value) },
     { source: 'observacao', header: 'Observação' }
   ]
 }
@@ -669,7 +692,7 @@ export const SAIDA_INSUMOS_EXPORT_CONFIG: TableExportConfig = {
     { source: 'nome_usuario', header: 'Usuário' },
     { source: 'dieta_produzida', header: 'Dieta Produzida' },
     { source: 'formulacao', header: 'Formulação', transform: (value: any) => value?.nome || '' },
-    { source: 'total_produzido', header: 'Total Produzido (kg)', format: 'number' },
+    { source: 'total_produzido', header: 'Total Produzido (kg)', transform: (value) => round2(value) },
     { source: 'destino_producao', header: 'Destino' },
     { source: 'saida_insumos_itens', header: 'Nº Insumos', transform: (value) => Array.isArray(value) ? value.length : '' }
   ]
@@ -685,8 +708,8 @@ export const FABRICA_CONFINAMENTO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'formulacao', header: 'Formulação', transform: (value: any) => value?.nome || '' },
     { source: 'ordem_trato', header: 'Ordem Trato', format: 'number' },
     { source: 'tipo', header: 'Tipo' },
-    { source: 'total_previsto', header: 'Previsto (kg)', format: 'number' },
-    { source: 'total_produzido', header: 'Produzido (kg)', format: 'number' },
+    { source: 'total_previsto', header: 'Previsto (kg)', transform: (value) => round2(value) },
+    { source: 'total_produzido', header: 'Produzido (kg)', transform: (value) => round2(value) },
     { source: 'concluido', header: 'Status', transform: (value) => value ? 'Concluído' : 'Em aberto' }
   ]
 }
@@ -716,8 +739,8 @@ export const TRATO_CONFINAMENTO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'curral', header: 'Curral', transform: (value: any) => value?.nome || '' },
     { source: 'lote', header: 'Lote', transform: (value: any) => value?.nome || '' },
     { source: 'ordem_trato', header: 'Trato', format: 'number' },
-    { source: 'kg_planejado', header: 'Planejado (kg)', format: 'number' },
-    { source: 'kg_ofertado_real', header: 'Ofertado (kg)', format: 'number' },
+    { source: 'kg_planejado', header: 'Planejado (kg)', transform: (value) => round2(value) },
+    { source: 'kg_ofertado_real', header: 'Ofertado (kg)', transform: (value) => round2(value) },
     { source: 'leitura_cocho_nota', header: 'Nota Cocho', format: 'number' },
     { source: 'origem', header: 'Origem' }
   ]
@@ -732,10 +755,11 @@ export const PESAGEM_EXPORT_CONFIG: TableExportConfig = {
     { source: 'responsavel', header: 'Responsável' },
     { source: 'id_brinco', header: 'Brinco' },
     { source: 'id_chip', header: 'Chip' },
-    { source: 'lote_nome', header: 'Lote' },
+    { source: 'lote_rel', header: 'Lote', transform: (value: any) => value?.nome || '' },
+    { source: 'lote', header: 'Lote (texto)' },
     { source: 'categoria', header: 'Categoria' },
     { source: 'sexo', header: 'Sexo' },
-    { source: 'peso_kg', header: 'Peso (kg)', format: 'number' },
+    { source: 'peso_kg', header: 'Peso (kg)', transform: (value) => round2(value) },
     { source: 'tipo_manejo', header: 'Manejo' },
     { source: 'ordem_servico', header: 'OS', transform: (value: any) => value?.numero_os || '' }
   ]
@@ -755,9 +779,17 @@ export const RECEBIMENTO_COMPRA_EXPORT_CONFIG: TableExportConfig = {
     { source: 'motorista', header: 'Motorista' },
     { source: 'responsavel', header: 'Responsável' },
     { source: 'destino', header: 'Destino' },
-    { source: 'total_cabecas', header: 'Cabeças', format: 'number' },
+    { source: 'contagens', header: 'Cabeças', transform: (value) => {
+      if (!value) return ''
+      const n = (v: any) => Number(v) || 0
+      let total = 0
+      if (Array.isArray(value)) total = value.reduce((acc: number, c: any) => acc + n(c?.quantidade ?? c), 0)
+      else if (typeof value === 'object') total = Object.values(value).reduce((acc: number, v: any) => acc + n(v), 0)
+      return total > 0 ? total : ''
+    }},
     { source: 'mortes', header: 'Mortes', format: 'number' },
-    { source: 'peso_medio_balancao', header: 'Peso Médio (kg)', format: 'number' },
+    { source: 'peso_medio_balancao', header: 'Peso Médio (kg)', transform: (value) => round2(value) },
+    { source: 'peso_origem', header: 'Peso Origem (kg)', transform: (value) => round2(value) },
     { source: 'conferido', header: 'Status', transform: (value) => value ? 'Conferido' : 'Pendente' }
   ]
 }

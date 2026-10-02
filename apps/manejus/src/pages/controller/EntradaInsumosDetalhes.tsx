@@ -33,7 +33,12 @@ interface RegistroEntradaInsumos {
 
 function formatCurrency(value?: number | null) {
   if (value === null || value === undefined) return '-'
-  return `R$ ${Number(value).toFixed(2).replace('.', ',')}`
+  return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function formatKg(value?: number | null) {
+  if (value === null || value === undefined) return '-'
+  return Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
 }
 
 export function EntradaInsumosDetalhes() {
@@ -138,7 +143,7 @@ export function EntradaInsumosDetalhes() {
                       {itens.map((item) => (
                         <Tr key={item.id}>
                           <Td>{item.insumo?.nome || item.formulacao?.nome || item.produto || '-'}</Td>
-                          <Td>{Number(item.quantidade).toLocaleString('pt-BR')}</Td>
+                          <Td>{formatKg(item.quantidade)}</Td>
                           <Td>{formatCurrency(item.valor_unitario)}</Td>
                           <Td>{formatCurrency(item.valor_total)}</Td>
                           <Td>{item.lote || '-'}</Td>

@@ -12,6 +12,11 @@ interface SaidaInsumoItem {
   insumo?: { nome: string } | null
 }
 
+function formatKg(value?: number | null) {
+  if (value === null || value === undefined) return '-'
+  return Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+}
+
 interface RegistroSaidaInsumos {
   id: string
   fazenda_id: string
@@ -101,7 +106,7 @@ export function SaidaInsumosDetalhes() {
 
             <DetailSection title="Produção" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <DetailField label="Total Produzido (kg)" value={registro!.total_produzido != null ? Number(registro!.total_produzido).toLocaleString('pt-BR') : '-'} />
+                <DetailField label="Total Produzido (kg)" value={formatKg(registro!.total_produzido)} />
                 <DetailField label="Destino" value={formatValue(registro!.destino_producao)} />
               </div>
             </DetailSection>
@@ -120,7 +125,7 @@ export function SaidaInsumosDetalhes() {
                       {itens.map((item) => (
                         <Tr key={item.id}>
                           <Td>{item.insumo?.nome || '-'}</Td>
-                          <Td>{Number(item.quantidade).toLocaleString('pt-BR')}</Td>
+                          <Td>{formatKg(item.quantidade)}</Td>
                         </Tr>
                       ))}
                     </Tbody>

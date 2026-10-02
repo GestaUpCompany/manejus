@@ -7,6 +7,11 @@ import { formatDateTime } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import { LEITURA_COCHO_DESCRICOES } from './RegistrosLeituraCocho'
 
+function formatKg(value?: number | null) {
+  if (value === null || value === undefined) return '-'
+  return Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+}
+
 interface RegistroTrato {
   id: string
   fazenda_id: string
@@ -94,14 +99,8 @@ export function TratoConfinamentoDetalhes() {
 
             <DetailSection title="Oferta" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <DetailField
-                  label="Planejado (kg)"
-                  value={registro!.kg_planejado != null ? Number(registro!.kg_planejado).toLocaleString('pt-BR') : '-'}
-                />
-                <DetailField
-                  label="Ofertado Real (kg)"
-                  value={registro!.kg_ofertado_real != null ? Number(registro!.kg_ofertado_real).toLocaleString('pt-BR') : '-'}
-                />
+                <DetailField label="Planejado (kg)" value={formatKg(registro!.kg_planejado)} />
+                <DetailField label="Ofertado Real (kg)" value={formatKg(registro!.kg_ofertado_real)} />
                 <DetailField
                   label="Nota do Cocho"
                   value={notaCocho != null ? `${notaCocho}${notaDescricao ? ` — ${notaDescricao}` : ''}` : '-'}

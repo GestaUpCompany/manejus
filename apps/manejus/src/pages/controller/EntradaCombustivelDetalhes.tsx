@@ -23,7 +23,12 @@ interface EntradaCombustivelRegistro {
 
 function formatCurrency(value?: number | null) {
   if (value === null || value === undefined) return '-'
-  return `R$ ${Number(value).toFixed(2).replace('.', ',')}`
+  return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function formatLitros(value?: number | null) {
+  if (value === null || value === undefined) return '-'
+  return `${Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} L`
 }
 
 export function EntradaCombustivelDetalhes() {
@@ -83,7 +88,7 @@ export function EntradaCombustivelDetalhes() {
                 <DetailField label="Data" value={formatDate(registro!.data)} />
                 <DetailField label="Tanque" value={formatValue(registro!.tanque?.nome)} />
                 <DetailField label="Tipo Combustível" value={formatValue(registro!.tanque?.tipo_combustivel)} />
-                <DetailField label="Quantidade (L)" value={formatValue(registro!.quantidade_l)} />
+                <DetailField label="Quantidade (L)" value={formatLitros(registro!.quantidade_l)} />
               </div>
             </DetailSection>
 

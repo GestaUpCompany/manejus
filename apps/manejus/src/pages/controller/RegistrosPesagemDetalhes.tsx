@@ -42,6 +42,18 @@ function boolLabel(v?: boolean | null) {
   return v ? 'Sim' : 'Não'
 }
 
+function formatMin(v?: number | null) {
+  if (v === null || v === undefined) return '-'
+  return `${Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} min`
+}
+
+function formatHora(v?: string | null) {
+  if (!v) return '-'
+  const d = new Date(v)
+  if (isNaN(d.getTime())) return v
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
 export function RegistrosPesagemDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
@@ -100,11 +112,8 @@ export function RegistrosPesagemDetalhes() {
                 <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
                 <DetailField label="Responsável" value={formatValue(registro!.responsavel)} />
                 <DetailField label="Tipo de Manejo" value={formatValue(registro!.tipo_manejo)} />
-                {registro!.ordem_servico?.id && (
-                  <DetailField
-                    label="Ordem de Serviço"
-                    value={registro!.ordem_servico.numero_os || registro!.ordem_servico.id}
-                  />
+                {registro!.ordem_servico?.numero_os && (
+                  <DetailField label="Ordem de Serviço" value={registro!.ordem_servico.numero_os} />
                 )}
               </div>
             </DetailSection>
@@ -114,7 +123,7 @@ export function RegistrosPesagemDetalhes() {
                 <DetailField label="Brinco" value={formatValue(registro!.id_brinco)} />
                 <DetailField label="Chip" value={formatValue(registro!.id_chip)} />
                 <DetailField label="Lote" value={formatValue(registro!.lote_rel?.nome || registro!.lote)} />
-                <DetailField label="Peso (kg)" value={registro!.peso_kg != null ? Number(registro!.peso_kg).toLocaleString('pt-BR') : '-'} />
+                <DetailField label="Peso (kg)" value={registro!.peso_kg != null ? Number(registro!.peso_kg).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '-'} />
                 <DetailField label="Categoria" value={formatValue(registro!.categoria)} />
                 <DetailField label="Sexo" value={formatValue(registro!.sexo)} />
                 <DetailField label="Raça" value={formatValue(registro!.raca)} />
@@ -124,10 +133,10 @@ export function RegistrosPesagemDetalhes() {
 
             <DetailSection title="Tempos" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <DetailField label="Início" value={formatValue(registro!.horario_inicio)} />
-                <DetailField label="Fim" value={formatValue(registro!.horario_fim)} />
-                <DetailField label="Tempo Total (min)" value={formatValue(registro!.tempo_total_min)} />
-                <DetailField label="Tempo Médio (min/cab)" value={formatValue(registro!.tempo_medio_min_cab)} />
+                <DetailField label="Início" value={formatHora(registro!.horario_inicio)} />
+                <DetailField label="Fim" value={formatHora(registro!.horario_fim)} />
+                <DetailField label="Tempo Total" value={formatMin(registro!.tempo_total_min)} />
+                <DetailField label="Tempo Médio" value={registro!.tempo_medio_min_cab != null ? `${formatMin(registro!.tempo_medio_min_cab)}/cab` : '-'} />
               </div>
             </DetailSection>
 

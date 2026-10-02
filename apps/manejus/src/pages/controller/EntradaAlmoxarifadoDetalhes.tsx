@@ -16,8 +16,37 @@ interface RegistroEntradaAlmoxarifado {
   nome_usuario?: string | null
 }
 
+const ITEM_LABELS: Record<string, string> = {
+  nome: 'Item',
+  classificacao: 'Classificação',
+  quantidade: 'Quantidade',
+  unidade: 'Unidade',
+  unidade_medida: 'Unidade',
+  observacao: 'Observação',
+  saldoAtual: 'Saldo Atual',
+  necessitaDevolucao: 'Necessita Devolução',
+  prazoDevolucao: 'Prazo Devolução',
+  tipo: 'Tipo',
+  setor: 'Setor',
+}
+
+function isInternalKey(key: string): boolean {
+  const k = key.replace(/[_-]/g, '').toLowerCase()
+  return k === 'id' || k.endsWith('id') || k === 'novoitem'
+}
+
 function formatItemKey(key: string): string {
-  return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
+  if (ITEM_LABELS[key]) return ITEM_LABELS[key]
+  return key
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/^./, (str) => str.toUpperCase())
+}
+
+function formatItemValue(value: any): string {
+  if (value === null || value === undefined || value === '') return '-'
+  if (typeof value === 'number') return value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+  return String(value)
 }
 
 function renderItens(itens: any): React.ReactNode {
@@ -27,13 +56,18 @@ function renderItens(itens: any): React.ReactNode {
         {itens.map((item: any, index: number) => (
           <div key={index} className="border-b border-border-base pb-3 last:border-0 last:pb-0">
             {typeof item === 'object' && item !== null ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                {Object.entries(item).map(([key, value]) => (
-                  <div key={key} className="flex flex-col">
-                    <span className="font-medium text-content capitalize">{formatItemKey(key)}:</span>
-                    <span className="text-content-strong">{String(value)}</span>
-                  </div>
-                ))}
+              <div className="text-sm">
+                {item.nome && <p className="font-semibold text-content-strong mb-1">{item.nome}</p>}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {Object.entries(item)
+                    .filter(([key, value]) => !isInternalKey(key) && key !== 'nome' && value !== null && value !== undefined && value !== '')
+                    .map(([key, value]) => (
+                      <div key={key} className="flex flex-col">
+                        <span className="font-medium text-content">{formatItemKey(key)}:</span>
+                        <span className="text-content-strong">{formatItemValue(value)}</span>
+                      </div>
+                    ))}
+                </div>
               </div>
             ) : (
               <p className="text-sm">{String(item)}</p>

@@ -14,6 +14,11 @@ interface FabricaInsumoItem {
   insumo?: { nome: string } | null
 }
 
+function formatKg(value?: number | null) {
+  if (value === null || value === undefined) return '-'
+  return Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+}
+
 interface RegistroFabricaConfinamento {
   id: string
   fazenda_id: string
@@ -111,15 +116,15 @@ export function FabricaConfinamentoDetalhes() {
             <DetailSection title="Vagão e Formulação" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <DetailField label="Vagão" value={formatValue(vagaoLabel)} />
-                <DetailField label="Capacidade (kg)" value={formatValue(registro!.vagao?.capacidade_kg)} />
+                <DetailField label="Capacidade (kg)" value={formatKg(registro!.vagao?.capacidade_kg)} />
                 <DetailField label="Formulação" value={formatValue(registro!.formulacao?.nome)} />
               </div>
             </DetailSection>
 
             <DetailSection title="Produção" highlighted>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <DetailField label="Total Previsto (kg)" value={Number(registro!.total_previsto).toLocaleString('pt-BR')} />
-                <DetailField label="Total Produzido (kg)" value={Number(registro!.total_produzido).toLocaleString('pt-BR')} />
+                <DetailField label="Total Previsto (kg)" value={formatKg(registro!.total_previsto)} />
+                <DetailField label="Total Produzido (kg)" value={formatKg(registro!.total_produzido)} />
                 <DetailField label="Status" value={registro!.concluido ? 'Concluído' : 'Em aberto'} />
               </div>
             </DetailSection>
@@ -141,8 +146,8 @@ export function FabricaConfinamentoDetalhes() {
                         <Tr key={item.id}>
                           <Td>{item.ordem}</Td>
                           <Td>{item.insumo?.nome || '-'}</Td>
-                          <Td>{Number(item.kg_previsto).toLocaleString('pt-BR')}</Td>
-                          <Td>{Number(item.kg_produzido).toLocaleString('pt-BR')}</Td>
+                          <Td>{formatKg(item.kg_previsto)}</Td>
+                          <Td>{formatKg(item.kg_produzido)}</Td>
                         </Tr>
                       ))}
                     </Tbody>

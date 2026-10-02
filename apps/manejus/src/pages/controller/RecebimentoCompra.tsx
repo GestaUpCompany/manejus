@@ -114,10 +114,7 @@ export function RecebimentoCompra() {
     return <PageSkeleton variant="list" />
   }
 
-  const exportData = filtered.map((r) => ({
-    ...r,
-    total_cabecas: totalCabecas(r),
-  }))
+  const exportData = filtered.map((r) => ({ ...r }))
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">

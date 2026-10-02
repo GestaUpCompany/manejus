@@ -175,7 +175,7 @@ export function TratoConfinamento() {
                   <div className="flex justify-between">
                     <span className="text-content-muted">Ofertado:</span>
                     <span className="text-content-strong font-medium">
-                      {registro.kg_ofertado_real != null ? `${Number(registro.kg_ofertado_real).toLocaleString('pt-BR')} kg` : '-'}
+                      {registro.kg_ofertado_real != null ? `${Number(registro.kg_ofertado_real).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg` : '-'}
                     </span>
                   </div>
                 </div>
@@ -215,8 +215,8 @@ export function TratoConfinamento() {
                     <Td>{registro.curral?.nome || '-'}</Td>
                     <Td>{registro.lote?.nome || '-'}</Td>
                     <Td>{registro.ordem_trato}º</Td>
-                    <Td>{registro.kg_planejado != null ? Number(registro.kg_planejado).toLocaleString('pt-BR') : '-'}</Td>
-                    <Td>{registro.kg_ofertado_real != null ? Number(registro.kg_ofertado_real).toLocaleString('pt-BR') : '-'}</Td>
+                    <Td>{registro.kg_planejado != null ? Number(registro.kg_planejado).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '-'}</Td>
+                    <Td>{registro.kg_ofertado_real != null ? Number(registro.kg_ofertado_real).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '-'}</Td>
                     <Td>{registro.leitura_cocho_nota ?? '-'}</Td>
                   </Tr>
                 ))}
