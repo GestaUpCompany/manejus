@@ -603,3 +603,181 @@ export const RODEIO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'equipe_nomes', header: 'Equipe Nomes', transform: (value) => Array.isArray(value) ? value.join(', ') : value }
   ]
 }
+
+export const ENTRADA_COMBUSTIVEL_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'movimentacoes_combustivel',
+  sheetName: 'Entrada Combustível',
+  columns: [
+    { source: 'data', header: 'Data', format: 'date' },
+    { source: 'tanque', header: 'Tanque', transform: (value: any) => value?.nome || '' },
+    { source: 'quantidade_l', header: 'Quantidade (L)', format: 'number' },
+    { source: 'valor_total', header: 'Valor Total (R$)', format: 'number' },
+    { source: 'preco_por_litro', header: 'Preço por Litro (R$)', format: 'number' },
+    { source: 'fornecedor', header: 'Fornecedor' },
+    { source: 'placa_veiculo', header: 'Placa' },
+    { source: 'nome_motorista', header: 'Motorista' },
+    { source: 'nota_fiscal', header: 'Nota Fiscal' },
+    { source: 'observacao', header: 'Observação' }
+  ]
+}
+
+export const ENTRADA_ALMOXARIFADO_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'registros_almoxarifado',
+  sheetName: 'Entrada Almoxarifado',
+  columns: [
+    { source: 'data', header: 'Data', format: 'datetime' },
+    { source: 'nome_usuario', header: 'Usuário' },
+    { source: 'quem_recebeu', header: 'Quem Recebeu' },
+    { source: 'itens', header: 'Itens', transform: (value) => Array.isArray(value) ? value.map((i: any) => typeof i === 'object' ? JSON.stringify(i) : String(i)).join(' | ') : value },
+    { source: 'observacao', header: 'Observação' }
+  ]
+}
+
+export const ENTRADA_CANTINA_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'registros_alimentacao',
+  sheetName: 'Entrada Cantina',
+  columns: [
+    { source: 'data', header: 'Data', format: 'datetime' },
+    { source: 'nome_usuario', header: 'Usuário' },
+    { source: 'quem_recebeu', header: 'Quem Recebeu' },
+    { source: 'itens_detalhe', header: 'Itens', transform: (value) => Array.isArray(value) ? value.map((i: any) => typeof i === 'object' ? JSON.stringify(i) : String(i)).join(' | ') : value },
+    { source: 'observacao', header: 'Observação' }
+  ]
+}
+
+export const ENTRADA_INSUMOS_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'registros_entrada_insumos',
+  sheetName: 'Entrada Insumos',
+  columns: [
+    { source: 'data_entrada', header: 'Data', format: 'date' },
+    { source: 'horario', header: 'Horário' },
+    { source: 'nome_usuario', header: 'Usuário' },
+    { source: 'fornecedor', header: 'Fornecedor' },
+    { source: 'nota_fiscal', header: 'Nota Fiscal' },
+    { source: 'placa', header: 'Placa' },
+    { source: 'motorista', header: 'Motorista' },
+    { source: 'responsavel_recebimento', header: 'Responsável Recebimento' },
+    { source: 'entrada_insumos_itens', header: 'Nº Itens', transform: (value) => Array.isArray(value) ? value.length : '' }
+  ]
+}
+
+export const SAIDA_INSUMOS_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'registros_saida_insumos',
+  sheetName: 'Produção Fábrica',
+  columns: [
+    { source: 'data_producao', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
+    { source: 'dieta_produzida', header: 'Dieta Produzida' },
+    { source: 'formulacao', header: 'Formulação', transform: (value: any) => value?.nome || '' },
+    { source: 'total_produzido', header: 'Total Produzido (kg)', format: 'number' },
+    { source: 'destino_producao', header: 'Destino' },
+    { source: 'saida_insumos_itens', header: 'Nº Insumos', transform: (value) => Array.isArray(value) ? value.length : '' }
+  ]
+}
+
+export const FABRICA_CONFINAMENTO_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'registros_fabrica_confinamento',
+  sheetName: 'Carregamento Vagão',
+  columns: [
+    { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
+    { source: 'vagao', header: 'Vagão', transform: (value: any) => [value?.nome, value?.marca, value?.modelo].filter(Boolean).join(' — ') || '' },
+    { source: 'formulacao', header: 'Formulação', transform: (value: any) => value?.nome || '' },
+    { source: 'ordem_trato', header: 'Ordem Trato', format: 'number' },
+    { source: 'tipo', header: 'Tipo' },
+    { source: 'total_previsto', header: 'Previsto (kg)', format: 'number' },
+    { source: 'total_produzido', header: 'Produzido (kg)', format: 'number' },
+    { source: 'concluido', header: 'Status', transform: (value) => value ? 'Concluído' : 'Em aberto' }
+  ]
+}
+
+export const LEITURA_COCHO_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'registros_leitura_cocho',
+  sheetName: 'Leitura de Cocho',
+  columns: [
+    { source: 'data', header: 'Data', format: 'datetime' },
+    { source: 'nome_usuario', header: 'Usuário' },
+    { source: 'responsavel', header: 'Responsável' },
+    { source: 'curral', header: 'Curral', transform: (value: any) => value?.nome || '' },
+    { source: 'pasto', header: 'Pasto', transform: (value: any) => value?.nome || '' },
+    { source: 'pasto_curral', header: 'Local' },
+    { source: 'lote_rel', header: 'Lote', transform: (value: any) => value?.nome || '' },
+    { source: 'lote', header: 'Lote (texto)' },
+    { source: 'leitura_cocho', header: 'Nota', format: 'number' }
+  ]
+}
+
+export const TRATO_CONFINAMENTO_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'registros_oferta_trato',
+  sheetName: 'Trato Confinamento',
+  columns: [
+    { source: 'data', header: 'Data', format: 'datetime' },
+    { source: 'nome_usuario', header: 'Usuário' },
+    { source: 'curral', header: 'Curral', transform: (value: any) => value?.nome || '' },
+    { source: 'lote', header: 'Lote', transform: (value: any) => value?.nome || '' },
+    { source: 'ordem_trato', header: 'Trato', format: 'number' },
+    { source: 'kg_planejado', header: 'Planejado (kg)', format: 'number' },
+    { source: 'kg_ofertado_real', header: 'Ofertado (kg)', format: 'number' },
+    { source: 'leitura_cocho_nota', header: 'Nota Cocho', format: 'number' },
+    { source: 'origem', header: 'Origem' }
+  ]
+}
+
+export const PESAGEM_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'registros_pesagem',
+  sheetName: 'Pesagem',
+  columns: [
+    { source: 'data', header: 'Data', format: 'datetime' },
+    { source: 'nome_usuario', header: 'Usuário' },
+    { source: 'responsavel', header: 'Responsável' },
+    { source: 'id_brinco', header: 'Brinco' },
+    { source: 'id_chip', header: 'Chip' },
+    { source: 'lote_nome', header: 'Lote' },
+    { source: 'categoria', header: 'Categoria' },
+    { source: 'sexo', header: 'Sexo' },
+    { source: 'peso_kg', header: 'Peso (kg)', format: 'number' },
+    { source: 'tipo_manejo', header: 'Manejo' },
+    { source: 'ordem_servico', header: 'OS', transform: (value: any) => value?.numero_os || '' }
+  ]
+}
+
+export const RECEBIMENTO_COMPRA_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'os_recebimentos',
+  sheetName: 'Recebimento Compra',
+  columns: [
+    { source: 'data_chegada', header: 'Chegada', format: 'datetime' },
+    { source: 'ordem_servico', header: 'OS', transform: (value: any) => value?.numero_os || '' },
+    { source: 'nome_usuario', header: 'Usuário' },
+    { source: 'numero_gta', header: 'GTA' },
+    { source: 'numero_nf', header: 'NF' },
+    { source: 'transportadora', header: 'Transportadora' },
+    { source: 'placa_veiculo', header: 'Placa' },
+    { source: 'motorista', header: 'Motorista' },
+    { source: 'responsavel', header: 'Responsável' },
+    { source: 'destino', header: 'Destino' },
+    { source: 'total_cabecas', header: 'Cabeças', format: 'number' },
+    { source: 'mortes', header: 'Mortes', format: 'number' },
+    { source: 'peso_medio_balancao', header: 'Peso Médio (kg)', format: 'number' },
+    { source: 'conferido', header: 'Status', transform: (value) => value ? 'Conferido' : 'Pendente' }
+  ]
+}
+
+export const ORDENS_SERVICO_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'ordens_servico',
+  sheetName: 'Ordens de Serviço',
+  columns: [
+    { source: 'created_at', header: 'Criada em', format: 'datetime' },
+    { source: 'numero_os', header: 'OS' },
+    { source: 'tipo', header: 'Tipo', transform: (value) => ({ venda: 'Venda', compra: 'Compra', transferencia: 'Transferência' } as Record<string, string>)[value] || value },
+    { source: 'tipo_venda', header: 'Tipo Venda', transform: (value) => ({ abate: 'Abate', animal_vivo: 'Animal Vivo' } as Record<string, string>)[value] || value },
+    { source: 'status', header: 'Status' },
+    { source: 'vendedor', header: 'Vendedor' },
+    { source: 'comprador', header: 'Comprador' },
+    { source: 'fornecedor', header: 'Fornecedor' },
+    { source: 'origem_fazenda', header: 'Origem' },
+    { source: 'quantidade_prevista', header: 'Previsto (cab)', format: 'number' },
+    { source: 'quantidade_embarcada', header: 'Embarcado/Recebido (cab)', format: 'number' },
+    { source: 'data_prevista_embarque', header: 'Data Prevista', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' }
+  ]
+}

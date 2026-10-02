@@ -1797,3 +1797,21 @@ Segundo bloco de checagens: status fora de {Pago, Em Aberto} em Venda/Compra/Des
 Validado na Santa Cecília (detecta os 25 lotes de abate sem comprador em AJ, linhas 10–32 e 34–35, e o fornecedor/total zerados em Compra_Gado) e na Guanabara (sem falsos positivos). Typecheck limpo.
 
 Disparador: quando mencionar "auditoria da planilha", "problemas na planilha", "validação do Vision no upload", ler esta seção.
+
+### Cadernetas do PWA expostas no Manejus (2026-10-02)
+
+O PWA tinha 29 cadernetas registradas em `frontend/src/utils/constants.ts` e o painel só 16 no grid de cadernetas. As 13 que faltavam foram adicionadas como telas próprias no controller, todas com listagem + detalhe, filtro por fazenda, busca, intervalo de datas e export XLSX:
+
+- **Entrada de estoque**: `EntradaCombustivel` (`movimentacoes_combustivel` filtrado `tipo_movimentacao='entrada' AND origem='pwa_entrada'`), `EntradaAlmoxarifado` (`registros_almoxarifado` `tipo='entrada'`), `EntradaCantina` (`registros_alimentacao` `modo='entrada'`), `EntradaInsumos` (`registros_entrada_insumos` + itens `entrada_insumos_itens`).
+- **Confinamento**: `RegistrosLeituraCocho` (`registros_leitura_cocho`, com `LEITURA_COCHO_DESCRICOES` fixas -1..3 e join `notas_leitura_cocho_config`), `TratoConfinamento` (`registros_oferta_trato`), `FabricaConfinamento` (`registros_fabrica_confinamento` + `registros_fabrica_confinamento_insumos`, join `vagoes`/`formulacoes`).
+- **Gado**: `RegistrosPesagem` (`registros_pesagem`, join `lotes` e `ordens_servico`).
+- **Comercial**: `OrdensServico` virou componente parametrizável (`tipoFixo`, `titulo`) e os wrappers `ComunicadoVenda`/`ComunicadoCompra`/`ComunicadoTransferencia` filtram `tipo` fixo; `RecebimentoCompra` lista `os_recebimentos` com join na OS e o clique abre `OrdemServicoDetalhes`.
+- **Saída de insumos**: `SaidaInsumos` (`registros_saida_insumos` + `saida_insumos_itens`, label "Produção Fábrica").
+
+Wiring: 26 rotas novas em `App.tsx` sob `/controller/cadernetas/<id>`; `utils/cadernetas.ts` ganhou `entrada-combustivel`, `fabrica-confinamento`, `comunicado-transferencia`; `types/images.ts` tem os 13 ids novos com ícones copiados do PWA para `public/images/cadernetas/`; grid de `Cadernetas.tsx` e cards do `Dashboard.tsx` exibem todos. `exportAllCadernetas` ganhou suporte a `orderBy`/`filters`/embeds e inclui as cadernetas novas (entrada-almoxarifado e entrada-cantina ficam fora do export-all porque já saem nas abas Almoxarifado/Alimentação). Export configs novos em `exportConfigs.ts`, inclusive `ORDENS_SERVICO_EXPORT_CONFIG`.
+
+Migration `20261002190000_dashboard_stats_novas_cadernetas.sql` (aplicada via `db push`): `get_dashboard_stats` passa a retornar as 13 contagens novas em `cadernetaStats`, e a view `v_registros_unificado` do rastreio ganhou `registros_fabrica_confinamento`, `registros_pesagem`, `movimentacoes_combustivel` (sem `nome_usuario`/`deleted_at`: NULLs), `ordens_servico` e `os_recebimentos`. `rastreioService.CADERNETA_LABELS` atualizado.
+
+Atenção: `movimentacoes_combustivel` não tem `deleted_at` nem `nome_usuario` — não filtrar por essas colunas. Arquivos `LeituraCocho.tsx`/`RegistrosCantina*.tsx` pré-existentes continuam não roteados (a caderneta nova usa `RegistrosLeituraCocho`).
+
+Disparador: quando mencionar "telas do PWA no painel", "cadernetas novas", "comunicado de transferência", "carregamento vagão", "entrada de insumos", ler esta seção.

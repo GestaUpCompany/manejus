@@ -105,6 +105,28 @@ const Problemas = laz(() => import('./pages/controller/Problemas'), 'Problemas')
 const ProblemasDetalhes = laz(() => import('./pages/controller/ProblemasDetalhes'), 'ProblemasDetalhes')
 const OrdensServico = laz(() => import('./pages/controller/OrdensServico'), 'OrdensServico')
 const OrdemServicoDetalhes = laz(() => import('./pages/controller/OrdemServicoDetalhes'), 'OrdemServicoDetalhes')
+const EntradaCombustivel = laz(() => import('./pages/controller/EntradaCombustivel'), 'EntradaCombustivel')
+const EntradaCombustivelDetalhes = laz(() => import('./pages/controller/EntradaCombustivelDetalhes'), 'EntradaCombustivelDetalhes')
+const EntradaAlmoxarifado = laz(() => import('./pages/controller/EntradaAlmoxarifado'), 'EntradaAlmoxarifado')
+const EntradaAlmoxarifadoDetalhes = laz(() => import('./pages/controller/EntradaAlmoxarifadoDetalhes'), 'EntradaAlmoxarifadoDetalhes')
+const EntradaCantina = laz(() => import('./pages/controller/EntradaCantina'), 'EntradaCantina')
+const EntradaCantinaDetalhes = laz(() => import('./pages/controller/EntradaCantinaDetalhes'), 'EntradaCantinaDetalhes')
+const EntradaInsumos = laz(() => import('./pages/controller/EntradaInsumos'), 'EntradaInsumos')
+const EntradaInsumosDetalhes = laz(() => import('./pages/controller/EntradaInsumosDetalhes'), 'EntradaInsumosDetalhes')
+const SaidaInsumos = laz(() => import('./pages/controller/SaidaInsumos'), 'SaidaInsumos')
+const SaidaInsumosDetalhes = laz(() => import('./pages/controller/SaidaInsumosDetalhes'), 'SaidaInsumosDetalhes')
+const FabricaConfinamento = laz(() => import('./pages/controller/FabricaConfinamento'), 'FabricaConfinamento')
+const FabricaConfinamentoDetalhes = laz(() => import('./pages/controller/FabricaConfinamentoDetalhes'), 'FabricaConfinamentoDetalhes')
+const RegistrosLeituraCocho = laz(() => import('./pages/controller/RegistrosLeituraCocho'), 'RegistrosLeituraCocho')
+const RegistrosLeituraCochoDetalhes = laz(() => import('./pages/controller/RegistrosLeituraCochoDetalhes'), 'RegistrosLeituraCochoDetalhes')
+const TratoConfinamento = laz(() => import('./pages/controller/TratoConfinamento'), 'TratoConfinamento')
+const TratoConfinamentoDetalhes = laz(() => import('./pages/controller/TratoConfinamentoDetalhes'), 'TratoConfinamentoDetalhes')
+const RegistrosPesagem = laz(() => import('./pages/controller/RegistrosPesagem'), 'RegistrosPesagem')
+const RegistrosPesagemDetalhes = laz(() => import('./pages/controller/RegistrosPesagemDetalhes'), 'RegistrosPesagemDetalhes')
+const ComunicadoVenda = laz(() => import('./pages/controller/ComunicadoVenda'), 'ComunicadoVenda')
+const ComunicadoCompra = laz(() => import('./pages/controller/ComunicadoCompra'), 'ComunicadoCompra')
+const ComunicadoTransferencia = laz(() => import('./pages/controller/ComunicadoTransferencia'), 'ComunicadoTransferencia')
+const RecebimentoCompra = laz(() => import('./pages/controller/RecebimentoCompra'), 'RecebimentoCompra')
 
 // Controller - outros
 const RelatorioGado = laz(() => import('./pages/controller/RelatorioGado'), 'RelatorioGado')
@@ -1055,6 +1077,226 @@ function App() {
               <ControllerRoute>
                 <ControllerLayout>
                   <ProblemasDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/entrada-combustivel"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <EntradaCombustivel />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/entrada-combustivel/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <EntradaCombustivelDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/entrada-almoxarifado"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <EntradaAlmoxarifado />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/entrada-almoxarifado/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <EntradaAlmoxarifadoDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/entrada-cantina"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <EntradaCantina />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/entrada-cantina/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <EntradaCantinaDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/entrada-insumos"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <EntradaInsumos />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/entrada-insumos/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <EntradaInsumosDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/saida-insumos"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <SaidaInsumos />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/saida-insumos/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <SaidaInsumosDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/fabrica-confinamento"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <FabricaConfinamento />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/fabrica-confinamento/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <FabricaConfinamentoDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/leitura-cocho"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <RegistrosLeituraCocho />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/leitura-cocho/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <RegistrosLeituraCochoDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/trato-confinamento"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <TratoConfinamento />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/trato-confinamento/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <TratoConfinamentoDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/pesagem"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <RegistrosPesagem />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/pesagem/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <RegistrosPesagemDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/comunicado-venda"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <ComunicadoVenda />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/comunicado-compra"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <ComunicadoCompra />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/comunicado-transferencia"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <ComunicadoTransferencia />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/recebimento-compra"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <RecebimentoCompra />
                 </ControllerLayout>
               </ControllerRoute>
             }

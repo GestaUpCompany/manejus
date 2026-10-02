@@ -116,6 +116,11 @@ export function ControllerDashboard() {
     maternidade: 0, enfermaria: 0, pastagens: 0, rodeio: 0, suplementacao: 0,
     bebedouros: 0, movimentacao: 0, morte: 0, clima: 0, abastecimento: 0,
     cantina: 0, limpeza: 0, 'operacoes-maquinas': 0, almoxarifado: 0, 'manutencao-maquinas': 0, problemas: 0,
+    pesagem: 0, 'leitura-cocho': 0, 'trato-confinamento': 0, 'fabrica-confinamento': 0,
+    'entrada-insumos': 0, 'saida-insumos': 0, 'entrada-combustivel': 0,
+    'entrada-almoxarifado': 0, 'entrada-cantina': 0,
+    'comunicado-venda': 0, 'comunicado-compra': 0, 'comunicado-transferencia': 0,
+    'recebimento-compra': 0,
   }
   const registrosHoje = stats?.registrosHoje ?? 0
   const gadoData = gadoStats ?? {
@@ -124,7 +129,7 @@ export function ControllerDashboard() {
   }
 
   const totalCadastros = cadastroStats.pastos + cadastroStats.lotes + cadastroStats.funcionarios + cadastroStats.insumos + cadastroStats.pluviometros + cadastroStats.medicamentos
-  const totalRegistros = cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao + cadernetaStats.morte + cadernetaStats.clima + cadernetaStats.abastecimento + cadernetaStats.cantina + cadernetaStats.limpeza + cadernetaStats['operacoes-maquinas'] + cadernetaStats.almoxarifado + cadernetaStats['manutencao-maquinas'] + cadernetaStats.problemas
+  const totalRegistros = Object.values(cadernetaStats).reduce((acc, n) => acc + (n || 0), 0)
 
   if (loading) {
     return <PageSkeleton variant="grid" />
@@ -205,6 +210,19 @@ export function ControllerDashboard() {
     { key: 'almoxarifado', title: CADERNETA_TITLES.almoxarifado, count: cadernetaStats.almoxarifado, path: '/controller/cadernetas/almoxarifado' },
     { key: 'manutencao-maquinas', title: CADERNETA_TITLES['manutencao-maquinas'], count: cadernetaStats['manutencao-maquinas'], path: '/controller/cadernetas/manutencao-maquinas' },
     { key: 'problemas', title: CADERNETA_TITLES.problemas, count: cadernetaStats.problemas, path: '/controller/cadernetas/problemas' },
+    { key: 'leitura-cocho', title: CADERNETA_TITLES['leitura-cocho'], count: cadernetaStats['leitura-cocho'] ?? 0, path: '/controller/cadernetas/leitura-cocho' },
+    { key: 'trato-confinamento', title: CADERNETA_TITLES['trato-confinamento'], count: cadernetaStats['trato-confinamento'] ?? 0, path: '/controller/cadernetas/trato-confinamento' },
+    { key: 'fabrica-confinamento', title: CADERNETA_TITLES['fabrica-confinamento'], count: cadernetaStats['fabrica-confinamento'] ?? 0, path: '/controller/cadernetas/fabrica-confinamento' },
+    { key: 'pesagem', title: CADERNETA_TITLES.pesagem, count: cadernetaStats.pesagem ?? 0, path: '/controller/cadernetas/pesagem' },
+    { key: 'recebimento-compra', title: CADERNETA_TITLES['recebimento-compra'], count: cadernetaStats['recebimento-compra'] ?? 0, path: '/controller/cadernetas/recebimento-compra' },
+    { key: 'comunicado-venda', title: CADERNETA_TITLES['comunicado-venda'], count: cadernetaStats['comunicado-venda'] ?? 0, path: '/controller/cadernetas/comunicado-venda' },
+    { key: 'comunicado-compra', title: CADERNETA_TITLES['comunicado-compra'], count: cadernetaStats['comunicado-compra'] ?? 0, path: '/controller/cadernetas/comunicado-compra' },
+    { key: 'comunicado-transferencia', title: CADERNETA_TITLES['comunicado-transferencia'], count: cadernetaStats['comunicado-transferencia'] ?? 0, path: '/controller/cadernetas/comunicado-transferencia' },
+    { key: 'saida-insumos', title: CADERNETA_TITLES['saida-insumos'], count: cadernetaStats['saida-insumos'] ?? 0, path: '/controller/cadernetas/saida-insumos' },
+    { key: 'entrada-insumos', title: CADERNETA_TITLES['entrada-insumos'], count: cadernetaStats['entrada-insumos'] ?? 0, path: '/controller/cadernetas/entrada-insumos' },
+    { key: 'entrada-combustivel', title: CADERNETA_TITLES['entrada-combustivel'], count: cadernetaStats['entrada-combustivel'] ?? 0, path: '/controller/cadernetas/entrada-combustivel' },
+    { key: 'entrada-almoxarifado', title: CADERNETA_TITLES['entrada-almoxarifado'], count: cadernetaStats['entrada-almoxarifado'] ?? 0, path: '/controller/cadernetas/entrada-almoxarifado' },
+    { key: 'entrada-cantina', title: CADERNETA_TITLES['entrada-cantina'], count: cadernetaStats['entrada-cantina'] ?? 0, path: '/controller/cadernetas/entrada-cantina' },
   ]
 
   const quickActions = [

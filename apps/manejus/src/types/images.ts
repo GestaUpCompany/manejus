@@ -15,6 +15,19 @@ export type CadernetaImage =
   | 'almoxarifado'
   | 'manutencao-maquinas'
   | 'problemas'
+  | 'pesagem'
+  | 'leitura-cocho'
+  | 'trato-confinamento'
+  | 'fabrica-confinamento'
+  | 'entrada-insumos'
+  | 'saida-insumos'
+  | 'entrada-combustivel'
+  | 'entrada-almoxarifado'
+  | 'entrada-cantina'
+  | 'comunicado-venda'
+  | 'comunicado-compra'
+  | 'comunicado-transferencia'
+  | 'recebimento-compra'
 
 export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   maternidade: '/images/cadernetas/maternidade.png',
@@ -33,6 +46,19 @@ export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   almoxarifado: '/images/almoxarifado.png',
   'manutencao-maquinas': '/images/manutencao-maquinas.png',
   problemas: '/images/problemas.png',
+  pesagem: '/images/cadernetas/pesagem.png',
+  'leitura-cocho': '/images/cadernetas/leitura-cocho.png',
+  'trato-confinamento': '/images/cadernetas/trato-confinamento.png',
+  'fabrica-confinamento': '/images/cadernetas/fabrica-confinamento.png',
+  'entrada-insumos': '/images/cadernetas/entrada.png',
+  'saida-insumos': '/images/cadernetas/producao.png',
+  'entrada-combustivel': '/images/cadernetas/entradacombustivel.png',
+  'entrada-almoxarifado': '/images/almoxarifado.png',
+  'entrada-cantina': '/images/cadernetas/cantina.png',
+  'comunicado-venda': '/images/cadernetas/comunicado.png',
+  'comunicado-compra': '/images/cadernetas/comunicado.png',
+  'comunicado-transferencia': '/images/cadernetas/movimentacao.png',
+  'recebimento-compra': '/images/cadernetas/recepcao.jpg',
 }
 
 export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
@@ -52,6 +78,19 @@ export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
   almoxarifado: 'Almoxarifado',
   'manutencao-maquinas': 'Manutenção de Máquinas',
   problemas: 'Problemas',
+  pesagem: 'Pesagem',
+  'leitura-cocho': 'Leitura de Cocho',
+  'trato-confinamento': 'Trato Confinamento',
+  'fabrica-confinamento': 'Carregamento Vagão',
+  'entrada-insumos': 'Entrada de Insumos',
+  'saida-insumos': 'Produção Fábrica',
+  'entrada-combustivel': 'Entrada de Combustível',
+  'entrada-almoxarifado': 'Entrada Almoxarifado',
+  'entrada-cantina': 'Entrada Cantina',
+  'comunicado-venda': 'Comunicado de Venda',
+  'comunicado-compra': 'Comunicado de Compra',
+  'comunicado-transferencia': 'Comunicado de Transferência',
+  'recebimento-compra': 'Recebimento de Compra',
 }
 
 export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
@@ -71,6 +110,19 @@ export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
   almoxarifado: 'Registros de almoxarifado',
   'manutencao-maquinas': 'Registros de manutenção de máquinas',
   problemas: 'Registros de problemas',
+  pesagem: 'Registros de pesagem de animais',
+  'leitura-cocho': 'Registros de leitura de cocho',
+  'trato-confinamento': 'Registros de oferta de trato',
+  'fabrica-confinamento': 'Registros de carregamento do vagão',
+  'entrada-insumos': 'Registros de entrada de insumos',
+  'saida-insumos': 'Registros de produção na fábrica',
+  'entrada-combustivel': 'Registros de entrada de combustível',
+  'entrada-almoxarifado': 'Registros de entrada no almoxarifado',
+  'entrada-cantina': 'Registros de entrada na cantina',
+  'comunicado-venda': 'Comunicados de venda de animais',
+  'comunicado-compra': 'Comunicados de compra de animais',
+  'comunicado-transferencia': 'Comunicados de transferência entre fazendas',
+  'recebimento-compra': 'Recepção de animais comprados',
 }
 
 export const LOGO_GESTAUP = '/images/logo/logo-gestaup.png'

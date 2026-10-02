@@ -49,7 +49,12 @@ export const TIPO_VENDA: Record<string, string> = {
   animal_vivo: 'Animal Vivo',
 }
 
-export function OrdensServico() {
+interface OrdensServicoProps {
+  tipoFixo?: OrdemServico['tipo']
+  titulo?: string
+}
+
+export function OrdensServico({ tipoFixo, titulo }: OrdensServicoProps = {}) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [ordens, setOrdens] = useState<OrdemServico[]>([])
@@ -100,7 +105,8 @@ export function OrdensServico() {
       (os.origem_fazenda && os.origem_fazenda.toLowerCase().includes(termo)) ||
       (os.nome_usuario && os.nome_usuario.toLowerCase().includes(termo))
     const matchesStatus = !filtroStatus || os.status === filtroStatus
-    const matchesTipo = !filtroTipo || os.tipo === filtroTipo
+    const tipoFiltro = tipoFixo || filtroTipo
+    const matchesTipo = !tipoFiltro || os.tipo === tipoFiltro
     return matchesSearch && matchesStatus && matchesTipo
   })
 
@@ -127,7 +133,7 @@ export function OrdensServico() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Ordens de Serviço</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">{titulo || 'Ordens de Serviço'}</h2>
       </div>
 
       <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
@@ -156,20 +162,22 @@ export function OrdensServico() {
               className="text-sm"
             />
           </div>
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-content mb-1">Tipo</label>
-            <Select
-              value={filtroTipo}
-              onChange={setFiltroTipo}
-              placeholder="Todos"
-              options={[
-                { value: '', label: 'Todos' },
-                { value: 'venda', label: 'Venda' },
-                { value: 'compra', label: 'Compra' },
-                { value: 'transferencia', label: 'Transferência' },
-              ]}
-            />
-          </div>
+          {!tipoFixo && (
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-content mb-1">Tipo</label>
+              <Select
+                value={filtroTipo}
+                onChange={setFiltroTipo}
+                placeholder="Todos"
+                options={[
+                  { value: '', label: 'Todos' },
+                  { value: 'venda', label: 'Venda' },
+                  { value: 'compra', label: 'Compra' },
+                  { value: 'transferencia', label: 'Transferência' },
+                ]}
+              />
+            </div>
+          )}
           <div>
             <label className="block text-xs sm:text-sm font-medium text-content mb-1">Status</label>
             <Select
