@@ -6,7 +6,7 @@ Caso real: na Fazenda Marcon, a solicitação `fe382a1d-f7d0-42a9-a29c-0eb3989de
 
 Causa-raiz: na migration `20260925100000_lote_curral_historico_ocupacao.sql` (reescrita da RPC `aprovar_solicitacao_novo_lote` para suportar curral), a lista de colunas do INSERT em `lote_categorias` ficou com 49 campos mas o VALUES com 48 expressões: faltava `NULLIF(v_cat_item->>'custo_total_entrada_reais_lote', '')::numeric` entre `custo_total_entrada_reais_cab` e `preco_entrada_reais_kg`. A versão anterior (`20260921150000`) tinha a linha. Como a função roda em transação única sem exception handler, a falha aborta tudo sem dados parciais.
 
-Correção na migration `20261003110000_fix_aprovar_novo_lote_custo_total_lote.sql` (db push): `CREATE OR REPLACE FUNCTION` idêntica, apenas recolocando a expressão faltante. Nenhum dado da Marcon foi tocado; a solicitação continua `rejeitada` e precisaria ser reaberta (status → 'pendente') ou recriada pelo PWA para ser aprovada.
+Correção na migration `20261003110000_fix_aprovar_novo_lote_custo_total_lote.sql` (db push): `CREATE OR REPLACE FUNCTION` idêntica, apenas recolocando a expressão faltante. Nenhum dado da Marcon foi tocado pela migration. Depois, a pedido do usuário, a solicitação foi reaberta via update pontual no MCP (status → 'pendente', `rejeitada_at`/`rejeitada_by`/`motivo_rejeicao` → null, `updated_at` restaurado ao valor original), voltando exatamente ao estado anterior à rejeição para nova aprovação.
 
 Comportamento ainda pendente de decisão: a data gravada em `registros_movimentacao.data` é `created_at do lote + 1s`, ignorando `dados_movimentacao.data` do PWA; se a data da movimentação deve honrar a data solicitada/editada, é ajuste separado.
 
