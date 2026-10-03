@@ -390,7 +390,7 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
       const g = vendasAbate.filter(v => ym(v.data) === k);
       return { mes: k, cab: sum(g, x => x.cab), rsAt: g.length ? avg(g, x => x.rsAt) : null };
     }).filter(m => m.cab > 0),
-    porEmpresa: [...groupBy(vendasAbate, x => x.comprador)].map(([k, g]) => ({
+    porEmpresa: [...groupBy(vendasAbate, x => x.comprador || 'Não informado')].map(([k, g]) => ({
       empresa: k, lotes: g.length, cab: sum(g, x => x.cab),
       rsAt: avg(g, x => x.rsAt), rendCarc: avg(g, x => x.rendCarc),
     })).sort((a, b) => b.cab - a.cab),
@@ -583,7 +583,7 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     porCategoria: [...groupBy(vendasVivo, x => x.categoria)].map(([k, g]) => ({
       categoria: k, cab: sum(g, x => x.cab), rsAt: avg(g, x => x.rsAt),
     })).sort((a, b) => b.cab - a.cab),
-    porComprador: [...groupBy(vendasVivo, x => x.comprador)].map(([k, g]) => ({
+    porComprador: [...groupBy(vendasVivo, x => x.comprador || 'Não informado')].map(([k, g]) => ({
       comprador: k, cab: sum(g, x => x.cab), valor: sum(g, x => x.valorLiq),
     })).sort((a, b) => b.cab - a.cab),
   };

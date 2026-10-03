@@ -32,7 +32,9 @@ export function render({ model, ctx }) {
     .ptable td:nth-child(3), .ptable td:nth-child(4), .ptable td:last-child { text-align: right; }
     .ptable tr.cut td { background: #FDF3F2; }
     .ptable tr.demais td { color: var(--muted); font-style: italic; }
-    .cut-note { font-size:10.5px; color: var(--muted); font-style: italic; margin-top: 6px; padding-left: 4px; }
+    .content > div:first-child { display: flex; flex-direction: column; }
+    .ptable { margin-top: auto; }
+    .cut-note { font-size:10.5px; color: var(--muted); font-style: italic; margin-top: 6px; margin-bottom: auto; padding-left: 4px; }
   `;
 
   const body = `

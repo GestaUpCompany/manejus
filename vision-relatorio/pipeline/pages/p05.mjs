@@ -35,8 +35,8 @@ export function render({ model, ctx }) {
   // se mesmo agregado por mês estourar, o nível de detalhe some (só tipo→categoria)
   const nLoteRows = compras.pivot.reduce((a, tp) => a + 1 + tp.categorias.reduce((b, c) => b + 1 + c.lotes.length, 0), 0);
   const nMesRows = compras.pivot.reduce((a, tp) => a + 1 + tp.categorias.reduce((b, c) => b + 1 + lotesPorMes(c).length, 0), 0);
-  const detail = nLoteRows <= 22 ? 'dia' : nMesRows <= 22 ? 'mes' : 'nenhum';
-  const dense = detail !== 'dia' || nLoteRows > 17;
+  const detail = nLoteRows <= 12 ? 'dia' : nMesRows <= 15 ? 'mes' : 'nenhum';
+  const dense = detail !== 'dia' || nLoteRows > 10;
 
   const rows = compras.pivot.map(tp => {
     const catRows = tp.categorias.map(cat => {
@@ -51,21 +51,21 @@ export function render({ model, ctx }) {
   }).join('');
 
   const extraCss = `
-    thead th { font-size:11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); padding: 8px 10px 10px 10px; border-bottom: 2px solid var(--blue); }
+    thead .cols th { font-size:10.5px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #fff; background: var(--blue); padding: 7px 10px; border-bottom: none; }
+    thead th:first-child { border-radius: 6px 0 0 6px; }
+    thead th:last-child { border-radius: 0 6px 6px 0; }
     tbody td:first-child { text-align: left; }
-    tr.tipo td { background: var(--blue); color: #fff; font-weight: 800; border-bottom: none; }
-    tr.tipo td:first-child { border-radius: 6px 0 0 6px; }
-    tr.tipo td:last-child { border-radius: 0 6px 6px 0; }
-    tr.tipo .twist { display: inline-block; margin-right: 8px; font-size:11px; }
-    tr.cat td { background: #EFF6F1; font-weight: 700; }
+    tr.tipo td { font-weight: 700; color: var(--ink); }
+    tr.tipo .twist { display: inline-block; margin-right: 8px; font-size:11px; color: var(--blue); }
+    tr.cat td { font-weight: 500; }
     tr.cat td.cat, tr.cat td:first-child { padding-left: 26px; }
     tr.cat td:first-child::before { content: ''; display: inline-block; width: 10px; height: 2px; background: var(--green); margin-right: 8px; vertical-align: 3px; }
-    tr.lot td { color: #3D4F61; font-weight: 400; }
-    tr.lot td:first-child { padding-left: 52px; color: var(--muted); font-weight: 500; }
+    tr.lot td { color: var(--muted); font-weight: 400; }
+    tr.lot td:first-child { padding-left: 52px; }
     tr.spacer td { padding: 3px; border: none; }
-    .table-wrap { flex: 1; }
+    .table-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; }
     table.dense { font-size:12.5px; }
-    table.dense tbody td { padding: 2.5px 8px; }
+    table.dense tbody td { padding: 4px 8px; }
     table.dense thead th { padding: 4px 8px 6px 8px; }
     .footnote { padding: 6px 48px 0 48px; font-size:11px; color: var(--muted); font-style: italic; }
   `;

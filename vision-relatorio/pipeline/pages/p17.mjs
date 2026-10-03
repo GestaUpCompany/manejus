@@ -17,7 +17,7 @@ export function render({ model, ctx }) {
     .kpi { border-top-color: var(--blue); }
     .kpi.g { border-top-color: var(--green); }
     .kpi.r { border-top-color: var(--red); }
-    .fc-wrap { padding: 0 48px; }
+    .fc-wrap { display: flex; flex-direction: column; }
     .fctable { width: 100%; border-collapse: collapse; font-size:14px; }
     .fctable th { font-size:11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: right; padding: 5px 10px; border-bottom: 1.5px solid var(--blue); }
     .fctable th:first-child { text-align: left; }
@@ -28,7 +28,7 @@ export function render({ model, ctx }) {
     .fctable tr.res td:not(:first-child) { font-weight: 700; }
     .fctable tr.res td.pos { color: var(--green-dark); }
     .fctable tr.res td.neg { color: var(--red); }
-    .fctable tr.sf td { font-weight: 800; color: var(--blue); background: #F4F7FA; border-top: 2px solid var(--blue); }
+    .fctable tr.sf td { font-weight: 700; color: var(--blue); background: #F4F7FA; border-top: 2px solid var(--blue); }
     .fctable td.na { color: #B7C2CC; }
     .fctable.dense { font-size:9.5px; table-layout: fixed; }
     .fctable.dense td { padding: 3.5px 4px; }

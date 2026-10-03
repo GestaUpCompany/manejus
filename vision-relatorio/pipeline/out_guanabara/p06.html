@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E; --green: #17A34A; --green-dark: #0F7A38; --green-light: #7CC98A;
+  --ink: #12263A; --muted: #5B6B7B; --line: #E3E8EE; --soft: #F4F7F9;
+  --red: #B0443C; --amber: #B8860B; --slate: #8FA3B5;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page { width: 1280px; height: 720px; position: relative; overflow: hidden; background: #F5F8FA; display: flex; flex-direction: column; }
+.page-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 48px 8px 48px; }
+.title-block h1 { font-size:33px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.title-block .kicker { font-size:12px; font-weight: 700; letter-spacing: 3px; color: var(--green-dark); text-transform: uppercase; margin-top: 5px; }
+.page-logo { height: 62px; }
+
+.kpis { display: grid; gap: 12px; padding: 4px 48px 10px 48px; }
+.kpi { border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green); padding: 8px 14px 9px 14px; background: #fff; box-shadow: 0 1px 2px rgba(18,38,58,.05), 0 4px 14px rgba(18,38,58,.06); width: fit-content; min-width: 200px; }
+.kpi.blue-top { border-top-color: var(--blue); }
+.kpi.red-top { border-top-color: var(--red); }
+.kpi.amber-top { border-top-color: var(--amber); }
+.kpi .lbl { font-size:10.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+.kpi .val { font-size:24px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size:13px; font-weight: 600; color: var(--muted); }
+
+.table-wrap { margin: 0 48px; padding: 10px 18px 14px 18px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+table { width: 100%; border-collapse: collapse; font-size:14px; }
+thead .cols th { font-size:10.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); padding: 5px 8px; border-bottom: 2px solid var(--ink); text-align: right; white-space: nowrap; }
+thead .cols th:first-child { text-align: left; }
+thead .grp th { font-size:11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; padding: 4px 8px; text-align: right; color: var(--ink); }
+thead .grp th.ent { color: var(--green-dark); }
+thead .grp th.sai { color: var(--red); }
+tbody td { padding: 6.5px 8px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+tbody td.cat { text-align: left; font-weight: 500; }
+tbody tr.zero td { color: #9AA8B5; }
+tbody td.in { color: var(--green-dark); }
+tbody td.out { color: var(--red); }
+tbody tr.total td { font-weight: 700; color: var(--blue); border-top: 2px solid var(--ink); border-bottom: none; background: var(--soft); }
+tbody tr.total td:first-child { border-radius: 0 0 0 8px; }
+tbody tr.total td:last-child { border-radius: 0 0 8px 0; }
+td.strong { font-weight: 700; }
+
+.chart-wrap { margin: 8px 48px 0 48px; padding: 12px 18px 8px 18px; flex: 1; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+.chart1 { margin: 0 48px 10px 48px; padding: 12px 18px 10px 18px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+.chart-row > div, .content > div { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+.chart-title { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; display: flex; align-items: center; gap: 18px; }
+.legend { display: flex; gap: 16px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
+.legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.legend .sw.bar { background: var(--blue); }
+.legend .sw.line { background: var(--green); border-radius: 50%; height: 4px; width: 16px; vertical-align: 2px; }
+
+svg text.axis, .axis text { font-family: 'Archivo'; font-size:11.5px; fill: var(--muted); font-weight: 600; }
+text.axis.dense { font-size:9px; }
+.vlbl { font-family: 'Archivo'; font-size:11.5px; fill: var(--blue); font-weight: 700; }
+.vlbl.w { fill: #fff; }
+.vlbl.h { paint-order: stroke; stroke: #fff; stroke-width: 1.2px; stroke-linejoin: round; font-weight: 600; }
+.vlbl.dense { font-size:9px; }
+.vlbl.dense.h { stroke-width: 1px; }
+.llbl { font-family: 'Archivo'; font-size:11px; fill: var(--green-dark); font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 1.5px; stroke-linejoin: round; }
+.llbl.w { fill: #fff; stroke-width: 0; }
+.llbl.dense { font-size:8.5px; stroke-width: 1.5px; }
+.llbl.dense.w { stroke-width: 0; }
+.barlbl { font-family: 'Archivo'; font-size:11.5px; fill: var(--blue); font-weight: 700; }
+.linelbl { font-family: 'Archivo'; font-size:11px; fill: #fff; font-weight: 600; }
+
+.panels { display: flex; gap: 16px; padding: 0 48px; }
+.panel { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fff; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+.panel h3 { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.caption { font-size:11px; color: var(--muted); margin-top: 6px; }
+
+.page-foot { display: flex; align-items: center; justify-content: space-between; padding: 6px 48px 14px 48px; font-size:12px; color: var(--muted); margin-top: auto; }
+.page-foot .num { font-weight: 800; color: var(--blue); font-size:14.5px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+
+    .chart1 { margin-top: 2px; }
+    .chart-row { display: grid; grid-template-columns: 1.15fr 1fr; gap: 48px; padding: 14px 48px 0 48px; flex: 1; }
+    .axis-note { font-size:10.5px; color: var(--muted); font-style: italic; margin-top: -2px; }
+    .mini-table { font-size:12.5px; border-collapse: collapse; width: 100%; margin-top: 6px; }
+    .mini-table th { font-size:10.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: 700; text-align: right; padding: 4px 6px; border-bottom: 1.5px solid var(--blue); }
+    .mini-table th:first-child { text-align: left; }
+    .mini-table td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); }
+    .mini-table td:first-child { text-align: left; font-weight: 600; }
+    .mini-table .bar { height: 5px; border-radius: 3px; background: var(--green); display: inline-block; vertical-align: 1px; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="page-head">
+    <div class="title-block">
+      <h1>Vendas de Animais · Abate</h1>
+      <div class="kicker">Jan – Ago · 2026 · Fazenda Guanabara</div>
+    </div>
+    <img class="page-logo" src="C:\Users\USER\Documents\GestaUp-Cadernetas-Gestao\tmp_pbix\Report\StaticResources\RegisteredResources\Gestaup_Intelligence-0127124017850949067.png" alt="">
+  </div>
+
+  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi"><div class="lbl">N° de Cabeças</div><div class="val">699 <small>cab</small></div></div>
+    <div class="kpi"><div class="lbl">Média R$/@</div><div class="val"><small>R$</small> 347,98</div></div>
+    <div class="kpi"><div class="lbl">Média R$/kg</div><div class="val"><small>R$</small> 12,95</div></div>
+  </div>
+
+  <div class="chart1">
+    <div class="chart-title">Cabeças vendidas e preço médio por mês
+      <span class="legend"><span><span class="sw bar"></span>Cabeças</span><span><span class="sw line"></span>Média R$/@</span></span></div>
+    <svg viewBox="0 0 1184 195" preserveAspectRatio="none" style="width:100%;height:195px"><line x1="0" y1="160" x2="1184" y2="160" stroke="#C9D2DB" stroke-width="1"/>
+<line x1="0" y1="91.0" x2="1184" y2="91.0" stroke="#EDF1F5" stroke-width="1"/>
+<line x1="0" y1="45.5" x2="1184" y2="45.5" stroke="#EDF1F5" stroke-width="1"/>
+<rect x="61.7" y="118.6" width="80.0" height="41.4" rx="4" fill="#0B3D6E" opacity="0.92"/>
+<rect x="225.1" y="91.0" width="80.0" height="69.0" rx="4" fill="#0B3D6E" opacity="0.92"/>
+<rect x="388.6" y="35.8" width="80.0" height="124.2" rx="4" fill="#0B3D6E" opacity="0.92"/>
+<rect x="552.0" y="63.4" width="80.0" height="96.6" rx="4" fill="#0B3D6E" opacity="0.92"/>
+<rect x="715.4" y="68.8" width="80.0" height="91.2" rx="4" fill="#0B3D6E" opacity="0.92"/>
+<rect x="878.9" y="107.1" width="80.0" height="52.9" rx="4" fill="#0B3D6E" opacity="0.92"/>
+<rect x="1042.3" y="99.4" width="80.0" height="60.6" rx="4" fill="#0B3D6E" opacity="0.92"/>
+<polyline points="102,159.5 265,86.9 429,45.7 592,22.7 755,34.9 919,94.6 1082,81.3" fill="none" stroke="#17A34A" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="101.7" cy="159.5" r="4.5" fill="#17A34A"/>
+<circle cx="265.1" cy="86.9" r="4.5" fill="#17A34A"/>
+<circle cx="428.6" cy="45.7" r="4.5" fill="#17A34A"/>
+<circle cx="592.0" cy="22.7" r="4.5" fill="#17A34A"/>
+<circle cx="755.4" cy="34.9" r="4.5" fill="#17A34A"/>
+<circle cx="918.9" cy="94.6" r="4.5" fill="#17A34A"/>
+<circle cx="1082.3" cy="81.3" r="4.5" fill="#17A34A"/>
+<text x="101.7" y="146.5" text-anchor="middle" font-family="Archivo" font-size="13.0" font-weight="600" fill="#fff">R$ 305</text>
+<text x="265.1" y="108.9" text-anchor="middle" font-family="Archivo" font-size="13.0" font-weight="600" fill="#fff">R$ 337</text>
+<text x="428.6" y="67.7" text-anchor="middle" font-family="Archivo" font-size="13.0" font-weight="600" fill="#fff">R$ 355</text>
+<text x="592.0" y="76.4" text-anchor="middle" font-family="Archivo" font-size="13.0" font-weight="600" fill="#fff">R$ 365</text>
+<text x="755.4" y="81.8" text-anchor="middle" font-family="Archivo" font-size="13.0" font-weight="600" fill="#fff">R$ 360</text>
+<text x="918.9" y="116.6" text-anchor="middle" font-family="Archivo" font-size="13.0" font-weight="600" fill="#fff">R$ 333</text>
+<text x="1082.3" y="112.4" text-anchor="middle" font-family="Archivo" font-size="13.0" font-weight="600" fill="#fff">R$ 339</text>
+<text class="vlbl" x="101.7" y="110.6" text-anchor="middle" style="font-size:13.7px;font-weight:600">54</text>
+<text class="vlbl" x="265.1" y="83.0" text-anchor="middle" style="font-size:13.7px;font-weight:600">90</text>
+<text class="vlbl" x="428.6" y="27.8" text-anchor="middle" style="font-size:13.7px;font-weight:600">162</text>
+<text class="vlbl" x="592.0" y="55.4" text-anchor="middle" style="font-size:13.7px;font-weight:600">126</text>
+<text class="vlbl" x="755.4" y="60.8" text-anchor="middle" style="font-size:13.7px;font-weight:600">119</text>
+<text class="vlbl" x="918.9" y="99.1" text-anchor="middle" style="font-size:13.7px;font-weight:600">69</text>
+<text class="vlbl" x="1082.3" y="91.4" text-anchor="middle" style="font-size:13.7px;font-weight:600">79</text>
+<text class="axis" x="101.7" y="183" text-anchor="middle">Jan</text>
+<text class="axis" x="265.1" y="183" text-anchor="middle">Fev</text>
+<text class="axis" x="428.6" y="183" text-anchor="middle">Abr</text>
+<text class="axis" x="592.0" y="183" text-anchor="middle">Mai</text>
+<text class="axis" x="755.4" y="183" text-anchor="middle">Jun</text>
+<text class="axis" x="918.9" y="183" text-anchor="middle">Jul</text>
+<text class="axis" x="1082.3" y="183" text-anchor="middle">Ago</text></svg>
+  </div>
+
+  <div class="chart-row">
+    <div>
+      <div class="chart-title">Preço e rendimento de carcaça por frigorífico
+        <span class="legend"><span><span class="sw bar"></span>R$/@</span><span><span class="sw line"></span>RC%</span></span></div>
+      <svg viewBox="0 0 620 195" preserveAspectRatio="none" style="width:100%;height:195px"><line x1="0" y1="160" x2="620" y2="160" stroke="#C9D2DB" stroke-width="1"/>
+<path d="M6,153 l10,14 M17,153 l10,14" stroke="#9AA8B5" stroke-width="1.5"/>
+<line x1="0" y1="91.0" x2="620" y2="91.0" stroke="#EDF1F5" stroke-width="1"/>
+<line x1="0" y1="45.5" x2="620" y2="45.5" stroke="#EDF1F5" stroke-width="1"/>
+<rect x="76.7" y="91.4" width="80.0" height="68.6" rx="4" fill="#0B3D6E" opacity="0.92"/>
+<rect x="270.0" y="102.4" width="80.0" height="57.6" rx="4" fill="#0B3D6E" opacity="0.92"/>
+<rect x="463.3" y="117.1" width="80.0" height="42.9" rx="4" fill="#0B3D6E" opacity="0.92"/>
+<polyline points="117,88.2 310,91.1 503,88.5" fill="none" stroke="#17A34A" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="116.7" cy="88.2" r="4.5" fill="#17A34A"/>
+<circle cx="310.0" cy="91.1" r="4.5" fill="#17A34A"/>
+<circle cx="503.3" cy="88.5" r="4.5" fill="#17A34A"/>
+<text x="116.7" y="110.2" text-anchor="middle" font-family="Archivo" font-size="13.0" font-weight="600" fill="#fff">56,0%</text>
+<text x="310.0" y="113.1" text-anchor="middle" font-family="Archivo" font-size="13.0" font-weight="600" fill="#fff">55,0%</text>
+<text x="503.3" y="130.1" text-anchor="middle" font-family="Archivo" font-size="13.0" font-weight="600" fill="#fff">55,9%</text>
+<text class="vlbl" x="116.7" y="83.4" text-anchor="middle" style="font-size:13.7px;font-weight:600">R$ 344,92</text>
+<text class="vlbl" x="310.0" y="94.4" text-anchor="middle" style="font-size:13.7px;font-weight:600">R$ 342,52</text>
+<text class="vlbl" x="503.3" y="109.1" text-anchor="middle" style="font-size:13.7px;font-weight:600">R$ 339,32</text>
+<text class="axis" x="116.7" y="183" text-anchor="middle">Agra Agrondustrial de Alimentos SA</text>
+<text class="axis" x="503.3" y="183" text-anchor="middle">Frigorífico Estrela</text></svg>
+      <div class="axis-note">Eixo R$/@ truncado em 330 para evidenciar a diferença entre empresas.</div>
+    </div>
+    <div>
+      <div class="chart-title">Volume por empresa</div>
+      <table class="mini-table">
+        <thead><tr><th>Frigorífico</th><th>Cab.</th><th>%</th><th>R$/@</th><th>RC%</th></tr></thead>
+        <tbody><tr><td>Agra Agrondustrial de Alimentos SA</td><td>353</td><td><span class="bar" style="width:60px"></span> 51%</td><td>344,92</td><td>56,0%</td></tr><tr><td>Frigorífico Vale Company</td><td>213</td><td><span class="bar" style="width:36px"></span> 30%</td><td>342,52</td><td>55,0%</td></tr><tr><td>Frigorífico Estrela</td><td>133</td><td><span class="bar" style="width:23px"></span> 19%</td><td>339,32</td><td>55,9%</td></tr></tbody>
+      </table>
+      <div class="axis-note" style="margin-top:10px">699 cabeças em 9 lotes · RC% = rendimento de carcaça médio.</div>
+    </div>
+  </div>
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">06</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

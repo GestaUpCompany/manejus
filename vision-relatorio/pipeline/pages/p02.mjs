@@ -35,9 +35,9 @@ export function render({ model, ctx }) {
     tbody td.sep, tbody td.sep ~ td { background: #F7FBF8; }
     tbody tr.total td.sep ~ td { background: #EAF4EE; }
     thead .cols th.sep ~ th { background: #F7FBF8; }
-    .table-wrap { flex: 1; }
-    .kpis.k8 { grid-template-columns: repeat(8, 1fr); gap: 10px; padding-top: 0; }
-    .kpis.k8 .kpi { padding: 10px 12px 9px 12px; }
+    .table-wrap { margin-top: auto; }
+    .kpis.k8 { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; padding-top: 0; }
+    .kpis.k8 .kpi { padding: 10px 12px 9px 12px; min-width: 0; width: auto; }
     .kpis.k8 .kpi .val { font-size:21px; }
   `;
 

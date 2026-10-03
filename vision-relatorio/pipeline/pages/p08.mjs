@@ -1,9 +1,29 @@
-// p.8 — Nascimentos (combo mensal só com meses com registro + raça×sexo + donut)
+// p.8 — Nascimentos (combo mensal só com meses com registro + listas horizontais)
 import { pageShell } from '../lib/shell.mjs';
-import { comboChart, donut, C } from '../lib/svg.mjs';
+import { comboChart, C } from '../lib/svg.mjs';
 import { fmtInt, fmt1, fmtPct, mesNome, mesAbrev, kickerPeriodo, esc } from '../lib/fmt.mjs';
 
 const SEXO = { M: 'Macho', F: 'Fêmea' };
+const SEXO_COLOR = { F: C.green, M: C.blue };
+const topN = (list, n = 6) => {
+  const s = [...list].sort((a, b) => b.quant - a.quant);
+  const out = s.slice(0, n);
+  const resto = s.slice(n).reduce((a, r) => a + r.quant, 0);
+  if (resto > 0) out.push({ quant: resto, _outros: true });
+  return out;
+};
+
+// lista de barras horizontais: nome · trilha · quant + %
+const hlist = (rows, color) => {
+  const total = rows.reduce((a, r) => a + r.quant, 0);
+  const mx = Math.max(...rows.map(r => r.quant), 1);
+  return `<div class="hlist">${rows.map(r => `
+    <div class="hrow">
+      <span class="h-name" title="${esc(r.label)}">${esc(r.label)}</span>
+      <span class="h-track"><i style="width:${Math.max(4, r.quant / mx * 100).toFixed(1)}%;background:${color}"></i></span>
+      <span class="h-num">${fmtInt(r.quant)} <em>${fmtPct(r.quant / total)}</em></span>
+    </div>`).join('')}</div>`;
+};
 
 export function render({ model, ctx }) {
   const { meta, nascimentos: nasc } = model;
@@ -15,77 +35,78 @@ export function render({ model, ctx }) {
   if (!nasc.mensal.length) {
     charts = `<div class="empty">Sem nascimentos registrados no período.</div>`;
   } else {
-    const wide = nasc.mensal.length > 12; // série longa: combo ocupa a largura toda
     const comboMes = comboChart({
       labels: nasc.mensal.map(m => mesLbl(m.mes)),
-      W: wide ? 1184 : 560, H: wide ? 230 : 300, labelScale: 1.3,
+      W: 1184, H: 205, labelScale: 1.3,
       bars: { values: nasc.mensal.map(m => m.quant), color: C.blue, labelFmt: fmtInt },
       line: { values: nasc.mensal.map(m => m.pesoMedio), color: C.green, labelFmt: (x) => `${fmt1(x)} kg` },
     });
-    // raça×sexo: top 6 por volume, o resto consolida em "Outros"
-    const rs = [...nasc.porRacaSexo].sort((a, b) => b.quant - a.quant);
-    const rsTop = rs.slice(0, 6);
-    const rsOutros = rs.slice(6).reduce((a, r) => a + r.quant, 0);
-    if (rsOutros > 0) rsTop.push({ raca: 'Outros', sexo: '', quant: rsOutros });
-    const rsLabels = rsTop.map(r => r.raca + (r.sexo ? ` · ${SEXO[r.sexo] ?? r.sexo}` : ''));
-    const barRaca = comboChart({
-      labels: rsLabels,
-      W: wide ? 660 : 340, H: wide ? 195 : 300, labelScale: 1.3,
-      bars: { values: rsTop.map(r => r.quant), color: C.green, labelFmt: fmtInt },
-    });
+
+    const bottom = [];
+
+    const rsTop = topN(nasc.porRacaSexo);
+    if (rsTop.length) {
+      const rows = rsTop.map(r => ({
+        quant: r.quant,
+        label: r._outros ? 'Outros'
+          : r.raca ? r.raca + (r.sexo ? ` · ${SEXO[r.sexo] ?? r.sexo}` : '')
+          : (SEXO[r.sexo] ?? 'Não informada'),
+      }));
+      bottom.push(`<div><div class="chart-title">Por raça × sexo</div>${hlist(rows, C.green)}</div>`);
+    }
+
+    const catTop = topN(nasc.porCategoria ?? []);
+    if (catTop.length > 1) {
+      const rows = catTop.map(r => ({
+        quant: r.quant,
+        label: r._outros ? 'Outras' : String(r.categoria).replace(' - ', ' · '),
+      }));
+      bottom.push(`<div><div class="chart-title">Por categoria</div>${hlist(rows, C.blue)}</div>`);
+    }
+
     const porSexo = [...nasc.porSexo].sort((a, b) => b.quant - a.quant);
     const total = porSexo.reduce((a, s) => a + s.quant, 0);
-    const donutSexo = donut({
-      items: porSexo.map(s => ({ value: s.quant })),
-      size: wide ? 130 : 150,
-      center: porSexo.length === 1
-        ? [fmtInt(total), `${SEXO[porSexo[0].sexo] ?? porSexo[0].sexo} · 100%`]
-        : [fmtInt(total), 'nascimentos'],
-    });
-    const legenda = porSexo.length > 1
-      ? `<div class="dlegend">${porSexo.map(s => `<span>${esc(SEXO[s.sexo] ?? s.sexo)} · ${fmtInt(s.quant)} · ${fmtPct(s.quant / total)}</span>`).join('')}</div>`
-      : '';
-    charts = wide ? `
+    if (porSexo.length) {
+      const seg = porSexo.map(s =>
+        `<span style="width:${(100 * s.quant / total).toFixed(2)}%;background:${SEXO_COLOR[s.sexo] ?? C.slate}"></span>`).join('');
+      const leg = porSexo.map(s =>
+        `<span><i style="background:${SEXO_COLOR[s.sexo] ?? C.slate}"></i>${esc(SEXO[s.sexo] ?? s.sexo)} <em>${fmtInt(s.quant)} · ${fmtPct(s.quant / total)}</em></span>`).join('');
+      bottom.push(`<div><div class="chart-title">Distribuição por sexo</div>
+        <div class="sexo-wrap"><div class="sexo-bar">${seg}</div><div class="sexo-leg">${leg}</div></div></div>`);
+    }
+
+    const cols = bottom.length === 3 ? '1.1fr 1.1fr 0.9fr'
+      : bottom.length === 2 ? '1.35fr 0.85fr' : '1fr';
+    charts = `
     <div>
       <div class="chart-title">Nascimentos e peso médio por mês
         <span class="legend"><span><span class="sw bar"></span>Nascimentos</span><span><span class="sw line"></span>Peso kg</span></span></div>
       ${comboMes}
       <div class="note">Exibidos apenas meses com registros.</div>
     </div>
-    <div class="charts-bottom">
-      <div>
-        <div class="chart-title">Por raça × sexo</div>
-        ${barRaca}
-      </div>
-      <div>
-        <div class="chart-title">Distribuição por sexo</div>
-        <div class="donut-wrap">${donutSexo}${legenda}</div>
-      </div>
-    </div>` : `
-    <div>
-      <div class="chart-title">Nascimentos e peso médio por mês
-        <span class="legend"><span><span class="sw bar"></span>Nascimentos</span><span><span class="sw line"></span>Peso kg</span></span></div>
-      ${comboMes}
-      <div class="note">Exibidos apenas meses com registros.</div>
-    </div>
-    <div>
-      <div class="chart-title">Por raça × sexo</div>
-      ${barRaca}
-    </div>
-    <div>
-      <div class="chart-title">Distribuição por sexo</div>
-      <div class="donut-wrap">${donutSexo}${legenda}</div>
-    </div>`;
+    <div class="charts-bottom" style="grid-template-columns:${cols}">${bottom.join('')}</div>`;
   }
 
   const extraCss = `
-    .charts { display: grid; grid-template-columns: 1.3fr 0.9fr 0.8fr; gap: 28px; padding: 8px 48px 0 48px; flex: 1; }
-    .charts.wide { grid-template-columns: 1fr; gap: 8px; }
-    .charts-bottom { display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; flex: 1; }
-    .charts-bottom .donut-wrap { padding-top: 8px; flex-direction: row; gap: 24px; align-items: center; justify-content: center; }
-    .note { font-size:11px; color: var(--muted); font-style: italic; padding: 6px 0 0 0; }
-    .donut-wrap { display: flex; flex-direction: column; align-items: center; padding-top: 30px; }
-    .dlegend { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; font-size:12px; font-weight: 600; color: var(--ink); }
+    .charts { display: flex; flex-direction: column; gap: 14px; padding: 8px 48px 0 48px; flex: 1; }
+    .charts > div:not(.charts-bottom) { display: flex; flex-direction: column; }
+    .charts > div:not(.charts-bottom) > svg { margin-top: auto; }
+    .charts-bottom { display: grid; gap: 24px; flex: 1; }
+    .charts-bottom > div { display: flex; flex-direction: column; }
+    .note { font-size:11px; color: var(--muted); font-style: italic; padding-top: 6px; margin-bottom: auto; }
+    .hlist { display: flex; flex-direction: column; justify-content: center; gap: 14px; flex: 1; padding-top: 6px; }
+    .hrow { display: flex; align-items: center; gap: 12px; font-size:13.5px; }
+    .h-name { width: 150px; flex-shrink: 0; text-align: right; color: var(--ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .h-track { flex: 1; height: 14px; background: var(--soft); border-radius: 7px; overflow: hidden; }
+    .h-track i { display: block; height: 100%; border-radius: 7px; }
+    .h-num { width: 86px; flex-shrink: 0; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .h-num em { font-style: normal; color: var(--muted); font-weight: 500; font-size:11.5px; }
+    .sexo-wrap { display: flex; flex-direction: column; justify-content: center; flex: 1; gap: 16px; }
+    .sexo-bar { display: flex; height: 18px; border-radius: 7px; overflow: hidden; }
+    .sexo-bar span { display: block; height: 100%; }
+    .sexo-leg { display: flex; flex-direction: column; gap: 8px; font-size:13.5px; font-weight: 600; color: var(--ink); }
+    .sexo-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 7px; vertical-align: -1px; }
+    .sexo-leg em { font-style: normal; color: var(--muted); font-weight: 500; }
     .empty { display: flex; align-items: center; justify-content: center; flex: 1; color: var(--muted); font-size:16.5px; font-style: italic; }
   `;
 
@@ -94,7 +115,7 @@ export function render({ model, ctx }) {
     <div class="kpi"><div class="lbl">N° Total de Nascimentos</div><div class="val">${fmtInt(nasc.total)} <small>cab</small></div></div>
     <div class="kpi"><div class="lbl">Peso Médio ao Nascimento</div><div class="val">${fmt1(nasc.pesoMedio)} <small>kg</small></div></div>
   </div>
-  <div class="charts${nasc.mensal.length > 12 ? ' wide' : ''}">${charts}</div>`;
+  <div class="charts">${charts}</div>`;
 
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),

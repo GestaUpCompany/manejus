@@ -33,8 +33,11 @@ export function render({ model, ctx }) {
     `<td>${fmt2(e.rsAt)}</td><td>${fmtPct(e.rendCarc)}</td></tr>`).join('');
 
   const extraCss = `
-    .chart1 { padding: 2px 48px 10px 48px; }
+    .chart1 { margin-top: 2px; }
     .chart-row { display: grid; grid-template-columns: 1.15fr 1fr; gap: 48px; padding: 14px 48px 0 48px; flex: 1; }
+    .chart-row > div { display: flex; flex-direction: column; }
+    .chart-row > div:last-child .mini-table { margin-top: auto; }
+    .chart-row > div:last-child .axis-note { margin-bottom: auto; }
     .axis-note { font-size:10.5px; color: var(--muted); font-style: italic; margin-top: -2px; }
     .mini-table { font-size:12.5px; border-collapse: collapse; width: 100%; margin-top: 6px; }
     .mini-table th { font-size:10.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: 700; text-align: right; padding: 4px 6px; border-bottom: 1.5px solid var(--blue); }

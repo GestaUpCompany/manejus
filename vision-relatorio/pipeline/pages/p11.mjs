@@ -24,12 +24,12 @@ export function render({ model, ctx }) {
   const area = areaChart({
     labels: d.mensal.map(m => mesLbl(m.mes)),
     values: d.mensal.map(m => m.valor),
-    W: 1184, H: 185, color: C.blue, labelFmt: fmtMoney, labelScale: 1.3,
+    W: 1184, H: 160, color: C.blue, labelFmt: fmtMoney, labelScale: 1.3,
   });
 
   const palette = [C.blue, C.green, C.greenLight, C.slate, C.muted];
   const dn = donut({
-    items: d.porTipo.map(t => ({ value: t.valor })), size: 190, stroke: 20, palette,
+    items: d.porTipo.map(t => ({ value: t.valor })), size: 160, stroke: 17, palette,
     center: d.porTipo.length === 1
       ? [fmtMoney(d.total), `${tipoLbl(d.porTipo[0].tipo)} · 100%`]
       : [fmtMoney(d.total), 'desembolso total'],
@@ -49,16 +49,17 @@ export function render({ model, ctx }) {
 
   const extraCss = `
     .kpi { border-top-color: var(--blue); }
-    .chart1 { padding: 0 48px 10px 48px; }
+    
     .chart-row { display: grid; grid-template-columns: 1fr 1.25fr; gap: 24px; padding: 14px 48px 0 48px; flex: 1; }
-    .donut-wrap { display: flex; align-items: center; gap: 18px; }
+    .chart-row > div:first-child { display: flex; flex-direction: column; }
+    .donut-wrap { display: flex; align-items: center; gap: 18px; margin-top: auto; margin-bottom: auto; }
     .dlegend { display: flex; flex-direction: column; gap: 8px; font-size:12.5px; font-weight: 600; color: var(--ink); }
     .dlegend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
     .dlegend em { font-style: normal; color: var(--muted); font-weight: 500; margin-left: 7px; }
     .rank-table { width: 100%; border-collapse: collapse; font-size:12.5px; }
     .rank-table th { font-size:10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: right; padding: 4px 8px; border-bottom: 1.5px solid var(--blue); }
     .rank-table th:first-child, .rank-table th:nth-child(2) { text-align: left; }
-    .rank-table td { padding: 4.5px 8px; border-bottom: 1px solid var(--line); color: var(--ink); }
+    .rank-table td { padding: 3.5px 8px; border-bottom: 1px solid var(--line); color: var(--ink); }
     .rank-table td:first-child { text-align: center; color: var(--muted); font-weight: 700; width: 24px; }
     .rank-table td:nth-child(4), .rank-table td:last-child { text-align: right; }
     .tag { display: inline-block; font-size:10px; font-weight: 700; letter-spacing: 0.6px; padding: 1px 6px; border-radius: 4px; color: #fff; }

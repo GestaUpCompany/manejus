@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --blue: #0B3D6E; --green: #17A34A; --green-dark: #0F7A38; --green-light: #7CC98A;
+  --ink: #12263A; --muted: #5B6B7B; --line: #E3E8EE; --soft: #F4F7F9;
+  --red: #B0443C; --amber: #B8860B; --slate: #8FA3B5;
+}
+body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
+.page { width: 1280px; height: 720px; position: relative; overflow: hidden; background: #F5F8FA; display: flex; flex-direction: column; }
+.page-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 48px 8px 48px; }
+.title-block h1 { font-size:33px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.title-block .kicker { font-size:12px; font-weight: 700; letter-spacing: 3px; color: var(--green-dark); text-transform: uppercase; margin-top: 5px; }
+.page-logo { height: 62px; }
+
+.kpis { display: grid; gap: 12px; padding: 4px 48px 10px 48px; }
+.kpi { border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green); padding: 8px 14px 9px 14px; background: #fff; box-shadow: 0 1px 2px rgba(18,38,58,.05), 0 4px 14px rgba(18,38,58,.06); width: fit-content; min-width: 200px; }
+.kpi.blue-top { border-top-color: var(--blue); }
+.kpi.red-top { border-top-color: var(--red); }
+.kpi.amber-top { border-top-color: var(--amber); }
+.kpi .lbl { font-size:10.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+.kpi .val { font-size:24px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
+.kpi .val small { font-size:13px; font-weight: 600; color: var(--muted); }
+
+.table-wrap { margin: 0 48px; padding: 10px 18px 14px 18px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+table { width: 100%; border-collapse: collapse; font-size:14px; }
+thead .cols th { font-size:10.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); padding: 5px 8px; border-bottom: 2px solid var(--ink); text-align: right; white-space: nowrap; }
+thead .cols th:first-child { text-align: left; }
+thead .grp th { font-size:11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; padding: 4px 8px; text-align: right; color: var(--ink); }
+thead .grp th.ent { color: var(--green-dark); }
+thead .grp th.sai { color: var(--red); }
+tbody td { padding: 6.5px 8px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+tbody td.cat { text-align: left; font-weight: 500; }
+tbody tr.zero td { color: #9AA8B5; }
+tbody td.in { color: var(--green-dark); }
+tbody td.out { color: var(--red); }
+tbody tr.total td { font-weight: 700; color: var(--blue); border-top: 2px solid var(--ink); border-bottom: none; background: var(--soft); }
+tbody tr.total td:first-child { border-radius: 0 0 0 8px; }
+tbody tr.total td:last-child { border-radius: 0 0 8px 0; }
+td.strong { font-weight: 700; }
+
+.chart-wrap { margin: 8px 48px 0 48px; padding: 12px 18px 8px 18px; flex: 1; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+.chart1 { margin: 0 48px 10px 48px; padding: 12px 18px 10px 18px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+.chart-row > div, .content > div { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+.chart-title { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; display: flex; align-items: center; gap: 18px; }
+.legend { display: flex; gap: 16px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
+.legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.legend .sw.bar { background: var(--blue); }
+.legend .sw.line { background: var(--green); border-radius: 50%; height: 4px; width: 16px; vertical-align: 2px; }
+
+svg text.axis, .axis text { font-family: 'Archivo'; font-size:11.5px; fill: var(--muted); font-weight: 600; }
+text.axis.dense { font-size:9px; }
+.vlbl { font-family: 'Archivo'; font-size:11.5px; fill: var(--blue); font-weight: 700; }
+.vlbl.w { fill: #fff; }
+.vlbl.h { paint-order: stroke; stroke: #fff; stroke-width: 1.2px; stroke-linejoin: round; font-weight: 600; }
+.vlbl.dense { font-size:9px; }
+.vlbl.dense.h { stroke-width: 1px; }
+.llbl { font-family: 'Archivo'; font-size:11px; fill: var(--green-dark); font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 1.5px; stroke-linejoin: round; }
+.llbl.w { fill: #fff; stroke-width: 0; }
+.llbl.dense { font-size:8.5px; stroke-width: 1.5px; }
+.llbl.dense.w { stroke-width: 0; }
+.barlbl { font-family: 'Archivo'; font-size:11.5px; fill: var(--blue); font-weight: 700; }
+.linelbl { font-family: 'Archivo'; font-size:11px; fill: #fff; font-weight: 600; }
+
+.panels { display: flex; gap: 16px; padding: 0 48px; }
+.panel { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fff; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+.panel h3 { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.caption { font-size:11px; color: var(--muted); margin-top: 6px; }
+
+.page-foot { display: flex; align-items: center; justify-content: space-between; padding: 6px 48px 14px 48px; font-size:12px; color: var(--muted); margin-top: auto; }
+.page-foot .num { font-weight: 800; color: var(--blue); font-size:14.5px; }
+.bottom-rule { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--blue); }
+.bottom-rule::after { content:''; position:absolute; bottom:4px; left:0; right:0; height:2px; background: var(--green); }
+
+    .body { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding-bottom: 10px; }
+    .section { padding: 0 48px; }
+    .section-title { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .kpi { padding: 13px 14px 11px 14px; }
+    .kpi.g { border-top-color: var(--green); }
+    .prod-strip { margin: 0 48px; border: 1px solid var(--line); border-left: 4px solid var(--green); border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; gap: 26px; background: #FAFCFB; }
+    .prod-strip .p-main .lbl { font-size:10.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; }
+    .prod-strip .p-main .val { font-size:28.5px; font-weight: 800; color: var(--green-dark); }
+    .prod-strip .p-main .val small { font-size:14.5px; font-weight: 600; color: var(--muted); }
+    .prod-strip .p-formula { display: flex; align-items: center; gap: 14px; flex-wrap: nowrap; }
+    .prod-strip .term { text-align: center; }
+    .prod-strip .term .t-val { font-size:15.5px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .prod-strip .term .t-lbl { font-size:9.5px; font-weight: 700; letter-spacing: 0.6px; color: var(--muted); text-transform: uppercase; margin-top: 1px; }
+    .prod-strip .op { font-size:17.5px; font-weight: 700; color: var(--muted); }
+    .prod-strip .op.plus { color: var(--green-dark); }
+    .prod-strip .op.minus { color: var(--red); }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="page-head">
+    <div class="title-block">
+      <h1>Índices Técnicos e Econômicos</h1>
+      <div class="kicker">Jan – Ago · 2026 · Fazenda Guanabara</div>
+    </div>
+    <img class="page-logo" src="C:\Users\USER\Documents\GestaUp-Cadernetas-Gestao\tmp_pbix\Report\StaticResources\RegisteredResources\Gestaup_Intelligence-0127124017850949067.png" alt="">
+  </div>
+
+  <div class="body">
+  <div class="section">
+    <div class="section-title">Rebanho e produção de arrobas</div>
+    <div class="grid4">
+      <div class="kpi "><div class="lbl">Estoque Inicial</div><div class="val">13.791 <small>@</small></div></div>
+      <div class="kpi "><div class="lbl">Estoque Final</div><div class="val">11.394 <small>@</small></div></div>
+      <div class="kpi g"><div class="lbl">Entradas (compras)</div><div class="val">5.799 <small>@</small></div></div>
+      <div class="kpi "><div class="lbl">Saídas (vendas)</div><div class="val">14.805 <small>@</small></div></div>
+      <div class="kpi "><div class="lbl">Rebanho Médio</div><div class="val">1.421 <small>cab</small></div></div>
+      <div class="kpi "><div class="lbl">UA/ha Média</div><div class="val">1,38 <small>UA/ha</small></div></div>
+      <div class="kpi "><div class="lbl">Taxa de Desfrute</div><div class="val">49,2%</div></div>
+      <div class="kpi "><div class="lbl">Produção por ha</div><div class="val">11,78 <small>@/ha</small></div></div>
+    </div>
+  </div>
+
+  <div class="prod-strip">
+    <div class="p-main">
+      <div class="lbl">@ Produzida no período</div>
+      <div class="val">6.608,55 <small>@</small></div>
+    </div>
+    <div class="p-formula">
+      <div class="term"><div class="t-val">11.393,78</div><div class="t-lbl">Estoque Final</div></div>
+      <div class="op plus">+</div>
+      <div class="term"><div class="t-val">14.804,80</div><div class="t-lbl">Saídas</div></div>
+      <div class="op minus">−</div>
+      <div class="term"><div class="t-val">5.798,60</div><div class="t-lbl">Entradas</div></div>
+      <div class="op minus">−</div>
+      <div class="term"><div class="t-val">13.791,43</div><div class="t-lbl">Estoque Inicial</div></div>
+      <div class="op">=</div>
+      <div class="term"><div class="t-val" style="color: var(--green-dark);">6.608,55</div><div class="t-lbl">@ Produzida</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Indicadores econômicos</div>
+    <div class="grid4">
+      <div class="kpi "><div class="lbl">Desembolso por ha</div><div class="val"><small>R$</small> 7.741,57</div></div>
+      <div class="kpi "><div class="lbl">Desembolso por cab.</div><div class="val"><small>R$</small> 3.055,52</div></div>
+      <div class="kpi "><div class="lbl">Despesa Média Mensal</div><div class="val"><small>R$</small> 542.877,51</div></div>
+      <div class="kpi "><div class="lbl">Custo Diária/cab</div><div class="val"><small>R$</small> 12,57</div></div>
+      <div class="kpi "><div class="lbl">Custeio por ha</div><div class="val"><small>R$</small> 2.393,70</div></div>
+      <div class="kpi "><div class="lbl">Custeio por @ Produzida</div><div class="val"><small>R$</small> 203,20</div></div>
+      <div class="kpi g"><div class="lbl">Faturamento por ha</div><div class="val"><small>R$</small> 9.183,25</div></div>
+      <div class="kpi g"><div class="lbl">Faturamento Médio Mensal</div><div class="val"><small>R$</small> 643.975,66</div></div>
+    </div>
+  </div>
+  </div>
+  <div class="page-foot">
+    <div>Vision'Up · Gesta'Up Intelligence</div>
+    <div>@gestaup.company</div>
+    <div class="num">18</div>
+  </div>
+  <div class="bottom-rule"></div>
+</div>
+</body>
+</html>

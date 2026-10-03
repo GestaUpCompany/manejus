@@ -142,6 +142,14 @@ export function comboChart(spec) {
       if (ty > axisY - 8) ty = py - Math.round(10 * labelScale);
       const bl = bLbl[i];
       if (bl && Math.abs(ty - bl.y) < 12 * labelScale) ty = ty >= py ? bl.y + Math.round(16 * labelScale) : bl.y - Math.round(14 * labelScale);
+      // rótulo dentro da barra fica indistinguível do valor dela: sobe acima do
+      // ponto quando o lugar está livre
+      if (ty > bt - 4 && ty < axisY - 4) {
+        const tyUp = py - Math.round(10 * labelScale);
+        const upBusy = (bl && Math.abs(tyUp - bl.y) < 12 * labelScale)
+          || placed.some(p => Math.abs(p.x - px) < (p.w + lw) / 2 + 3 && Math.abs(p.y - tyUp) < 11 * labelScale);
+        if (!upBusy) ty = tyUp;
+      }
       // colide com outro rótulo da linha já posicionado? pula (o pico nunca pula)
       const hit = placed.some(p => Math.abs(p.x - px) < (p.w + lw) / 2 + 3 && Math.abs(p.y - ty) < 11 * labelScale);
       if (hit && v !== lPeak) continue;
@@ -151,15 +159,18 @@ export function comboChart(spec) {
       const cls = fitsBar && ty > bt - 4 && ty < axisY - 4 ? 'llbl w' : 'llbl';
       placed.push({ x: px, y: ty, w: lw });
       if (labelScale !== 1) {
-        // mesma técnica do areaChart: halo por cópias brancas deslocadas ±1px
-        // (fill only); rótulo .w dentro de barra não precisa de halo
+        // mesma técnica do areaChart: halo por cópias brancas deslocadas ±1px.
+        // dentro da barra, verde-claro liso (o halo ficava borrado no azul);
+        // fora, verde-escuro com halo. A família verde mantém a identidade da linha
         const base = `text-anchor="middle" font-family="Archivo" font-size="${fsL}" font-weight="600"`;
-        if (cls !== 'llbl w') {
+        if (cls === 'llbl w') {
+          out.push(`<text x="${f(px)}" y="${f(ty)}" ${base} fill="#BFDFCB">${esc(txt)}</text>`);
+        } else {
           for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
             out.push(`<text x="${f(px + dx)}" y="${f(ty + dy)}" ${base} fill="#fff">${esc(txt)}</text>`);
           }
+          out.push(`<text x="${f(px)}" y="${f(ty)}" ${base} fill="${C.greenDark}">${esc(txt)}</text>`);
         }
-        out.push(`<text x="${f(px)}" y="${f(ty)}" ${base} fill="${cls === 'llbl w' ? '#fff' : C.greenDark}">${esc(txt)}</text>`);
         continue;
       }
       out.push(`<text class="${cls}${dense ? ' dense' : ''}" x="${f(px)}" y="${f(ty)}" text-anchor="middle">${esc(txt)}</text>`);

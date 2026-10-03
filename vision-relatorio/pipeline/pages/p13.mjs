@@ -17,7 +17,7 @@ export function render({ model, ctx }) {
 
   const combo = comboChart({
     labels: d.mensalCfCv.map(m => mesLbl(m.mes)),
-    W: 1184, H: 240, labelScale: 1.3,
+    W: 1184, H: 208, labelScale: 1.3,
     bars: {
       values: d.mensalCfCv.map(m => m.custoDiariaCab),
       color: C.blue, labelFmt: (v) => `R$ ${fmt2(v)}`, labelInside: true,
@@ -30,8 +30,8 @@ export function render({ model, ctx }) {
 
   const extraCss = `
     .kpi { border-top-color: var(--green); }
-    .chart1 { padding: 0 48px 10px 48px; }
-    .chart2 { padding: 14px 48px 0 48px; flex: 1; }
+    
+    .chart2 { margin-top: 14px; flex: 1; }
     .chart-title { display: flex; align-items: center; justify-content: space-between; }
     .legend { display: flex; gap: 14px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
     .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }

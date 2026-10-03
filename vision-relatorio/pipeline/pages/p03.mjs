@@ -17,7 +17,7 @@ export function render({ model, ctx }) {
       `<td class="cat">${esc(catLabel(r.categoria))}</td>`,
       `<td>${fmtInt(r.si)}</td>`,
       ...['compras', 'nasc', 'transfE', 'evolE'].map(k => `<td class="in">${fmtInt(r[k])}</td>`),
-      ...['vendas', 'mortes', 'consumo', 'transfS', 'evolS'].map(k => `<td class="out">${fmtInt(r[k])}</td>`),
+      ...['vendas', 'mortes', 'consumo', 'transfS', 'evolS'].map((k, i) => `<td class="out${i === 0 ? ' sep' : ''}">${fmtInt(r[k])}</td>`),
       `<td class="strong">${fmtInt(r.sf)}</td>`,
     ];
     return `<tr${zero ? ' class="zero"' : ''}>${tds.join('')}</tr>`;
@@ -26,17 +26,25 @@ export function render({ model, ctx }) {
   const tot = (k) => rebanho.matriz.reduce((a, x) => a + x[k], 0);
   const totalRow = `<tr class="total"><td class="cat">Total do Rebanho</td><td>${fmtInt(tot('si'))}</td>${
     ['compras', 'nasc', 'transfE', 'evolE'].map(k => `<td class="in">${fmtInt(tot(k))}</td>`).join('')
-  }${['vendas', 'mortes', 'consumo', 'transfS', 'evolS'].map(k => `<td class="out">${fmtInt(tot(k))}</td>`).join('')
+  }${['vendas', 'mortes', 'consumo', 'transfS', 'evolS'].map((k, i) => `<td class="out${i === 0 ? ' sep' : ''}">${fmtInt(tot(k))}</td>`).join('')
   }<td>${fmtInt(tot('sf'))}</td></tr>`;
 
   const labels = rebanho.serieMensal.map(s => mesAbrev(s.mes));
   const svg = comboChart({
-    labels, W: 1184, H: 148, labelScale: 1.3,
+    labels, W: 1184, H: 126, labelScale: 1.3,
     bars: { values: rebanho.serieMensal.map(s => Math.round(s.rebanhoMedio)), color: C.blue, labelFmt: fmtInt, labelInside: false },
     line: { values: rebanho.serieMensal.map(s => s.uaha), color: C.green, labelFmt: (v) => fmt2(v) },
   });
 
-  const extraCss = `.chart-wrap { padding-bottom: 6px; }`;
+  const extraCss = `.chart-wrap { padding-bottom: 6px; display: flex; flex-direction: column; justify-content: flex-end; }
+    tbody td { padding: 5px 8px; }
+    thead .grp th.ent { color: #fff; background: var(--green-dark); border-radius: 8px 0 0 0; }
+    thead .grp th.sai { color: #fff; background: var(--red); border-radius: 0 8px 0 0; }
+    td.sep, th.sep { border-left: 2px solid var(--line); }
+    tbody td.in { background: #EFF7F2; }
+    tbody td.out { background: #FBF1F0; }
+    tbody tr.total td.in { background: #E0EFE6; }
+    tbody tr.total td.out { background: #F4E1DF; }`;
 
   const body = `
   <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
@@ -52,7 +60,7 @@ export function render({ model, ctx }) {
         <tr class="cols">
           <th>Categoria</th><th>Saldo Ini.</th>
           <th>Compras</th><th>Nascim.</th><th>Transf. E</th><th>Evol. E</th>
-          <th>Vendas</th><th>Mortes</th><th>Consumo</th><th>Transf. S</th><th>Evol. S</th>
+          <th class="sep">Vendas</th><th>Mortes</th><th>Consumo</th><th>Transf. S</th><th>Evol. S</th>
           <th>Saldo Final</th>
         </tr>
       </thead>

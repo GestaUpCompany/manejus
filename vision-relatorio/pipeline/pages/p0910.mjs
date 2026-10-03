@@ -75,7 +75,7 @@ function makeRender(key) {
 
     const extraCss = `
       .kpi { border-top-color: ${cfg.accent}; }
-      .chart1 { padding: 2px 48px 10px 48px; }
+      .chart1 { margin-top: 2px; }
       .chart-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; padding: 16px 48px 0 48px; flex: 1; }
       .vlbl.r { fill: ${cfg.accent}; }
       .vlbl.a { fill: #8F6708; }

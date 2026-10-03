@@ -23,7 +23,7 @@ export function render({ model, ctx }) {
 
   const extraCss = `
     .kpi { border-top-color: var(--green); }
-    .chart1 { padding: 0 48px 6px 48px; }
+    .chart1 { margin-bottom: 6px; }
     .bottom-row { display: grid; grid-template-columns: 1fr 0.95fr; gap: 30px; padding: 10px 48px 0 48px; flex: 1; }
     .chart-title { display: flex; align-items: center; justify-content: space-between; }
     .legend { display: flex; gap: 14px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
@@ -36,7 +36,7 @@ export function render({ model, ctx }) {
     .btable td { padding: 4px 8px; border-bottom: 1px solid var(--line); color: var(--ink); }
     .btable td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .btable td.pct { color: var(--muted); }
-    .btable tr.total td { font-weight: 800; color: var(--blue); border-top: 2px solid var(--blue); border-bottom: none; }
+    .btable tr.total td { font-weight: 700; color: var(--blue); border-top: 2px solid var(--blue); border-bottom: none; }
     .b-note { font-size:10.5px; color: var(--muted); font-style: italic; margin-top: 6px; padding-left: 2px; }
   `;
 

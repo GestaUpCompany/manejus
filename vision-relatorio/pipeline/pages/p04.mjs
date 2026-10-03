@@ -37,7 +37,7 @@ export function render({ model, ctx }) {
   const donutBlock = `<div class="donut-wrap">${donutSvg}${donutLegend}</div>`;
 
   const extraCss = `
-    .chart1 { padding: 2px 48px 10px 48px; }
+    .chart1 { margin-top: 2px; }
     .chart-row { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; padding: 14px 48px 0 48px; flex: 1; }
     .donut-wrap { display: flex; align-items: center; justify-content: center; gap: 18px; }
     .dlegend { display: flex; flex-direction: column; gap: 6px; }

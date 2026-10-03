@@ -10,14 +10,15 @@ const BASE_CSS = `
   --red: #B0443C; --amber: #B8860B; --slate: #8FA3B5;
 }
 body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
-.page { width: 1280px; height: 720px; position: relative; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+.page { width: 1280px; height: 720px; position: relative; overflow: hidden; background: #F5F8FA; display: flex; flex-direction: column; }
 .page-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 48px 8px 48px; }
 .title-block h1 { font-size:33px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.title-block .t-sub { font-size:18px; font-weight: 700; color: var(--muted); letter-spacing: 0; }
 .title-block .kicker { font-size:12px; font-weight: 700; letter-spacing: 3px; color: var(--green-dark); text-transform: uppercase; margin-top: 5px; }
 .page-logo { height: 62px; }
 
-.kpis { display: grid; gap: 12px; padding: 4px 48px 10px 48px; }
-.kpi { border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green); padding: 7px 12px 6px 12px; background: #fff; }
+.kpis { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 48px 10px 48px; }
+.kpi { border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green); padding: 8px 14px 9px 14px; background: #fff; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); width: fit-content; min-width: 180px; }
 .kpi.blue-top { border-top-color: var(--blue); }
 .kpi.red-top { border-top-color: var(--red); }
 .kpi.amber-top { border-top-color: var(--amber); }
@@ -25,24 +26,26 @@ body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
 .kpi .val { font-size:24px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
 .kpi .val small { font-size:13px; font-weight: 600; color: var(--muted); }
 
-.table-wrap { padding: 0 48px; }
+.table-wrap, .fc-wrap { margin: 0 48px; padding: 10px 18px 14px 18px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); }
 table { width: 100%; border-collapse: collapse; font-size:14px; }
 thead .cols th { font-size:10.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); padding: 5px 8px; border-bottom: 2px solid var(--ink); text-align: right; white-space: nowrap; }
 thead .cols th:first-child { text-align: left; }
 thead .grp th { font-size:11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; padding: 4px 8px; text-align: right; color: var(--ink); }
 thead .grp th.ent { color: var(--green-dark); }
 thead .grp th.sai { color: var(--red); }
-tbody td { padding: 4.5px 8px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
-tbody td.cat { text-align: left; font-weight: 600; }
+tbody td { padding: 6.5px 8px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+tbody td.cat { text-align: left; font-weight: 500; }
 tbody tr.zero td { color: #9AA8B5; }
 tbody td.in { color: var(--green-dark); }
 tbody td.out { color: var(--red); }
-tbody tr.total td { font-weight: 800; color: var(--blue); border-top: 2px solid var(--ink); border-bottom: none; background: var(--soft); }
+tbody tr.total td { font-weight: 700; color: var(--blue); border-top: 2px solid var(--ink); border-bottom: none; background: var(--soft); }
 tbody tr.total td:first-child { border-radius: 0 0 0 8px; }
 tbody tr.total td:last-child { border-radius: 0 0 8px 0; }
 td.strong { font-weight: 700; }
 
-.chart-wrap { padding: 8px 48px 0 48px; flex: 1; }
+.chart-wrap { margin: 8px 48px 0 48px; padding: 12px 18px 8px 18px; flex: 1; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); }
+.chart1, .chart2 { margin: 0 48px 10px 48px; padding: 12px 18px 10px 18px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); }
+.chart-row > div, .content > div, .charts > div:not(.charts-bottom), .charts-bottom > div, .bottom-row > div { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); }
 .chart-title { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; display: flex; align-items: center; gap: 18px; }
 .legend { display: flex; gap: 16px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
 .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
@@ -64,7 +67,7 @@ text.axis.dense { font-size:9px; }
 .linelbl { font-family: 'Archivo'; font-size:11px; fill: #fff; font-weight: 600; }
 
 .panels { display: flex; gap: 16px; padding: 0 48px; }
-.panel { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fff; }
+.panel { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fff; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); }
 .panel h3 { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
 .caption { font-size:11px; color: var(--muted); margin-top: 6px; }
 
@@ -76,6 +79,10 @@ text.axis.dense { font-size:9px; }
 
 export function pageShell({ kicker, title, pageNum, logoSrc, fazenda, body, extraCss = '' }) {
   const kickerTxt = fazenda ? `${kicker} · ${fazenda}` : kicker;
+  const ti = title.indexOf(' · ');
+  const titleHtml = ti > 0
+    ? `${esc(title.slice(0, ti))} <span class="t-sub">· ${esc(title.slice(ti + 3))}</span>`
+    : esc(title);
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -88,7 +95,7 @@ export function pageShell({ kicker, title, pageNum, logoSrc, fazenda, body, extr
 <div class="page">
   <div class="page-head">
     <div class="title-block">
-      <h1>${esc(title)}</h1>
+      <h1>${titleHtml}</h1>
       <div class="kicker">${esc(kickerTxt)}</div>
     </div>
     ${logoSrc ? `<img class="page-logo" src="${esc(logoSrc)}" alt="">` : ''}

@@ -23,7 +23,7 @@ export function render({ model, ctx }) {
 
   const extraCss = `
     .kpi { border-top-color: var(--blue); }
-    .chart1 { padding: 0 48px 10px 48px; }
+    
     .chart-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 26px; padding: 14px 48px 0 48px; flex: 1; }
     .chart-title { display: flex; align-items: center; justify-content: space-between; }
     .legend { display: flex; gap: 14px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
@@ -38,6 +38,9 @@ export function render({ model, ctx }) {
     .comp-totals { display: flex; justify-content: space-between; margin: 8px 6px 0 6px; font-size:12.5px; color: var(--ink); }
     .comp-totals .cf-t, .comp-totals .cv-t { font-weight: 700; }
     .comp-note { font-size:10.5px; color: var(--muted); font-style: italic; margin: 8px 6px 0 6px; }
+    .chart-row > div:last-child { display: flex; flex-direction: column; }
+    .chart-row > div:last-child .comp-row { margin-top: auto; }
+    .chart-row > div:last-child .comp-note { margin-bottom: auto; }
   `;
 
   const body = `

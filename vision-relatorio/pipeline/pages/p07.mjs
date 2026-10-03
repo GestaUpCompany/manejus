@@ -3,7 +3,7 @@ import { pageShell } from '../lib/shell.mjs';
 import { fmtInt, fmt2, fmtPct, fmtData, ymOf, mesAbrev, kickerPeriodo, esc } from '../lib/fmt.mjs';
 
 const catLabel = (c) => c.replace(' - ', ' · ');
-const compradorLabel = (g) => new Set(g.map(x => x.comprador)).size > 1 ? 'Vários' : g[0].comprador;
+const compradorLabel = (g) => new Set(g.map(x => x.comprador)).size > 1 ? 'Vários' : (g[0].comprador || '—');
 const tds = (r, comp) =>
   `<td class="comp">${esc(comp)}</td><td>${fmtInt(r.cab)}</td><td>${r.at ? fmt2(r.at) : '—'}</td>` +
   `<td>${r.rsAt ? fmt2(r.rsAt) : '—'}</td><td>${fmt2(r.total)}</td>`;
@@ -35,8 +35,8 @@ export function render({ model, ctx }) {
   // orçamento de linhas, mesma regra da p.5
   const nLoteRows = v.pivot.reduce((a, tp) => a + 1 + tp.categorias.reduce((b, c) => b + 1 + c.lotes.length, 0), 0);
   const nMesRows = v.pivot.reduce((a, tp) => a + 1 + tp.categorias.reduce((b, c) => b + 1 + lotesPorMes(c).length, 0), 0);
-  const detail = nLoteRows <= 27 ? 'dia' : nMesRows <= 27 ? 'mes' : 'nenhum';
-  const dense = detail !== 'dia' || nLoteRows > 19;
+  const detail = nLoteRows <= 12 ? 'dia' : nMesRows <= 15 ? 'mes' : 'nenhum';
+  const dense = detail !== 'dia' || nLoteRows > 10;
 
   const rows = v.pivot.map(tp => {
     const catRows = tp.categorias.map(cat => {
@@ -51,26 +51,26 @@ export function render({ model, ctx }) {
   }).join('');
 
   const extraCss = `
-    thead th { font-size:11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); padding: 8px 10px 10px 10px; border-bottom: 2px solid var(--blue); }
-    thead th:first-child, thead th:nth-child(2) { text-align: left; }
+    thead .cols th { font-size:10.5px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #fff; background: var(--blue); padding: 7px 10px; border-bottom: none; }
+    thead th:first-child { border-radius: 6px 0 0 6px; }
+    thead th:last-child { border-radius: 0 6px 6px 0; }
+    thead th:nth-child(2) { text-align: left; }
     tbody td { text-align: right; }
     tbody td:first-child, tbody td.comp { text-align: left; }
     tbody td.comp { color: var(--muted); font-size:12.5px; font-weight: 500; }
-    tr.tipo td { background: var(--blue); color: #fff; font-weight: 800; border-bottom: none; }
-    tr.tipo td.comp { color: #BCD3E8; }
-    tr.tipo td:first-child { border-radius: 6px 0 0 6px; }
-    tr.tipo td:last-child { border-radius: 0 6px 6px 0; }
-    tr.tipo .twist { display: inline-block; margin-right: 8px; font-size:11px; }
-    tr.cat td { background: #EFF6F1; font-weight: 700; }
-    tr.cat td.comp { color: var(--muted); font-weight: 600; }
+    tr.tipo td { font-weight: 700; color: var(--ink); }
+    tr.tipo td.comp { color: var(--muted); }
+    tr.tipo .twist { display: inline-block; margin-right: 8px; font-size:11px; color: var(--blue); }
+    tr.cat td { font-weight: 500; }
+    tr.cat td.comp { color: var(--muted); font-weight: 400; }
     tr.cat td:first-child { padding-left: 26px; }
     tr.cat td:first-child::before { content: ''; display: inline-block; width: 10px; height: 2px; background: var(--green); margin-right: 8px; vertical-align: 3px; }
-    tr.lot td { color: #3D4F61; font-weight: 400; }
-    tr.lot td:first-child { padding-left: 52px; color: var(--muted); font-weight: 500; }
+    tr.lot td { color: var(--muted); font-weight: 400; }
+    tr.lot td:first-child { padding-left: 52px; }
     tr.spacer td { padding: 3px; border: none; }
-    .table-wrap { flex: 1; padding: 0 48px; }
+    .table-wrap { flex: 1; padding: 0 48px; display: flex; flex-direction: column; justify-content: center; }
     table.dense { font-size:12px; }
-    table.dense tbody td { padding: 3.5px 8px; }
+    table.dense tbody td { padding: 4px 8px; }
     table.dense thead th { padding: 5px 8px 7px 8px; }
     .footnote { padding: 6px 48px 0 48px; font-size:11px; color: var(--muted); font-style: italic; }
   `;
@@ -98,7 +98,7 @@ export function render({ model, ctx }) {
   <div class="table-wrap">
     <table${dense ? ' class="dense"' : ''}>
       <thead>
-        <tr><th>Tipo · Categoria${detail === 'mes' ? ' · Mês' : detail === 'dia' ? ' · Data' : ''}</th><th>Frigorífico / Comprador</th><th>N° Cabeças</th><th>Total @</th><th>Média R$/@</th><th>Total R$</th></tr>
+        <tr class="cols"><th>Tipo · Categoria${detail === 'mes' ? ' · Mês' : detail === 'dia' ? ' · Data' : ''}</th><th>Frigorífico / Comprador</th><th>N° Cabeças</th><th>Total @</th><th>Média R$/@</th><th>Total R$</th></tr>
       </thead>
       <tbody>${rows}<tr class="spacer"><td colspan="6"></td></tr><tr class="total"><td class="cat">Total Geral</td>${tds(totRow, 'Vários')}</tr></tbody>
     </table>

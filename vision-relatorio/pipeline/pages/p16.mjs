@@ -1,6 +1,6 @@
 // p.16 — Receitas por Tipo e Empresa Pagante
 import { pageShell } from '../lib/shell.mjs';
-import { comboChart, donut, C } from '../lib/svg.mjs';
+import { comboChart, C } from '../lib/svg.mjs';
 import { fmt2, fmtPct, fmtMoney, fmtData, mesAbrev, kickerPeriodo, esc } from '../lib/fmt.mjs';
 
 export function render({ model, ctx }) {
@@ -36,15 +36,12 @@ export function render({ model, ctx }) {
 
   const palette = [C.green, C.blue, C.greenLight, C.slate, C.muted];
   const tipos = r.porTipo;
-  const dn = donut({
-    items: tipos.map(t => ({ value: t.valor })), size: 92, stroke: 20, palette,
-    center: tipos.length === 1 ? ['100%', 'do período'] : [`${tipos.length}`, 'tipos'],
-  });
-  const tipoTxt = tipos.length === 1
-    ? `<div class="t-name">${esc(String(tipos[0].tipo).replace(/_/g, ' ').replace(/^Receitas /i, ''))}</div>
-       <div class="t-val">${fmtMoney(r.total)} · única classificação no período</div>`
-    : `<div class="t-name">${tipos.length} classificações</div>
-       <div class="t-val">${tipos.map(t => `${esc(String(t.tipo).replace(/_/g, ' ').replace(/^Receitas /i, ''))} ${fmtPct(t.valor / r.total)}`).join(' · ')}</div>`;
+  const tipoLbl = (t) => esc(String(t.tipo).replace(/_/g, ' ').replace(/^Receitas /i, ''));
+  const tbar = `<div class="tbar">${tipos.map((t, i) =>
+    `<span style="width:${(100 * t.valor / r.total).toFixed(2)}%;background:${palette[i % palette.length]}"></span>`).join('')}</div>`;
+  const trows = tipos.map((t, i) =>
+    `<div class="trow"><i style="background:${palette[i % palette.length]}"></i>` +
+    `<span class="t-name">${tipoLbl(t)}</span><span class="t-val">${fmtMoney(t.valor)} · ${fmtPct(t.valor / r.total)}</span></div>`).join('');
 
   const extraCss = `
     .kpi { border-top-color: var(--green); }
@@ -56,11 +53,15 @@ export function render({ model, ctx }) {
     .rtable td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .rtable tr.emp td { background: #EAF6EE; font-weight: 700; color: var(--blue); border-left: 3px solid var(--green); }
     .rtable tr.rec td:first-child { padding-left: 24px; color: var(--muted); }
-    .rtable tr.total td { font-weight: 800; color: var(--blue); border-top: 2px solid var(--blue); border-bottom: none; }
-    .tipo-panel { margin-top: 22px; border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; }
-    .tipo-panel .t-lbl { font-size:10.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; }
-    .tipo-panel .t-name { font-size:15px; font-weight: 700; color: var(--ink); margin-top: 2px; }
-    .tipo-panel .t-val { font-size:12.5px; color: var(--muted); margin-top: 1px; }
+    .rtable tr.total td { font-weight: 700; color: var(--blue); border-top: 2px solid var(--blue); border-bottom: none; }
+    .tipo-panel { margin-top: 22px; border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
+    .tipo-panel .t-lbl { font-size:10.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; }
+    .tbar { display: flex; height: 14px; border-radius: 5px; overflow: hidden; }
+    .tbar span { display: block; height: 100%; }
+    .trow { display: flex; align-items: center; gap: 8px; margin-top: 9px; font-size:12.5px; }
+    .trow i { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+    .trow .t-name { font-weight: 600; color: var(--ink); }
+    .trow .t-val { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
   `;
 
   const body = `
@@ -75,7 +76,7 @@ export function render({ model, ctx }) {
     <div>
       <div class="chart-title">Faturamento por hectare por mês</div>
       ${bars}
-      <div class="tipo-panel">${dn}<div><div class="t-lbl">Faturamento por tipo de receita</div>${tipoTxt}</div></div>
+      <div class="tipo-panel"><div class="t-lbl">Faturamento por tipo de receita</div>${tbar}${trows}</div>
     </div>
     <div>
       <div class="chart-title">Recebimentos por empresa pagante</div>
@@ -89,7 +90,7 @@ export function render({ model, ctx }) {
 
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
-    title: 'Receitas por Tipo e Empresa · Recebimentos Realizados',
+    title: 'Receitas por Tipo e Empresa',
     pageNum: 16, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }
