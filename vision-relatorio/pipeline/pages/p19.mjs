@@ -100,7 +100,7 @@ export function render({ model, ctx }) {
         <thead><tr><th>Comprador</th><th class="num">Cab.</th><th class="num">Valor Líquido R$</th><th class="num">%</th></tr></thead>
         <tbody>${tRows}</tbody>
       </table>
-      <div class="b-note">Compradores consolidados por alias (sufixos societários ignorados) — a planilha não normaliza nomes.</div>
+      <div class="b-note">Compradores com grafias diferentes do mesmo nome foram agrupados; sufixos societários foram ignorados.</div>
     </div>
   </div>`;
   }

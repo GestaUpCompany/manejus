@@ -35,9 +35,10 @@ export function render({ model, ctx }) {
     tbody td.sep, tbody td.sep ~ td { background: #F7FBF8; }
     tbody tr.total td.sep ~ td { background: #EAF4EE; }
     thead .cols th.sep ~ th { background: #F7FBF8; }
-    .table-wrap { margin-top: auto; }
-    .kpis.k8 { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; padding-top: 0; }
-    .kpis.k8 .kpi { padding: 10px 12px 9px 12px; min-width: 0; width: auto; }
+    .table-wrap { margin-top: auto; padding: 8px 16px 10px 16px; }
+    .table-wrap tbody td { padding: 5.5px 8px; }
+    .kpis.k8 { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; padding-top: 0; margin-top: 18px; }
+    .kpis.k8 .kpi { padding: 12px 12px 11px 12px; min-width: 0; width: auto; }
     .kpis.k8 .kpi .val { font-size:21px; }
   `;
 

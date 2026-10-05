@@ -86,7 +86,7 @@ export function render({ model, ctx }) {
   };
 
   const notaDetalhe = detail === 'nenhum'
-    ? 'Volume alto de vendas no período: pivot resumida até o nível de categoria; o detalhe por mês e lote está no relatório interativo. '
+    ? 'Volume alto de vendas no período: a tabela foi resumida até o nível de categoria; o detalhe por mês e lote está no relatório interativo. '
     : detail === 'mes'
       ? 'Lotes agregados por mês para caber na página, médias ponderadas pelo n° de lotes; o detalhe dia a dia está no relatório interativo. '
       : '';

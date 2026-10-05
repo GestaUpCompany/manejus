@@ -87,7 +87,7 @@ export function render({ model, ctx }) {
   </div>
 
   <div class="footnote">${detail === 'nenhum'
-    ? 'Volume alto de compras no período: pivot resumida até o nível de categoria. O detalhe por mês e por lote está disponível no relatório interativo.'
+    ? 'Volume alto de compras no período: a tabela foi resumida até o nível de categoria. O detalhe por mês e por lote está disponível no relatório interativo.'
     : detail === 'mes'
       ? 'Lotes agregados por mês para caber na página; médias ponderadas pelo n° de lotes. O detalhe dia a dia está disponível no relatório interativo.'
       : 'Peso médio, R$/@ e R$/cab são médias aritméticas por lote de compra; para os indicadores ponderados por volume, ver Compra de Animais.'}</div>`;
