@@ -14,6 +14,12 @@ const faixaEtariaKey = (cat) => {
   return m ? Number(m[1]) + (/acima|>/i.test(cat) ? 0.5 : 0) : 999;
 };
 const avg = (arr, f) => arr.length ? sum(arr, f) / arr.length : 0;
+// média só sobre valores >0: lotes vendidos sem valor lançado (Em Aberto)
+// não diluem indicadores de preço; retorna null quando nenhum tem valor
+const avgPos = (arr, f) => {
+  const vals = arr.map(f).filter(v => v > 0);
+  return vals.length ? vals.reduce((a, x) => a + x, 0) / vals.length : null;
+};
 // Nome da contraparte num grupo de lotes: 'Vários' só quando há nomes
 // diferentes preenchidos; o próprio nome quando todos iguais; '' em branco.
 const nomeOuVarios = (g, get) => {
@@ -395,22 +401,29 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   // ---------- p.6 Vendas abate (duas páginas: machos e fêmeas) ----------
   const vendasCards = (v) => {
     const cab = sum(v, x => x.cab), at = sum(v, x => x.atAbatidas), kg = sum(v, x => x.kgFinal), val = sum(v, x => x.valorLiq);
-    return { cab, at, kg, valor: val, rsAt: at ? val / at : 0, rsKg: kg ? val / kg : 0 };
+    // R$/@ e R$/kg só sobre lotes com valor lançado: lote sem preço (Em Aberto)
+    // não deve diluir o indicador com seu peso
+    const prec = v.filter(x => x.valorLiq > 0);
+    const atP = sum(prec, x => x.atAbatidas), kgP = sum(prec, x => x.kgFinal);
+    return { cab, at, kg, valor: val, rsAt: atP ? val / atP : 0, rsKg: kgP ? val / kgP : 0 };
   };
   // campo "Frigorífico/Comprador" mistura pessoa jurídica e física; o gráfico de
-  // preço × RC% usa só frigoríficos (sufixo societário ou marca conhecida)
-  const isFrigorifico = (n) => /ltda|s\.?\s?a\.?\b|eireli|epp|\bme\b|frigo|foods|carnes|abatedouro|marfrig|minerva|jbs/i.test(n);
+  // preço × RC% usa só frigoríficos (sufixo societário ou marca conhecida;
+  // "frig" cobre abreviações como "Frig.")
+  const isFrigorifico = (n) => /ltda|s\.?\s?a\.?\b|eireli|epp|\bme\b|frig|foods|carnes|abatedouro|marfrig|minerva|jbs/i.test(n);
   const aggVendasAbate = (rows) => {
     const porEmpresa = [...groupBy(rows, x => x.comprador || 'Não informado')].map(([k, g]) => ({
       empresa: k, lotes: g.length, cab: sum(g, x => x.cab),
-      rsAt: avg(g, x => x.rsAt), rendCarc: avg(g, x => x.rendCarc),
+      rsAt: avgPos(g, x => x.rsAt) ?? 0, rendCarc: avgPos(g, x => x.rendCarc) ?? 0,
     })).sort((a, b) => b.cab - a.cab);
     return {
       ...vendasCards(rows),
       // eixo só com meses que tiveram venda: mês ausente no eixo = sem venda (conv. p.19)
       mensal: meses.map(k => {
         const g = rows.filter(v => ym(v.data) === k);
-        return { mes: k, cab: sum(g, x => x.cab), rsAt: g.length ? avg(g, x => x.rsAt) : null };
+        // mês com vendas mas nenhum valor lançado: ponto ausente na linha,
+        // não zero (zero arrastaria a média para a base do gráfico)
+        return { mes: k, cab: sum(g, x => x.cab), rsAt: g.length ? avgPos(g, x => x.rsAt) : null };
       }).filter(m => m.cab > 0),
       porEmpresa,
       porEmpresaFrigo: porEmpresa.filter(e => isFrigorifico(e.empresa)),
@@ -460,15 +473,15 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     pivot: [...groupBy(vendasComerciais, x => x.tipo)].map(([tipo, gTipo]) => ({
       tipo,
       cab: sum(gTipo, x => x.cab), at: sum(gTipo, x => x.atAbatidas),
-      rsAt: avg(gTipo, x => x.rsAt), total: sum(gTipo, x => x.valorLiq),
+      rsAt: avgPos(gTipo, x => x.rsAt) ?? 0, total: sum(gTipo, x => x.valorLiq),
       categorias: [...groupBy(gTipo, x => x.categoria)].map(([cat, gCat]) => ({
         categoria: cat,
         cab: sum(gCat, x => x.cab), at: sum(gCat, x => x.atAbatidas),
-        rsAt: avg(gCat, x => x.rsAt), total: sum(gCat, x => x.valorLiq),
+        rsAt: avgPos(gCat, x => x.rsAt) ?? 0, total: sum(gCat, x => x.valorLiq),
         lotes: [...groupBy(gCat, x => x.data.getTime())].map(([t, gD]) => ({
           data: new Date(Number(t)), comprador: nomeOuVarios(gD, x => x.comprador), nLotes: gD.length,
           cab: sum(gD, x => x.cab), at: sum(gD, x => x.atAbatidas),
-          rsAt: avg(gD, x => x.rsAt), total: sum(gD, x => x.valorLiq),
+          rsAt: avgPos(gD, x => x.rsAt) ?? 0, total: sum(gD, x => x.valorLiq),
         })).sort((a, b) => a.data - b.data),
       })).sort((a, b) => faixaEtariaKey(a.categoria) - faixaEtariaKey(b.categoria)),
     })),
@@ -660,10 +673,10 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     ...vendasCards(vendasVivo),
     lotes: vendasVivo.length,
     mensal: [...groupBy(vendasVivo, x => ym(x.data))].map(([k, g]) => ({
-      mes: k, cab: sum(g, x => x.cab), rsAt: avg(g, x => x.rsAt),
+      mes: k, cab: sum(g, x => x.cab), rsAt: avgPos(g, x => x.rsAt),
     })).sort((a, b) => a.mes.localeCompare(b.mes)),
     porCategoria: [...groupBy(vendasVivo, x => x.categoria)].map(([k, g]) => ({
-      categoria: k, cab: sum(g, x => x.cab), rsAt: avg(g, x => x.rsAt),
+      categoria: k, cab: sum(g, x => x.cab), rsAt: avgPos(g, x => x.rsAt) ?? 0,
     })).sort((a, b) => b.cab - a.cab),
     porComprador: [...groupBy(vendasVivo, x => x.comprador || 'Não informado')].map(([k, g]) => ({
       comprador: k, cab: sum(g, x => x.cab), valor: sum(g, x => x.valorLiq),

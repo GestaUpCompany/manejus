@@ -20,12 +20,12 @@ const lotesPorMes = (cat) => {
     byMes.get(k).push(l);
   }
   return [...byMes.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([k, g]) => {
-    const n = g.reduce((a, x) => a + (x.nLotes ?? 1), 0);
+    const prec = g.filter(x => x.rsAt > 0);
     return {
-    label: `${mesAbrev(k)}/${k.slice(2, 4)}${n > 1 ? ` · ${n} lotes` : ''}`,
+    label: `${mesAbrev(k)}/${k.slice(2, 4)}`,
     comprador: compradorLabel(g),
     cab: g.reduce((a, x) => a + x.cab, 0), at: g.reduce((a, x) => a + x.at, 0),
-    rsAt: g.reduce((a, x) => a + x.rsAt, 0) / g.length,
+    rsAt: prec.length ? prec.reduce((a, x) => a + x.rsAt, 0) / prec.length : 0,
     total: g.reduce((a, x) => a + x.total, 0),
     };
   });
@@ -46,7 +46,7 @@ export function render({ model, ctx }) {
       const detalhe = detail === 'mes'
         ? lotesPorMes(cat).map(l => `<tr class="lot"><td>${esc(l.label)}</td>${tds(l, l.comprador)}</tr>`).join('')
         : detail === 'dia'
-          ? cat.lotes.map(l => `<tr class="lot"><td>${fmtData(l.data)}${l.nLotes > 1 ? ` · ${l.nLotes} lotes` : ''}</td>${tds(l, l.comprador)}</tr>`).join('')
+          ? cat.lotes.map(l => `<tr class="lot"><td>${fmtData(l.data)}</td>${tds(l, l.comprador)}</tr>`).join('')
           : '';
       return `<tr class="cat"><td>${esc(catLabel(cat.categoria))}</td>${tds(cat, compradorLabel(cat.lotes))}</tr>${detalhe}`;
     }).join('');
@@ -88,7 +88,7 @@ export function render({ model, ctx }) {
   const notaDetalhe = detail === 'nenhum'
     ? 'Volume alto de vendas no período: a tabela foi resumida até o nível de categoria; o detalhe por mês e lote está no relatório interativo. '
     : detail === 'mes'
-      ? 'Lotes agregados por mês para caber na página, médias ponderadas pelo n° de lotes; o detalhe dia a dia está no relatório interativo. '
+      ? 'Lotes agregados por mês, médias ponderadas pelo n° de lotes; o detalhe dia a dia está no relatório interativo. '
       : '';
 
   const body = `

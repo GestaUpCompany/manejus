@@ -20,7 +20,7 @@ const lotesPorMes = (cat) => {
     const n = g.reduce((a, x) => a + x.nLotes, 0);
     const wavg = (f) => g.reduce((a, x) => a + f(x) * x.nLotes, 0) / n;
     return {
-      label: `${mesAbrev(k)}/${k.slice(2, 4)} · ${n} lote${n > 1 ? 's' : ''}`,
+      label: `${mesAbrev(k)}/${k.slice(2, 4)}`,
       cab: g.reduce((a, x) => a + x.cab, 0), at: g.reduce((a, x) => a + x.at, 0),
       total: g.reduce((a, x) => a + x.total, 0),
       pesoMedio: wavg(x => x.pesoMedio), rsCab: wavg(x => x.rsCab), rsAt: wavg(x => x.rsAt),
@@ -43,7 +43,7 @@ export function render({ model, ctx }) {
       const detalhe = detail === 'mes'
         ? lotesPorMes(cat).map(l => `<tr class="lot"><td>${esc(l.label)}</td>${tds(l)}</tr>`).join('')
         : detail === 'dia'
-          ? cat.lotes.map(l => `<tr class="lot"><td>${fmtData(l.data)}${l.nLotes > 1 ? ` · ${l.nLotes} lotes` : ''}</td>${tds(l)}</tr>`).join('')
+          ? cat.lotes.map(l => `<tr class="lot"><td>${fmtData(l.data)}</td>${tds(l)}</tr>`).join('')
           : '';
       return `<tr class="cat"><td>${esc(catLabel(cat.categoria))}</td>${tds(cat)}</tr>${detalhe}`;
     }).join('');
