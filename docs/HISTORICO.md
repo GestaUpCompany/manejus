@@ -1,5 +1,17 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Importação de lotes + categorias por planilha-modelo (2026-10-05)
+
+A tela de Lotes ganhou "Importar Planilha" (botão em `LoteFilters`), abrindo `components/lotes/ImportarLotesModal.tsx` com dois passos: baixar a planilha-modelo e enviar o arquivo preenchido.
+
+- **Modelo** (`utils/modeloImportacaoLotes.ts`): gerado na hora via exceljs com a aba "Importação" (uma linha por categoria, 13 colunas) e a aba oculta "Listas" populada com pastos, currais e raças da fazenda. Dropdowns usam `dataValidation` de range + defined names (`ListaPastos` etc.) para funcionar em Excel antigo e LibreOffice; o d.ts do exceljs não expõe `dataValidations`, usado via cast. A leitura do arquivo enviado usa `xlsx` com `cellDates`.
+- **Service** (`services/lotesImportacao.ts`): `parseLinhasPlanilha` localiza o cabeçalho por nome normalizado (caixa/acento/pontuação tolerados); `validarLinhas` agrupa por nome de lote normalizado, aplica as mesmas regras do formulário (sistema define pasto-vs-curral via `usaCurral`, quantidade inteira > 0, categoria da lista canônica de 12, destino com alias "abate"→"corte"), detecta divergência de atributos entre linhas do mesmo lote e rejeita o grupo inteiro quando qualquer linha falha (evita lote parcial). `importarLotesValidos` grava `lotes` (o trigger `trg_lotes_pasto_historico` abre o histórico sozinho), chama `alocar_lote_curral` para confinamento e faz batch insert em `lote_categorias` com `quant_atual = quant_inicial`; falha pós-insert do lote faz soft-delete para liberar o nome. `n_cabecas` = soma das categorias.
+- Duplicidade: nomes já cadastrados são pulados e reportados por linha (mesmo padrão da importação de pastos/bebedouros); o trigger `trg_lote_nome_unico_fazenda` é a última linha de defesa.
+
+Verificado na fazenda de testes: insert equivalente criou lote com 2 categorias e `lote_pasto_historico` aberto via trigger; dados removidos após. Typecheck, build e 16 testes novos verdes (parse, validação, round-trip do xlsx com validações/defined names).
+
+Disparador: quando mencionar "importar lotes", "planilha de lotes", "importação de lote", `ImportarLotesModal`, `lotesImportacao`, `modeloImportacaoLotes`, ler esta seção.
+
 ## Exclusão de entrada de insumos com estorno de estoque (2026-10-02)
 
 `EntradaInsumosDetalhes.tsx` ganhou ação "Excluir" (admin/controller/super_admin) com `ConfirmModal`. Chama a RPC `excluir_registro_entrada_insumos` (migration `20261003120000`, db push): valida papel, injeta contexto de auditoria, soft-deleta o cabeçalho e deleta fisicamente os itens (`entrada_insumos_itens` não tem `deleted_at`). O DELETE do item dispara `trg_entrada_insumos_itens_mov`, que soft-deleta a movimentação espelhada e recalcula saldo e custo médio do insumo/formulação.

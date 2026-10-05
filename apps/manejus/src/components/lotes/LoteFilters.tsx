@@ -10,6 +10,7 @@ interface LoteFiltersProps {
   onFiltroChange: (filtro: 'todos' | 'pasto' | 'confinamento' | 'tip') => void
   counts: { todos: number; pasto: number; confinamento: number; tip: number }
   onNewLote: () => void
+  onImport: () => void
   onExport: () => void
   exportDisabled: boolean
 }
@@ -23,6 +24,7 @@ function LoteFiltersComponent({
   onFiltroChange,
   counts,
   onNewLote,
+  onImport,
   onExport,
   exportDisabled,
 }: LoteFiltersProps) {
@@ -40,6 +42,9 @@ function LoteFiltersComponent({
           />
           <div className="flex gap-2 sm:gap-2">
             <Button onClick={onNewLote} className="h-10 flex-1 sm:flex-none">Novo Lote</Button>
+            <Button onClick={onImport} variant="secondary" className="h-10 flex-1 sm:flex-none">
+              Importar Planilha
+            </Button>
             <Button onClick={onExport} disabled={exportDisabled} className="h-10 flex-1 sm:flex-none">
               Exportar Tudo
             </Button>

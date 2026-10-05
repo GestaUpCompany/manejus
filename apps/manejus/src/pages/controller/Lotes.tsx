@@ -8,6 +8,7 @@ import { PlanoNutricionalLoteModal } from '../../components/plano-nutricional/Pl
 import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plano-nutricional/PlanoNutricionalDraftModal'
 import { RevisarNovoLoteModal } from '../../components/lotes/RevisarNovoLoteModal'
 import { CorrigirPesoModal } from '../../components/lotes/CorrigirPesoModal'
+import { ImportarLotesModal } from '../../components/lotes/ImportarLotesModal'
 import { LoteCard } from '../../components/lotes/LoteCard'
 import { LoteFilters } from '../../components/lotes/LoteFilters'
 import { useKeyboardShortcuts } from '@gestaup/shared'
@@ -205,6 +206,7 @@ export function Lotes() {
   const [solicitacoesNovoLote, setSolicitacoesNovoLote] = useState<any[]>([])
   const [solicitacaoRevisao, setSolicitacaoRevisao] = useState<any | null>(null)
   const [showRevisarModal, setShowRevisarModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
 
   const [originalPesos, setOriginalPesos] = useState<Record<string, number | undefined>>({})
   const [pesoEditModal, setPesoEditModal] = useState<{
@@ -2343,6 +2345,7 @@ export function Lotes() {
           onFiltroChange={setFiltroLocal}
           counts={filterCounts}
           onNewLote={onNewLote}
+          onImport={() => setShowImportModal(true)}
           onExport={onExport}
           exportDisabled={lotes.length === 0}
         />
@@ -3900,6 +3903,25 @@ export function Lotes() {
           }}
         />
       )}
+
+      <ImportarLotesModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        fazendaId={fazendaId}
+        pastos={pastos}
+        currais={currais}
+        racas={racas}
+        onImported={() => {
+          lotesCacheRef.current = null
+          loadLotes()
+          if (user?.id) {
+            queryClient.invalidateQueries({ queryKey: ['fazenda', user.id] })
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', user.id] })
+            queryClient.invalidateQueries({ queryKey: ['gado-stats', user.id] })
+            queryClient.invalidateQueries({ queryKey: ['recent-activities', user.id] })
+          }
+        }}
+      />
     </div>
   )
 }
