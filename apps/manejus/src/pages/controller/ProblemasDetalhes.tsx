@@ -29,6 +29,10 @@ interface RegistroProblemas {
   tipo_problema_obs?: string
   prioridade?: string
   setor_resolve?: string
+  foto_url?: string
+  latitude?: number
+  longitude?: number
+  gps_accuracy?: number
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -39,7 +43,8 @@ function fieldWithObs(value?: string, obs?: string): string {
   return obs ? `${value} (${obs})` : value
 }
 
-function boolWithObs(value?: boolean, obs?: string): string {
+function boolWithObs(value?: boolean | null, obs?: string): string {
+  if (value === undefined || value === null) return '-'
   const base = value ? 'Sim' : 'Não'
   return obs ? `${base} - ${obs}` : base
 }
@@ -127,6 +132,30 @@ export function ProblemasDetalhes() {
             {registro!.descricao_problema && (
               <DetailSection title="Descrição do Problema" highlighted>
                 <p className="text-sm">{registro!.descricao_problema}</p>
+              </DetailSection>
+            )}
+
+            {/* Evidência: foto + GPS */}
+            {(registro!.foto_url || (registro!.latitude != null && registro!.longitude != null)) && (
+              <DetailSection title="Foto e Localização" highlighted>
+                <div className="flex flex-col gap-2">
+                  {registro!.foto_url && (
+                    <a href={registro!.foto_url} target="_blank" rel="noopener noreferrer" className="w-fit">
+                      <img
+                        src={registro!.foto_url}
+                        alt="Foto do problema"
+                        className="w-full max-w-[320px] rounded-lg border border-border-base"
+                        loading="lazy"
+                      />
+                    </a>
+                  )}
+                  {registro!.latitude != null && registro!.longitude != null && (
+                    <p className="text-xs text-content-muted inline-flex items-center gap-1">
+                      📍 {registro!.latitude.toFixed(5)}, {registro!.longitude.toFixed(5)}
+                      {registro!.gps_accuracy ? ` (±${Math.round(registro!.gps_accuracy)}m)` : ''}
+                    </p>
+                  )}
+                </div>
               </DetailSection>
             )}
 
