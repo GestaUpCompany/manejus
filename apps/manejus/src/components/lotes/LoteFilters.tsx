@@ -42,7 +42,7 @@ function LoteFiltersComponent({
           />
           <div className="flex gap-2 sm:gap-2">
             <Button onClick={onNewLote} className="h-10 flex-1 sm:flex-none">Novo Lote</Button>
-            <Button onClick={onImport} variant="secondary" className="h-10 flex-1 sm:flex-none">
+            <Button onClick={onImport} className="h-10 flex-1 sm:flex-none">
               Importar Planilha
             </Button>
             <Button onClick={onExport} disabled={exportDisabled} className="h-10 flex-1 sm:flex-none">
