@@ -7,6 +7,7 @@ import {
   PAGE_NUMS,
   auditSheets,
   buildModelFromReads,
+  paginasSemDados,
   computeRange,
   extractReads,
   fmtLinhas,
@@ -119,6 +120,9 @@ export function RelatorioVision() {
   const [saldoCaixa, setSaldoCaixa] = useState('0')
   const [anoGiro, setAnoGiro] = useState('')
   const [ocultas, setOcultas] = useState<Set<string>>(new Set())
+  // Páginas sem dados são ocultadas automaticamente; `desocultas` guarda as
+  // que o usuário forçou a exibir mesmo vazias.
+  const [desocultas, setDesocultas] = useState<Set<string>>(new Set())
 
   const [links, setLinks] = useState<LinkRow[]>([])
   const [gerando, setGerando] = useState<'link' | 'pdf' | 'preview' | null>(null)
@@ -277,7 +281,7 @@ export function RelatorioVision() {
         p_fazenda_id: fazenda.id,
         p_titulo: `Relatório Vision — ${fazenda.nome}`,
         p_config: {
-          paginas_ocultas: [...ocultas],
+          paginas_ocultas: ocultasEfetivas,
           ini,
           fim,
           saldo_caixa_inicial: Number(saldoCaixa.replace(',', '.')) || 0,
@@ -302,7 +306,7 @@ export function RelatorioVision() {
     const b64 = await payloadToB64(payload)
     return {
       b64,
-      hiddenPages: [...ocultas],
+      hiddenPages: ocultasEfetivas,
       titulo: `Relatório Vision — ${fazenda.nome}`,
       ts: Date.now(),
       preview: true,
@@ -358,7 +362,7 @@ export function RelatorioVision() {
       // PDF gerado no servidor (Puppeteer) a partir do mesmo documento do link:
       // sai idêntico às lâminas, sem diálogo de impressão do navegador.
       await baixarPdfRelatorio(payload, {
-        hiddenPages: [...ocultas],
+        hiddenPages: ocultasEfetivas,
         titulo: `Relatorio Vision - ${fazenda.nome}`,
       })
     } catch (e) {
@@ -424,7 +428,7 @@ export function RelatorioVision() {
         p_id: link.id,
         p_payload: b64,
         p_config: {
-          paginas_ocultas: [...ocultas],
+          paginas_ocultas: ocultasEfetivas,
           ini,
           fim,
           saldo_caixa_inicial: Number(saldoCaixa.replace(',', '.')) || 0,
@@ -441,31 +445,57 @@ export function RelatorioVision() {
     }
   }
 
-  // Resumo rápido para conferir os números-chave logo após o upload, sem
-  // precisar abrir a prévia. Reage a planilha, período, saldo e ano-base.
-  const resumo = useMemo(() => {
+  // Modelo do período atual: base do resumo de conferência e da detecção
+  // automática de páginas sem dados.
+  const modelo = useMemo(() => {
     if (!reads || !ini || !fim) return null
     try {
-      const m = buildModelFromReads(reads, {
+      return buildModelFromReads(reads, {
         ini: new Date(`${ini}T12:00:00`),
         fim: new Date(`${fim}T12:00:00`),
         saldoCaixaInicial: Number(saldoCaixa.replace(',', '.')) || 0,
         anoBaseGiro: Number(anoGiro) || undefined,
       })
-      return {
-        rebanho: m.rebanho.saldoFinal,
-        comprasCab: m.compras.cab,
-        comprasRs: m.compras.total,
-        vendasCab: m.vendas.cab,
-        vendasRs: m.vendas.valor,
-        desembolso: m.desembolso.total,
-        receitas: m.receitas.total,
-        caixa: m.fluxoCaixa.saldoFinal,
-      }
     } catch {
       return null
     }
   }, [reads, ini, fim, saldoCaixa, anoGiro])
+
+  const resumo = useMemo(() => {
+    if (!modelo) return null
+    return {
+      rebanho: modelo.rebanho.saldoFinal,
+      comprasCab: modelo.compras.cab,
+      comprasRs: modelo.compras.total,
+      vendasCab: modelo.vendas.cab,
+      vendasRs: modelo.vendas.valor,
+      desembolso: modelo.desembolso.total,
+      receitas: modelo.receitas.total,
+      caixa: modelo.fluxoCaixa.saldoFinal,
+    }
+  }, [modelo])
+
+  // Auto-ocultação: páginas sem nenhum dado no período selecionado.
+  const autoOcultas = useMemo(() => new Set(modelo ? paginasSemDados(modelo) : []), [modelo])
+  const ocultasEfetivas = useMemo(
+    () => PAGE_IDS.filter((id) => (ocultas.has(id) || autoOcultas.has(id)) && !desocultas.has(id)),
+    [ocultas, autoOcultas, desocultas],
+  )
+  const nAutoOcultas = useMemo(
+    () => [...autoOcultas].filter((id) => !desocultas.has(id)).length,
+    [autoOcultas, desocultas],
+  )
+
+  function alternarOculta(id: string) {
+    if (ocultasEfetivas.includes(id)) {
+      // Reexibir: se é auto-oculta, marca como desocultada; senão tira do manual.
+      if (autoOcultas.has(id)) setDesocultas((s) => new Set(s).add(id))
+      setOcultas((s) => { const n = new Set(s); n.delete(id); return n })
+    } else {
+      setOcultas((s) => new Set(s).add(id))
+      setDesocultas((s) => { const n = new Set(s); n.delete(id); return n })
+    }
+  }
 
   const pronto = !!(reads && fazenda)
 
@@ -697,41 +727,48 @@ export function RelatorioVision() {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-content">Ocultar páginas ({ocultas.size} selecionadas)</label>
-              {ocultas.size > 0 && (
-                <button onClick={() => setOcultas(new Set())} className="text-xs text-primary hover:underline">
+              <label className="text-sm font-medium text-content">
+                Ocultar páginas ({ocultasEfetivas.length} selecionadas
+                {nAutoOcultas > 0 && `, ${nAutoOcultas} sem dados`})
+              </label>
+              {ocultasEfetivas.length > 0 && (
+                <button
+                  onClick={() => { setOcultas(new Set()); setDesocultas(new Set()) }}
+                  className="text-xs text-primary hover:underline"
+                >
                   Reexibir todas
                 </button>
               )}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
-              {PAGE_IDS.map((id) => (
-                <label
-                  key={id}
-                  className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm cursor-pointer transition-colors ${
-                    ocultas.has(id)
-                      ? 'border-red-300 bg-red-50 text-red-800 line-through'
-                      : 'border-border-base bg-surface-1 text-content hover:bg-surface-2'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={ocultas.has(id)}
-                    onChange={() =>
-                      setOcultas((s) => {
-                        const n = new Set(s)
-                        if (n.has(id)) n.delete(id)
-                        else n.add(id)
-                        return n
-                      })
-                    }
-                    className="accent-red-600"
-                  />
-                  <span className="truncate" title={PAGE_TITLES[id]}>
-                    <span className="font-semibold">{PAGE_NUMS[id]}</span> {PAGE_TITLES[id]}
-                  </span>
-                </label>
-              ))}
+              {PAGE_IDS.map((id) => {
+                const auto = autoOcultas.has(id)
+                const oculta = ocultasEfetivas.includes(id)
+                return (
+                  <label
+                    key={id}
+                    className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm cursor-pointer transition-colors ${
+                      oculta
+                        ? auto && !ocultas.has(id)
+                          ? 'border-amber-300 bg-amber-50 text-amber-800 line-through'
+                          : 'border-red-300 bg-red-50 text-red-800 line-through'
+                        : 'border-border-base bg-surface-1 text-content hover:bg-surface-2'
+                    }`}
+                    title={auto ? 'Sem dados no período — ocultada automaticamente. Desmarque para exibir mesmo assim.' : undefined}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={oculta}
+                      onChange={() => alternarOculta(id)}
+                      className={auto && !ocultas.has(id) ? 'accent-amber-600' : 'accent-red-600'}
+                    />
+                    <span className="truncate" title={PAGE_TITLES[id]}>
+                      <span className="font-semibold">{PAGE_NUMS[id]}</span> {PAGE_TITLES[id]}
+                      {auto && <span className="ml-1 text-[10px] font-bold no-underline">· sem dados</span>}
+                    </span>
+                  </label>
+                )
+              })}
             </div>
           </div>
         </section>

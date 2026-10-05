@@ -11,6 +11,7 @@ declare module '*pipeline/web/app.mjs' {
     payload: unknown,
     config?: { hiddenPages?: string[]; ini?: string; fim?: string },
   ): string
+  export function paginasSemDados(model: unknown): string[]
 }
 
 declare module '*pipeline/lib/model.mjs' {

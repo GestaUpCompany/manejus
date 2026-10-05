@@ -610,6 +610,23 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   const entradasAt = comprasPage.at;   // só compras (quirk do modelo)
   const saidasAt = sum(vendasAbate, x => x.atAbatidas); // só vendas abate
   const atProduzida = sfAt + saidasAt - entradasAt - siAt;
+  // @ produzida por mês: Δ do estoque em @ + saídas − entradas do mês. O mês
+  // inicial usa o saldo inicial do período como base; meses além do último
+  // bloco de estoque real são projetados e ficam de fora.
+  const atProduzidaPorMes = [];
+  {
+    let atAnt = siAt;
+    for (const k of meses) {
+      if (k > keyFim) break;
+      const b = estoque.get(k);
+      if (!b) continue;
+      const atF = sum(b.linhas, x => x.at);
+      const e = sum(comprasSo.filter(c => ym(c.data) === k), x => x.at);
+      const s = sum(vendasAbate.filter(v => ym(v.data) === k), x => x.atAbatidas);
+      atProduzidaPorMes.push({ mes: k, at: atF + s - e - atAnt });
+      atAnt = atF;
+    }
+  }
   const indices = {
     estoqueInicialAt: siAt,
     estoqueFinalAt: sfAt,
@@ -617,6 +634,17 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     rebanhoMedio, uahaMedia,
     txDesfrute: rebanhoMedio ? sum(vendasAbate, x => x.cab) / rebanhoMedio : 0,
     producaoAtHa: atProduzida / cad.areaHa,
+    atPorMes: atProduzidaPorMes,
+    faturamento: recTotal,
+    desembolso: desembTotal,
+    resultado: recTotal - desembTotal,
+    margem: recTotal ? (recTotal - desembTotal) / recTotal : 0,
+    resultadoHa: (recTotal - desembTotal) / cad.areaHa,
+    resultadoCab: rebanhoMedio ? (recTotal - desembTotal) / rebanhoMedio : 0,
+    txMortalidade: mortesPage.taxa,
+    nascimentos: nascPage.total,
+    mortes: mortesPage.count,
+    consumos: consumoPage.count,
     custoDiariaCab: desembolsoPage.custoDiariaCab,
     custeioPorAt: atProduzida ? cfcvTotal / atProduzida : 0,
     custeioHa: desembolsoPage.custeio.porHa,

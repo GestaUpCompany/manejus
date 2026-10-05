@@ -53,6 +53,33 @@ export const PAGE_NUMS = {
   p14: '17', p15: '18', p16: '19', p17: '20', p18: '21', p19: '22', p20: '23',
 };
 
+// IDs de página sem nenhum dado no período do modelo. Capa, estoque, rebanho,
+// índices e encerramento sempre renderizam (o estoque existe mesmo sem
+// movimentação). O resto só faz sentido quando a aba-fonte tem linhas.
+export function paginasSemDados(model) {
+  const sem = {
+    p04: !model.compras?.cab,
+    p05: !model.compras?.pivot?.length,
+    p05e: !model.transfE?.cab,
+    p05s: !model.transfS?.cab,
+    p06a: !model.vendasAbateM?.cab,
+    p06b: !model.vendasAbateF?.cab,
+    p07: !model.vendas?.cab,
+    p08: !model.nascimentos?.total,
+    p09: !model.mortes?.count,
+    p10: !model.consumo?.count,
+    p11: !model.desembolso?.total,
+    p12: !model.desembolso?.cf?.cfcvTotal,
+    p13: !model.desembolso?.cf?.cfcvTotal,
+    p14: !model.pareto?.linhas?.length,
+    p15: !model.receitas?.total,
+    p16: !model.receitas?.porTipo?.length,
+    p17: !(model.fluxoCaixa?.entradas || model.fluxoCaixa?.saidas),
+    p19: !model.vivos?.cab,
+  };
+  return Object.keys(sem).filter((id) => sem[id]);
+}
+
 export const SHELL_CSS = `
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -126,8 +153,7 @@ const fmtPt = (ymd) => { const [y, m, d] = ymd.split('-'); return `${d}/${m}/${y
 export function mountRelatorio(el, payload, config = {}) {
   ensureFont();
   const { reads, ctx, defaults, range } = payload;
-  const hidden = new Set(config.hiddenPages ?? []);
-  const pageOrder = PAGE_ORDER.filter((id) => !hidden.has(id));
+  const hiddenManual = new Set(config.hiddenPages ?? []);
   const isPublic = !!config.public;
   if (config.titulo) document.title = config.titulo;
 
@@ -220,13 +246,22 @@ export function mountRelatorio(el, payload, config = {}) {
       saldoCaixaInicial: defaults.saldoCaixaInicial ?? 0,
       anoBaseGiro: defaults.anoBaseGiro,
     });
-    for (const id of pageOrder) {
+    // Páginas sem nenhum dado no período ficam fora automaticamente (além das
+    // ocultadas manualmente). Recalcula a cada filtro: estreitar o período
+    // pode esvaziar uma página que antes tinha dados.
+    const semDados = new Set(paginasSemDados(model));
+    const visiveis = PAGE_ORDER.filter((id) => !hiddenManual.has(id) && !semDados.has(id));
+    for (const id of PAGE_ORDER) {
       const rec = ensureHost(id);
+      if (!visiveis.includes(id)) { rec.wrap.style.display = 'none'; continue; }
+      rec.wrap.style.display = '';
       setPageContent(rec, registry[id]({ model, ctx }));
       rec.wrap.dataset.meses = JSON.stringify(model.meta.meses);
     }
+    navEl.innerHTML = visiveis.map((id) =>
+      `<a href="#pg-${id}" data-pg="${id}"><i>${PAGE_NUMS[id]}</i>${esc(PAGE_TITLES[id])}</a>`).join('');
     rangeLbl.textContent = ` · ${fmtPt(ini)} a ${fmtPt(fim)}`;
-    console.debug(`[render] ${pageOrder.length} páginas em ${(performance.now() - t0).toFixed(0)}ms`);
+    console.debug(`[render] ${visiveis.length} páginas em ${(performance.now() - t0).toFixed(0)}ms`);
   }
 
   function apply(nIni, nFim) {
@@ -272,8 +307,6 @@ export function mountRelatorio(el, payload, config = {}) {
   });
 
   const navEl = sr.getElementById('nav');
-  navEl.innerHTML = pageOrder.map((id) =>
-    `<a href="#pg-${id}" data-pg="${id}"><i>${PAGE_NUMS[id]}</i>${esc(PAGE_TITLES[id])}</a>`).join('');
   // Âncoras de fragmento não atravessam o shadow root: rola manualmente.
   navEl.addEventListener('click', (e) => {
     const a = e.target.closest?.('a[data-pg]');
@@ -306,6 +339,7 @@ export function buildMergedHtml(payload, config = {}) {
     saldoCaixaInicial: defaults.saldoCaixaInicial ?? 0,
     anoBaseGiro: defaults.anoBaseGiro,
   });
+  for (const id of paginasSemDados(model)) hidden.add(id);
   const styles = [], pages = [];
   for (const id of PAGE_ORDER) {
     if (hidden.has(id)) continue;
