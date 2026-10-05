@@ -51,8 +51,8 @@ function get(obj, pathExpr) {
   }, obj);
 }
 
-function check(expr, expected, tol = TOL.money) {
-  const actual = get(model, expr);
+function check(expr, expected, tol = TOL.money, actualOverride) {
+  const actual = actualOverride ?? get(model, expr);
   if (actual == null) { errors.push(`${expr}: esperado ${expected}, veio undefined`); return; }
   const diff = Math.abs(actual - expected);
   const ok = diff <= Math.max(tol, Math.abs(expected) * tol / 100);
@@ -113,7 +113,16 @@ if (want('compras') && golden.compras) {
   }
 }
 if (want('vendasAbate') && golden.vendasAbate) {
-  for (const [k, v] of Object.entries(golden.vendasAbate)) check(`vendasAbate.${k}`, v, k === 'rsAt' || k === 'rsKg' ? 0.02 : TOL.money);
+  // p.06 foi dividida em machos/fêmeas: o golden do total é validado pela soma
+  // das duas páginas (rsAt/rsKg são razões, recompostas de valor e at/kg).
+  const m = model.vendasAbateM, f = model.vendasAbateF, g = golden.vendasAbate;
+  const comb = (k) => (m?.[k] ?? 0) + (f?.[k] ?? 0);
+  check('vendasAbate.cab', g.cab, 0.5, comb('cab'));
+  check('vendasAbate.at', g.at, TOL.money, comb('at'));
+  check('vendasAbate.valor', g.valor, TOL.money, comb('valor'));
+  const at = comb('at'), kg = comb('kg'), val = comb('valor');
+  check('vendasAbate.rsAt', g.rsAt, 0.02, at ? val / at : 0);
+  check('vendasAbate.rsKg', g.rsKg, 0.02, kg ? val / kg : 0);
 }
 if (want('vendas') && golden.vendas) {
   check('vendas.cab', golden.vendas.cab, 0.5);

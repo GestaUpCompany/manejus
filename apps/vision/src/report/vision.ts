@@ -2,11 +2,11 @@ import { NEEDED_SHEETS } from '../../../../vision-relatorio/pipeline/lib/core.mj
 import { sheetsFromXlsxBlob } from '../../../../vision-relatorio/pipeline/lib/xlsx-stream.mjs'
 import { buildModelFromReads, extractReads } from '../../../../vision-relatorio/pipeline/lib/model.mjs'
 import { buildPayload, compressPayload, computeRange, decompressPayload } from '../../../../vision-relatorio/pipeline/lib/payload.mjs'
-import { mountRelatorio, buildMergedHtml, PAGE_TITLES, SHELL_CSS } from '../../../../vision-relatorio/pipeline/web/app.mjs'
+import { mountRelatorio, buildMergedHtml, PAGE_TITLES, PAGE_NUMS, SHELL_CSS } from '../../../../vision-relatorio/pipeline/web/app.mjs'
 import { auditSheets, fmtLinhas } from '../../../../vision-relatorio/pipeline/lib/audit.mjs'
 import { supabase } from '@gestaup/supabase'
 
-export { mountRelatorio, buildMergedHtml, PAGE_TITLES, SHELL_CSS, decompressPayload, computeRange, extractReads, buildModelFromReads, auditSheets, fmtLinhas }
+export { mountRelatorio, buildMergedHtml, PAGE_TITLES, PAGE_NUMS, SHELL_CSS, decompressPayload, computeRange, extractReads, buildModelFromReads, auditSheets, fmtLinhas }
 
 export interface FazendaRef {
   id: string

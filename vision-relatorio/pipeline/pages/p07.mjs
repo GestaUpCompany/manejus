@@ -3,7 +3,10 @@ import { pageShell } from '../lib/shell.mjs';
 import { fmtInt, fmt2, fmtPct, fmtData, ymOf, mesAbrev, kickerPeriodo, esc } from '../lib/fmt.mjs';
 
 const catLabel = (c) => c.replace(' - ', ' · ');
-const compradorLabel = (g) => new Set(g.map(x => x.comprador)).size > 1 ? 'Vários' : (g[0].comprador || '—');
+const compradorLabel = (g) => {
+  const nomes = new Set(g.map(x => x.comprador).filter(Boolean));
+  return nomes.size > 1 ? 'Vários' : ([...nomes][0] || '—');
+};
 const tds = (r, comp) =>
   `<td class="comp">${esc(comp)}</td><td>${fmtInt(r.cab)}</td><td>${r.at ? fmt2(r.at) : '—'}</td>` +
   `<td>${r.rsAt ? fmt2(r.rsAt) : '—'}</td><td>${fmt2(r.total)}</td>`;
@@ -109,6 +112,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Resumo de Vendas',
-    pageNum: 7, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
+    pageNum: 10, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

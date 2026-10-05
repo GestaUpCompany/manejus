@@ -187,7 +187,19 @@ export function comboChart(spec) {
   // se mesmo assim não couber (ou não houver separador), salta rótulos
   // (primeiro e último sempre visíveis)
   const fullW = Math.max(...labels.map(l => String(l).length)) * (dense ? 5 : 5.6) + 6;
-  const partsAll = labels.map(l => String(l).split(/\s+[·-]\s+/));
+  const partsAll = labels.map(l => String(l).split(/\s+[·-]\s+/)).map((p, i) => {
+    // nomes longos sem separador (empresas/pessoas): quebra em duas linhas no
+    // ponto mais equilibrado, senão o rótulo é pulado por não caber (p.06)
+    if (p.length > 1) return p;
+    const words = String(labels[i]).split(' ');
+    if (words.length < 2 || String(labels[i]).length * 5.6 + 6 <= xb.step) return p;
+    let best = p;
+    for (let k = 1; k < words.length; k++) {
+      const cand = [words.slice(0, k).join(' '), words.slice(k).join(' ')];
+      if (best.length < 2 || Math.abs(cand[0].length - cand[1].length) < Math.abs(best[0].length - best[1].length)) best = cand;
+    }
+    return best;
+  });
   const axTwoLines = fullW > xb.step && partsAll.some(p => p.length > 1);
   const partW = Math.max(...partsAll.flat().map(s => s.length)) * (dense ? 5 : 5.6) + 6;
   const axEvery = Math.max(1, Math.ceil((axTwoLines ? partW : fullW) / xb.step));
@@ -342,14 +354,30 @@ export function paretoChart({ linhas, corteIdx, W = 640, H = 400, labelScale = 1
     `<line x1="30" y1="${f(cutY)}" x2="${W - 10}" y2="${f(cutY)}" stroke="${C.red}" stroke-width="1.5" stroke-dasharray="6 4"/>`,
     `<text x="${W - 14}" y="${f(cutY - 6)}" text-anchor="end" font-family="Archivo" font-size="10.5" font-weight="700" fill="${C.red}">80%</text>`,
   ];
+  const pts = linhas.map((l, i) => [xb.cx(i), py(l.pct)]);
+  const lblIdx = new Set([0, corteIdx - 1, corteIdx, n - 1].filter(i => i >= 0 && i < n));
+  // guia vertical pontilhada do ponto do % até a barra: desenhada antes das
+  // barras, some atrás delas e "pousa" visualmente na barra certa
+  for (const i of lblIdx) {
+    out.push(`<line x1="${f(pts[i][0])}" y1="${f(pts[i][1] + 6)}" x2="${f(pts[i][0])}" y2="${axisY - 1}" stroke="#B9C4CE" stroke-width="1" stroke-dasharray="2 3"/>`);
+  }
   for (let i = 0; i < n; i++) {
     const v = linhas[i].valor;
     if (v <= 0) continue;
-    out.push(`<rect x="${f(xb.cx(i) - xb.barW / 2)}" y="${f(by(v))}" width="${f(xb.barW)}" height="${f(axisY - by(v))}" rx="2" fill="${C.blue}" opacity="0.92"/>`);
+    const barTop = by(v);
+    out.push(`<rect x="${f(xb.cx(i) - xb.barW / 2)}" y="${f(barTop)}" width="${f(xb.barW)}" height="${f(axisY - barTop)}" rx="2" fill="${C.blue}" opacity="0.92"/>`);
   }
-  const pts = linhas.map((l, i) => [xb.cx(i), py(l.pct)]);
+  // rank da tabela dentro de cada barra (branco) ou acima dela (cinza, barras
+  // baixas): o usuário cruza o "#" da tabela com a barra sem contar posições
+  const fsR = f(9 * labelScale, 1);
+  for (let i = 0; i < n; i++) {
+    const v = linhas[i].valor;
+    if (v <= 0) continue;
+    const barTop = by(v);
+    const inside = axisY - barTop >= 16 * labelScale;
+    out.push(`<text x="${f(xb.cx(i))}" y="${f(inside ? barTop + 10 * labelScale : barTop - 4)}" text-anchor="middle" font-family="Archivo" font-size="${fsR}" font-weight="700" fill="${inside ? '#fff' : C.muted}">${i + 1}</text>`);
+  }
   out.push(`<polyline points="${pts.map(p => p.map(f).join(',')).join(' ')}" fill="none" stroke="${C.green}" stroke-width="2.5" stroke-linejoin="round"/>`);
-  const lblIdx = new Set([0, corteIdx - 1, corteIdx, n - 1].filter(i => i >= 0 && i < n));
   for (const i of lblIdx) {
     out.push(`<circle cx="${f(pts[i][0])}" cy="${f(pts[i][1])}" r="3.5" fill="${C.green}"/>`);
     const pctTxt = `${(linhas[i].pct * 100).toFixed(1).replace('.', ',').replace(',0', '')}%`;
@@ -370,6 +398,94 @@ export function paretoChart({ linhas, corteIdx, W = 640, H = 400, labelScale = 1
     if (i !== 0 && (i + 1) % 5 !== 0 && !isLast) continue;
     if (isLast && (i + 1) % 5 !== 0 && xb.cx(i) - xb.cx(i - ((i + 1) % 5)) < 26) continue;
     out.push(`<text class="axis" x="${f(xb.cx(i))}" y="${labelY}" text-anchor="middle">${i + 1}º</text>`);
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:${H}px">${out.join('\n')}</svg>`;
+}
+
+/**
+ * Barras empilhadas por slot (ex.: categoria × tipo). series = [{key,color,values[]}].
+ * Rótulo do total acima da pilha. Quando o rótulo do eixo não cabe nem em
+ * linha única nem quebrado em duas partes, ele é desenhado na diagonal em vez
+ * de ser pulado (CONVENCOES: nunca esconder nome de categoria).
+ */
+export function stackedBars({ labels, series, W = 690, H = 190, labelScale = 1, totalFmt }) {
+  const n = labels.length;
+  const xb = xBand(n, W, { padL: 14, padR: 14 });
+  const dense = n > 14;
+  const partsAll = labels.map(l => String(l).split(/\s+[·-]\s+/));
+  const cwEst = (s) => String(s).length * (dense ? 4.6 : 5.2) * labelScale + 4;
+  const fullW = Math.max(...labels.map(cwEst));
+  const partW = Math.max(...partsAll.flat().map(cwEst));
+  const twoLines = fullW > xb.step && partsAll.some(p => p.length > 1);
+  const rotate = (twoLines ? partW : fullW) > xb.step;
+  const rad = 38 * Math.PI / 180;
+  // largura real de cada rótulo (maior parte + desconto das linhas extras)
+  const labelW = labels.map((l, i) => Math.max(...partsAll[i].map(cwEst)) + (partsAll[i].length - 1) * 4);
+  const topPad = 20;
+  const bottomPad = rotate ? Math.min(84, Math.round(Math.max(...labelW) * Math.sin(rad)) + 22) : 33;
+  const axisY = H - bottomPad, labelY = H - bottomPad + 16;
+  const chartH = axisY - topPad;
+  const totals = labels.map((_, i) => series.reduce((a, s) => a + (s.values[i] || 0), 0));
+  const tPeak = Math.max(...totals, 0) || 1;
+  const niceStep = Math.pow(10, Math.max(0, Math.floor(Math.log10(tPeak)) - 1));
+  const yMax = ceilTo(tPeak * 1.08, niceStep) || niceStep;
+  const by = (v) => axisY - (v / yMax) * chartH;
+
+  const out = [
+    `<line x1="0" y1="${axisY}" x2="${W}" y2="${axisY}" stroke="#C9D2DB" stroke-width="1"/>`,
+    `<line x1="0" y1="${f(by(yMax / 2))}" x2="${W}" y2="${f(by(yMax / 2))}" stroke="${C.grid}" stroke-width="1"/>`,
+    `<line x1="0" y1="${f(by(yMax))}" x2="${W}" y2="${f(by(yMax))}" stroke="${C.grid}" stroke-width="1"/>`,
+  ];
+  for (let i = 0; i < n; i++) {
+    let acc = 0;
+    for (const s of series) {
+      const v = s.values[i] || 0;
+      if (v <= 0) continue;
+      const y0 = by(acc + v), y1 = by(acc);
+      out.push(`<rect x="${f(xb.cx(i) - xb.barW / 2)}" y="${f(y0)}" width="${f(xb.barW)}" height="${f(y1 - y0)}" rx="2" fill="${s.color}" opacity="0.92"/>`);
+      acc += v;
+    }
+  }
+  // totais acima da pilha
+  if (totalFmt) {
+    const fsT = f(10.5 * labelScale, 1);
+    const totEvery = Math.max(1, Math.ceil((Math.max(...totals.map(v => String(totalFmt(v)).length)) * 5.2 * labelScale + 4) / xb.step));
+    for (let i = 0; i < n; i++) {
+      if (!totals[i] || (i % totEvery !== 0 && totals[i] !== tPeak)) continue;
+      out.push(`<text x="${f(xb.cx(i))}" y="${f(by(totals[i]) - 6)}" text-anchor="middle" font-family="Archivo" font-size="${fsT}" font-weight="600" fill="${C.ink}">${esc(totalFmt(totals[i]))}</text>`);
+    }
+  }
+  // eixo x: inteiro se cabe; quebrado em duas linhas no separador; na diagonal
+  // quando nem assim cabe — pular rótulo esconde a categoria (p.04)
+  const fsA = f((dense ? 8 : 10) * labelScale, 1);
+  const aBase = `font-family="Archivo" font-size="${fsA}" fill="${C.muted}"`;
+  if (rotate) {
+    const needW = labelW.map(w => w * Math.cos(rad));
+    const rotEvery = Math.max(1, Math.ceil(Math.max(...needW) / xb.step));
+    for (let i = 0; i < n; i++) {
+      // tick sempre desenhado: mantém a associação quando o rótulo é deslocado
+      out.push(`<line x1="${f(xb.cx(i))}" y1="${axisY}" x2="${f(xb.cx(i))}" y2="${axisY + 4}" stroke="#B9C4CE" stroke-width="1"/>`);
+      if (i % rotEvery !== 0) continue;
+      const parts = partsAll[i];
+      const l2 = parts.slice(1).join(' ');
+      // o rótulo cresce para baixo-esquerda; desloca a âncora se vazar à esquerda
+      let ax = xb.cx(i);
+      const leftX = ax - needW[i];
+      if (leftX < 2) ax += 2 - leftX;
+      out.push(`<text x="${f(ax)}" y="${f(labelY)}" text-anchor="end" transform="rotate(-38 ${f(ax)} ${f(labelY)})" ${aBase}>${esc(parts[0])}${l2 ? `<tspan x="${f(ax)}" dy="${f(10 * labelScale)}">${esc(l2)}</tspan>` : ''}</text>`);
+    }
+  } else if (twoLines) {
+    for (let i = 0; i < n; i++) {
+      const parts = partsAll[i];
+      const l2 = parts.slice(1).join(' ');
+      out.push(`<text x="${f(xb.cx(i))}" y="${f(labelY)}" text-anchor="middle" ${aBase}>${esc(parts[0])}${l2 ? `<tspan x="${f(xb.cx(i))}" dy="${f(10 * labelScale)}">${esc(l2)}</tspan>` : ''}</text>`);
+    }
+  } else {
+    const axEvery = Math.max(1, Math.ceil(fullW / xb.step));
+    for (let i = 0; i < n; i++) {
+      if (i % axEvery !== 0 && i !== n - 1) continue;
+      out.push(`<text x="${f(xb.cx(i))}" y="${f(labelY)}" text-anchor="middle" ${aBase}>${esc(labels[i])}</text>`);
+    }
   }
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:${H}px">${out.join('\n')}</svg>`;
 }

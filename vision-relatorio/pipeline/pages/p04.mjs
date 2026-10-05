@@ -1,6 +1,6 @@
 // p.4 — Compra de Animais
 import { pageShell } from '../lib/shell.mjs';
-import { areaChart, comboChart, donut, C } from '../lib/svg.mjs';
+import { areaChart, stackedBars, donut, C } from '../lib/svg.mjs';
 import { fmtInt, fmt1, fmt2, mesAbrev, kickerPeriodo, esc } from '../lib/fmt.mjs';
 
 const catLabel = (c) => c.replace(' - ', ' · ');
@@ -15,14 +15,17 @@ export function render({ model, ctx }) {
     W: 1184, H: 190, color: C.green, labelFmt: fmtInt, labelScale: 1.3,
   });
 
-  const cats = compras.porCategoria;
-  const bars = comboChart({
-    labels: cats.map(c => catLabel(c.categoria)),
-    W: 690, H: 190, labelScale: 1.3,
-    bars: { values: cats.map(c => c.cab), color: C.blue, labelFmt: fmtInt, labelInside: false },
+  const tipos = compras.porTipo.filter(t => t.cab > 0);
+  const catsTipo = compras.porCategoriaTipo ?? compras.porCategoria.map(c => ({ ...c, tipos: [] }));
+  const bars = stackedBars({
+    labels: catsTipo.map(c => catLabel(c.categoria)),
+    W: 690, H: 232, labelScale: 1.3, totalFmt: fmtInt,
+    series: tipos.map((t, i) => ({
+      key: t.tipo, color: DONUT_COLORS[i % DONUT_COLORS.length],
+      values: catsTipo.map(c => c.tipos.find(x => x.tipo === t.tipo)?.cab || 0),
+    })),
   });
 
-  const tipos = compras.porTipo.filter(t => t.cab > 0);
   const donutSvg = donut({
     items: tipos.map((t, i) => ({ value: t.cab, color: DONUT_COLORS[i % DONUT_COLORS.length] })),
     size: 190, stroke: 30,
@@ -61,7 +64,8 @@ export function render({ model, ctx }) {
 
   <div class="chart-row">
     <div>
-      <div class="chart-title">Cabeças por categoria<span class="legend"><span><span class="sw bar"></span>Cabeças</span></span></div>
+      <div class="chart-title">Cabeças por categoria<span class="legend">${tipos.map((t, i) =>
+        `<span><span class="sw bar" style="background:${DONUT_COLORS[i % DONUT_COLORS.length]}"></span>${esc(t.tipo)}</span>`).join('')}</span></div>
       ${bars}
     </div>
     <div>

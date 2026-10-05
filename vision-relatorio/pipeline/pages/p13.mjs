@@ -43,7 +43,7 @@ export function render({ model, ctx }) {
   <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
     <div class="kpi"><div class="lbl">Desembolso Total (CF+CV)</div><div class="val"><small>R$</small> ${fmt2(c.total)}</div></div>
     <div class="kpi"><div class="lbl">Despesa Média Mensal</div><div class="val"><small>R$</small> ${fmt2(c.mediaMensal)}</div></div>
-    <div class="kpi"><div class="lbl">Custeio por ha</div><div class="val"><small>R$</small> ${fmt2(c.porHa)}</div></div>
+    <div class="kpi"><div class="lbl">Custeio por ha/mês</div><div class="val"><small>R$</small> ${fmt2(c.porHaMes)}</div></div>
     <div class="kpi"><div class="lbl">Custo Diária/cab</div><div class="val"><small>R$</small> ${fmt2(c.custoDiariaCab)}</div></div>
   </div>
 
@@ -63,6 +63,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Relatório de Custeio · Somente Custos Fixos e Variáveis',
-    pageNum: 13, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
+    pageNum: 16, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

@@ -4,6 +4,7 @@ import { supabase } from '@gestaup/supabase'
 import { useToast } from '@gestaup/ui'
 import {
   PAGE_TITLES,
+  PAGE_NUMS,
   auditSheets,
   buildModelFromReads,
   computeRange,
@@ -727,7 +728,7 @@ export function RelatorioVision() {
                     className="accent-red-600"
                   />
                   <span className="truncate" title={PAGE_TITLES[id]}>
-                    <span className="font-semibold">{id.slice(1)}</span> {PAGE_TITLES[id]}
+                    <span className="font-semibold">{PAGE_NUMS[id]}</span> {PAGE_TITLES[id]}
                   </span>
                 </label>
               ))}

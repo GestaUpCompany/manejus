@@ -1,6 +1,7 @@
 declare module '*pipeline/web/app.mjs' {
   export const SHELL_CSS: string
   export const PAGE_TITLES: Record<string, string>
+  export const PAGE_NUMS: Record<string, string>
   export function mountRelatorio(
     el: HTMLElement,
     payload: unknown,

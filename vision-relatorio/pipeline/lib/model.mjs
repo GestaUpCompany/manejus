@@ -14,6 +14,12 @@ const faixaEtariaKey = (cat) => {
   return m ? Number(m[1]) + (/acima|>/i.test(cat) ? 0.5 : 0) : 999;
 };
 const avg = (arr, f) => arr.length ? sum(arr, f) / arr.length : 0;
+// Nome da contraparte num grupo de lotes: 'Vários' só quando há nomes
+// diferentes preenchidos; o próprio nome quando todos iguais; '' em branco.
+const nomeOuVarios = (g, get) => {
+  const nomes = new Set(g.map(get).filter(Boolean));
+  return nomes.size > 1 ? 'Vários' : [...nomes][0] || '';
+};
 const groupBy = (arr, f) => {
   const m = new Map();
   for (const x of arr) {
@@ -103,6 +109,7 @@ function readCompras(rows) {
     const at = toNum(r[15]) || pesoAt * cab;
     out.push({
       data: d, tipo: toStr(r[5]), cab, categoria: toStr(r[7]), fornecedor: toStr(r[8]),
+      status: toStr(r[3]), destino: toStr(r[9]),
       pesoKg, pesoMedio, rendCarc, at,
       total: toNum(r[19]), rsCab: toNum(r[20]), rsAt: toNum(r[21]), rsKg: toNum(r[22]),
       rsBoiGordo: toNum(r[23]),
@@ -343,15 +350,22 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   };
 
   // ---------- p.4/p.5 Compras ----------
+  // p.4 conta somente compras de fato (exclui transferências de entrada);
+  // o pivot da p.5 continua com todas as linhas (separa por tipo)
+  const comprasSo = compras.filter(x => !/^tran(s)?f/i.test(x.tipo));
   const comprasPage = {
-    cab: sum(compras, x => x.cab),
-    total: sum(compras, x => x.total),
-    at: sum(compras, x => x.at),
-    kg: sum(compras, x => x.pesoKg),
-    mensal: meses.map(k => ({ mes: k, cab: sum(compras.filter(c => ym(c.data) === k), x => x.cab) })),
-    porCategoria: [...groupBy(compras, x => x.categoria)].map(([k, g]) => ({ categoria: k, cab: sum(g, x => x.cab) })).sort((a, b) => b.cab - a.cab),
-    porTipo: [...groupBy(compras, x => x.tipo)].map(([k, g]) => ({ tipo: k, cab: sum(g, x => x.cab) })).sort((a, b) => b.cab - a.cab),
-    porFornecedor: [...groupBy(compras, x => x.fornecedor)].map(([k, g]) => ({ fornecedor: k, cab: sum(g, x => x.cab) })).sort((a, b) => b.cab - a.cab),
+    cab: sum(comprasSo, x => x.cab),
+    total: sum(comprasSo, x => x.total),
+    at: sum(comprasSo, x => x.at),
+    kg: sum(comprasSo, x => x.pesoKg),
+    mensal: meses.map(k => ({ mes: k, cab: sum(comprasSo.filter(c => ym(c.data) === k), x => x.cab) })),
+    porCategoria: [...groupBy(comprasSo, x => x.categoria)].map(([k, g]) => ({ categoria: k, cab: sum(g, x => x.cab) })).sort((a, b) => b.cab - a.cab),
+    porTipo: [...groupBy(comprasSo, x => x.tipo)].map(([k, g]) => ({ tipo: k, cab: sum(g, x => x.cab) })).sort((a, b) => b.cab - a.cab),
+    porCategoriaTipo: [...groupBy(comprasSo, x => x.categoria)].map(([k, g]) => ({
+      categoria: k, cab: sum(g, x => x.cab),
+      tipos: [...groupBy(g, x => x.tipo)].map(([t, gg]) => ({ tipo: t, cab: sum(gg, x => x.cab) })),
+    })).sort((a, b) => b.cab - a.cab),
+    porFornecedor: [...groupBy(comprasSo, x => x.fornecedor)].map(([k, g]) => ({ fornecedor: k, cab: sum(g, x => x.cab) })).sort((a, b) => b.cab - a.cab),
   };
   comprasPage.rsAt = comprasPage.at ? comprasPage.total / comprasPage.at : 0;
   comprasPage.rsKg = comprasPage.kg ? comprasPage.total / comprasPage.kg : 0;
@@ -366,7 +380,7 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
       cab: sum(gCat, x => x.cab), at: sum(gCat, x => x.at), pesoMedio: avg(gCat, x => x.pesoMedio),
       rsCab: avg(gCat, x => x.rsCab), rsAt: avg(gCat, x => x.rsAt), total: sum(gCat, x => x.total),
       lotes: [...groupBy(gCat, x => x.data.getTime())].map(([t, gD]) => ({
-        data: new Date(Number(t)), nLotes: gD.length, fornecedor: gD.length > 1 ? 'Vários' : gD[0].fornecedor,
+        data: new Date(Number(t)), nLotes: gD.length, fornecedor: nomeOuVarios(gD, x => x.fornecedor),
         cab: sum(gD, x => x.cab), at: sum(gD, x => x.at), pesoMedio: avg(gD, x => x.pesoMedio),
         rsCab: avg(gD, x => x.rsCab), rsAt: avg(gD, x => x.rsAt), total: sum(gD, x => x.total),
       })).sort((a, b) => a.data - b.data),
@@ -378,33 +392,72 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     pesoMedio: avg(compras, x => x.pesoMedio), rsCab: avg(compras, x => x.rsCab), rsAt: avg(compras, x => x.rsAt),
   };
 
-  // ---------- p.6 Vendas abate ----------
+  // ---------- p.6 Vendas abate (duas páginas: machos e fêmeas) ----------
   const vendasCards = (v) => {
     const cab = sum(v, x => x.cab), at = sum(v, x => x.atAbatidas), kg = sum(v, x => x.kgFinal), val = sum(v, x => x.valorLiq);
     return { cab, at, kg, valor: val, rsAt: at ? val / at : 0, rsKg: kg ? val / kg : 0 };
   };
-  // eixo só com meses que tiveram venda: mês ausente no eixo = sem venda (conv. p.19)
-  const vendasAbatePage = {
-    ...vendasCards(vendasAbate),
-    mensal: meses.map(k => {
-      const g = vendasAbate.filter(v => ym(v.data) === k);
-      return { mes: k, cab: sum(g, x => x.cab), rsAt: g.length ? avg(g, x => x.rsAt) : null };
-    }).filter(m => m.cab > 0),
-    porEmpresa: [...groupBy(vendasAbate, x => x.comprador || 'Não informado')].map(([k, g]) => ({
+  // campo "Frigorífico/Comprador" mistura pessoa jurídica e física; o gráfico de
+  // preço × RC% usa só frigoríficos (sufixo societário ou marca conhecida)
+  const isFrigorifico = (n) => /ltda|s\.?\s?a\.?\b|eireli|epp|\bme\b|frigo|foods|carnes|abatedouro|marfrig|minerva|jbs/i.test(n);
+  const aggVendasAbate = (rows) => {
+    const porEmpresa = [...groupBy(rows, x => x.comprador || 'Não informado')].map(([k, g]) => ({
       empresa: k, lotes: g.length, cab: sum(g, x => x.cab),
       rsAt: avg(g, x => x.rsAt), rendCarc: avg(g, x => x.rendCarc),
-    })).sort((a, b) => b.cab - a.cab),
+    })).sort((a, b) => b.cab - a.cab);
+    return {
+      ...vendasCards(rows),
+      // eixo só com meses que tiveram venda: mês ausente no eixo = sem venda (conv. p.19)
+      mensal: meses.map(k => {
+        const g = rows.filter(v => ym(v.data) === k);
+        return { mes: k, cab: sum(g, x => x.cab), rsAt: g.length ? avg(g, x => x.rsAt) : null };
+      }).filter(m => m.cab > 0),
+      porEmpresa,
+      porEmpresaFrigo: porEmpresa.filter(e => isFrigorifico(e.empresa)),
+    };
   };
+  const vendasAbateMPage = aggVendasAbate(vendasAbate.filter(x => /^m/i.test(x.sexo)));
+  const vendasAbateFPage = aggVendasAbate(vendasAbate.filter(x => /^f/i.test(x.sexo)));
+
+  // ---------- p.6/p.7 Transferências entre fazendas ----------
+  // Entrada: "Transf/Tranf Entrada" na Compra_Gado; saída: "Transf Saída" na
+  // Venda_Gado (tipo previsto na planilha, ainda sem uso nas fazendas). Os
+  // valores financeiros são sempre zerados: a movimentação é só física, e o
+  // status "Em Aberto" refere-se ao financeiro, não ao deslocamento.
+  const isTransf = (t) => /^tran(s)?f/i.test(t);
+  const sexoDaCategoria = (c) => /f[eê]mea/i.test(c) ? 'Fêmea' : /macho/i.test(c) ? 'Macho' : '';
+  const aggTransf = (rows, pesoFn, sexoFn) => ({
+    cab: sum(rows, x => x.cab),
+    lotes: rows.length,
+    pesoMedio: avg(rows, pesoFn),
+    mensal: meses.map(k => {
+      const g = rows.filter(v => ym(v.data) === k);
+      return { mes: k, cab: sum(g, x => x.cab), pesoMedio: g.length ? avg(g, pesoFn) : null };
+    }).filter(m => m.cab > 0),
+    porCategoria: [...groupBy(rows, x => x.categoria || 'Não informado')].map(([k, g]) => ({
+      categoria: k, cab: sum(g, x => x.cab), pesoMedio: avg(g, pesoFn),
+    })).sort((a, b) => b.cab - a.cab),
+    porSexo: [...groupBy(rows, sexoFn)].map(([k, g]) => ({ sexo: k || 'Não informado', cab: sum(g, x => x.cab) }))
+      .sort((a, b) => b.cab - a.cab),
+    lista: rows.map(x => ({ data: x.data, categoria: x.categoria || 'Não informado', cab: x.cab, pesoMedio: pesoFn(x) }))
+      .sort((a, b) => a.data - b.data),
+  });
+  const transfE = compras.filter(x => isTransf(x.tipo));
+  const transfS = vendas.filter(x => isTransf(x.tipo));
+  const transfEntradaPage = aggTransf(transfE, x => x.pesoMedio, x => sexoDaCategoria(x.categoria));
+  const transfSaidaPage = aggTransf(transfS, x => (x.cab ? x.kgFinal / x.cab : 0), x => x.sexo);
+  // Transferência de saída não é venda: fora dos KPIs e do pivot de vendas.
+  const vendasComerciais = vendas.filter(x => !isTransf(x.tipo));
 
   // ---------- p.7 Resumo vendas ----------
   const giroDenominador = sum(
     [...estoque.entries()].filter(([k]) => k.startsWith(`${anoBaseGiro}-`))
       .flatMap(([, b]) => b.linhas), l => l.saldoIni);
   const vendasPage = {
-    cab: sum(vendas, x => x.cab),
-    valor: sum(vendas, x => x.valorLiq),
-    giroEstoque: giroDenominador ? sum(vendas, x => x.cab) / giroDenominador : 0,
-    pivot: [...groupBy(vendas, x => x.tipo)].map(([tipo, gTipo]) => ({
+    cab: sum(vendasComerciais, x => x.cab),
+    valor: sum(vendasComerciais, x => x.valorLiq),
+    giroEstoque: giroDenominador ? sum(vendasComerciais, x => x.cab) / giroDenominador : 0,
+    pivot: [...groupBy(vendasComerciais, x => x.tipo)].map(([tipo, gTipo]) => ({
       tipo,
       cab: sum(gTipo, x => x.cab), at: sum(gTipo, x => x.atAbatidas),
       rsAt: avg(gTipo, x => x.rsAt), total: sum(gTipo, x => x.valorLiq),
@@ -413,7 +466,7 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
         cab: sum(gCat, x => x.cab), at: sum(gCat, x => x.atAbatidas),
         rsAt: avg(gCat, x => x.rsAt), total: sum(gCat, x => x.valorLiq),
         lotes: [...groupBy(gCat, x => x.data.getTime())].map(([t, gD]) => ({
-          data: new Date(Number(t)), comprador: gD.length > 1 ? 'Vários' : gD[0].comprador, nLotes: gD.length,
+          data: new Date(Number(t)), comprador: nomeOuVarios(gD, x => x.comprador), nLotes: gD.length,
           cab: sum(gD, x => x.cab), at: sum(gD, x => x.atAbatidas),
           rsAt: avg(gD, x => x.rsAt), total: sum(gD, x => x.valorLiq),
         })).sort((a, b) => a.data - b.data),
@@ -495,6 +548,7 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
       total: cfcvTotal,
       mediaMensal: cfcvTotal / nMeses,
       porHa: cfcvTotal / cad.areaHa,
+      porHaMes: nMeses ? cfcvTotal / nMeses / cad.areaHa : 0,
       custoDiariaCab: animalDias ? cfcvTotal / animalDias : 0,
     },
   };
@@ -597,7 +651,10 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     estoque: estoquePage,
     rebanho: rebanhoPage,
     compras: comprasPage,
-    vendasAbate: vendasAbatePage,
+    vendasAbateM: vendasAbateMPage,
+    vendasAbateF: vendasAbateFPage,
+    transfE: transfEntradaPage,
+    transfS: transfSaidaPage,
     vendas: vendasPage,
     nascimentos: nascPage,
     mortes: mortesPage,

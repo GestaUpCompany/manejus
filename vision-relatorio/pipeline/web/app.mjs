@@ -17,7 +17,8 @@ import { render as p02 } from '../pages/p02.mjs';
 import { render as p03 } from '../pages/p03.mjs';
 import { render as p04 } from '../pages/p04.mjs';
 import { render as p05 } from '../pages/p05.mjs';
-import { render as p06 } from '../pages/p06.mjs';
+import { renderEntrada as p05e, renderSaida as p05s } from '../pages/transf.mjs';
+import { renderMachos as p06a, renderFemeas as p06b } from '../pages/p06.mjs';
 import { render as p07 } from '../pages/p07.mjs';
 import { render as p08 } from '../pages/p08.mjs';
 import { renderMortes as p09, renderConsumo as p10 } from '../pages/p0910.mjs';
@@ -32,17 +33,24 @@ import { render as p18 } from '../pages/p18.mjs';
 import { render as p19 } from '../pages/p19.mjs';
 
 const registry = {
-  p01: renderCapa, p02, p03, p04, p05, p06, p07, p08, p09, p10,
+  p01: renderCapa, p02, p03, p04, p05, p05e, p05s, p06a, p06b, p07, p08, p09, p10,
   p11, p12, p13, p14, p15, p16, p17, p18, p19, p20: renderFinal,
 };
 const PAGE_ORDER = Object.keys(registry).sort(); // p01..p20
 
 export const PAGE_TITLES = {
   p01: 'Capa', p02: 'Estoque de Rebanho', p03: 'Rebanho no Período', p04: 'Compra de Animais',
-  p05: 'Resumo de Compras', p06: 'Vendas — Abate', p07: 'Resumo de Vendas', p08: 'Nascimentos',
+  p05: 'Resumo de Compras', p05e: 'Transferência Entrada', p05s: 'Transferência Saída', p06a: 'Vendas — Abate Machos', p06b: 'Vendas — Abate Fêmeas', p07: 'Resumo de Vendas', p08: 'Nascimentos',
   p09: 'Mortes', p10: 'Consumo e Doações', p11: 'Desembolso', p12: 'Desembolso CF × CV',
   p13: 'Custeio', p14: 'Pareto de Desembolsos', p15: 'Receitas', p16: 'Receitas por Tipo',
   p17: 'Fluxo de Caixa', p18: 'Índices Técnicos', p19: 'Vendas Animais Vivos', p20: 'Encerramento',
+};
+// Número impresso no rodapé de cada página (p06a/p06b viram 06/07).
+export const PAGE_NUMS = {
+  p01: '01', p02: '02', p03: '03', p04: '04', p05: '05', p05e: '06', p05s: '07',
+  p06a: '08', p06b: '09',
+  p07: '10', p08: '11', p09: '12', p10: '13', p11: '14', p12: '15', p13: '16',
+  p14: '17', p15: '18', p16: '19', p17: '20', p18: '21', p19: '22', p20: '23',
 };
 
 export const SHELL_CSS = `
@@ -173,7 +181,7 @@ export function mountRelatorio(el, payload, config = {}) {
     const wrap = document.createElement('section');
     wrap.className = 'page-block'; wrap.id = `pg-${id}`;
     const cap = document.createElement('div'); cap.className = 'pg-cap';
-    cap.innerHTML = `<span class="pg-num">${id.slice(1)}</span> ${esc(PAGE_TITLES[id])}`;
+    cap.innerHTML = `<span class="pg-num">${PAGE_NUMS[id]}</span> ${esc(PAGE_TITLES[id])}`;
     const host = document.createElement('div'); host.className = 'pg-host';
     const psr = host.attachShadow({ mode: 'open' });
     wrap.append(cap, host); pagesEl.append(wrap);
@@ -265,7 +273,7 @@ export function mountRelatorio(el, payload, config = {}) {
 
   const navEl = sr.getElementById('nav');
   navEl.innerHTML = pageOrder.map((id) =>
-    `<a href="#pg-${id}" data-pg="${id}"><i>${id.slice(1)}</i>${esc(PAGE_TITLES[id])}</a>`).join('');
+    `<a href="#pg-${id}" data-pg="${id}"><i>${PAGE_NUMS[id]}</i>${esc(PAGE_TITLES[id])}</a>`).join('');
   // Âncoras de fragmento não atravessam o shadow root: rola manualmente.
   navEl.addEventListener('click', (e) => {
     const a = e.target.closest?.('a[data-pg]');
