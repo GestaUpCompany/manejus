@@ -34,10 +34,13 @@ interface RegistroSuplementacao {
   grupo_operacao?: string
   escore_fezes?: string
   checklist?: {
-    limpeza_cocho?: { valor: boolean; observacao: string }
-    cochos_condicoes?: { valor: boolean; observacao: string }
-    deposito_condicoes?: { valor: boolean; observacao: string }
-    aterro_acesso_ideal?: { valor: boolean; observacao: string }
+    limpeza_cocho?: { valor: boolean; observacao: string; foto_url?: string }
+    espacamento_cocho_adequado?: { valor: boolean; observacao: string; foto_url?: string }
+    cochos_condicoes?: { valor: boolean; observacao: string; foto_url?: string }
+    deposito_condicoes?: { valor: boolean; observacao: string; foto_url?: string }
+    aterro_acesso_ideal?: { valor: boolean; observacao: string; foto_url?: string }
+    foto_cocho?: { valor: boolean; observacao: string; foto_url?: string }
+    [key: string]: { valor: boolean; observacao: string; foto_url?: string } | undefined
   }
   sync_status?: string
   created_at: string
@@ -54,6 +57,15 @@ interface EditForm {
   kg_deposito: string
   leitura: string
   escore_fezes: string
+}
+
+const CHECKLIST_FOTO_LABELS: Record<string, string> = {
+  espacamento_cocho_adequado: 'Espaçamento do cocho inadequado',
+  cochos_condicoes: 'Cocho em más condições',
+  aterro_acesso_ideal: 'Aterro/acesso inadequado',
+  deposito_condicoes: 'Depósito em más condições',
+  limpeza_cocho: 'Limpeza de cocho',
+  foto_cocho: 'Foto do cocho',
 }
 
 function capitalizeWords(str: string): string {
@@ -545,6 +557,12 @@ export function SuplementacaoDetalhes() {
                       {registro!.checklist.limpeza_cocho.observacao && <p className="text-sm text-content-muted"><span className="font-medium">Obs.:</span> {registro!.checklist.limpeza_cocho.observacao}</p>}
                     </div>
                   )}
+                  {registro!.checklist?.espacamento_cocho_adequado && (
+                    <div className="space-y-1">
+                      <DetailField label="Espaçamento do cocho adequado?" value={boolSimNao(registro!.checklist.espacamento_cocho_adequado.valor)} />
+                      {registro!.checklist.espacamento_cocho_adequado.observacao && <p className="text-sm text-content-muted"><span className="font-medium">Obs.:</span> {registro!.checklist.espacamento_cocho_adequado.observacao}</p>}
+                    </div>
+                  )}
                   {registro!.checklist?.cochos_condicoes && (
                     <div className="space-y-1">
                       <DetailField label="Cochos estão em boas condições?" value={boolSimNao(registro!.checklist.cochos_condicoes.valor)} />
@@ -563,6 +581,40 @@ export function SuplementacaoDetalhes() {
                       {registro!.checklist.deposito_condicoes.observacao && <p className="text-sm text-content-muted"><span className="font-medium">Obs.:</span> {registro!.checklist.deposito_condicoes.observacao}</p>}
                     </div>
                   )}
+                  {(() => {
+                    const itensComFoto = Object.entries(registro!.checklist ?? {}).filter(
+                      ([, item]) => item?.foto_url,
+                    )
+                    if (itensComFoto.length === 0) return null
+                    return (
+                      <div>
+                        <p className="text-xs font-medium text-content-muted uppercase tracking-wider mb-2">
+                          Fotos do registro
+                        </p>
+                        <div className="flex flex-wrap gap-3">
+                          {itensComFoto.map(([campo, item]) => (
+                            <a
+                              key={campo}
+                              href={item!.foto_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-32"
+                            >
+                              <img
+                                src={item!.foto_url}
+                                alt={CHECKLIST_FOTO_LABELS[campo] ?? campo}
+                                className="w-full h-24 object-cover rounded-lg border border-border-base"
+                                loading="lazy"
+                              />
+                              <p className="mt-1 text-xs text-content-muted leading-tight">
+                                {CHECKLIST_FOTO_LABELS[campo] ?? campo}
+                              </p>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
               </DetailSection>
             </div>
