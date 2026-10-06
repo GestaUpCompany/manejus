@@ -67,6 +67,7 @@ describe('calcularTratosDoDia', () => {
     const linhas = [{
       curralId: 'curral',
       curralNome: 'Curral 1',
+      ordemFolhaTrato: null,
       linhaNome: null,
       loteId: 'lote',
       loteNome: 'Lote 1',
@@ -93,6 +94,7 @@ function linhaBase(overrides: Partial<LancamentoTratoLinha> = {}): LancamentoTra
   return {
     curralId: 'curral',
     curralNome: 'Curral 1',
+    ordemFolhaTrato: null,
     linhaNome: null,
     loteId: 'lote',
     loteNome: 'Lote 1',

@@ -1,5 +1,16 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Ordem manual dos currais na folha de trato (2026-10-06)
+
+A seção "Currais em trato" de `ProgramacaoTratos.tsx` (previsto MN dia 1) ganhou reordenação por arrastar, persistida em `currais.ordem_folha_trato` (migration `20261006170000_currais_ordem_folha_trato.sql`, db push, com backfill alfabético por fazenda). A ordem é respeitada em três pontos: a própria tabela de configuração, a folha de lançamento do painel (`lancamentoTratosService.ts`, tela e PDF) e a barra inferior de currais do PWA (`TratoConfinamentoPage.tsx`).
+
+- **Drag**: padrão nativo HTML5 já usado em `PlanoNutricionalModal` (dataTransfer + dragOverIndex), sem lib nova. A linha `<tr>` só fica `draggable` após `onMouseDown` no grip de 6 pontos, para não roubar o drag dos inputs de kg.
+- **Persistência**: `salvarOrdemCurraisTrato` grava posições 1..n nos `curral_id` visíveis via `Promise.all` de updates; erro reverte o estado local. Currais fora da lista (outro tipo de programação ou sem ocupação) mantêm o valor.
+- **Semântica**: ordenação é do curral, não da ocupação (lote novo no mesmo curral herda a posição). NULL cai no fim com desempate por nome. Ordem única por fazenda, não por tipo; cada visão filtra por `lote_sistema` e preserva a ordem relativa.
+- **PWA**: `getCurrais` usa `select('*')`, então a coluna chega ao cache sem tocar no sync; o sort em `carregarDados` usa `curraisPorId` + `ordem_folha_trato`, propagando para `curraisDaLinha` e "SALVAR E IR PARA X".
+
+Disparador: quando mencionar "ordenar currais", "ordem da folha de trato", `ordem_folha_trato`, `salvarOrdemCurraisTrato`, ler esta seção.
+
 ## Edição/exclusão de registros de clima (2026-10-06)
 
 `RegistrosClimaDetalhes.tsx` ganhou ações "Editar" e "Excluir" (papel admin/controller/super_admin) seguindo o padrão de `SuplementacaoDetalhes`: botões no `DetailLayout`, `Modal` de edição e `ConfirmModal` de exclusão.

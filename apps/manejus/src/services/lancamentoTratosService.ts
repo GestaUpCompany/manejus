@@ -5,6 +5,7 @@ import { getDayBoundsInTimezone, toFarmDateOnly } from '@gestaup/shared'
 export interface LancamentoTratoLinha {
   curralId: string
   curralNome: string
+  ordemFolhaTrato: number | null
   linhaNome: string | null
   loteId: string | null
   loteNome: string
@@ -196,7 +197,7 @@ export async function carregarLancamentoTratos(
   const curralIds = ocupacoes.map((o) => o.curral_id)
   const curraisResult2 = await supabase
     .from('currais')
-    .select('id, nome, linha_id')
+    .select('id, nome, linha_id, ordem_folha_trato')
     .in('id', curralIds)
     .eq('ativo', true)
     .is('deleted_at', null)
@@ -274,6 +275,7 @@ export async function carregarLancamentoTratos(
     linhas.push({
       curralId: curral.id,
       curralNome: curral.nome,
+      ordemFolhaTrato: curral.ordem_folha_trato != null ? Number(curral.ordem_folha_trato) : null,
       linhaNome: null,
       loteId,
       loteNome: lote?.nome || 'Sem lote',
@@ -291,7 +293,13 @@ export async function carregarLancamentoTratos(
     })
   }
 
-  linhas.sort((a, b) => a.loteNome.localeCompare(b.loteNome, 'pt-BR') || a.curralNome.localeCompare(b.curralNome, 'pt-BR'))
+  // Ordem manual da folha (currais.ordem_folha_trato) primeiro; currais sem
+  // ordem definida caem no fim, no critério anterior (lote, curral).
+  linhas.sort((a, b) =>
+    (a.ordemFolhaTrato ?? Number.MAX_SAFE_INTEGER) - (b.ordemFolhaTrato ?? Number.MAX_SAFE_INTEGER) ||
+    a.loteNome.localeCompare(b.loteNome, 'pt-BR') ||
+    a.curralNome.localeCompare(b.curralNome, 'pt-BR')
+  )
   return { fazendaId, data, tipo, programacaoId: programacao.id, linhas }
 }
 

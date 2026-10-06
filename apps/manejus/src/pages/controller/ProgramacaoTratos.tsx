@@ -12,6 +12,7 @@ import {
   getProgramacaoTratos,
   getTiposExistentes,
   getVigenciasProgramacao,
+  salvarOrdemCurraisTrato,
   saveProgramacaoTratos,
   setOcupacaoKgDia1,
 } from '../../services/programacaoTratosService'
@@ -89,6 +90,11 @@ export function ConfiguracaoTratos() {
   const [savingPrevistos, setSavingPrevistos] = useState(false)
   const [salvoPrevistos, setSalvoPrevistos] = useState(false)
   const [erroPrevistos, setErroPrevistos] = useState<string | null>(null)
+
+  // Drag and drop da ordem dos currais na folha de trato
+  const [draggingCurralIndex, setDraggingCurralIndex] = useState<number | null>(null)
+  const [dragOverCurralIndex, setDragOverCurralIndex] = useState<number | null>(null)
+  const [dragHandleOcupacaoId, setDragHandleOcupacaoId] = useState<string | null>(null)
 
   // Leitura de cocho
   const [notasLeitura, setNotasLeitura] = useState<NotaLeituraConfig[]>([])
@@ -340,6 +346,63 @@ export function ConfiguracaoTratos() {
     }
 
     setSavingPrevistos(false)
+  }
+
+  // Reordena a lista visível dentro de `ocupacoes` (que mistura tipos) e
+  // persiste a posição de cada curral visível em currais.ordem_folha_trato.
+  const handleReorderCurrais = async (fromIndex: number, toIndex: number) => {
+    const sistemaEsperado = SISTEMA_POR_TIPO[tipoSelecionado]
+    const reordenadas = [...ocupacoesDoTipo]
+    const [movida] = reordenadas.splice(fromIndex, 1)
+    reordenadas.splice(toIndex, 0, movida)
+
+    const posicoes = new Map(reordenadas.map((o, i) => [o.curral_id, i + 1]))
+    const anterior = ocupacoes
+    setOcupacoes((prev) => {
+      let cursor = 0
+      return prev.map((o) => {
+        if (o.lote_sistema !== sistemaEsperado) return o
+        const movida = reordenadas[cursor++]
+        return { ...movida, ordem_folha_trato: posicoes.get(movida.curral_id)! }
+      })
+    })
+
+    const result = await salvarOrdemCurraisTrato(reordenadas.map((o) => o.curral_id))
+    if (!result.success) {
+      setErroPrevistos(
+        result.error
+          ? `Erro ao salvar a ordem dos currais: ${result.error}`
+          : 'Erro ao salvar a ordem dos currais.'
+      )
+      setOcupacoes(anterior)
+    }
+  }
+
+  const handleDragStartCurral = (index: number) => (e: React.DragEvent<HTMLTableRowElement>) => {
+    setDraggingCurralIndex(index)
+    e.dataTransfer.setData('text/plain', index.toString())
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOverCurral = (index: number) => (e: React.DragEvent<HTMLTableRowElement>) => {
+    e.preventDefault()
+    setDragOverCurralIndex(index)
+  }
+
+  const handleDropCurral = (dropIndex: number) => (e: React.DragEvent<HTMLTableRowElement>) => {
+    e.preventDefault()
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'), 10)
+    setDragOverCurralIndex(null)
+    setDraggingCurralIndex(null)
+    setDragHandleOcupacaoId(null)
+    if (isNaN(dragIndex) || dragIndex === dropIndex) return
+    void handleReorderCurrais(dragIndex, dropIndex)
+  }
+
+  const handleDragEndCurral = () => {
+    setDragOverCurralIndex(null)
+    setDraggingCurralIndex(null)
+    setDragHandleOcupacaoId(null)
   }
 
   // Leitura de cocho
@@ -688,6 +751,7 @@ export function ConfiguracaoTratos() {
                 <table className="w-full text-sm text-left border border-border-base rounded-lg">
                   <thead className="bg-surface-2 text-xs text-content-muted uppercase">
                     <tr>
+                      <th className="w-8 px-2 py-2" title="Arraste para reordenar"></th>
                       <th className="px-4 py-2">Curral</th>
                       <th className="px-4 py-2">Lote</th>
                       <th className="px-4 py-2">Entrada</th>
@@ -695,8 +759,30 @@ export function ConfiguracaoTratos() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {ocupacoesDoTipo.map((o) => (
-                      <tr key={o.ocupacao_id}>
+                    {ocupacoesDoTipo.map((o, index) => (
+                      <tr
+                        key={o.ocupacao_id}
+                        draggable={dragHandleOcupacaoId === o.ocupacao_id}
+                        onDragStart={handleDragStartCurral(index)}
+                        onDragOver={handleDragOverCurral(index)}
+                        onDrop={handleDropCurral(index)}
+                        onDragEnd={handleDragEndCurral}
+                        className={`${
+                          draggingCurralIndex === index
+                            ? 'opacity-50'
+                            : dragOverCurralIndex === index && draggingCurralIndex !== null
+                              ? 'bg-primary/5'
+                              : ''
+                        }`}
+                      >
+                        <td
+                          className="px-2 py-2 text-content-faint cursor-grab active:cursor-grabbing select-none"
+                          title="Arraste para reordenar"
+                          onMouseDown={() => setDragHandleOcupacaoId(o.ocupacao_id)}
+                          onMouseUp={() => setDragHandleOcupacaoId(null)}
+                        >
+                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="1.5" /><circle cx="15" cy="7" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="17" r="1.5" /><circle cx="15" cy="17" r="1.5" /></svg>
+                        </td>
                         <td className="px-4 py-2 font-medium text-content-strong">{o.curral_nome}</td>
                         <td className="px-4 py-2 text-content-muted">{o.lote_nome || '—'}</td>
                         <td className="px-4 py-2 text-content-muted">{formatarDataVigencia(o.data_inicial)}</td>

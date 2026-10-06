@@ -37,6 +37,7 @@ export interface OcupacaoEmTrato {
   data_inicial: string
   data_final: string | null
   kg_mn_dia_dia1: number | null
+  ordem_folha_trato: number | null
 }
 
 export interface ProgramacaoCompleta {
@@ -170,7 +171,7 @@ export async function getCurraisFazenda(
 export async function getOcupacoesEmTrato(fazendaId: string): Promise<OcupacaoEmTrato[]> {
   const { data, error } = await supabase
     .from('lote_curral_historico')
-    .select('id, curral_id, lote_id, data_inicial, data_final, kg_mn_dia_dia1, currais(nome, ativo, deleted_at), lotes(nome, sistema_producao, deleted_at)')
+    .select('id, curral_id, lote_id, data_inicial, data_final, kg_mn_dia_dia1, currais(nome, ativo, deleted_at, ordem_folha_trato), lotes(nome, sistema_producao, deleted_at)')
     .eq('fazenda_id', fazendaId)
     .is('data_final', null)
     .order('data_inicial', { ascending: true })
@@ -188,7 +189,30 @@ export async function getOcupacoesEmTrato(fazendaId: string): Promise<OcupacaoEm
       data_inicial: o.data_inicial as string,
       data_final: (o.data_final as string | null) ?? null,
       kg_mn_dia_dia1: o.kg_mn_dia_dia1 != null ? Number(o.kg_mn_dia_dia1) : null,
+      ordem_folha_trato: o.currais.ordem_folha_trato != null ? Number(o.currais.ordem_folha_trato) : null,
     }))
+    .sort((a, b) => (a.ordem_folha_trato ?? Number.MAX_SAFE_INTEGER) - (b.ordem_folha_trato ?? Number.MAX_SAFE_INTEGER) || a.curral_nome.localeCompare(b.curral_nome, 'pt-BR', { numeric: true }))
+}
+
+/**
+ * Persiste a ordem manual dos currais na folha de trato. Recebe os curral_ids
+ * na ordem desejada e grava posições sequenciais (1..n) em
+ * currais.ordem_folha_trato. Currais fora da lista mantêm o valor atual.
+ */
+export async function salvarOrdemCurraisTrato(
+  curralIds: string[]
+): Promise<{ success: boolean; error: string | null }> {
+  const agora = new Date().toISOString()
+  const resultados = await Promise.all(
+    curralIds.map((curralId, index) =>
+      supabase
+        .from('currais')
+        .update({ ordem_folha_trato: index + 1, updated_at: agora })
+        .eq('id', curralId)
+    )
+  )
+  const erro = resultados.find((r) => r.error)?.error
+  return { success: !erro, error: erro?.message ?? null }
 }
 
 /**
@@ -203,7 +227,7 @@ export async function getOcupacoesNaData(
 ): Promise<OcupacaoEmTrato[]> {
   const { data: rows, error } = await supabase
     .from('lote_curral_historico')
-    .select('id, curral_id, lote_id, data_inicial, data_final, kg_mn_dia_dia1, currais(nome), lotes(nome, sistema_producao)')
+    .select('id, curral_id, lote_id, data_inicial, data_final, kg_mn_dia_dia1, currais(nome, ordem_folha_trato), lotes(nome, sistema_producao)')
     .eq('fazenda_id', fazendaId)
     .lte('data_inicial', data)
     .or(`data_final.is.null,data_final.gte.${data}`)
@@ -228,6 +252,7 @@ export async function getOcupacoesNaData(
     data_inicial: o.data_inicial as string,
     data_final: (o.data_final as string | null) ?? null,
     kg_mn_dia_dia1: o.kg_mn_dia_dia1 != null ? Number(o.kg_mn_dia_dia1) : null,
+    ordem_folha_trato: o.currais?.ordem_folha_trato != null ? Number(o.currais.ordem_folha_trato) : null,
   }))
 }
 

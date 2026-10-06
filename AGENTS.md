@@ -109,3 +109,4 @@ Quando mencionar qualquer um destes tópicos, ler a seção correspondente em `d
 - "detalhamento operacional", "tabelas do abastecimento distantes", "fusão de páginas PDF", `operMergedCount`, `mergeDetail` → `docs/HISTORICO.md` (Fusão dinâmica das tabelas de detalhamento nos relatórios de Abastecimento e Mortalidade)
 - "Vision", "Vision'Up", "sistema financeiro", "monorepo", "módulo financeiro" → `docs/VISION_ARQUITETURA_FUTURA.md` (Arquitetura Vision + auditoria da planilha fonte)
 - "pill de pasto/curral", "localização do lote no relatório de consumo", `localizacao_por_lote`, `pasto_nome`/`curral_nome` no info → `docs/HISTORICO.md` (Pill de localização no relatório de consumo)
+- "ordenar currais", "ordem da folha de trato", `ordem_folha_trato`, `salvarOrdemCurraisTrato` → `docs/HISTORICO.md` (Ordem manual dos currais na folha de trato)
