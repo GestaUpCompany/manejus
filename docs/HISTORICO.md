@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Doação desconta cabeças do lote (2026-10-06)
+
+Migration `20261006230000_calculate_quant_atual_doacao.sql`: `calculate_quant_atual` passa a incluir `'Doação'` entre as saídas (junto de Consumo/Saída). No PWA a Doação deixou de ser um registro vazio (0 cabeças, que na prática nem salvava por conta da validação de destino): agora exige lote de origem e cabeças por categoria, grava um registro por categoria com `destino` nulo e `motivo_movimentacao = 'Doação'`. Não havia Doações reais anteriores com cabeças (só o teste de hoje).
+
 ## Movimentação no layout novo do PWA: foto do registro (2026-10-06)
 
 Migration `20261006220000_movimentacao_foto_url.sql` (db push): coluna aditiva `registros_movimentacao.foto_url text` (nullable). O PWA (`MovimentacaoPage` no layout novo) anexa foto opcional ao primeiro registro de cada salvamento (Saída/Consumo/Entrevero/Doação/Entrada/Novo Lote; Transferência não usa) e envia ao bucket `fotos-registros`. Ditado por voz grava em `observacao` (já existia). PWAs antigos não enviam a coluna. O painel ainda não exibe `foto_url` (candidato a backlog).
