@@ -72,8 +72,8 @@ export function render({ model, ctx }) {
   <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
     <div class="kpi"><div class="lbl">Desembolso Total</div><div class="val"><small>R$</small> ${fmt2(d.total)}</div></div>
     <div class="kpi"><div class="lbl">Despesa Média Mensal</div><div class="val"><small>R$</small> ${fmt2(d.mediaMensal)}</div></div>
-    <div class="kpi"><div class="lbl">Desembolso por ha</div><div class="val"><small>R$</small> ${fmt2(d.porHa)}</div></div>
-    <div class="kpi"><div class="lbl">Custo Diária/cab</div><div class="val"><small>R$</small> ${fmt2(d.custoDiariaCab)}</div></div>
+    <div class="kpi"><div class="lbl">Desembolso Médio por ha</div><div class="val"><small>R$</small> ${fmt2(d.porHa)}</div></div>
+    <div class="kpi"><div class="lbl">Diária Média/cab</div><div class="val"><small>R$</small> ${fmt2(d.custoDiariaCab)}</div></div>
   </div>
 
   <div class="chart1">

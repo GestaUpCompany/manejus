@@ -20,6 +20,13 @@ const avgPos = (arr, f) => {
   const vals = arr.map(f).filter(v => v > 0);
   return vals.length ? vals.reduce((a, x) => a + x, 0) / vals.length : null;
 };
+// média ponderada por registro agregado (cada linha de nascimento carrega vários
+// animais em `quant`); registros sem valor lançado não entram
+const wavg = (arr, fv, fw) => {
+  let n = 0, d = 0;
+  for (const x of arr) { const v = fv(x), w = fw(x); if (v > 0 && w > 0) { n += v * w; d += w; } }
+  return d ? n / d : 0;
+};
 // Nome da contraparte num grupo de lotes: 'Vários' só quando há nomes
 // diferentes preenchidos; o próprio nome quando todos iguais; '' em branco.
 const nomeOuVarios = (g, get) => {
@@ -490,9 +497,9 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   // ---------- p.8 Nascimentos ----------
   const nascPage = {
     total: sum(nasc, x => x.quant),
-    pesoMedio: avg(nasc, x => x.pesoNasc),
+    pesoMedio: wavg(nasc, x => x.pesoNasc, x => x.quant),
     mensal: [...groupBy(nasc, x => ym(x.data))].map(([k, g]) => ({
-      mes: k, quant: sum(g, x => x.quant), pesoMedio: avg(g, x => x.pesoNasc),
+      mes: k, quant: sum(g, x => x.quant), pesoMedio: wavg(g, x => x.pesoNasc, x => x.quant),
     })).sort((a, b) => a.mes.localeCompare(b.mes)),
     porSexo: [...groupBy(nasc, x => x.sexo)].map(([k, g]) => ({ sexo: k, quant: sum(g, x => x.quant) })),
     porRacaSexo: [...groupBy(nasc, x => `${x.raca}|${x.sexo}`)].map(([k, g]) => ({ raca: k.split('|')[0], sexo: k.split('|')[1], quant: sum(g, x => x.quant) })),
