@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Movimentação no layout novo do PWA: foto do registro (2026-10-06)
+
+Migration `20261006220000_movimentacao_foto_url.sql` (db push): coluna aditiva `registros_movimentacao.foto_url text` (nullable). O PWA (`MovimentacaoPage` no layout novo) anexa foto opcional ao primeiro registro de cada salvamento (Saída/Consumo/Entrevero/Doação/Entrada/Novo Lote; Transferência não usa) e envia ao bucket `fotos-registros`. Ditado por voz grava em `observacao` (já existia). PWAs antigos não enviam a coluna. O painel ainda não exibe `foto_url` (candidato a backlog).
+
 ## Rodeio no layout novo do PWA: contagem por categoria, foto/voz nos problemas (2026-10-06)
 
 Migration `20261006210000_rodeio_categorias_detalhes_observacao.sql`: `registros_rodeio.categorias_detalhes jsonb` (`[{nome, quant_atual, quant_informada}]`, mesmo formato de `registros_pastagens`) e `observacao text` (observação do lote, digitada ou ditada). Colunas fixas (`vaca`, `boi`, `garrote`...) continuam preenchidas por normalização da categoria, então relatórios e painel seguem lendo `total_cabecas`/`diagnosticos`. `diagnosticos.<item>.foto_url` passa a existir quando o peão fotografa o problema (upload no PWA, bucket `fotos-registros`). Tudo aditivo: PWAs antigos continuam compatíveis. Painel ainda não exibe `categorias_detalhes`/fotos em `RodeioDetalhes`.
