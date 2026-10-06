@@ -9,6 +9,7 @@ import { getFazendaIdForUser } from '@gestaup/shared'
 interface ChecklistItem {
   valor: boolean
   observacao: string
+  foto_url?: string
 }
 
 interface RegistroBebedouros {
@@ -30,6 +31,7 @@ interface RegistroBebedouros {
     aterro_acesso_bebedouro_ideal?: ChecklistItem
     espacamento_bebedouro_ideal?: ChecklistItem
     boia_protecao_boas_condicoes?: ChecklistItem
+    limpou_hoje?: ChecklistItem
   }
   sync_status?: string
   created_at: string
@@ -45,6 +47,16 @@ interface LimpezaInfo {
 function boolSimNao(item?: ChecklistItem): string {
   if (!item) return '-'
   return item.valor ? 'Sim' : 'Não'
+}
+
+// Rótulos dos itens do checklist quando tem foto anexada (o item marcado no
+// PWA e um problema, entao o caption usa a afirmacao negativa da tela).
+const CHECKLIST_FOTO_LABELS: Record<string, string> = {
+  agua_suficiente: 'Água insuficiente',
+  vazao_bebedouro_ideal: 'Vazão da bóia fora do ideal',
+  boia_protecao_boas_condicoes: 'Bóia/proteção em más condições',
+  aterro_acesso_bebedouro_ideal: 'Aterro/acesso inadequado',
+  espacamento_bebedouro_ideal: 'Espaçamento inadequado',
 }
 
 function addDias(data: string, dias: number): string {
@@ -208,12 +220,47 @@ export function BebedourosDetalhes() {
                   <DetailField label="Aterro Acesso Bebedouro Ideal" value={boolSimNao(registro!.checklist?.aterro_acesso_bebedouro_ideal)} />
                   <DetailField label="Espaçamento Bebedouro Ideal" value={boolSimNao(registro!.checklist?.espacamento_bebedouro_ideal)} />
                   <DetailField label="Boia Proteção Boas Condições" value={boolSimNao(registro!.checklist?.boia_protecao_boas_condicoes)} />
+                  <DetailField label="Limpou Hoje" value={boolSimNao(registro!.checklist?.limpou_hoje)} />
                 </div>
                 {registro!.checklist?.agua_suficiente?.observacao && <DetailField label="Obs. Água" value={registro!.checklist.agua_suficiente.observacao} />}
                 {registro!.checklist?.vazao_bebedouro_ideal?.observacao && <DetailField label="Obs. Vazão" value={registro!.checklist.vazao_bebedouro_ideal.observacao} />}
                 {registro!.checklist?.aterro_acesso_bebedouro_ideal?.observacao && <DetailField label="Obs. Aterro" value={registro!.checklist.aterro_acesso_bebedouro_ideal.observacao} />}
                 {registro!.checklist?.espacamento_bebedouro_ideal?.observacao && <DetailField label="Obs. Espaçamento" value={registro!.checklist.espacamento_bebedouro_ideal.observacao} />}
                 {registro!.checklist?.boia_protecao_boas_condicoes?.observacao && <DetailField label="Obs. Boia" value={registro!.checklist.boia_protecao_boas_condicoes.observacao} />}
+                {(() => {
+                  const itensComFoto = Object.entries(registro!.checklist ?? {}).filter(
+                    ([, item]) => item?.foto_url,
+                  )
+                  if (itensComFoto.length === 0) return null
+                  return (
+                    <div>
+                      <p className="text-xs font-medium text-content-muted uppercase tracking-wider mb-2">
+                        Fotos dos problemas
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        {itensComFoto.map(([campo, item]) => (
+                          <a
+                            key={campo}
+                            href={item.foto_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-32"
+                          >
+                            <img
+                              src={item.foto_url}
+                              alt={CHECKLIST_FOTO_LABELS[campo] ?? campo}
+                              className="w-full h-24 object-cover rounded-lg border border-border-base"
+                              loading="lazy"
+                            />
+                            <p className="mt-1 text-xs text-content-muted leading-tight">
+                              {CHECKLIST_FOTO_LABELS[campo] ?? campo}
+                            </p>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             </DetailSection>
 

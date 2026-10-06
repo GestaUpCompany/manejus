@@ -14,6 +14,10 @@ interface RegistroClima {
   data: string
   responsavel: string
   temperatura_media?: number
+  tempo_atual?: string
+  umidade_relativa?: number
+  esvaziou_pluviometros?: boolean | null
+  choveu?: boolean | null
   observacao?: string
   medicoes?: any[]
   sync_status?: string
@@ -21,6 +25,23 @@ interface RegistroClima {
   created_at: string
   updated_at: string
   deleted_at?: string
+}
+
+// Valores de tempo_atual gravados pela tela nova do PWA
+const TEMPO_ATUAL_LABELS: Record<string, string> = {
+  sol: 'Sol',
+  nublado: 'Nublado',
+  chuva_fraca: 'Chuva fraca',
+  chuva_forte: 'Chuva forte',
+  temporal: 'Temporal',
+  vento_forte: 'Vento forte',
+  frio: 'Frio',
+  seco_poeira: 'Seco / poeira',
+}
+
+function boolSimNao(valor?: boolean | null): string {
+  if (valor === null || valor === undefined) return '-'
+  return valor ? 'Sim' : 'Não'
 }
 
 export function RegistrosClimaDetalhes() {
@@ -88,6 +109,12 @@ export function RegistrosClimaDetalhes() {
                 <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
                 <DetailField label="Responsável" value={formatValue(registro!.responsavel)} />
                 <DetailField label="Temperatura Média" value={registro!.temperatura_media ? `${registro!.temperatura_media}°C` : '-'} />
+                <DetailField label="Tempo Atual" value={registro!.tempo_atual ? (TEMPO_ATUAL_LABELS[registro!.tempo_atual] ?? registro!.tempo_atual) : '-'} />
+                <DetailField label="Umidade Relativa" value={registro!.umidade_relativa != null ? `${registro!.umidade_relativa}%` : '-'} />
+                <DetailField label="Esvaziou Pluviômetros" value={boolSimNao(registro!.esvaziou_pluviometros)} />
+                {registro!.choveu !== null && registro!.choveu !== undefined && (
+                  <DetailField label="Choveu desde Última Leitura" value={boolSimNao(registro!.choveu)} />
+                )}
               </div>
             </DetailSection>
 
@@ -101,6 +128,9 @@ export function RegistrosClimaDetalhes() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Pluviômetro</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Localização</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Medição (mm)</th>
+                        {registro!.medicoes.some((m: any) => m.temperatura !== null && m.temperatura !== undefined) && (
+                          <th className="px-4 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Temperatura (°C)</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="bg-surface-1 divide-y divide-border-base">
@@ -115,6 +145,11 @@ export function RegistrosClimaDetalhes() {
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-content-strong">
                             {medicao.medicao !== undefined ? `${medicao.medicao} mm` : '-'}
                           </td>
+                          {registro!.medicoes!.some((m: any) => m.temperatura !== null && m.temperatura !== undefined) && (
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-content-strong">
+                              {medicao.temperatura !== null && medicao.temperatura !== undefined ? `${medicao.temperatura}°C` : '-'}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
