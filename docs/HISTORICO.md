@@ -1,5 +1,31 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Edição/exclusão de registros de clima (2026-10-06)
+
+`RegistrosClimaDetalhes.tsx` ganhou ações "Editar" e "Excluir" (papel admin/controller/super_admin) seguindo o padrão de `SuplementacaoDetalhes`: botões no `DetailLayout`, `Modal` de edição e `ConfirmModal` de exclusão.
+
+- **RPCs** (migration `20261006130000_editar_excluir_registro_clima.sql`, db push): `editar_registro_clima` e `excluir_registro_clima`, no padrão hardenado de `editar_registro_leitura_cocho` (caller resolvido via `auth.uid()`, `p_usuario_*` ignorados para autorização, papel admin/controller em `usuario_fazenda`, whitelist em `p_campos`, soft delete).
+- **Campos editáveis**: `data` (timestamptz, editada como data+hora de parede convertidas para o fuso da fazenda via `farmDateTimeToIso`/`FARM_TIMEZONE`), `responsavel`, `medicoes`, `temperatura_media`, `umidade_relativa`, `tempo_atual` (8 valores válidos), `esvaziou_pluviometros`, `choveu`, `observacao`. Não editáveis: identidade/autoria (`id`, `fazenda_id`, `dispositivo_id`, `nome_usuario`, que é fallback de auditoria) e metadados de sync (`local_id` com unique constraint, `sync_status`, `version`).
+- **Medições**: o editor permite alterar medicao/temperatura/horario por linha, remover linha e adicionar pluviômetro da fazenda (snapshot de nome/localização, igual ao PWA). `temperatura_media` é recalculada como média das temperaturas das medições (mesma derivação do PWA): o front calcula e trava o input quando há temperaturas; a RPC re-deriva quando `medicoes` é enviado e pelo menos uma temperatura existe, senão preserva o valor enviado (protege registros antigos sem temperatura por medição).
+- **Auditoria**: a migration também cria `trg_audit_registros_clima` (`fn_audit_trigger`), que faltava nessa tabela; todas as demais cadernetas editáveis já a tinham.
+
+Testado na fazenda de testes via MCP com `request.jwt.claim.sub` simulado: edição de `data` aplicou e reverteu, exclusão fez soft-delete, `audit_log` recebeu as linhas com `usuario_email` correto.
+
+Disparador: quando mencionar "editar/excluir clima", `editar_registro_clima`, `excluir_registro_clima`, ou "data errada em registro de clima", ler esta seção.
+
+## Redução de writes no caminho de sync para resolver timeouts 57014 (2026-10-06)
+
+Sintoma: inserts do PWA em `registros_suplementacao` e `saida_insumos` falhavam com 57014 (`statement_timeout=8s` da role `authenticated`), repetidos no horário de trato. Investigação: cada insert dispara uma cascata de triggers que transforma 1 write em centenas — `trg_suplementacao_mov` cria movimentação em `movimentacoes_estoque_suplementos`, cujo trigger `update_estoque_suplemento` chama `recalcular_custo_medio_item`, que fazia replay do histórico inteiro do item com UPDATE incondicional por linha (~105 writes para a formulação mais usada da fazenda afetada); em paralelo `trigger_recalc_peso_on_insert` varre todo o histórico do lote e cada UPDATE de peso gera insert em `audit_log` (214 MB) mais recalc de consumo. Com checkpoints de 23-65s no mesmo período (I/O saturado) e locks nas mesmas linhas do replay, a statement estourava 8s.
+
+Correção na migration `20261006150000_reduzir_writes_sync_estoque.sql` (db push, commit `3551a1c`):
+
+1. `recalcular_custo_medio_item(uuid,text,uuid)`: o UPDATE por linha do replay ganhou guarda `IS DISTINCT FROM` (só reescreve quando o saldo diverge; a outra sobrecarga já tinha) e o UPDATE final em `insumos`/`formulacoes` só roda quando `estoque_atual`/`custo_unitario` mudam. Em estado estacionário o replay passa de ~N writes por insert para ~0, e a pegada de lock na linha da formulação encolhe. Valores calculados e gravados são idênticos; única mudança observável é `updated_at` deixar de ser tocado em rewrites no-op (nenhum consumidor lê esse campo).
+2. `fn_audit_trigger`: `dados_antigos`/`dados_novos` passam a NULL — eram duplicatas byte a byte de `valor_anterior`/`valor_novo`. A RPC `get_audit_log` só lê `valor_*` e `alteracoes`; linhas antigas mantêm os dados e expiram pela retenção de 90 dias.
+
+Pendente se o problema voltar: mover recalc de peso/estoque para processamento assíncrono (marcar dirty + job), elevar `statement_timeout` via função `SECURITY DEFINER`, ou investigar saturação de I/O da instância (checkpoints lentos na janela do erro).
+
+Disparador: quando mencionar "timeout de sync", "57014", "canceling statement due to statement timeout", `recalcular_custo_medio_item`, `fn_audit_trigger`, `recalcular_peso_vivo_lote`, "replay de estoque", ler esta seção.
+
 ## Importação de lotes + categorias por planilha-modelo (2026-10-05)
 
 A tela de Lotes ganhou "Importar Planilha" (botão em `LoteFilters`), abrindo `components/lotes/ImportarLotesModal.tsx` com dois passos: baixar a planilha-modelo e enviar o arquivo preenchido.
