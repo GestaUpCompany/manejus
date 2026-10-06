@@ -14,6 +14,7 @@ import {
   getVigenciasProgramacao,
   salvarOrdemCurraisTrato,
   saveProgramacaoTratos,
+  setOcupacaoDataInicial,
   setOcupacaoKgDia1,
 } from '../../services/programacaoTratosService'
 import { toFarmDateOnly } from '@gestaup/shared'
@@ -90,6 +91,11 @@ export function ConfiguracaoTratos() {
   const [savingPrevistos, setSavingPrevistos] = useState(false)
   const [salvoPrevistos, setSalvoPrevistos] = useState(false)
   const [erroPrevistos, setErroPrevistos] = useState<string | null>(null)
+
+  // Edição inline da data de entrada da ocupação (coluna Entrada)
+  const [editandoEntradaId, setEditandoEntradaId] = useState<string | null>(null)
+  const [entradaDraft, setEntradaDraft] = useState('')
+  const [salvandoEntradaId, setSalvandoEntradaId] = useState<string | null>(null)
 
   // Drag and drop da ordem dos currais na folha de trato
   const [draggingCurralIndex, setDraggingCurralIndex] = useState<number | null>(null)
@@ -244,6 +250,23 @@ export function ConfiguracaoTratos() {
 
   const handleOcupacaoKgChange = (ocupacaoId: string, value: string) => {
     setKgInputs((prev) => ({ ...prev, [ocupacaoId]: value }))
+  }
+
+  const handleSalvarEntrada = async (ocupacao: OcupacaoEmTrato) => {
+    const novaData = entradaDraft
+    setEditandoEntradaId(null)
+    if (!novaData || novaData === ocupacao.data_inicial) return
+    setSalvandoEntradaId(ocupacao.ocupacao_id)
+    setErroPrevistos(null)
+    const result = await setOcupacaoDataInicial(ocupacao.ocupacao_id, novaData)
+    setSalvandoEntradaId(null)
+    if (!result.success) {
+      setErroPrevistos(result.error || 'Não foi possível atualizar a data de entrada.')
+      return
+    }
+    setOcupacoes((prev) =>
+      prev.map((o) => (o.ocupacao_id === ocupacao.ocupacao_id ? { ...o, data_inicial: novaData } : o))
+    )
   }
 
   const handleAdicionarTipo = (tipo: TipoProgramacao) => {
@@ -731,12 +754,13 @@ export function ConfiguracaoTratos() {
               Estes currais aparecem na folha de tratos porque estão ocupados por lotes deste sistema.
               O previsto de MN do dia 1 é a oferta sugerida no primeiro dia da ocupação; em branco, a folha
               mostra "a definir" e o operador informa no primeiro trato. Do dia 2 em diante, a oferta
-              segue a leitura de cocho.
+              segue a leitura de cocho. A folha só mostra o curral a partir da data de entrada; clique
+              nela para corrigir entradas registradas com atraso e habilitar lançamentos retroativos.
             </p>
 
             {erroPrevistos && (
               <div className="p-4 bg-red-500/10 border-2 border-red-500/30 rounded-xl mb-4">
-                <p className="text-sm text-red-700 dark:text-red-200 font-medium">Erro ao salvar previstos</p>
+                <p className="text-sm text-red-700 dark:text-red-200 font-medium">Erro ao salvar</p>
                 <p className="text-xs text-red-500 mt-1">{erroPrevistos}</p>
               </div>
             )}
@@ -785,7 +809,35 @@ export function ConfiguracaoTratos() {
                         </td>
                         <td className="px-4 py-2 font-medium text-content-strong">{o.curral_nome}</td>
                         <td className="px-4 py-2 text-content-muted">{o.lote_nome || '—'}</td>
-                        <td className="px-4 py-2 text-content-muted">{formatarDataVigencia(o.data_inicial)}</td>
+                        <td className="px-4 py-2 text-content-muted">
+                          {editandoEntradaId === o.ocupacao_id ? (
+                            <Input
+                              type="date"
+                              value={entradaDraft}
+                              autoFocus
+                              onChange={(e) => setEntradaDraft(e.target.value)}
+                              onBlur={() => handleSalvarEntrada(o)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSalvarEntrada(o)
+                                if (e.key === 'Escape') setEditandoEntradaId(null)
+                              }}
+                              className="w-36 border-border-base focus:border-accent"
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={salvandoEntradaId === o.ocupacao_id}
+                              title="Corrigir data de entrada no curral"
+                              onClick={() => {
+                                setEditandoEntradaId(o.ocupacao_id)
+                                setEntradaDraft(o.data_inicial)
+                              }}
+                              className="hover:text-content-strong hover:underline underline-offset-2 disabled:opacity-50"
+                            >
+                              {salvandoEntradaId === o.ocupacao_id ? 'salvando...' : formatarDataVigencia(o.data_inicial)}
+                            </button>
+                          )}
+                        </td>
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-2">
                             <Input

@@ -1,5 +1,15 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Edição da data de entrada da ocupação na folha de trato (2026-10-06)
+
+A folha de lançamento (`carregarLancamentoTratos`) lista um curral apenas quando a ocupação cobre a data selecionada (`lote_curral_historico.data_inicial <= data`), e não quando a programação foi criada. Lote alocado ao curral com registro atrasado ficava impossível de lançar retroativamente: o sistema não tem bloqueio de data passada, mas a folha ficava vazia para datas anteriores à `data_inicial` (caso real: Lote 05 da Jacamim alocado em 29/09 com início efetivo em 23/09; corrigido via update pontual na `data_inicial`).
+
+- **UI**: a coluna "Entrada" da tabela "Currais em trato" em `ProgramacaoTratos.tsx` virou edição inline (clique na data abre `input[type=date]`, blur/Enter salva, Esc cancela) usando `setOcupacaoDataInicial`, que já existia no service mas não era chamada por tela nenhuma. Após salvar, só a ocupação é atualizada no estado local para não perder os drafts de kg.
+- **Semântica**: a `data_inicial` define o "dia 1" da ocupação (âncora de `totalUltimoDiaDaOcupacao` e do previsto `kg_mn_dia_dia1`), então retrocedê-la habilita lançamentos para o intervalo antes sem curral.
+- O banner de erro do card foi generalizado ("Erro ao salvar") pois passou a cobrir também a edição de entrada.
+
+Disparador: quando mencionar "lote não aparece na folha de tratos", "lançamento retroativo", "data de entrada do lote no curral", `data_inicial` de `lote_curral_historico`, `setOcupacaoDataInicial`, ler esta seção.
+
 ## Ordem manual dos currais na folha de trato (2026-10-06)
 
 A seção "Currais em trato" de `ProgramacaoTratos.tsx` (previsto MN dia 1) ganhou reordenação por arrastar, persistida em `currais.ordem_folha_trato` (migration `20261006170000_currais_ordem_folha_trato.sql`, db push, com backfill alfabético por fazenda). A ordem é respeitada em três pontos: a própria tabela de configuração, a folha de lançamento do painel (`lancamentoTratosService.ts`, tela e PDF) e a barra inferior de currais do PWA (`TratoConfinamentoPage.tsx`).
