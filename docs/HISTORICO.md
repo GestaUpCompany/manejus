@@ -1,5 +1,25 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Isolamento de tenant: RLS por fazenda em fazendas, usuario_fazenda, pastos, lotes e peoes (2026-10-06)
+
+Incidente real (Serrinha 5, Fazenda Marcon): controller vinculado a outra fazenda alterou geometria de pasto e `lotes.pasto_id` de registros da Marcon. Causa raiz: policies `qual=true`/`check=true` nas tabelas de cadastro (item S3 da auditoria), incluindo `pastos_update_public` aberta para o role `public`, e auto-vínculo livre em `usuario_fazenda` (escalação de privilégio). O audit também revelou que `app.current_user_*` é session-scoped e pode vazar entre requisições pooled, ou seja, o nome gravado no `audit_log` não é prova confiável de autoria.
+
+Migration `20261006180000_isolamento_tenant_lotes_pastos_fazendas.sql` (db push):
+
+- **Helper novo** `user_has_fazenda_role(p_fazenda_id, p_papeis text[])`: papel do usuário autenticado em uma fazenda, `SECURITY DEFINER` (evita recursão em policies de `usuario_fazenda`).
+- **`fazendas`**: removidas as policies abertas de `anon`/`authenticated` (INSERT/UPDATE/DELETE `qual=true`) e os dois SELECTs públicos. Novas: SELECT por `caller_has_fazenda_access(id)` OU mesmo `grupo_id` (necessário para transferência entre fazendas do grupo) OU `is_admin_user()`; INSERT/DELETE só `is_admin_user()`; UPDATE admin da fazenda com papel `admin`/`controller`.
+- **`usuario_fazenda`**: removidas `Authenticated insert/update/delete` (`qual=true`) e `Users can insert their farm associations` (auto-vínculo com papel livre). Gestão de vínculos só via `is_admin_user()` ou admin da própria fazenda. Mantidas leituras escopadas e auto-exclusão do próprio vínculo.
+- **`pastos`**: removidas as 7 policies permissivas, incluindo `pastos_update_public` (UPDATE aberto para `public`, sem login). Todas as operações via `caller_has_fazenda_access(fazenda_id)`, que cobre tanto usuário do painel (`usuario_fazenda` via `auth.uid()`) quanto peão do PWA (`auth.jwt()->>'email'` -> `peoes` -> `fazendas.acesso_id`).
+- **`lotes`**: idem pastos; `deleted_at IS NULL` preservado em SELECT/UPDATE/DELETE.
+- **`peoes`**: removidas `Auth insert/update/delete` (`qual=true`); qualquer autenticado podia trocar senha de peão de outra fazenda. Gestão só por admin/controller da fazenda (join `fazendas.acesso_id = peoes.fazenda_id`). Policies de `service_role` (edge function `login-peao`) mantidas.
+- **`sincronizar_historico_pasto_lote_edit`** (RPC do `Lotes.tsx` ao editar pasto do lote, `SECURITY DEFINER` sem verificação): agora resolve o `fazenda_id` do lote e exige `caller_has_fazenda_access` antes de escrever; falha com `insufficient_privilege`.
+
+Testado na fazenda de testes (`d649c65e`) com `request.jwt.claims` simulado: JWT do controller Marcon passou a ver 0 linhas em `pastos`/`lotes` da Gesta'Up e a falhar com erro RLS ao tentar auto-vínculo em `usuario_fazenda` (baseline anterior: UPDATE em pasto retornava a linha); controller e peão da Gesta'Up seguem lendo e escrevendo na própria fazenda; a RPC nega chamador cross-farm e executa para usuário da fazenda.
+
+Pendente para fechar o item S3 da auditoria do PWA: as demais ~18 tabelas de cadastro (currais, insumos, funcionarios, setores, racas, fornecedores, frigorificos, implementos, itens_almoxarifado, locais, maquinas_veiculos, medicamentos, mineral, proteinado, racao, tratamentos, causas_morte, bebedouros), `usuarios` (S4), `lote_historico` (S7) e as RPCs `SECURITY DEFINER` restantes sem check de vínculo (`transferir_lote_entre_fazendas`, `aprovar_solicitacao_novo_lote`, `get_*` com `p_fazenda_id`).
+
+Disparador: quando mencionar "controller alterou outra fazenda", "isolamento de tenant", "RLS por fazenda", `user_has_fazenda_role`, `caller_has_fazenda_access`, S1/S2/S3, ler esta seção.
+
 ## Edição da data de entrada da ocupação na folha de trato (2026-10-06)
 
 A folha de lançamento (`carregarLancamentoTratos`) lista um curral apenas quando a ocupação cobre a data selecionada (`lote_curral_historico.data_inicial <= data`), e não quando a programação foi criada. Lote alocado ao curral com registro atrasado ficava impossível de lançar retroativamente: o sistema não tem bloqueio de data passada, mas a folha ficava vazia para datas anteriores à `data_inicial` (caso real: Lote 05 da Jacamim alocado em 29/09 com início efetivo em 23/09; corrigido via update pontual na `data_inicial`).
