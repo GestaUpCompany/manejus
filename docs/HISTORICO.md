@@ -16,6 +16,8 @@ Migration `20261006180000_isolamento_tenant_lotes_pastos_fazendas.sql` (db push)
 
 Testado na fazenda de testes (`d649c65e`) com `request.jwt.claims` simulado: JWT do controller Marcon passou a ver 0 linhas em `pastos`/`lotes` da Gesta'Up e a falhar com erro RLS ao tentar auto-vínculo em `usuario_fazenda` (baseline anterior: UPDATE em pasto retornava a linha); controller e peão da Gesta'Up seguem lendo e escrevendo na própria fazenda; a RPC nega chamador cross-farm e executa para usuário da fazenda.
 
+Fix imediato (`20261006190000_fix_fazendas_select_recursion.sql`): a cláusula de "mesmo grupo" na policy de SELECT de `fazendas` fazia EXISTS sobre a própria tabela, gerando `42P17 infinite recursion` (estourou no login, em `hasActiveFazenda` do `authService`). O check foi movido para a função `SECURITY DEFINER` `caller_mesmo_grupo_fazenda`. Verificado end-to-end no Painel: login com controller Gesta'Up, página de Lotes carrega só dados da fazenda, seletor de grupo mostra só a Gesta'Up Teste.
+
 Pendente para fechar o item S3 da auditoria do PWA: as demais ~18 tabelas de cadastro (currais, insumos, funcionarios, setores, racas, fornecedores, frigorificos, implementos, itens_almoxarifado, locais, maquinas_veiculos, medicamentos, mineral, proteinado, racao, tratamentos, causas_morte, bebedouros), `usuarios` (S4), `lote_historico` (S7) e as RPCs `SECURITY DEFINER` restantes sem check de vínculo (`transferir_lote_entre_fazendas`, `aprovar_solicitacao_novo_lote`, `get_*` com `p_fazenda_id`).
 
 Disparador: quando mencionar "controller alterou outra fazenda", "isolamento de tenant", "RLS por fazenda", `user_has_fazenda_role`, `caller_has_fazenda_access`, S1/S2/S3, ler esta seção.
