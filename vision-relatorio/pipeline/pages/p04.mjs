@@ -77,6 +77,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Compra de Animais',
-    pageNum: 4, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
+    pageNum: ctx.pageNum ?? 4, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

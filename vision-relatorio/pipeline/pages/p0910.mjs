@@ -5,14 +5,14 @@ import { fmtInt, fmt2, fmtPct, mesAbrev, kickerPeriodo, esc } from '../lib/fmt.m
 
 const CFG = {
   mortes: {
-    title: 'Mortes', pageNum: 12, accent: C.red, accentDark: '#8F3730', lblCls: 'r',
+    title: 'Mortes', pageNum: 13, accent: C.red, accentDark: '#8F3730', lblCls: 'r',
     cards: ['Animais Mortos', '@ Perdidas', 'R$ Perdidos', 'Tx. de Mortalidade'],
     areaTitle: 'Mortes por mês', causaTitle: 'Mortes por causa', donutTitle: 'Distribuição por categoria',
     palette: [C.red, C.blue, C.slate, C.greenLight, C.muted],
     empty: 'Sem mortes registradas no período.',
   },
   consumo: {
-    title: 'Consumo e Doações', pageNum: 13, accent: C.amber, accentDark: '#8F6708', lblCls: 'a',
+    title: 'Consumo e Doações', pageNum: 14, accent: C.amber, accentDark: '#8F6708', lblCls: 'a',
     cards: ['Total de Animais', '@ Destinadas', 'R$ Destinados', 'Tx. de Consumo e Doações'],
     areaTitle: 'Consumo e doações por mês', causaTitle: 'Por destino', donutTitle: 'Distribuição por categoria',
     palette: [C.amber, C.blue, C.slate, C.greenLight, C.muted],
@@ -97,7 +97,7 @@ function makeRender(key) {
 
     return pageShell({
       kicker: kickerPeriodo(meta.ini, meta.fim),
-      title: cfg.title, pageNum: cfg.pageNum, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
+      title: cfg.title, pageNum: ctx.pageNum ?? cfg.pageNum, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
     });
   };
 }

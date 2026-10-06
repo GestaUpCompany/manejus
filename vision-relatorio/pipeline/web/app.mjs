@@ -25,6 +25,7 @@ import { renderMortes as p09, renderConsumo as p10 } from '../pages/p0910.mjs';
 import { render as p11 } from '../pages/p11.mjs';
 import { render as p12 } from '../pages/p12.mjs';
 import { render as p13 } from '../pages/p13.mjs';
+import { render as p13b } from '../pages/p13b.mjs';
 import { render as p14 } from '../pages/p14.mjs';
 import { render as p15 } from '../pages/p15.mjs';
 import { render as p16 } from '../pages/p16.mjs';
@@ -34,23 +35,30 @@ import { render as p19 } from '../pages/p19.mjs';
 
 const registry = {
   p01: renderCapa, p02, p03, p04, p05, p05e, p05s, p06a, p06b, p07, p08, p09, p10,
-  p11, p12, p13, p14, p15, p16, p17, p18, p19, p20: renderFinal,
+  p11, p12, p13, p13b, p14, p15, p16, p17, p18, p19, p20: renderFinal,
 };
-const PAGE_ORDER = Object.keys(registry).sort(); // p01..p20
+// Ordem editorial do relatório (Vivos vem antes dos abates).
+export const PAGE_ORDER = [
+  'p01', 'p02', 'p03', 'p04', 'p05', 'p05e', 'p05s', 'p19', 'p06a', 'p06b',
+  'p07', 'p08', 'p09', 'p10', 'p11', 'p12', 'p13', 'p13b', 'p14', 'p15', 'p16', 'p17',
+  'p18', 'p20',
+];
 
 export const PAGE_TITLES = {
   p01: 'Capa', p02: 'Estoque de Rebanho', p03: 'Rebanho no Período', p04: 'Compra de Animais',
   p05: 'Resumo de Compras', p05e: 'Transferência Entrada', p05s: 'Transferência Saída', p06a: 'Vendas — Abate Machos', p06b: 'Vendas — Abate Fêmeas', p07: 'Resumo de Vendas', p08: 'Nascimentos',
-  p09: 'Mortes', p10: 'Consumo e Doações', p11: 'Desembolso', p12: 'Desembolso CF × CV',
-  p13: 'Custeio', p14: 'Pareto de Desembolsos', p15: 'Receitas', p16: 'Receitas por Tipo',
+  p09: 'Mortes', p10: 'Consumo e Doações', p11: 'Desembolso', p12: 'Desembolso · Custos por ha',
+  p13: 'Custeio', p13b: 'Custeio CF × CV', p14: 'Pareto de Desembolsos', p15: 'Receitas', p16: 'Receitas por Tipo',
   p17: 'Fluxo de Caixa', p18: 'Índices Técnicos', p19: 'Vendas Animais Vivos', p20: 'Encerramento',
 };
-// Número impresso no rodapé de cada página (p06a/p06b viram 06/07).
+// Número impresso no rodapé de cada página com o relatório completo
+// (p19 vivos virou 08, antes dos abates). Quando há páginas ocultas, o
+// motor renumera sequencialmente e estes valores são só o fallback.
 export const PAGE_NUMS = {
   p01: '01', p02: '02', p03: '03', p04: '04', p05: '05', p05e: '06', p05s: '07',
-  p06a: '08', p06b: '09',
-  p07: '10', p08: '11', p09: '12', p10: '13', p11: '14', p12: '15', p13: '16',
-  p14: '17', p15: '18', p16: '19', p17: '20', p18: '21', p19: '22', p20: '23',
+  p19: '08', p06a: '09', p06b: '10',
+  p07: '11', p08: '12', p09: '13', p10: '14', p11: '15', p12: '16', p13: '17',
+  p13b: '18', p14: '19', p15: '20', p16: '21', p17: '22', p18: '23', p20: '24',
 };
 
 // IDs de página sem nenhum dado no período do modelo. Capa, estoque, rebanho,
@@ -69,8 +77,9 @@ export function paginasSemDados(model) {
     p09: !model.mortes?.count,
     p10: !model.consumo?.count,
     p11: !model.desembolso?.total,
-    p12: !model.desembolso?.cf?.cfcvTotal,
+    p12: !model.desembolso?.total,
     p13: !model.desembolso?.cf?.cfcvTotal,
+    p13b: !model.desembolso?.cf?.cfcvTotal,
     p14: !model.pareto?.linhas?.length,
     p15: !model.receitas?.total,
     p16: !model.receitas?.porTipo?.length,
@@ -251,15 +260,20 @@ export function mountRelatorio(el, payload, config = {}) {
     // pode esvaziar uma página que antes tinha dados.
     const semDados = new Set(paginasSemDados(model));
     const visiveis = PAGE_ORDER.filter((id) => !hiddenManual.has(id) && !semDados.has(id));
+    // renumera as páginas visíveis em sequência: ocultar uma página não deve
+    // deixar buraco na numeração do rodapé, do chip de navegação e do rótulo
+    const numMap = {};
+    visiveis.forEach((id, i) => { numMap[id] = String(i + 1).padStart(2, '0'); });
     for (const id of PAGE_ORDER) {
       const rec = ensureHost(id);
       if (!visiveis.includes(id)) { rec.wrap.style.display = 'none'; continue; }
       rec.wrap.style.display = '';
-      setPageContent(rec, registry[id]({ model, ctx }));
+      rec.wrap.querySelector('.pg-num').textContent = numMap[id];
+      setPageContent(rec, registry[id]({ model, ctx: { ...ctx, pageNum: numMap[id] } }));
       rec.wrap.dataset.meses = JSON.stringify(model.meta.meses);
     }
     navEl.innerHTML = visiveis.map((id) =>
-      `<a href="#pg-${id}" data-pg="${id}"><i>${PAGE_NUMS[id]}</i>${esc(PAGE_TITLES[id])}</a>`).join('');
+      `<a href="#pg-${id}" data-pg="${id}"><i>${numMap[id]}</i>${esc(PAGE_TITLES[id])}</a>`).join('');
     rangeLbl.textContent = ` · ${fmtPt(ini)} a ${fmtPt(fim)}`;
     console.debug(`[render] ${visiveis.length} páginas em ${(performance.now() - t0).toFixed(0)}ms`);
   }
@@ -340,10 +354,13 @@ export function buildMergedHtml(payload, config = {}) {
     anoBaseGiro: defaults.anoBaseGiro,
   });
   for (const id of paginasSemDados(model)) hidden.add(id);
+  // mesma renumeração sequencial do modo interativo (sem buracos na numeração)
+  const visiveis = PAGE_ORDER.filter((id) => !hidden.has(id));
+  const numMap = {};
+  visiveis.forEach((id, i) => { numMap[id] = String(i + 1).padStart(2, '0'); });
   const styles = [], pages = [];
-  for (const id of PAGE_ORDER) {
-    if (hidden.has(id)) continue;
-    const html = registry[id]({ model, ctx });
+  for (const id of visiveis) {
+    const html = registry[id]({ model, ctx: { ...ctx, pageNum: numMap[id] } });
     const scope = `.pg-${id}`;
     for (const m of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) styles.push(scopeCss(m[1], scope));
     const body = html.match(/<body[^>]*>([\s\S]*?)<\/body>/)?.[1] ?? '';

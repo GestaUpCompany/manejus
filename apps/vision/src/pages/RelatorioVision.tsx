@@ -5,6 +5,7 @@ import { useToast } from '@gestaup/ui'
 import {
   PAGE_TITLES,
   PAGE_NUMS,
+  PAGE_ORDER,
   auditSheets,
   buildModelFromReads,
   paginasSemDados,
@@ -21,7 +22,7 @@ import {
 } from '../report/vision'
 import type { AuditIssue } from '../../../../vision-relatorio/pipeline/lib/audit.mjs'
 
-const PAGE_IDS = Object.keys(PAGE_TITLES).sort()
+const PAGE_IDS = PAGE_ORDER.filter((id) => id in PAGE_TITLES)
 
 interface Fazenda extends FazendaRef {
   acesso_id: string

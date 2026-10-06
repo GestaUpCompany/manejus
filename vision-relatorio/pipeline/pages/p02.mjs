@@ -75,6 +75,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Auditoria Mensal de Estoque',
-    pageNum: 2, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
+    pageNum: ctx.pageNum ?? 2, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

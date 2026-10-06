@@ -108,6 +108,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Vendas de Animais Vivos · Comercial Vivo',
-    pageNum: 22, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
+    pageNum: ctx.pageNum ?? 8, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

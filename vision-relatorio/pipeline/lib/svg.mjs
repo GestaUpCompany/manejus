@@ -111,8 +111,12 @@ export function comboChart(spec) {
   if (line) {
     const lVals = line.values;
     const nums = lVals.filter(v => v != null);
-    const lo = line.domain?.[0] ?? Math.floor((Math.min(...nums) - 0.2) * 10) / 10;
-    const hi = line.domain?.[1] ?? Math.ceil((Math.max(...nums) + 0.2) * 10) / 10;
+    // margem proporcional à amplitude: sem ela o mínimo da série cola na base
+    // do gráfico e o rótulo invade o eixo; séries não-negativas nunca passam de 0
+    const lMn = Math.min(...nums), lMx = Math.max(...nums);
+    const lPad = Math.max((lMx - lMn) * 0.15, Math.abs(lMx) * 0.08, 0.5);
+    const lo = line.domain?.[0] ?? Math.max(lMn >= 0 ? 0 : -Infinity, Math.floor((lMn - lPad) * 10) / 10);
+    const hi = line.domain?.[1] ?? Math.ceil((lMx + lPad) * 10) / 10;
     const ly = (v) => axisY - ((v - lo) / (hi - lo || 1)) * (axisY - topPad);
     const pts = lVals.map((v, i) => v == null ? null : [xb.cx(i), ly(v)]);
     if (line.connectNulls === false) {
@@ -180,7 +184,9 @@ export function comboChart(spec) {
   // emite rótulos de barra (pós-resolução de colisão com a linha)
   for (const bl of bLbl) {
     if (!bl) continue;
-    out.push(`<text class="${bl.inside ? 'vlbl w' : 'vlbl'}${bars?.labelCls ? ' ' + bars.labelCls : ''}${dense ? ' dense' : ''}" x="${f(bl.x)}" y="${f(bl.y)}" text-anchor="middle"${stl(fsV, ';font-weight:600')}>${esc(bl.txt)}</text>`);
+    // labelCls (cor de acento da página) só em rótulo fora da barra; dentro,
+    // a mesma cor do preenchimento tornaria o texto invisível
+    out.push(`<text class="${bl.inside ? 'vlbl w' : 'vlbl'}${!bl.inside && bars?.labelCls ? ' ' + bars.labelCls : ''}${dense ? ' dense' : ''}" x="${f(bl.x)}" y="${f(bl.y)}" text-anchor="middle"${stl(fsV, ';font-weight:600')}>${esc(bl.txt)}</text>`);
   }
 
   // eixo x — rótulo longo demais para o slot quebra em duas linhas no separador;

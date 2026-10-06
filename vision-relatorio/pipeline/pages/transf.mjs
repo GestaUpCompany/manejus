@@ -49,7 +49,7 @@ function renderTransf({ model, ctx, v, sufixo, pageNum, corBarra }) {
     return pageShell({
       kicker: kickerPeriodo(meta.ini, meta.fim),
       title: `Transferência de Animais · ${sufixo}`,
-      pageNum, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, extraCss,
+      pageNum: ctx.pageNum ?? pageNum, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, extraCss,
       body: `${kpis}<div class="chart1"><div class="empty-note">Nenhuma transferência de ${sufixo.toLowerCase()} registrada no período.</div></div>`,
     });
   }
@@ -108,7 +108,7 @@ function renderTransf({ model, ctx, v, sufixo, pageNum, corBarra }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: `Transferência de Animais · ${sufixo}`,
-    pageNum, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
+    pageNum: ctx.pageNum ?? pageNum, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }
 

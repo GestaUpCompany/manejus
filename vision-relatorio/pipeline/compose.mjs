@@ -50,6 +50,7 @@ const registry = {
   p11: (await import('./pages/p11.mjs')).render,
   p12: (await import('./pages/p12.mjs')).render,
   p13: (await import('./pages/p13.mjs')).render,
+  p13b: (await import('./pages/p13b.mjs')).render,
   p14: (await import('./pages/p14.mjs')).render,
   p15: (await import('./pages/p15.mjs')).render,
   p16: (await import('./pages/p16.mjs')).render,

@@ -516,6 +516,8 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   const desembTotal = sum(desemb, x => x.valor);
   const desembPorMes = meses.map(k => ({
     mes: k, valor: sum(desemb.filter(d => ym(d.data) === k), x => x.valor),
+    animalDias: sum(diariasPeriodo.filter(x => ym(x.data) === k), x => x.saldoFinal),
+    rebMedio: rebMedioPorMes.get(k) || 0,
   }));
   // agrupamento por tipo case-insensitive (Aruã tem "investimentos_e_Estruturação" vs "Investimentos_e_Estruturação")
   const desembPorTipo = [...groupBy(desemb, x => x.tipo.toLowerCase())].map(([k, g]) => ({ tipo: g[0].tipo, valor: sum(g, x => x.valor) })).sort((a, b) => b.valor - a.valor);
@@ -547,8 +549,12 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     total: desembTotal,
     mediaMensal: desembTotal / nMeses,
     porHa: desembTotal / cad.areaHa,
+    porHaMes: nMeses ? desembTotal / nMeses / cad.areaHa : 0,
     custoDiariaCab: animalDias ? desembTotal / animalDias : 0,
-    mensal: desembPorMesT.map(m => ({ ...m, porHa: m.valor / cad.areaHa })),
+    mensal: desembPorMesT.map(m => ({
+      ...m, porHa: m.valor / cad.areaHa,
+      custoDiariaCab: m.animalDias ? m.valor / m.animalDias : 0,
+    })),
     porTipo: desembPorTipo.map(t => ({ ...t, pct: desembTotal ? t.valor / desembTotal : 0 })),
     rankingPlanos: desembPorPlano,
     cf: { total: cfTotal, cvTotal, cfcvTotal, relacao: cfcvTotal ? [cfTotal / cfcvTotal, cvTotal / cfcvTotal] : [0, 0] },
@@ -588,7 +594,10 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
 
   // ---------- p.15/16 Receitas ----------
   const recTotal = sum(receitas, x => x.valorLiq);
-  const recPorMesAll = meses.map(k => ({ mes: k, valor: sum(receitas.filter(r => ym(r.data) === k), x => x.valorLiq) }));
+  const recPorMesAll = meses.map(k => ({
+    mes: k, valor: sum(receitas.filter(r => ym(r.data) === k), x => x.valorLiq),
+    rebMedio: rebMedioPorMes.get(k) || 0,
+  }));
   const recPorMes = recPorMesAll.slice(0, lastVal(recPorMesAll, 'valor') + 1);
   const receitasPage = {
     total: recTotal,
@@ -621,7 +630,9 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   // ---------- p.18 Índices ----------
   const siAt = totIni.at, sfAt = totFim.at;
   const entradasAt = comprasPage.at;   // só compras (quirk do modelo)
-  const saidasAt = sum(vendasAbate, x => x.atAbatidas); // só vendas abate
+  // saídas em @ = todas as vendas comerciais (abate + comercial vivo);
+  // excluir vivos subestimava @ produzida e divergia do Resumo de Vendas
+  const saidasAt = sum(vendasComerciais, x => x.atAbatidas);
   const atProduzida = sfAt + saidasAt - entradasAt - siAt;
   // @ produzida por mês: Δ do estoque em @ + saídas − entradas do mês. O mês
   // inicial usa o saldo inicial do período como base; meses além do último
@@ -635,7 +646,7 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
       if (!b) continue;
       const atF = sum(b.linhas, x => x.at);
       const e = sum(comprasSo.filter(c => ym(c.data) === k), x => x.at);
-      const s = sum(vendasAbate.filter(v => ym(v.data) === k), x => x.atAbatidas);
+      const s = sum(vendasComerciais.filter(v => ym(v.data) === k), x => x.atAbatidas);
       atProduzidaPorMes.push({ mes: k, at: atF + s - e - atAnt });
       atAnt = atF;
     }

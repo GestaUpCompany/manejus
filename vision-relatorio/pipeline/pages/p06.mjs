@@ -33,7 +33,7 @@ function renderAbate({ model, ctx, v, sufixo, pageNum }) {
     return pageShell({
       kicker: kickerPeriodo(meta.ini, meta.fim),
       title: `Vendas de Animais · Abate ${sufixo}`,
-      pageNum, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, extraCss,
+      pageNum: ctx.pageNum ?? pageNum, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, extraCss,
       body: `${kpis}<div class="chart1"><div class="empty-note">Nenhum abate de ${sufixo.toLowerCase()} registrado no período.</div></div>`,
     });
   }
@@ -94,14 +94,14 @@ function renderAbate({ model, ctx, v, sufixo, pageNum }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: `Vendas de Animais · Abate ${sufixo}`,
-    pageNum, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
+    pageNum: ctx.pageNum ?? pageNum, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }
 
 export function renderMachos({ model, ctx }) {
-  return renderAbate({ model, ctx, v: model.vendasAbateM, sufixo: 'Machos', pageNum: 8 });
+  return renderAbate({ model, ctx, v: model.vendasAbateM, sufixo: 'Machos', pageNum: 9 });
 }
 
 export function renderFemeas({ model, ctx }) {
-  return renderAbate({ model, ctx, v: model.vendasAbateF, sufixo: 'Fêmeas', pageNum: 9 });
+  return renderAbate({ model, ctx, v: model.vendasAbateF, sufixo: 'Fêmeas', pageNum: 10 });
 }

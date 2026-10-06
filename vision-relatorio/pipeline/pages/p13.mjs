@@ -12,7 +12,7 @@ export function render({ model, ctx }) {
   const area = areaChart({
     labels: d.mensalCfCv.map(m => mesLbl(m.mes)),
     values: d.mensalCfCv.map(m => m.porHa),
-    W: 1184, H: 178, color: C.green, labelFmt: (v) => `R$ ${fmt2(v)}`, labelScale: 1.3,
+    W: 1184, H: 185, color: C.green, labelFmt: (v) => `R$ ${fmt2(v)}`, labelScale: 1.3,
   });
 
   const combo = comboChart({
@@ -63,6 +63,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Relatório de Custeio · Somente Custos Fixos e Variáveis',
-    pageNum: 16, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
+    pageNum: ctx.pageNum ?? 17, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }

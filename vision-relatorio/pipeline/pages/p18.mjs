@@ -97,6 +97,6 @@ export function render({ model, ctx }) {
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
     title: 'Índices Técnicos e Econômicos',
-    pageNum: 21, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
+    pageNum: ctx.pageNum ?? 23, logoSrc: ctx.logoSrc, fazenda: ctx.fazendaNome, body, extraCss,
   });
 }
