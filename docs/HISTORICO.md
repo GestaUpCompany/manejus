@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Rodeio no layout novo do PWA: contagem por categoria, foto/voz nos problemas (2026-10-06)
+
+Migration `20261006210000_rodeio_categorias_detalhes_observacao.sql`: `registros_rodeio.categorias_detalhes jsonb` (`[{nome, quant_atual, quant_informada}]`, mesmo formato de `registros_pastagens`) e `observacao text` (observação do lote, digitada ou ditada). Colunas fixas (`vaca`, `boi`, `garrote`...) continuam preenchidas por normalização da categoria, então relatórios e painel seguem lendo `total_cabecas`/`diagnosticos`. `diagnosticos.<item>.foto_url` passa a existir quando o peão fotografa o problema (upload no PWA, bucket `fotos-registros`). Tudo aditivo: PWAs antigos continuam compatíveis. Painel ainda não exibe `categorias_detalhes`/fotos em `RodeioDetalhes`.
+
 ## Isolamento de tenant: RLS por fazenda em fazendas, usuario_fazenda, pastos, lotes e peoes (2026-10-06)
 
 Incidente real (Serrinha 5, Fazenda Marcon): controller vinculado a outra fazenda alterou geometria de pasto e `lotes.pasto_id` de registros da Marcon. Causa raiz: policies `qual=true`/`check=true` nas tabelas de cadastro (item S3 da auditoria), incluindo `pastos_update_public` aberta para o role `public`, e auto-vínculo livre em `usuario_fazenda` (escalação de privilégio). O audit também revelou que `app.current_user_*` é session-scoped e pode vazar entre requisições pooled, ou seja, o nome gravado no `audit_log` não é prova confiável de autoria.
