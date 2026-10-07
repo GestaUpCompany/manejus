@@ -151,7 +151,7 @@ interface Props {
   relatorioInfo: RelatorioInfo
 }
 
-export function RelatorioAtividadesPublico({ relatorioInfo }: Props) {
+export function RelatorioAtividadesPublico({ token, relatorioInfo }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [atividades, setAtividades] = useState<AtividadeRel[]>([])
@@ -186,35 +186,29 @@ export function RelatorioAtividadesPublico({ relatorioInfo }: Props) {
         fim = new Date().toISOString().split('T')[0]
       }
 
-      // Atividades com funcionários
-      const query = supabase
-        .from('atividades')
-        .select(`
-          id, titulo, descricao, local, data_inicio, data_fim, prioridade,
-          status, atrasada, nao_prevista,
-          setor:setores(nome),
-          funcionarios:atividade_funcionarios(
-            id, funcionario_id, status_individual, tempo_gasto_segundos,
-            inicio_at, fim_at,
-            funcionario:funcionarios(nome)
-          )
-        `)
-        .eq('fazenda_id', fazendaId)
-        .is('deleted_at', null)
-        .gte('data_inicio', inicio)
-        .lte('data_inicio', fim)
-        .order('data_inicio', { ascending: false })
+      // Período anterior (mesma duração imediatamente antes do período atual)
+      const duracaoMs = new Date(fim).getTime() - new Date(inicio).getTime()
+      const inicioAnt = new Date(new Date(inicio).getTime() - duracaoMs - 86400000).toISOString().split('T')[0]
+      const fimAnt = new Date(new Date(inicio).getTime() - 86400000).toISOString().split('T')[0]
 
-      const { data: atvData, error: atvError } = await query
+      // Dados via RPC com validação de token (as tabelas não são mais legíveis por anon)
+      const { data: rel, error: relRpcError } = await supabase.rpc('get_dados_relatorio_atividades', {
+        p_token: token,
+        p_data_inicio: inicio,
+        p_data_fim: fim,
+        p_data_inicio_ant: inicioAnt,
+        p_data_fim_ant: fimAnt,
+      })
 
-      if (atvError) {
-        console.error('Erro ao carregar atividades:', atvError)
+      if (relRpcError || !rel) {
+        console.error('Erro ao carregar atividades:', relRpcError)
         setError('Erro ao carregar dados do relatório.')
         setLoading(false)
         return
       }
 
-      const mapped: AtividadeRel[] = (atvData || []).map((a: any) => ({
+      const dados = rel as any
+      const mapAtividades = (lista: any[]): AtividadeRel[] => (lista || []).map((a: any) => ({
         id: a.id,
         titulo: a.titulo,
         descricao: a.descricao,
@@ -237,23 +231,9 @@ export function RelatorioAtividadesPublico({ relatorioInfo }: Props) {
         })),
       }))
 
-      setAtividades(mapped)
+      setAtividades(mapAtividades(dados.atividades))
 
-      // Imprevistos do período (busca simples, join com atividade_funcionarios para nome)
-      const { data: impData } = await supabase
-        .from('atividade_imprevistos')
-        .select(`
-          id, tipo, descricao, ocorrido_at, impacto_minutos,
-          atividade_funcionario:atividade_funcionarios(
-            funcionario:funcionarios(nome),
-            atividade:atividades(titulo, fazenda_id)
-          )
-        `)
-        .gte('ocorrido_at', inicio + 'T00:00:00')
-        .lte('ocorrido_at', fim + 'T23:59:59')
-        .order('ocorrido_at', { ascending: false })
-
-      const impMapped: ImprevistoRel[] = (impData || [])
+      const impMapped: ImprevistoRel[] = (dados.imprevistos || [])
         .filter((i: any) => i.atividade_funcionario?.atividade?.fazenda_id === fazendaId)
         .map((i: any) => ({
           id: i.id,
@@ -266,72 +246,9 @@ export function RelatorioAtividadesPublico({ relatorioInfo }: Props) {
         }))
 
       setImprevistos(impMapped)
-
-      // Período anterior (mesma duração imediatamente antes do período atual)
-      const duracaoMs = new Date(fim).getTime() - new Date(inicio).getTime()
-      const inicioAnt = new Date(new Date(inicio).getTime() - duracaoMs - 86400000).toISOString().split('T')[0]
-      const fimAnt = new Date(new Date(inicio).getTime() - 86400000).toISOString().split('T')[0]
-
-      const { data: atvAntData } = await supabase
-        .from('atividades')
-        .select(`
-          id, titulo, descricao, local, data_inicio, data_fim, prioridade,
-          status, atrasada, nao_prevista,
-          setor:setores(nome),
-          funcionarios:atividade_funcionarios(
-            id, funcionario_id, status_individual, tempo_gasto_segundos,
-            inicio_at, fim_at,
-            funcionario:funcionarios(nome)
-          )
-        `)
-        .eq('fazenda_id', fazendaId)
-        .is('deleted_at', null)
-        .gte('data_inicio', inicioAnt)
-        .lte('data_inicio', fimAnt)
-        .order('data_inicio', { ascending: false })
-
-      const mappedAnt: AtividadeRel[] = (atvAntData || []).map((a: any) => ({
-        id: a.id,
-        titulo: a.titulo,
-        descricao: a.descricao,
-        local: a.local,
-        data_inicio: a.data_inicio,
-        data_fim: a.data_fim,
-        prioridade: a.prioridade,
-        status: a.status,
-        atrasada: a.atrasada,
-        nao_prevista: a.nao_prevista,
-        setor_nome: a.setor?.nome || null,
-        funcionarios: (a.funcionarios || []).map((af: any) => ({
-          id: af.id,
-          funcionario_id: af.funcionario_id,
-          funcionario_nome: af.funcionario?.nome || 'Sem nome',
-          status_individual: af.status_individual,
-          tempo_gasto_segundos: af.tempo_gasto_segundos,
-          inicio_at: af.inicio_at,
-          fim_at: af.fim_at,
-        })),
-      }))
-      setAtividadesPeriodoAnterior(mappedAnt)
-
-      // Funcionários ativos
-      const { data: funcData } = await supabase
-        .from('funcionarios')
-        .select('id, nome')
-        .eq('fazenda_id', fazendaId)
-        .eq('ativo', true)
-        .order('nome')
-
-      setFuncionarios(funcData || [])
-
-      // Setores com atividades (para filtro)
-      const { data: setorData } = await supabase
-        .from('setores')
-        .select('nome')
-        .eq('fazenda_id', fazendaId)
-        .order('nome')
-
-      setSetores((setorData || []).map((s: any) => s.nome).filter(Boolean))
+      setAtividadesPeriodoAnterior(mapAtividades(dados.atividades_anterior))
+      setFuncionarios(dados.funcionarios || [])
+      setSetores((dados.setores || []).map((s: any) => s.nome).filter(Boolean))
       setError(null)
     } catch (err) {
       console.error('Erro:', err)
@@ -339,7 +256,7 @@ export function RelatorioAtividadesPublico({ relatorioInfo }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [relatorioInfo, dataInicio, dataFim])
+  }, [token, relatorioInfo, dataInicio, dataFim])
 
   useEffect(() => {
     carregarDados()
