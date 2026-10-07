@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Morte no layout novo do PWA: fotos de brinco e cabeça (2026-10-07)
+
+Migration `20261007110000_morte_fotos_brinco_cabeca.sql` (db push): colunas aditivas `registros_morte.foto_brinco_url` e `foto_cabeca_url`. A foto do animal segue em `foto_url` (com `latitude/longitude/gps_accuracy`, GPS obrigatório). No PWA a foto do animal passou a ser obrigatória; brinco e cabeça são opcionais e sobem para o bucket `fotos-morte` (`<fazenda>/<id>/brinco|cabeca`). Categorias vêm do lote (que varia por destino); sem categorias cadastradas, o fallback usa a lista por destino do lote (a mesma da Movimentação, agora em `utils/categorias.ts`) e a opção "Outros" de categoria foi removida. Os 19 itens SIM/NÃO mantêm a semântica (observação só na resposta de problema; `animalSozinho`/`morteSubita` invertidos) e ganharam ditado por voz; observação de identificação também. O painel ainda não exibe as novas fotos (candidato a backlog).
+
+## Morte no layout novo do PWA: fotos de brinco e cabeça (2026-10-07)
+
+Migration `20261007110000_morte_fotos_brinco_cabeca.sql` (db push): colunas aditivas `registros_morte.foto_brinco_url` e `foto_cabeca_url`. A foto do animal segue em `foto_url` (com `latitude/longitude/gps_accuracy`, GPS obrigatório). No PWA a foto do animal passou a ser obrigatória; brinco e cabeça são opcionais e sobem para o bucket `fotos-morte` (`<fazenda>/<id>/brinco|cabeca`). Categorias vêm do lote (que varia por destino); sem categorias cadastradas, o fallback usa a lista por destino do lote (a mesma da Movimentação, agora em `utils/categorias.ts`) e a opção "Outros" de categoria foi removida. Os 19 itens SIM/NÃO mantêm a semântica (observação só na resposta de problema; `animalSozinho`/`morteSubita` invertidos) e ganharam ditado por voz; a observação de identificação também. O painel ainda não exibe as novas fotos (candidato a backlog).
+
 ## Manejo Pastagens no layout novo do PWA: fotos dos pastos com GPS (2026-10-07)
 
 Migration `20261007100000_pastagens_fotos_gps.sql` (db push): em `registros_pastagens`, colunas aditivas `foto_saida_url`, `foto_saida_latitude`, `foto_saida_longitude`, `foto_saida_gps_accuracy`, `foto_saida_em` e o equivalente `foto_entrada_*`. O PWA exige uma foto por pasto (saída e entrada), marcada com GPS (opcional se indisponível) e hora, enviada ao bucket `fotos-registros` (`pastagens/<id>/saida|entrada`). Avaliação geral passou ao padrão do Rodeio (afirmações negativas, foto e voz por item; `avaliacao_geral` mantém `{valor, observacao}` e ganha `foto_url` por item). Escore corporal agora só inteiros 1–5 e equipe aceita 6+. O painel ainda não exibe as fotos/GPS (candidato a backlog).
