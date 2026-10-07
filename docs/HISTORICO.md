@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Manejo Pastagens no layout novo do PWA: fotos dos pastos com GPS (2026-10-07)
+
+Migration `20261007100000_pastagens_fotos_gps.sql` (db push): em `registros_pastagens`, colunas aditivas `foto_saida_url`, `foto_saida_latitude`, `foto_saida_longitude`, `foto_saida_gps_accuracy`, `foto_saida_em` e o equivalente `foto_entrada_*`. O PWA exige uma foto por pasto (saída e entrada), marcada com GPS (opcional se indisponível) e hora, enviada ao bucket `fotos-registros` (`pastagens/<id>/saida|entrada`). Avaliação geral passou ao padrão do Rodeio (afirmações negativas, foto e voz por item; `avaliacao_geral` mantém `{valor, observacao}` e ganha `foto_url` por item). Escore corporal agora só inteiros 1–5 e equipe aceita 6+. O painel ainda não exibe as fotos/GPS (candidato a backlog).
+
 ## Doação desconta cabeças do lote (2026-10-06)
 
 Migration `20261006230000_calculate_quant_atual_doacao.sql`: `calculate_quant_atual` passa a incluir `'Doação'` entre as saídas (junto de Consumo/Saída). No PWA a Doação deixou de ser um registro vazio (0 cabeças, que na prática nem salvava por conta da validação de destino): agora exige lote de origem e cabeças por categoria, grava um registro por categoria com `destino` nulo e `motivo_movimentacao = 'Doação'`. Não havia Doações reais anteriores com cabeças (só o teste de hoje).
