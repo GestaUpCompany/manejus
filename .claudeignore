@@ -1,0 +1,40 @@
+# ATENÇÃO: Claude Code não lê .claudeignore nativamente.
+# Este arquivo documenta o que deve ficar fora de contexto e é honrado
+# por ferramentas compatíveis. O bloqueio efetivo no Claude Code está
+# nas regras "deny" de .claude/settings.json.
+
+# Dependências e builds
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# Segredos
+.env
+**/.env
+**/.env.*
+
+# Backups e dumps de banco
+backups/
+backup*.sql
+supabase_backup.sql
+backup_*.json
+
+# Artefatos pontuais na raiz (não são código do produto)
+tmp_*
+smoke-*
+__*.cjs
+*.kmz
+*.xlsm
+*.xlsx
+*.pdf
+*.pbix
+*.png
+*.webp
+nul
+vision-relatorio/
+tmp_pbix/
+
+# Saídas de ferramentas
+*.log
+*.tsbuildinfo
