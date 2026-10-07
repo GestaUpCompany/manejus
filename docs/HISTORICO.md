@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Fix: cria viva em lote sem categoria "Bezerro/Bezerra ao Pé" falhava no sync (2026-10-07)
+
+Migration `20261007130000_fix_fn_ensure_categoria_bezerro_ao_pe_valores.sql`: o INSERT em `lote_categorias` de `fn_ensure_categoria_bezerro_ao_pe` (trigger de `registros_maternidade`) tinha 51 colunas e só 49 valores (erro `42601 INSERT has more target columns than expressions`), então o registro de qualquer cria viva num lote que ainda não tinha a categoria ficava preso no aparelho com sync em erro. Descoberto no baseline de testes da Maternidade (bezerra fêmea em lote só com "bezerro ao pé"). Correção: dois `NULL` para `custo_total_entrada_reais_cab/lote`; resto da função igual. O registro preso foi reenviado e sincronizou. A versão anterior (migration 20260922100000, "cria morta não conta cabeça") reintroduziu o descompasso.
+
 ## Enfermaria no layout novo do PWA: foto do brinco, dose com stepper e áudio (2026-10-07)
 
 Migration `20261007120000_enfermaria_foto_brinco.sql` (db push): coluna aditiva `registros_enfermaria.foto_brinco_url`. No PWA: foto opcional do brinco na identificação (bucket `fotos-registros`, `enfermaria/<id>/brinco`), dose aplicada com stepper e chips ml/mg (continua gravada como texto, ex.: "20 ml", "1,5 mg", então `medicamentos` e o texto compartilhado não mudam), bloco "Foto ou recado" com ditado por voz na observação do tratamento, rascunho e rodapé com pendência. Os inputs de ID manejo/brinco/chip foram mantidos. O painel ainda não exibe a foto do brinco.
