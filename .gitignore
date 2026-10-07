@@ -68,3 +68,13 @@ vision-relatorio/pipeline/out/
 vision-relatorio/pipeline/extract-*.json
 vision-relatorio/pipeline/model-*.json
 vision-relatorio/pipeline/_*
+
+# Claude Code local settings (contem segredos / preferencias pessoais)
+.claude/settings.local.json
+
+# Artefatos soltos: planilhas, PDFs e HTMLs pontuais na raiz (nao sao codigo do produto)
+# Arquivos ja versionados (ex.: modelos .xlsx em apps/manejus/public) continuam rastreados
+*.pdf
+*.xlsx
+*.xls
+/*.html

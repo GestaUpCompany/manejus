@@ -672,7 +672,7 @@ export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAba
   }
 
   // Tabela 1: Detalhamento por máquina (colunas 1-5)
-  let finalY = await renderTabelaDetalhamento(ctx, dados.detalhesPorMaquina, dados.totalLitros, dados.totalRegistros, tabelaY, margin)
+  const finalY = await renderTabelaDetalhamento(ctx, dados.detalhesPorMaquina, dados.totalLitros, dados.totalRegistros, tabelaY, margin)
 
   // Tabela 2: Detalhamento operacional (colunas 6-9)
   let tabela2StartY = finalY + 18

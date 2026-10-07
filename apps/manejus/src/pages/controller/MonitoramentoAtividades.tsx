@@ -313,7 +313,7 @@ export function MonitoramentoAtividades() {
       if (data) {
         // Buscar setores dos funcionarios via junction N:N
         const funcIds = ((data as any).funcionarios || []).map((af: any) => af.funcionario_id)
-        let setoresByFuncId: Record<string, string[]> = {}
+        const setoresByFuncId: Record<string, string[]> = {}
         if (funcIds.length > 0) {
           const { data: fsData } = await supabase
             .from('funcionario_setores')

@@ -128,7 +128,7 @@ export async function getAtividades(
 
   // Buscar setores de cada funcionario via junction (N:N)
   const funcIds = [...new Set((afs || []).map((af: any) => af.funcionario_id))]
-  let setoresByFuncId: Record<string, string[]> = {}
+  const setoresByFuncId: Record<string, string[]> = {}
   if (funcIds.length > 0) {
     const { data: fsData } = await supabase
       .from('funcionario_setores')
@@ -147,7 +147,7 @@ export async function getAtividades(
 
   // Fallback: se o join voltar null (RLS no join aninhado), buscar nomes separadamente
   const funcIdsSemNome = (afs || []).filter((af: any) => !af.funcionario?.nome).map((af: any) => af.funcionario_id)
-  let nomesByFuncId: Record<string, string> = {}
+  const nomesByFuncId: Record<string, string> = {}
   if (funcIdsSemNome.length > 0) {
     const uniqueIds = [...new Set(funcIdsSemNome)]
     const { data: funcs } = await supabase

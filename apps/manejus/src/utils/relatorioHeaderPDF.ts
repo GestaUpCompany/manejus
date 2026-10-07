@@ -63,7 +63,7 @@ export function renderRelatorioHeader(ctx: HeaderContext, opts: HeaderOptions) {
   const logoX = 10
   const logoY = 6
   const logoMargin = 0.6
-  let nextX = logoX + logoSize + 6
+  const nextX = logoX + logoSize + 6
 
   if (logoGestaoBase64) {
     const formato = logoGestaoBase64.toLowerCase().includes('data:image/png') ? 'PNG' : 'JPEG'

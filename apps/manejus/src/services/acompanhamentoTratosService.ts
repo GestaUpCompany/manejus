@@ -667,8 +667,8 @@ export async function fetchHorariosTratos(
   )]
 
   // Buscar horários sugeridos e tipos de programação
-  let horariosMapa: Record<string, string | null> = {} // chave: "programacao_id|ordem_trato" -> horario
-  let tiposMapa: Record<string, TipoProgramacao | null> = {} // programacao_id -> tipo
+  const horariosMapa: Record<string, string | null> = {} // chave: "programacao_id|ordem_trato" -> horario
+  const tiposMapa: Record<string, TipoProgramacao | null> = {} // programacao_id -> tipo
   if (programacaoIds.length > 0) {
     const [percentuaisRes, progsRes] = await Promise.all([
       supabase

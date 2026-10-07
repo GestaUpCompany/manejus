@@ -187,7 +187,7 @@ export function RelatorioAtividadesPublico({ relatorioInfo }: Props) {
       }
 
       // Atividades com funcionários
-      let query = supabase
+      const query = supabase
         .from('atividades')
         .select(`
           id, titulo, descricao, local, data_inicio, data_fim, prioridade,

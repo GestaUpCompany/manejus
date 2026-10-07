@@ -89,7 +89,7 @@ export function parseLinhasPlanilha(jsonData: unknown[][]): ParsePlanilhaResult 
   }
 
   let headerRowIdx = -1
-  let colIndices: Record<string, number> = {}
+  const colIndices: Record<string, number> = {}
 
   for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
     const row = jsonData[i]

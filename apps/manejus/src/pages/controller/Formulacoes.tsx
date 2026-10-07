@@ -617,7 +617,7 @@ export function Formulacoes() {
 
     // Formulações creep são vinculadas diretamente às categorias ao pé
     // (lote_categorias.formulacao_id), não a lotes.formulacao_id
-    let lotesAfetadosCreep: { id: string; nome: string }[] = []
+    const lotesAfetadosCreep: { id: string; nome: string }[] = []
     if (dieta.e_creep) {
       const { data: catsCreep } = await supabase
         .from('lote_categorias')

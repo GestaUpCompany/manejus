@@ -60,7 +60,7 @@ export function Movimentacao() {
     const fazendaId = vinculos[0].fazenda_id
     getFazendaNome(fazendaId).then(setFazendaNome)
 
-    let query = supabase
+    const query = supabase
       .from('registros_movimentacao')
       .select('*, lote_origem_nome:lotes!lote_origem_id(nome), lote_destino_nome:lotes!lote_destino_id(nome), fazenda_destino_nome:fazendas!fazenda_destino_id(nome), individuo:individuos!individuo_id(id_brinco)')
       .eq('fazenda_id', fazendaId)

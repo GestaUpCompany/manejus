@@ -2148,7 +2148,7 @@ export function MapaFazenda() {
         const p = pastoRes.data as any
         const bebedourosList: { id: string; nome: string }[] = []
         if (bebedourosRes.data) {
-          ;(bebedourosRes.data as any[]).forEach((row) => {
+          (bebedourosRes.data as any[]).forEach((row) => {
             const b = row.bebedouros
             if (b) {
               const arr = Array.isArray(b) ? b : [b]

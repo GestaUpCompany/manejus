@@ -54,7 +54,7 @@ export function RegistrosLimpeza() {
     const fazendaId = vinculos[0].fazenda_id
     getFazendaNome(fazendaId).then(setFazendaNome)
 
-    let query = supabase
+    const query = supabase
       .from('registros_limpeza')
       .select('*')
       .eq('fazenda_id', fazendaId)

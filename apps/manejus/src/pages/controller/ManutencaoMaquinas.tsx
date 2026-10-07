@@ -51,7 +51,7 @@ export function ManutencaoMaquinas() {
     const fazendaId = vinculos[0].fazenda_id
     getFazendaNome(fazendaId).then(setFazendaNome)
 
-    let query = supabase
+    const query = supabase
       .from('registros_manutencao_maquinas')
       .select('*')
       .eq('fazenda_id', fazendaId)
