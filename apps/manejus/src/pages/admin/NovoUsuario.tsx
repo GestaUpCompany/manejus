@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { signUp } from '@gestaup/shared'
+import { signUp, useAuth } from '@gestaup/shared'
 import { getFazendas, Fazenda } from '@gestaup/shared'
 import { vincularFazendaAoUsuario } from '@gestaup/shared'
 import { Button, Input, Card } from '@gestaup/ui'
 
 export function NovoUsuario() {
   const navigate = useNavigate()
+  const { user: usuarioLogado } = useAuth()
+  // Só super_admin cria admin (a Edge Function também recusa; aqui só evitamos a opção inútil)
+  const podeCriarAdmin = usuarioLogado?.papel === 'super_admin'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [fazendas, setFazendas] = useState<Fazenda[]>([])
@@ -192,7 +195,7 @@ export function NovoUsuario() {
               required
             >
               <option value="controller">Controller</option>
-              <option value="admin">Admin</option>
+              {podeCriarAdmin && <option value="admin">Admin</option>}
             </select>
           </div>
 

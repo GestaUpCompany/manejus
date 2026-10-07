@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getUsuarioById, updateUsuario } from '@gestaup/shared'
-import { changeUserPassword } from '@gestaup/shared'
+import { changeUserPassword, useAuth } from '@gestaup/shared'
 import { getFazendas, Fazenda } from '@gestaup/shared'
 import { getFazendasDoUsuario, vincularFazendaAoUsuario, desvincularFazendaDoUsuario } from '@gestaup/shared'
 import { Button, Input, Card } from '@gestaup/ui'
@@ -9,6 +9,9 @@ import { Button, Input, Card } from '@gestaup/ui'
 export function EditarUsuario() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const { user: usuarioLogado } = useAuth()
+  // O banco só deixa super_admin alterar papel (trigger trg_usuarios_protege_colunas); aqui só evitamos o erro
+  const podeAlterarPapel = usuarioLogado?.papel === 'super_admin'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -195,7 +198,9 @@ export function EditarUsuario() {
               name="papel"
               value={formData.papel}
               onChange={handleChange}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+              disabled={!podeAlterarPapel}
+              title={podeAlterarPapel ? undefined : 'Somente super_admin altera o papel'}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
               required
             >
               <option value="controller">Controller</option>
