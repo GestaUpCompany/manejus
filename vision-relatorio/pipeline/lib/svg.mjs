@@ -61,9 +61,6 @@ export function comboChart(spec) {
   // halo/peso 700 em fonte maior dá aparência de negrito excessivo (CONVENCOES)
   const stl = (px, extra = '') => labelScale === 1 ? '' : ` style="font-size:${px}px${extra}"`;
   const estW = (list) => Math.max(4, ...list.map(s => String(s).length)) * (dense ? 4.8 : 5.6) * labelScale + 6;
-  const barEvery = bars?.labelFmt
-    ? Math.max(1, Math.ceil(estW(bVals.filter(v => v != null).map(v => bars.labelFmt(v))) / xb.step))
-    : 1;
   const lineEvery = line?.labelFmt
     ? Math.max(1, Math.ceil(estW(line.values.filter(v => v != null).map(v => line.labelFmt(v))) / xb.step))
     : 1;
@@ -93,17 +90,28 @@ export function comboChart(spec) {
     if (v > 0) out.push(`<rect x="${f(xb.cx(i) - bw / 2)}" y="${f(y)}" width="${f(bw)}" height="${f(h)}" rx="4" fill="${bars?.color ?? C.blue}" opacity="0.92"/>`);
   }
   // rótulos das barras — posição resolvida junto com os da linha para evitar colisão
-  const bPeak = Math.max(...bVals, 0);
+  const placedBar = [];
   const bLbl = bars ? bVals.map((v, i) => {
-    if (!v || !bars.labelFmt || (i % barEvery !== 0 && v !== bPeak)) return null;
+    if (!v || !bars.labelFmt) return null;
     const h = axisY - by(v);
     const txt = bars.labelFmt(v);
-    // rótulo interno exige largura além de altura: texto branco mais largo que a
-    // barra vaza para o fundo branco e fica invisível. Avaliado só quando a página
-    // adota labelScale ≠ 1, para não mudar o layout das demais nesta etapa.
-    const fitsW = labelScale === 1 || String(txt).length * (dense ? 4.4 : 5.6) * labelScale <= bw - 4;
-    const inside = fitsW && (bars.labelInside === true || (bars.labelInside !== false && h >= 26 * labelScale));
-    return { y: inside ? by(v) + Math.round(15 * labelScale) : by(v) - Math.round(6 * labelScale), inside, x: xb.cx(i), txt };
+    const x = xb.cx(i);
+    const lw = String(txt).length * (dense ? 4.4 : 5.6) * labelScale + 4;
+    // rótulo interno exige largura e altura: texto branco mais largo ou mais alto
+    // que a barra vaza para o fundo branco e fica invisível (CONVENCOES)
+    const fitsW = labelScale === 1 || lw <= bw;
+    if (fitsW && h >= 17 * labelScale && bars.labelInside !== false) {
+      return { y: by(v) + Math.round(15 * labelScale), inside: true, x, txt };
+    }
+    // acima da barra com nível escalonado quando vizinhos colidem
+    for (const off of [6, 22, 38]) {
+      const ly = by(v) - Math.round(off * labelScale);
+      if (ly < 8 * labelScale) continue;
+      if (placedBar.some(p => Math.abs(p.x - x) < (p.w + lw) / 2 && Math.abs(p.y - ly) < 12 * labelScale)) continue;
+      placedBar.push({ x, y: ly, w: lw });
+      return { y: ly, inside: false, x, txt };
+    }
+    return null;
   }) : [];
 
   // linha: por padrão liga através dos meses sem dado (connectNulls);
@@ -256,29 +264,32 @@ export function areaChart({ labels, values, W = 1184, H = 190, color = C.green, 
   const fsV = f((dense ? 8 : 10.5) * labelScale, 1);
   const cw = (dense ? 4.8 : 6.4) * labelScale;
   const lblW = Math.max(...values.filter(v => v).map(v => labelFmt(v).length), 1) * cw + 10;
-  const slot = n > 1 ? xb.cx(1) - xb.cx(0) : W;
-  const step = Math.max(1, Math.ceil(lblW / slot));
   const placed = [];
   const tryLabel = (i) => {
     const [x, y] = pts[i];
-    if (placed.some(p => Math.abs(p[0] - x) < lblW * 0.92 && Math.abs(p[1] - y) < 14 * labelScale)) return;
-    placed.push([x, y]);
     const tx = Math.min(Math.max(x, lblW / 2), W - lblW / 2);
-    const ty = f(y - Math.round(10 * labelScale));
     const txt = esc(labelFmt(values[i]));
-    if (labelScale === 1) {
-      out.push(`<text class="vlbl h${dense ? ' dense' : ''}" x="${f(tx)}" y="${ty}" text-anchor="middle">${txt}</text>`);
+    // níveis escalonados: colisão no nível junto ao ponto sobe para uma linha
+    // mais alta; último recurso é abaixo do ponto, dentro da área
+    for (const off of [10, 27, -19]) {
+      const ly = y - Math.round(off * labelScale);
+      if (ly < 8 * labelScale || ly > axisY - 16 * labelScale) continue;
+      if (placed.some(p => Math.abs(p[0] - tx) < lblW * 0.92 && Math.abs(p[1] - ly) < 14 * labelScale)) continue;
+      placed.push([tx, ly]);
+      if (labelScale === 1) {
+        out.push(`<text class="vlbl h${dense ? ' dense' : ''}" x="${f(tx)}" y="${f(ly)}" text-anchor="middle">${txt}</text>`);
+        return;
+      }
+      // halo sem stroke: cópias brancas deslocadas ±1px por trás. O stroke branco
+      // da classe `.h` vaza para o miolo dos glifos na rasterização do PDF
+      // (texto vazado), e cópia ampliada por scale vira "sombra" visível.
+      const base = `text-anchor="middle" font-family="Archivo" font-size="${fsV}" font-weight="600"`;
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        out.push(`<text x="${f(tx + dx)}" y="${f(ly + dy)}" ${base} fill="#fff">${txt}</text>`);
+      }
+      out.push(`<text x="${f(tx)}" y="${f(ly)}" ${base} fill="${C.blue}">${txt}</text>`);
       return;
     }
-    // halo sem stroke: cópias brancas deslocadas ±1px por trás. O stroke branco
-    // da classe `.h` vaza para o miolo dos glifos na rasterização do PDF
-    // (texto vazado), e cópia ampliada por scale vira "sombra" visível.
-    const base = `text-anchor="middle" font-family="Archivo" font-size="${fsV}" font-weight="600"`;
-    const yNum = y - Math.round(10 * labelScale);
-    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-      out.push(`<text x="${f(tx + dx)}" y="${f(yNum + dy)}" ${base} fill="#fff">${txt}</text>`);
-    }
-    out.push(`<text x="${f(tx)}" y="${f(yNum)}" ${base} fill="${C.blue}">${txt}</text>`);
   };
   const iMax = values.indexOf(maxV);
   for (let i = 0; i < n; i++) {
@@ -288,7 +299,7 @@ export function areaChart({ labels, values, W = 1184, H = 190, color = C.green, 
   }
   if (maxV > 0 && iMax >= 0) tryLabel(iMax);
   for (let i = 0; i < n; i++) {
-    if (!values[i] || i === iMax || i % step !== 0) continue;
+    if (!values[i] || i === iMax) continue;
     tryLabel(i);
   }
   for (let i = 0; i < n; i++) {
