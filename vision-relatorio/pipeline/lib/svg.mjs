@@ -92,8 +92,8 @@ export function comboChart(spec) {
   // rótulos das barras — posição resolvida junto com os da linha para evitar colisão
   const placedBar = [];
   const bLbl = bars ? bVals.map((v, i) => {
-    if (!v || !bars.labelFmt) return null;
-    const h = axisY - by(v);
+    if (!Number.isFinite(v) || !bars.labelFmt) return null;
+    const h = Math.max(0, axisY - by(v));
     const txt = bars.labelFmt(v);
     const x = xb.cx(i);
     const lw = String(txt).length * (dense ? 4.4 : 5.6) * labelScale + 4;
@@ -263,7 +263,7 @@ export function areaChart({ labels, values, W = 1184, H = 190, color = C.green, 
   const maxV = Math.max(...values, 0);
   const fsV = f((dense ? 8 : 10.5) * labelScale, 1);
   const cw = (dense ? 4.8 : 6.4) * labelScale;
-  const lblW = Math.max(...values.filter(v => v).map(v => labelFmt(v).length), 1) * cw + 10;
+  const lblW = Math.max(...values.filter(v => v != null).map(v => labelFmt(v).length), 1) * cw + 10;
   const placed = [];
   const tryLabel = (i) => {
     const [x, y] = pts[i];
@@ -273,7 +273,7 @@ export function areaChart({ labels, values, W = 1184, H = 190, color = C.green, 
     // mais alta; último recurso é abaixo do ponto, dentro da área
     for (const off of [10, 27, -19]) {
       const ly = y - Math.round(off * labelScale);
-      if (ly < 8 * labelScale || ly > axisY - 16 * labelScale) continue;
+      if (ly < 8 * labelScale || ly > axisY - 6 * labelScale) continue;
       if (placed.some(p => Math.abs(p[0] - tx) < lblW * 0.92 && Math.abs(p[1] - ly) < 14 * labelScale)) continue;
       placed.push([tx, ly]);
       if (labelScale === 1) {
@@ -294,12 +294,12 @@ export function areaChart({ labels, values, W = 1184, H = 190, color = C.green, 
   const iMax = values.indexOf(maxV);
   for (let i = 0; i < n; i++) {
     const v = values[i];
-    if (!v) continue;
+    if (!Number.isFinite(v)) continue;
     out.push(`<circle cx="${f(pts[i][0])}" cy="${f(pts[i][1])}" r="4" fill="${color}"/>`);
   }
   if (maxV > 0 && iMax >= 0) tryLabel(iMax);
   for (let i = 0; i < n; i++) {
-    if (!values[i] || i === iMax) continue;
+    if (!Number.isFinite(values[i]) || i === iMax) continue;
     tryLabel(i);
   }
   for (let i = 0; i < n; i++) {
