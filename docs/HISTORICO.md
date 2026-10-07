@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Entrada Cantina no layout novo do PWA: tiles de tipo, itens com stepper e item novo por voz (2026-10-07)
+
+Sem migration. A `EntradaCantinaPage` mantém o payload (`itens` por "Nome (un)", `itens_detalhe`, observação, criação de item novo pelo sync via RPC e atualização do saldo em cache) e muda a interface: tipo (classificação) em tiles, lista dos itens com controle de estoque com saldo ("tem X un") e −/quantidade/+ (inteiro para Unidade/Pacote, decimal para kg/g/L/mL), item novo com nome digitado ou por voz (sem foto), faixa "Chegando agora" com todos os tipos e "Recebido por {usuário} às HH:MM (automático)" (grava `quem_recebeu` com o usuário logado). Sem foto de nota, sem seção de conferência e sem abas (decisão do usuário). Texto compartilhável agrupado por classificação com "RECEBIDO POR".
+
 ## Carregamento Vagão no layout novo do PWA: pesagem por leitura acumulada da balança (2026-10-07)
 
 Migration `20261007190000_fabrica_confinamento_foto_url.sql` (db push): coluna aditiva `registros_fabrica_confinamento.foto_url` (foto opcional da balança no fechamento, enviada pelo caminho genérico de fotos do `syncService`, também no update de trato em aberto). A `FabricaConfinamentoPage` mantém a lógica de dados (programação de tratos, currais da dieta, trato parcial, ENCERRAR TRATO, rascunho, offline) e muda a forma de digitar as quantidades: o operador informa o número acumulado que a balança marcou depois de cada insumo, na ordem da dieta; `kg_produzido` de cada insumo é a diferença entre leituras e o total produzido é a última leitura (payload do master e dos insumos inalterado). Mostra alvo da balança, falta/passou, diferença por insumo ao concluir (ok até 3%, informativo) e bloqueia leitura menor que a do insumo anterior. Rascunho agora guarda as leituras acumuladas (rascunhos antigos são descartados). Texto compartilhável ganhou a lista de insumos previsto x carregado.
