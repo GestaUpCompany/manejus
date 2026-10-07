@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Carregamento Vagão no layout novo do PWA: pesagem por leitura acumulada da balança (2026-10-07)
+
+Migration `20261007190000_fabrica_confinamento_foto_url.sql` (db push): coluna aditiva `registros_fabrica_confinamento.foto_url` (foto opcional da balança no fechamento, enviada pelo caminho genérico de fotos do `syncService`, também no update de trato em aberto). A `FabricaConfinamentoPage` mantém a lógica de dados (programação de tratos, currais da dieta, trato parcial, ENCERRAR TRATO, rascunho, offline) e muda a forma de digitar as quantidades: o operador informa o número acumulado que a balança marcou depois de cada insumo, na ordem da dieta; `kg_produzido` de cada insumo é a diferença entre leituras e o total produzido é a última leitura (payload do master e dos insumos inalterado). Mostra alvo da balança, falta/passou, diferença por insumo ao concluir (ok até 3%, informativo) e bloqueia leitura menor que a do insumo anterior. Rascunho agora guarda as leituras acumuladas (rascunhos antigos são descartados). Texto compartilhável ganhou a lista de insumos previsto x carregado.
+
 ## Leitura de Cocho no layout novo do PWA: um curral por vez, sugestão de trato e foto (2026-10-07)
 
 Migration `20261007180000_leitura_cocho_foto_url.sql` (db push): coluna aditiva `registros_leitura_cocho.foto_url` (foto opcional do cocho, enviada pelo caminho genérico de fotos do `syncService`, bucket `fotos-registros`). A `LeituraCochoPage` mantém toda a lógica de dados (carga em lote, cache/offline, rascunho por data, bloqueio e anti-duplicidade, payload do registro) e muda a camada visual e o fluxo:
