@@ -1,8 +1,8 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
-## Morte no layout novo do PWA: fotos de brinco e cabeça (2026-10-07)
+## Enfermaria no layout novo do PWA: foto do brinco, dose com stepper e áudio (2026-10-07)
 
-Migration `20261007110000_morte_fotos_brinco_cabeca.sql` (db push): colunas aditivas `registros_morte.foto_brinco_url` e `foto_cabeca_url`. A foto do animal segue em `foto_url` (com `latitude/longitude/gps_accuracy`, GPS obrigatório). No PWA a foto do animal passou a ser obrigatória; brinco e cabeça são opcionais e sobem para o bucket `fotos-morte` (`<fazenda>/<id>/brinco|cabeca`). Categorias vêm do lote (que varia por destino); sem categorias cadastradas, o fallback usa a lista por destino do lote (a mesma da Movimentação, agora em `utils/categorias.ts`) e a opção "Outros" de categoria foi removida. Os 19 itens SIM/NÃO mantêm a semântica (observação só na resposta de problema; `animalSozinho`/`morteSubita` invertidos) e ganharam ditado por voz; observação de identificação também. O painel ainda não exibe as novas fotos (candidato a backlog).
+Migration `20261007120000_enfermaria_foto_brinco.sql` (db push): coluna aditiva `registros_enfermaria.foto_brinco_url`. No PWA: foto opcional do brinco na identificação (bucket `fotos-registros`, `enfermaria/<id>/brinco`), dose aplicada com stepper e chips ml/mg (continua gravada como texto, ex.: "20 ml", "1,5 mg", então `medicamentos` e o texto compartilhado não mudam), bloco "Foto ou recado" com ditado por voz na observação do tratamento, rascunho e rodapé com pendência. Os inputs de ID manejo/brinco/chip foram mantidos. O painel ainda não exibe a foto do brinco.
 
 ## Morte no layout novo do PWA: fotos de brinco e cabeça (2026-10-07)
 
