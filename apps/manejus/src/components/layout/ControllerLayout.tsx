@@ -117,7 +117,8 @@ const menuStructure: MenuItem[] = [
     items: [
       { label: 'Combustível', path: '/controller/estoque-combustivel' },
       { label: 'Suplementação', path: '/controller/estoque-suplementacao' },
-      { label: 'Almoxarifado', path: '/controller/estoque-almoxarifado' }
+      { label: 'Almoxarifado', path: '/controller/estoque-almoxarifado' },
+      { label: 'Pendências de devolução', path: '/controller/pendencias-almoxarifado' }
     ],
   },
   {

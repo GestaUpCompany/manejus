@@ -15,6 +15,7 @@ interface RegistroAlmoxarifado {
   quem_entregou?: string
   quem_pegou?: string
   quem_recebeu?: string
+  tipo?: 'retirada' | 'devolucao' | 'entrada'
   setor?: string
   observacao?: string
   itens?: any
@@ -27,7 +28,33 @@ function formatItemKey(key: string): string {
   return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
 }
 
-function renderItens(itens: any): React.ReactNode {
+const TIPO_LABEL: Record<string, string> = { retirada: 'Retirada', devolucao: 'Devolução', entrada: 'Entrada' }
+
+// Campos técnicos do jsonb que não interessam a quem lê o registro
+const CAMPOS_OCULTOS = new Set(['itemId', 'retiradaId', 'retiradaItemIndex', 'saldoAtual', 'quantidadePendente', 'setor', 'novoItem'])
+
+// Item no formato atual (nome + quantidade): linha legível em vez de chaves cruas
+function renderItemLegivel(item: any, tipo?: string): React.ReactNode {
+  const unidade = item.unidade && item.unidade !== 'un' ? ` ${item.unidade}` : ''
+  const mostraDevolucao = tipo !== 'devolucao' && tipo !== 'entrada' && item.necessitaDevolucao
+  return (
+    <div className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="font-semibold text-content-strong">{item.nome}</span>
+        <span className="text-content-strong">{String(item.quantidade ?? '-')}{unidade}</span>
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-content-muted">
+        {item.classificacao && item.classificacao !== 'Pendentes' && <span>Classificação: {item.classificacao}</span>}
+        {mostraDevolucao && (
+          <span>{item.necessitaDevolucao === 'S' ? `Volta${item.prazoDevolucao ? ` até ${item.prazoDevolucao}` : ''}` : 'Fica'}</span>
+        )}
+        {item.observacao && <span>Obs: {item.observacao}</span>}
+      </div>
+    </div>
+  )
+}
+
+function renderItens(itens: any, tipo?: string): React.ReactNode {
   if (Array.isArray(itens)) {
     return (
       <div className="space-y-4">
@@ -35,9 +62,12 @@ function renderItens(itens: any): React.ReactNode {
           <div key={index} className="border-b border-border-base pb-3 last:border-0 last:pb-0">
             {typeof item === 'string' ? (
               <p className="text-sm">{item}</p>
+            ) : typeof item === 'object' && item !== null && item.nome ? (
+              renderItemLegivel(item, tipo)
             ) : typeof item === 'object' && item !== null ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                 {Object.entries(item).map(([key, value]) => {
+                  if (CAMPOS_OCULTOS.has(key)) return null
                   if (key === 'necessitaDevolucao' && item.prazoDevolucao) return null
                   return (
                     <div key={key} className="flex flex-col">
@@ -71,6 +101,16 @@ function renderItens(itens: any): React.ReactNode {
     )
   }
   return <p className="text-sm">{String(itens)}</p>
+}
+
+// Registros novos trazem setor no registro; antigos só dentro dos itens
+function setorDe(registro: RegistroAlmoxarifado): string {
+  if (registro.setor) return registro.setor
+  if (Array.isArray(registro.itens)) {
+    const item = registro.itens.find((i: any) => i && typeof i === 'object' && i.setor)
+    if (item) return String(item.setor)
+  }
+  return ''
 }
 
 export function AlmoxarifadoDetalhes() {
@@ -136,7 +176,8 @@ export function AlmoxarifadoDetalhes() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <DetailField label="Data" value={formatDateTime(registro!.data)} />
                 <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
-                <DetailField label="Setor" value={formatValue(registro!.setor)} />
+                <DetailField label="Tipo" value={TIPO_LABEL[registro!.tipo || 'retirada'] || '-'} />
+                <DetailField label="Setor" value={formatValue(setorDe(registro!))} />
               </div>
             </DetailSection>
 
@@ -152,7 +193,7 @@ export function AlmoxarifadoDetalhes() {
             {/* Itens */}
             {registro!.itens && (
               <DetailSection title="Itens" highlighted>
-                {renderItens(registro!.itens)}
+                {renderItens(registro!.itens, registro!.tipo)}
               </DetailSection>
             )}
 

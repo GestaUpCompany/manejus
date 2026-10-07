@@ -5,7 +5,7 @@ import { supabase } from '@gestaup/supabase'
 import { Card, Input, EmptyState, PageSkeleton, Table, Thead, Tbody, Tr, Th, Td, SearchInput, FilterToolbar, FilterField } from '@gestaup/ui'
 import { exportToXLSX } from '@gestaup/shared'
 import { ENTRADA_ALMOXARIFADO_EXPORT_CONFIG } from '../../utils/exportConfigs'
-import { formatDateTime } from '@gestaup/shared'
+import { formatDateTime, toFarmDateOnly } from '@gestaup/shared'
 import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
 
 interface RegistroEntradaAlmoxarifado {
@@ -70,8 +70,10 @@ export function EntradaAlmoxarifado() {
         JSON.stringify(item).toLowerCase().includes(search)
       ))
 
-    const matchesDataInicio = !dataInicio || registro.data >= dataInicio
-    const matchesDataFim = !dataFim || registro.data <= dataFim
+    // Compara pelo dia no fuso da fazenda (fim inclusivo)
+    const dia = toFarmDateOnly(registro.data) || registro.data.slice(0, 10)
+    const matchesDataInicio = !dataInicio || dia >= dataInicio
+    const matchesDataFim = !dataFim || dia <= dataFim
 
     return matchesSearch && matchesDataInicio && matchesDataFim
   }).sort((a, b) => {

@@ -5,7 +5,7 @@ import { supabase } from '@gestaup/supabase'
 import { Button, Card, Input, CardSkeleton } from '@gestaup/ui'
 import { exportToXLSX } from '@gestaup/shared'
 import { ALMOXARIFADO_EXPORT_CONFIG } from '../../utils/exportConfigs'
-import { formatDateTime } from '@gestaup/shared'
+import { formatDateTime, toFarmDateOnly } from '@gestaup/shared'
 import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
 
 interface RegistroAlmoxarifado {
@@ -23,6 +23,30 @@ interface RegistroAlmoxarifado {
   itens?: any
   sync_status?: string
   created_at: string
+}
+
+// Registros novos trazem setor no próprio registro; antigos só dentro dos itens
+const setorDe = (registro: RegistroAlmoxarifado): string => {
+  if (registro.setor) return registro.setor
+  if (Array.isArray(registro.itens)) {
+    const item = registro.itens.find((i: any) => i && typeof i === 'object' && i.setor)
+    if (item) return String(item.setor)
+  }
+  return ''
+}
+
+// "2 Botinas, 1 Alicate" (registros antigos sem nome caem em tipo/classificação)
+const resumoItens = (registro: RegistroAlmoxarifado): string => {
+  if (!Array.isArray(registro.itens)) return ''
+  return registro.itens
+    .map((i: any) => {
+      if (typeof i === 'string') return i
+      if (!i || typeof i !== 'object') return ''
+      const nome = i.nome || i.tipo || i.tipoClassificacao || i.classificacao || 'Item'
+      return i.quantidade ? `${i.quantidade} ${nome}` : String(nome)
+    })
+    .filter(Boolean)
+    .join(', ')
 }
 
 export function Almoxarifado() {
@@ -52,21 +76,27 @@ export function Almoxarifado() {
     const fazendaId = vinculos[0].fazenda_id
     getFazendaNome(fazendaId).then(setFazendaNome)
 
-    let query = supabase
-      .from('registros_almoxarifado')
-      .select('*')
-      .eq('fazenda_id', fazendaId)
-      .is('deleted_at', null)
-      .order('data', { ascending: false })
-      .order('created_at', { ascending: false })
+    // O PostgREST limita cada resposta a 1000 linhas: busca em páginas até esgotar
+    const PAGE = 1000
+    const todos: RegistroAlmoxarifado[] = []
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('registros_almoxarifado')
+        .select('*')
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+        .order('data', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(from, from + PAGE - 1)
 
-    const { data, error } = await query
-
-    if (error) {
-      console.error('Erro ao buscar registros de almoxarifado:', error)
-    } else {
-      setRegistros(data as RegistroAlmoxarifado[])
+      if (error) {
+        console.error('Erro ao buscar registros de almoxarifado:', error)
+        break
+      }
+      todos.push(...(data as RegistroAlmoxarifado[]))
+      if (!data || data.length < PAGE) break
     }
+    setRegistros(todos)
 
     setLoading(false)
   }
@@ -76,12 +106,15 @@ export function Almoxarifado() {
       (registro.quem_entregou && registro.quem_entregou.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.quem_pegou && registro.quem_pegou.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.quem_recebeu && registro.quem_recebeu.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.setor && registro.setor.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      setorDe(registro).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      resumoItens(registro).toLowerCase().includes(searchTerm.toLowerCase()) ||
       (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    const matchesDataInicio = !dataInicio || registro.data >= dataInicio
-    const matchesDataFim = !dataFim || registro.data <= dataFim
+    // Compara pelo dia no fuso da fazenda (data é timestamptz; o fim do filtro é inclusivo)
+    const dia = toFarmDateOnly(registro.data) || registro.data.slice(0, 10)
+    const matchesDataInicio = !dataInicio || dia >= dataInicio
+    const matchesDataFim = !dataFim || dia <= dataFim
     const matchesTipo = tipoFiltro === 'todos' || (registro.tipo || 'retirada') === tipoFiltro
 
     return matchesSearch && matchesDataInicio && matchesDataFim && matchesTipo
@@ -226,13 +259,13 @@ export function Almoxarifado() {
                   )}
                   <div className="flex justify-between">
                     <span className="text-content-muted">Setor:</span>
-                    <span className="text-content-strong font-medium">{registro.setor || '-'}</span>
+                    <span className="text-content-strong font-medium">{setorDe(registro) || '-'}</span>
                   </div>
                   {registro.itens && (
                     <div className="flex justify-between">
                       <span className="text-content-muted">Itens:</span>
-                      <span className="text-content-strong font-medium truncate max-w-[150px]">
-                        {Array.isArray(registro.itens) ? `${registro.itens.length} item(s)` : 'Ver detalhes'}
+                      <span className="text-content-strong font-medium truncate max-w-[200px]">
+                        {Array.isArray(registro.itens) ? (resumoItens(registro) || `${registro.itens.length} item(s)`) : 'Ver detalhes'}
                       </span>
                     </div>
                   )}
@@ -286,13 +319,13 @@ export function Almoxarifado() {
                       {registro.quem_pegou || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
-                      {registro.setor || '-'}
+                      {setorDe(registro) || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.itens ? (
                         Array.isArray(registro.itens) ? (
-                          <span className="truncate max-w-[150px] inline-block">
-                            {registro.itens.length} item(s)
+                          <span className="truncate max-w-[260px] inline-block" title={resumoItens(registro)}>
+                            {resumoItens(registro) || `${registro.itens.length} item(s)`}
                           </span>
                         ) : (
                           <span className="truncate max-w-[150px] inline-block">

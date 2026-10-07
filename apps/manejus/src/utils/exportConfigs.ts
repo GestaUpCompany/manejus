@@ -84,6 +84,7 @@ export const ALMOXARIFADO_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Almoxarifado',
   columns: [
     { source: 'data', header: 'Data', format: 'datetime' },
+    { source: 'tipo', header: 'Tipo', transform: (value) => value === 'devolucao' ? 'Devolução' : value === 'entrada' ? 'Entrada' : 'Retirada' },
     { source: 'nome_usuario', header: 'Usuário' },
     { source: 'quem_entregou', header: 'Quem Entregou' },
     { source: 'quem_pegou', header: 'Quem Pegou' },
@@ -94,7 +95,8 @@ export const ALMOXARIFADO_EXPORT_CONFIG: TableExportConfig = {
         return value.map((item: any) => {
           if (typeof item === 'string') return item
           if (item && typeof item === 'object') {
-            const tipo = item.tipo || item.tipoClassificacao || 'Item'
+            // Registros novos trazem nome/classificacao; os antigos, tipo/tipoClassificacao
+            const tipo = item.nome || item.tipo || item.tipoClassificacao || 'Item'
             const qtd = item.quantidade || '-'
             const setor = item.setor || ''
             const dev = item.necessitaDevolucao === 'S' && item.prazoDevolucao ? `, devolução até ${item.prazoDevolucao}` : ''
@@ -114,6 +116,19 @@ export const ALMOXARIFADO_EXPORT_CONFIG: TableExportConfig = {
       return String(value)
     }},
     { source: 'observacao', header: 'Observação' }
+  ]
+}
+
+export const PENDENCIAS_ALMOXARIFADO_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'pendencias_almoxarifado',
+  sheetName: 'Pendências',
+  columns: [
+    { source: 'pessoa', header: 'Pessoa' },
+    { source: 'item', header: 'Item' },
+    { source: 'quantidade', header: 'Pendente' },
+    { source: 'retirada_em', header: 'Retirada', format: 'date' },
+    { source: 'prazo', header: 'Prazo', format: 'date' },
+    { source: 'situacao', header: 'Situação' }
   ]
 }
 

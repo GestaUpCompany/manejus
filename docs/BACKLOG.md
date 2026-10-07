@@ -2,6 +2,15 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
+## Almoxarifado: débitos da auditoria de 2026-10-07
+
+- **Pendência por nome digitado**: `quem_pegou` é texto livre; troca de nome ou grafia gera pendência órfã. Ideal: guardar `funcionario_id` no registro e agrupar por ele.
+- **Ordem do recálculo de estoque**: `recalcular_estoque_almoxarifado` ordena por `created_at` (hora do sync). Um `ajuste` (define o saldo) intercalado com retirada sincronizada depois muda o resultado conforme a ordem de chegada. Sem ajustes no banco hoje; antes de usar ajustes em produção, ordenar por `data` e desempatar por `created_at`.
+- **Itens legados sem `itemId`** (21 de 28 itens na fazenda de testes): nunca entram na lista de pendências; VOLTA antigo vencido fica invisível. Opcional: tela de reconciliação manual.
+- **Filtro "Data fim" não inclusivo** (`registro.data <= dataFim`) ainda existe em `EntradaCombustivel`, `EntradaCantina`, `FabricaConfinamento`, `ManutencaoMaquinas` e `Problemas`; corrigir com `toFarmDateOnly` como em `Almoxarifado`.
+- **Backfill de `setor`** nas fazendas fora da de testes (85 registros no total) depende de autorização explícita.
+- **ESLint sem configuração** no monorepo (`pnpm lint` falha antes de analisar qualquer arquivo).
+
 ## Drop das colunas legadas de bezerros (auditoria completa, não executado)
 
 `lotes.qtd_bezerros`, `lotes.quantidade_bezerros` e `lote_categorias.qtd_bezerros` são colunas mortas: o input que as alimentava não existe mais e toda leitura de app foi aposentada (23/09/2026, ver `docs/HISTORICO.md` — "Campo legado aposentado"). A contagem real de bezerros é a soma de `quant_atual` das categorias ao pé. `registros_suplementacao.qtd_bezerros` é coluna diferente, viva (operando do denominador `n_cabecas - qtd_bezerros`) e NÃO entra no drop.
