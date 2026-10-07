@@ -1,5 +1,16 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Leitura de Cocho no layout novo do PWA: um curral por vez, sugestão de trato e foto (2026-10-07)
+
+Migration `20261007180000_leitura_cocho_foto_url.sql` (db push): coluna aditiva `registros_leitura_cocho.foto_url` (foto opcional do cocho, enviada pelo caminho genérico de fotos do `syncService`, bucket `fotos-registros`). A `LeituraCochoPage` mantém toda a lógica de dados (carga em lote, cache/offline, rascunho por data, bloqueio e anti-duplicidade, payload do registro) e muda a camada visual e o fluxo:
+
+- Card do curral (`InfoCard`) com cabeças, peso médio, dias de cocho (dias desde `data_inicial` da ocupação do curral), categoria, trato ontem e kg por cabeça.
+- "Nota do cocho" com escala rotulada (-1 Lambido, 0 Limpo, 1 Ideal, 2 Sobra, 3 Muita sobra; a escala é fixa), chips "Antes" dos 3 dias exatos anteriores à data, faixa com a sugestão do nutricionista (`tratoAnterior × (1 + percentual_ajuste/100)`, com "N-ésimo dia seguido" contando dias consecutivos iguais) e chip POP COCHO.
+- Consumo do curral: ontem e média de 10 dias em destaque (matéria seca por peso vivo), 2d/3d/geral em linha secundária.
+- Rodapé com progresso da linha e o botão "Salvar e ir para {próximo curral}"; o salvamento de todos os pendentes da linha continua disponível como link quando há 2+ rascunhos.
+- Painel: a tela de detalhes da leitura mostra a foto do cocho.
+- Texto compartilhável: "Nota: 0 - Limpo".
+
 ## Auditoria do estoque de almoxarifado: pendências sem estoque, segurança e painel (2026-10-07)
 
 Migrations `20261007150000_almoxarifado_pendencias_sem_estoque.sql` e `20261007160000_almoxarifado_seguranca.sql` (db push).

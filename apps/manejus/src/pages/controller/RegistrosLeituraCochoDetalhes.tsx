@@ -20,6 +20,7 @@ interface RegistroLeituraCocho {
   leitura_cocho?: number | null
   nota_config?: { nota: number; percentual_ajuste: number; descricao: string | null } | null
   nome_usuario?: string | null
+  foto_url?: string | null
 }
 
 export function RegistrosLeituraCochoDetalhes() {
@@ -105,6 +106,19 @@ export function RegistrosLeituraCochoDetalhes() {
                 />
               </div>
             </DetailSection>
+
+            {registro!.foto_url && (
+              <DetailSection title="Foto do cocho" highlighted>
+                <a href={registro!.foto_url} target="_blank" rel="noopener noreferrer" className="block w-48">
+                  <img
+                    src={registro!.foto_url}
+                    alt="Foto do cocho"
+                    className="w-full h-36 object-cover rounded-lg border border-border-base"
+                    loading="lazy"
+                  />
+                </a>
+              </DetailSection>
+            )}
           </div>
         </Card>
       )}
