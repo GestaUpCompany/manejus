@@ -14,7 +14,13 @@ interface RegistroEntradaAlmoxarifado {
   itens?: any[] | null
   observacao?: string | null
   nome_usuario?: string | null
+  foto_url?: string | null
+  sem_nota?: boolean | null
+  chegou_tudo?: boolean | null
+  item_danificado?: boolean | null
 }
+
+const simNao = (v: boolean | null | undefined) => (v === true ? 'Sim' : v === false ? 'Não' : '-')
 
 const ITEM_LABELS: Record<string, string> = {
   nome: 'Item',
@@ -24,6 +30,7 @@ const ITEM_LABELS: Record<string, string> = {
   unidade_medida: 'Unidade',
   observacao: 'Observação',
   saldoAtual: 'Saldo Atual',
+  validade: 'Validade',
   necessitaDevolucao: 'Necessita Devolução',
   prazoDevolucao: 'Prazo Devolução',
   tipo: 'Tipo',
@@ -140,6 +147,33 @@ export function EntradaAlmoxarifadoDetalhes() {
                 <DetailField label="Quem Recebeu" value={formatValue(registro!.quem_recebeu)} />
               </div>
             </DetailSection>
+
+            {(registro!.foto_url || registro!.sem_nota) && (
+              <DetailSection title="Nota Fiscal" highlighted>
+                {registro!.foto_url ? (
+                  <a href={registro!.foto_url} target="_blank" rel="noopener noreferrer" className="block w-48">
+                    <img
+                      src={registro!.foto_url}
+                      alt="Foto da nota fiscal"
+                      className="w-full h-36 object-cover rounded-lg border border-border-base"
+                      loading="lazy"
+                    />
+                  </a>
+                ) : (
+                  <p className="text-sm">Chegou sem nota fiscal</p>
+                )}
+              </DetailSection>
+            )}
+
+            {(registro!.chegou_tudo !== null && registro!.chegou_tudo !== undefined ||
+              registro!.item_danificado !== null && registro!.item_danificado !== undefined) && (
+              <DetailSection title="Conferência do Recebimento">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <DetailField label="Chegou tudo que está na nota?" value={simNao(registro!.chegou_tudo)} />
+                  <DetailField label="Item danificado ou vencido?" value={simNao(registro!.item_danificado)} />
+                </div>
+              </DetailSection>
+            )}
 
             {registro!.itens && Array.isArray(registro!.itens) && registro!.itens.length > 0 && (
               <DetailSection title="Itens Recebidos" highlighted>
