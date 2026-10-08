@@ -25,28 +25,14 @@ import {
   renderHeader,
   renderFooter,
   kpi,
-  page as pageSection,
   chartCard,
   htmlDocument,
 } from './_shared/template.js'
+import { flowBlock, flowIntro, flowSection, flowTable } from './_shared/flowEngine.js'
 
 const MAX_REGISTROS = 20000
 const MAX_OCUPACOES = 50000
 const MAX_BODY_BYTES = 12_000_000
-
-// Linhas por página (A4 landscape, ~140mm úteis). O detalhamento usa 12
-// porque registros com vários alertas esticam a linha; acima disso a
-// última linha era cortada pelo rodapé.
-const DETAIL_ROWS_PER_PAGE = 9
-const OCUPACAO_ROWS_PER_PAGE = 16
-const PASTO_ROWS_PER_PAGE = 18
-
-// Alertas têm página própria depois da página de análise visual.
-const ALERTAS_ROWS_PAGE = 24
-// Tabela de condição: a coluna esquerda da página 2 comporta 20
-// linhas com folga; o excedente pagina em páginas de continuação.
-const CONDICAO_ROWS_P2 = 20
-const CONDICAO_ROWS_PAGE = 22
 
 const CATEGORIAS = [
   { key: 'vaca', label: 'Vacas', short: 'Vac' },
@@ -84,18 +70,13 @@ const PASTAGENS_CSS = `
 .report-title{font-size:22px}
 .farm-logo{max-height:56px;max-width:120px}
 .page{display:flex;flex-direction:column}
-.past-content{flex:1;display:flex;flex-direction:column;min-height:0}
-.past-gantt-wrap{flex:1;min-height:0;display:flex;flex-direction:column}
-.past-gantt-wrap .chart-card{flex:1;min-height:0}
+.past-gantt-wrap .chart-card{margin-bottom:0}
+.past-charts{display:grid;grid-template-columns:repeat(var(--cols,2),1fr);gap:8px;height:62mm}
+.past-charts .chart-card{height:100%}
+.past-nota{font-size:12px;color:#7a8981;margin:0}
 .gantt-legend{display:flex;gap:14px;font-size:9px;color:#6B7280;margin-top:4px}
 .gantt-dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .gantt-hatch{border:1px solid #c28a27;background:repeating-linear-gradient(45deg,transparent 0,transparent 2px,#c28a27 2px,#c28a27 4px)}
-.past-quad{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px}
-.past-quad .chart-card{height:auto;min-height:0}
-.past-quad .past-tall{grid-row:1/-1;display:flex;flex-direction:column;min-height:0}
-.past-quad .past-tall > .chart-card{flex:1;min-height:0}
-.past-quad .past-tall .past-condicao{flex:1;min-height:0;overflow:hidden}
-.past-condicao .table-block{display:flex;flex-direction:column;height:100%}
 .past-alertas-mini{border:1px solid #efd8d6;border-left:3px solid #c94d46;border-radius:0 5px 5px 0;background:#fdf6f5;padding:6px 10px;margin-bottom:3mm}
 .past-alertas-mini .am-title{color:#c94d46;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
 .past-alertas-mini .am-item{font-size:11px;color:#7a4a45;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -103,7 +84,6 @@ const PASTAGENS_CSS = `
 .past-alertas-mini .am-more{font-size:10px;color:#a08a86;margin-top:2px}
 .past-alertas-table td{font-size:10px;padding:4px 5px;line-height:1.3}
 .past-alertas-table th{font-size:10px;padding:5px}
-.past-resumo-wrap{margin-top:6mm}
 .past-resumo-table td, .past-detail-table td, .past-ocupacao-table td, .past-condicao-table td{font-size:11px;padding:5px 4px;line-height:1.25}
 .past-resumo-table th, .past-detail-table th, .past-ocupacao-table th, .past-condicao-table th{font-size:10px;padding:5px 4px}
 .past-resumo-table th, .past-resumo-table td,
@@ -755,15 +735,6 @@ function detailTableHtml(registros, total, temTempos) {
   return `<div class="table-block"><h3 class="table-title">Movimentações detalhadas<span>${total} ${pl(total, 'registro', 'registros')}</span></h3><table class="past-detail-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
 }
 
-function chunkArray(arr, size) {
-  if (arr.length <= size) return [arr]
-  const chunks = []
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size))
-  }
-  return chunks
-}
-
 export async function renderPastagensHtml(input) {
   const { dataInicio, dataFim, fazendaNome, logoGestao, logoFazenda, resumo, registros, ocupacoes } = input
   const brand = { logoGestao, logoFazenda, fazendaNome }
@@ -787,23 +758,8 @@ export async function renderPastagensHtml(input) {
   const temTempos = registros.some((r) => r.tempo_ocupacao || r.tempo_vedacao)
   const pastosSemMov = porPasto.filter((p) => !p.entradas && !p.saidas).length
 
-  const pastoChunks = porPasto.length ? chunkArray(porPasto, PASTO_ROWS_PER_PAGE) : []
-  const ocupacaoChunks = ocupacoes.length ? chunkArray(ocupacoes, OCUPACAO_ROWS_PER_PAGE) : []
-  const detailChunks = registros.length ? chunkArray(registros, DETAIL_ROWS_PER_PAGE) : []
-  // Alertas ganharam página(s) próprias depois que a página 2 virou
-  // exclusiva dos gráficos de análise.
-  const alertasChunks = alertas.length ? chunkArray(alertas, ALERTAS_ROWS_PAGE) : []
-  // Condição virou tabela na coluna esquerda da página 2; o excedente
-  // do primeiro chunk pagina em páginas próprias.
-  const condicaoExtraChunks = itensCondicao.length > CONDICAO_ROWS_P2 ? chunkArray(itensCondicao.slice(CONDICAO_ROWS_P2), CONDICAO_ROWS_PAGE) : []
-  const totalPages = 2 + alertasChunks.length + condicaoExtraChunks.length + pastoChunks.length + ocupacaoChunks.length + detailChunks.length
-
   const chartsData = []
-  const pagesHtml = []
-  let pageIndex = 0
 
-  // Página 1: resumo executivo (KPIs + insights + faixa de alertas + Gantt)
-  pageIndex += 1
   const canvasGantt = 'chart-past-gantt'
   const canvasDescanso = 'chart-past-descanso'
   const canvasUa = 'chart-past-ua'
@@ -812,122 +768,68 @@ export async function renderPastagensHtml(input) {
   if (itensUa.length) chartsData.push({ canvasId: canvasUa, kind: 'uaPasto', itens: itensUa, media: resumo.taxa_lotacao_media_ua_ha })
 
   const totalAlertas = (resumo.alertas_sanitarios || 0) + (resumo.pendencias_infra || 0)
-  pagesHtml.push(
-    pageSection(`
-      ${renderHeader({ ...brand, reportTitle: 'Relatório de Manejo de Pastagens', section: 'Resumo executivo', sectionLabel: 'Visão geral' })}
-      <p class="section-kicker">Resumo do período</p>
-      <div class="period-badge">${dateFmt(dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(dataFim)}</div>
-      ${resumo.insights ? `<div class="insight-box"><span class="insight-label">Resumo</span>${escapeHtml(resumo.insights)}</div>` : ''}
-      <div class="kpi-grid">
+  const periodBadge = `<div class="period-badge">${dateFmt(dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(dataFim)}</div>`
+  const resumoSec = { sec: 'Resumo executivo', lbl: 'Visão geral' }
+  const analiseSec = { sec: 'Uso dos pastos', lbl: 'Análise' }
+  const ocupacaoSec = { sec: 'Ocupação e movimentações', lbl: 'Registros' }
+
+  const kpisHtml = `<div class="kpi-grid">
         ${kpi(intFmt(resumo.total_movimentacoes), 'Movimentações de pasto', `${intFmt(resumo.lotes_movimentados)} ${pl(resumo.lotes_movimentados, 'lote', 'lotes')} · ${intFmt(resumo.pastos_utilizados)} ${pl(resumo.pastos_utilizados, 'pasto', 'pastos')}`)}
         ${kpi(intFmt(resumo.animais_manejados), 'Animais manejados', `Escore gado: ${resumo.escore_gado_medio != null ? numFmt(resumo.escore_gado_medio, 1) : '—'}`)}
         ${kpi(resumo.ocupacao_media_dias != null ? numFmt(resumo.ocupacao_media_dias, 1) : '—', 'Ocupação média (dias)', `UA/ha: ${resumo.taxa_lotacao_media_ua_ha != null ? numFmt(resumo.taxa_lotacao_media_ua_ha, 2) : '—'} · ${intFmt(resumo.ocupacoes_em_andamento)} ${pl(resumo.ocupacoes_em_andamento, 'aberta', 'abertas')}`)}
         ${kpi(intFmt(totalAlertas), 'Alertas de diagnóstico', `${intFmt(resumo.alertas_sanitarios)} sanitários · ${intFmt(resumo.pendencias_infra)} infra · ${intFmt(resumo.ocupacoes_acima_meta)} ocup. acima da meta`, totalAlertas + (resumo.ocupacoes_acima_meta || 0) > 0 ? 'red' : 'green')}
-      </div>
-      ${alertasMiniHtml(alertas)}
-      <div class="past-gantt-wrap">
-        ${chartCard({ canvasId: canvasGantt, title: 'Mapa de ocupação', subtitle: `Períodos com gado em cada pasto; os vazios são o descanso${mapa.omitidos > 0 ? ` · +${mapa.omitidos} ${pl(mapa.omitidos, 'pasto não exibido', 'pastos não exibidos')}` : ''}`, hasData: mapa.pts.length > 0 })}
+      </div>`
+
+  // Mapa de ocupação: altura proporcional ao nº de pastos exibidos.
+  const alturaGantt = Math.max(52, Math.min(100, 30 + mapa.labels.length * 9))
+  const ganttHtml = mapa.pts.length
+    ? `<div class="past-gantt-wrap">
+        ${chartCard({ canvasId: canvasGantt, title: 'Mapa de ocupação', subtitle: `Períodos com gado em cada pasto; os vazios são o descanso${mapa.omitidos > 0 ? ` · +${mapa.omitidos} ${pl(mapa.omitidos, 'pasto não exibido', 'pastos não exibidos')}` : ''}`, hasData: true, height: `${alturaGantt}mm` })}
         <div class="gantt-legend">
           <span><span class="gantt-dot gantt-hatch"></span>Encerrada</span>
           <span><span class="gantt-dot" style="background:#1E3A5F"></span>Em andamento</span>
           ${(resumo.pastos_sem_uso || 0) > 0 ? `<span style="margin-left:auto">${resumo.pastos_sem_uso} ${pl(resumo.pastos_sem_uso, 'pasto', 'pastos')} sem ocupação no período${resumo.area_utilizada_pct != null ? ` · ${numFmt(resumo.area_utilizada_pct, 0)}% da área utilizada` : ''}</span>` : ''}
         </div>
-      </div>
-      ${renderFooter({ ...period, page: pageIndex, totalPages })}
-    `),
-  )
+      </div>`
+    : ''
 
-  // Página 2: análise visual dos pastos. Condição ocupa a coluna
-  // esquerda inteira (card mais denso); à direita, lotação em cima e
-  // descanso embaixo, dividindo a altura.
-  pageIndex += 1
-  pagesHtml.push(
-    pageSection(`
-      ${renderHeader({ ...brand, reportTitle: 'Relatório de Manejo de Pastagens', section: 'Uso dos pastos', sectionLabel: 'Análise' })}
-      <p class="section-kicker">Condição, lotação e descanso dos pastos</p>
-      <div class="past-quad">
-        <div class="past-tall">
-          <div class="past-condicao">${condicaoTableHtml(itensCondicao.slice(0, CONDICAO_ROWS_P2), itensCondicao.length)}</div>
-        </div>
-        ${/* Sem dados de descanso o card colapsa e a lotação ocupa a coluna inteira. */''}
-        <div class="${itensDescanso.length ? '' : 'past-tall'}">${chartCard({ canvasId: canvasUa, title: 'Taxa de lotação', subtitle: `UA/ha média das ocupações${top(itensUa.length, totalUa)}`, hasData: itensUa.length > 0 })}</div>
-        ${itensDescanso.length ? chartCard({ canvasId: canvasDescanso, title: 'Descanso entre ocupações', subtitle: `Dias médios sem gado no pasto${top(itensDescanso.length, totalDescanso)}`, hasData: true }) : ''}
-      </div>
-      ${renderFooter({ ...period, page: pageIndex, totalPages })}
-    `),
-  )
+  // Gráficos de análise: só os que têm dados; as colunas acompanham.
+  const analiseCards = []
+  if (itensUa.length) analiseCards.push(chartCard({ canvasId: canvasUa, title: 'Taxa de lotação', subtitle: `UA/ha média das ocupações${top(itensUa.length, totalUa)}`, hasData: true }))
+  if (itensDescanso.length) analiseCards.push(chartCard({ canvasId: canvasDescanso, title: 'Descanso entre ocupações', subtitle: `Dias médios sem gado no pasto${top(itensDescanso.length, totalDescanso)}`, hasData: true }))
+  const analiseChartsHtml = analiseCards.length
+    ? `<div class="past-charts" style="--cols:${analiseCards.length}">${analiseCards.join('')}</div>`
+    : ''
 
-  // Continuação da tabela de condição quando há mais pastos do que
-  // cabem na coluna da página 2.
-  condicaoExtraChunks.forEach((chunk, i) => {
-    pageIndex += 1
-    pagesHtml.push(
-      pageSection(`
-        ${renderHeader({ ...brand, reportTitle: 'Relatório de Manejo de Pastagens', section: `Condição na entrada e na saída${condicaoExtraChunks.length > 1 ? ` (${i + 1}/${condicaoExtraChunks.length})` : ''}`, sectionLabel: 'Análise' })}
-        <p class="section-kicker">Condição dos pastos (continuação)</p>
-        <div class="past-content">${condicaoTableHtml(chunk, itensCondicao.length)}</div>
-        ${renderFooter({ ...period, page: pageIndex, totalPages })}
-      `),
-    )
-  })
+  // Cada bloco só existe se há conteúdo; o motor de fluxo (flowEngine) mede
+  // e distribui em quantas páginas forem necessárias.
+  const blocks = [
+    flowBlock(flowIntro('Resumo do período', periodBadge), { ...resumoSec, keepNext: true }),
+    flowBlock(resumo.insights ? `<div class="insight-box"><span class="insight-label">Resumo</span>${escapeHtml(resumo.insights)}</div>` : '', resumoSec),
+    flowBlock(kpisHtml, resumoSec),
+    flowBlock(alertasMiniHtml(alertas), resumoSec),
+    flowBlock(ganttHtml, resumoSec),
+    flowBlock(analiseChartsHtml, analiseSec),
+    itensCondicao.length
+      ? flowTable(condicaoTableHtml(itensCondicao, itensCondicao.length), analiseSec)
+      : flowBlock(condicaoTableHtml([], 0), analiseSec),
+    alertas.length ? flowTable(alertasTableHtml(alertas, alertas.length), { sec: 'Alertas do período', lbl: 'Diagnósticos' }) : '',
+    flowTable(resumoPastoTableHtml(porPasto, porPasto.length, pastosSemMov), analiseSec),
+    flowTable(ocupacaoTableHtml(ocupacoes, ocupacoes.length), ocupacaoSec),
+    flowTable(detailTableHtml(registros, registros.length, temTempos), ocupacaoSec),
+  ]
 
-  // Páginas de alertas do período.
-  alertasChunks.forEach((chunk, i) => {
-    pageIndex += 1
-    pagesHtml.push(
-      pageSection(`
-        ${renderHeader({ ...brand, reportTitle: 'Relatório de Manejo de Pastagens', section: `Alertas do período${alertasChunks.length > 1 ? ` (${i + 1}/${alertasChunks.length})` : ''}`, sectionLabel: 'Diagnósticos' })}
-        <p class="section-kicker">Alertas do período${alertasChunks.length > 1 ? ' (continuação)' : ''}</p>
-        ${alertasTableHtml(chunk, alertas.length)}
-        ${renderFooter({ ...period, page: pageIndex, totalPages })}
-      `),
-    )
-  })
-
-  // Páginas de resumo por pasto
-  pastoChunks.forEach((chunk, i) => {
-    pageIndex += 1
-    pagesHtml.push(
-      pageSection(`
-        ${renderHeader({ ...brand, reportTitle: 'Relatório de Manejo de Pastagens', section: `Resumo por pasto${pastoChunks.length > 1 ? ` (${i + 1}/${pastoChunks.length})` : ''}`, sectionLabel: 'Análise' })}
-        <p class="section-kicker">Distribuição por pasto</p>
-        <div class="past-content">${resumoPastoTableHtml(chunk, porPasto.length, i === 0 ? pastosSemMov : 0)}</div>
-        ${renderFooter({ ...period, page: pageIndex, totalPages })}
-      `),
-    )
-  })
-
-  // Páginas de histórico de ocupação
-  ocupacaoChunks.forEach((chunk, i) => {
-    pageIndex += 1
-    pagesHtml.push(
-      pageSection(`
-        ${renderHeader({ ...brand, reportTitle: 'Relatório de Manejo de Pastagens', section: `Histórico de ocupação${ocupacaoChunks.length > 1 ? ` (${i + 1}/${ocupacaoChunks.length})` : ''}`, sectionLabel: 'Ocupação' })}
-        <p class="section-kicker">Períodos de ocupação no intervalo (inclui ocupações abertas)</p>
-        <div class="past-content">${ocupacaoTableHtml(chunk, ocupacoes.length)}</div>
-        ${renderFooter({ ...period, page: pageIndex, totalPages })}
-      `),
-    )
-  })
-
-  // Páginas de detalhamento das movimentações
-  detailChunks.forEach((chunk, i) => {
-    pageIndex += 1
-    pagesHtml.push(
-      pageSection(`
-        ${renderHeader({ ...brand, reportTitle: 'Relatório de Manejo de Pastagens', section: `Detalhamento${detailChunks.length > 1 ? ` (${i + 1}/${detailChunks.length})` : ''}`, sectionLabel: 'Registros' })}
-        <p class="section-kicker">Movimentações de pasto</p>
-        <div class="past-content">${detailTableHtml(chunk, registros.length, temTempos)}</div>
-        ${renderFooter({ ...period, page: pageIndex, totalPages })}
-      `),
-    )
+  const body = flowSection({
+    headerHtml: renderHeader({ ...brand, reportTitle: 'Relatório de Manejo de Pastagens', section: '__SEC__', sectionLabel: '__LBL__' }),
+    footerHtml: renderFooter({ ...period, page: 0, totalPages: 0 }),
+    blocks,
   })
 
   const chartJsScript = await getChartJsScript()
   return htmlDocument({
     title: 'Relatório de Manejo de Pastagens',
     extraCss: PASTAGENS_CSS,
-    body: pagesHtml.join(''),
+    body,
     chartJsScript,
     chartsInit: CHARTS_INIT_JS,
     dataJson: { charts: chartsData },

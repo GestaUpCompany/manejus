@@ -38,24 +38,35 @@ interface IndividuoForm {
   data_liberacao_sisbov?: string
 }
 
+// Espelham o CHECK de categoria e o trigger trg_individuos_validar_sexo_categoria (20260916270000_caderneta_pesagem.sql)
 export const categoriasMacho = [
   'Bezerro ao Pé',
   'Bezerro Desmama',
+  'Bezerro',
   'Garrote',
   'Boi Magro',
+  'Boi Gordo',
+  'Tourinho',
   'Touro',
 ]
 
 export const categoriasFemea = [
   'Bezerra ao Pé',
   'Bezerra Desmama',
+  'Bezerra',
   'Novilha',
   'Primípara',
   'Vaca Parida',
   'Vaca Prenha',
   'Vaca Vazia',
   'Vaca Descarte',
+  'Vaca',
+  'Tropa',
 ]
+
+export const categoriasTodas = [...categoriasMacho, ...categoriasFemea]
+
+export const sexos = ['Macho', 'Fêmea']
 
 export const statusList = [
   'Vivo',
@@ -66,9 +77,18 @@ export const statusList = [
   'Venda Vivo',
 ]
 
-export const origens = ['Compra', 'Doação', 'Nascimento', 'Transferência']
+// Status que o gestor pode atribuir no formulário. Morto só pela Caderneta de Morte.
+export const statusEditaveis = statusList.filter((s) => s !== 'Morto')
+
+export const origens = ['Compra', 'Doação', 'Nascimento', 'Transferência', 'Cadastro Manual']
 
 export const estrategiaNutricionalTipos = ['insumo', 'mineral', 'proteinado', 'racao']
+
+// O NumericInput emite texto pt-BR com vírgula decimal ("32,000"); valores do banco chegam como number
+export function toNumber(value: number | string): number {
+  if (typeof value === 'number') return value
+  return Number(value.replace(',', '.'))
+}
 
 export function validateIndividuo(form: IndividuoForm): Record<string, string> {
   const errors: Record<string, string> = {}
@@ -116,7 +136,7 @@ export function validateIndividuo(form: IndividuoForm): Record<string, string> {
   }
 
   if (form.peso_nascimento_kg !== undefined && form.peso_nascimento_kg !== '') {
-    const peso = Number(form.peso_nascimento_kg)
+    const peso = toNumber(form.peso_nascimento_kg)
     if (isNaN(peso) || peso < 0) {
       errors.peso_nascimento_kg = 'Informe um peso válido.'
     }
@@ -134,7 +154,7 @@ export function validateIndividuo(form: IndividuoForm): Record<string, string> {
   ) => {
     const value = form[field]
     if (value !== undefined && value !== '') {
-      const num = Number(value)
+      const num = toNumber(value)
       if (isNaN(num) || num < 0) {
         errors[field] = `${label} não pode ser negativo.`
       }

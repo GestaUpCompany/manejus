@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@gestaup/shared'
+import { useAuth, formatDate } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import { Button, Card, Input, CardSkeleton, Select, Pagination } from '@gestaup/ui'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import { useLotes, usePastos } from '@gestaup/shared'
+import { categoriasTodas, sexos, statusList, origens } from '../../utils/individualValidation'
 
 interface Individuo {
   id: string
@@ -33,17 +34,7 @@ interface Raca {
   nome: string
 }
 
-const categorias = [
-  'Bezerro ao Pé', 'Bezerra ao Pé', 'Bezerro Desmama', 'Bezerra Desmama',
-  'Garrote', 'Novilha', 'Boi Magro', 'Primípara', 'Vaca Parida',
-  'Vaca Prenha', 'Vaca Vazia', 'Vaca Descarte', 'Touro'
-]
-
-const statusList = ['Vivo', 'Abatido', 'Doado', 'Morto', 'Transferido', 'Venda Vivo']
-
-const sexos = ['Macho', 'Fêmea']
-
-const origens = ['Compra', 'Doação', 'Nascimento', 'Transferência']
+const categorias = categoriasTodas
 
 const syncStatusList = [
   { value: 'automatico_incompleto', label: 'Criado automaticamente' },
@@ -89,9 +80,28 @@ export function Individuos() {
   const from = (page - 1) * perPage
   const to = from + perPage - 1
 
+  const loadDataRef = useRef<() => Promise<void>>(async () => {})
+  const requestIdRef = useRef(0)
+
   useEffect(() => {
     loadData()
-  }, [user, page, perPage])
+  }, [
+    user,
+    page,
+    perPage,
+    searchTerm,
+    filtroTipoIdentificacao,
+    filtroStatus,
+    filtroSexo,
+    filtroCategoria,
+    filtroRaca,
+    filtroOrigem,
+    filtroSyncStatus,
+    filtroLote,
+    filtroPasto,
+    filtroIncompletos,
+    filtroAutomaticos,
+  ])
 
   useEffect(() => {
     setPage(1)
@@ -139,7 +149,7 @@ export function Individuos() {
         .channel(channelName)
         .on('postgres_changes', filterConfig, () => {
           if (isMounted) {
-            loadData()
+            loadDataRef.current()
           }
         })
         .subscribe()
@@ -200,15 +210,16 @@ export function Individuos() {
   const loadData = async () => {
     if (!user) return
 
+    const requestId = ++requestIdRef.current
     const isAdmin = user.papel === 'admin'
     let fazendaId: string | null = null
 
     if (!isAdmin) {
-      const _fazendaId = await getFazendaIdForUser(user.id)
-    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
-
-      if (!vinculos || vinculos.length === 0) return
-      fazendaId = vinculos[0].fazenda_id
+      fazendaId = await getFazendaIdForUser(user.id)
+      if (!fazendaId) {
+        setLoading(false)
+        return
+      }
     }
 
     setFazendaId(fazendaId || undefined)
@@ -238,6 +249,9 @@ export function Individuos() {
       racasQuery,
     ])
 
+    // Descarta resposta de uma consulta antiga (filtros mudaram durante o carregamento)
+    if (requestId !== requestIdRef.current) return
+
     if (countRes.error) {
       console.error('Erro ao contar indivíduos:', countRes.error)
     } else {
@@ -255,6 +269,8 @@ export function Individuos() {
 
     setLoading(false)
   }
+
+  loadDataRef.current = loadData
 
   const getNomeLote = (id?: string) => lotes.find((l) => l.id === id)?.nome || '-'
   const getNomePasto = (id?: string) => pastos.find((p) => p.id === id)?.nome || '-'
@@ -521,7 +537,7 @@ export function Individuos() {
             </div>
             {searchTerm && (
               <span className="text-sm text-content-muted whitespace-nowrap">
-                {individuos.length} resultado{individuos.length !== 1 ? 's' : ''}
+                {totalCount} resultado{totalCount !== 1 ? 's' : ''}
               </span>
             )}
           </div>
@@ -561,7 +577,7 @@ export function Individuos() {
                 </div>
                 <div>
                   <span className="text-content-faint">Nascimento:</span>{' '}
-                  {ind.data_nascimento ? new Date(ind.data_nascimento).toLocaleDateString('pt-BR') : '-'}
+                  {formatDate(ind.data_nascimento)}
                 </div>
                 <div>
                   <span className="text-content-faint">Status:</span> {ind.status}
@@ -667,9 +683,7 @@ export function Individuos() {
                       <td className="px-4 py-3 text-sm text-content">{ind.sexo}</td>
                       <td className="px-4 py-3 text-sm text-content">{ind.raca}</td>
                       <td className="px-4 py-3 text-sm text-content">
-                        {ind.data_nascimento
-                          ? new Date(ind.data_nascimento).toLocaleDateString('pt-BR')
-                          : '-'}
+                        {formatDate(ind.data_nascimento)}
                       </td>
                       <td className="px-4 py-3 text-sm text-content">{ind.status}</td>
                       <td className="px-4 py-3 text-sm text-content">{getNomeLote(ind.lote_atual)}</td>
@@ -691,7 +705,7 @@ export function Individuos() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation()
-                              navigate(`/controller/individuos/${ind.id}`)
+                              navigate(`/controller/individuos/novo?edit=${ind.id}`)
                             }}
                           >
                             Editar

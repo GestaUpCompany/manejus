@@ -158,7 +158,9 @@ describe('normalizador do Boletim de Rebanho', () => {
     const rendererPath = '../../../api/pdf/boletimRebanho.js'
     const { renderBoletimRebanhoHtml } = await import(rendererPath)
     const html = renderBoletimRebanhoHtml({ ano: 2026, mesReferencia: 'Julho', mesNumero: 7, ...agrupado, fazendaNome: 'Fazenda Teste' })
-    expect(html.match(/<section class="page"/g)).toHaveLength(2)
+    // As páginas são montadas pelo motor de fluxo no navegador: aqui só
+    // conferimos que há uma tabela para o consolidado e outra por local.
+    expect(html.match(/<table class="boletim-table"/g)).toHaveLength(2)
     expect(html).toContain('Consolidado anual')
     expect(html).toContain('Fazenda Sede')
     expect(html).toContain('Saldo final geral')

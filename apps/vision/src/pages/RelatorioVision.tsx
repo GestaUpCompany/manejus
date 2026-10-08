@@ -98,7 +98,11 @@ function detectarFazenda(nomePlanilha: string, nomeArquivo: string, fazendas: Fa
         empate = true
       }
     }
-    if (melhor && melhorScore >= 0.5 && !empate) return melhor
+    if (melhor && melhorScore >= 0.5) {
+      // Empate na fonte principal = ambíguo: não cai para o nome do arquivo
+      // (ele pode citar outra fazenda, ex.: "Gesta'Up") e deixa a escolha manual.
+      return empate ? undefined : melhor
+    }
   }
   return undefined
 }
@@ -140,11 +144,9 @@ export function RelatorioVision() {
   const fazenda = useMemo(() => fazendas.find((f) => f.id === fazendaId), [fazendas, fazendaId])
 
   useEffect(() => {
+    // RPC porque a RLS de fazendas só expõe as fazendas vinculadas ao usuário.
     supabase
-      .from('fazendas')
-      .select('id, nome, acesso_id, logo_url')
-      .eq('ativo', true)
-      .order('nome')
+      .rpc('vision_listar_fazendas')
       .then(({ data, error }) => {
         if (error) setErro(`Erro ao carregar fazendas: ${error.message}`)
         else setFazendas((data ?? []) as Fazenda[])
