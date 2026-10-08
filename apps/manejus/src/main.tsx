@@ -10,7 +10,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
 import { AuthProvider } from '@gestaup/shared'
 import { ToastProvider } from '@gestaup/ui'
+import { StagingBanner } from './components/StagingBanner'
+import { tituloComAmbiente } from './utils/ambiente'
 import './index.css'
+
+// Em staging, distingue a aba da produção pelo título
+document.title = tituloComAmbiente(document.title)
 
 // Preconnect ao Supabase para eliminar DNS+TLS latency na primeira chamada de API
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -60,6 +65,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <ToastProvider>
           <App />
+          <StagingBanner />
         </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>
