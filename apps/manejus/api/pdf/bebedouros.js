@@ -28,9 +28,9 @@ import { generatePdf } from './_shared/puppeteer.js'
 import {
   renderHeader,
   kpi,
-  page as pageSection,
   htmlDocument,
 } from './_shared/template.js'
+import { flowBlock, flowIntro, flowSection, flowTable } from './_shared/flowEngine.js'
 
 // === Limites do body ===
 const MAX_BEBEDOUROS = 2000
@@ -41,21 +41,8 @@ const MAX_BODY_BYTES = 8_000_000
 // Não há clamp de linhas: o texto aparece inteiro até este limite.
 const MAX_TEXTO_OCORRENCIA = 500
 
-// === Dimensões para paginação (mm) ===
-// A4 landscape = 297x210mm. Área útil de conteúdo ≈ 155mm.
-const TOTAL_CONTENT_H = 155
-const KICKER_H = 6
-const BADGE_H = 10
-const TITLE_H = 6
-const KPI_PERIOD_H = 27
-const ALERT_H = 11
-const LEGEND_H = 8
-const TABLE_HEAD_H = 8
-const ROW_H = 7 // altura fixa de linha das tabelas de cronograma
-const SAFETY = 3
-// Folga extra da 1ª página (selo de período, caixa de insight e margens dos KPIs
-// ocupam mais que as constantes nominais).
-const FIRST_PAGE_EXTRA = 9
+// Altura fixa das linhas das tabelas de cronograma (uma linha, sem quebra).
+const ROW_H = 7
 
 function isPDFData(value) {
   if (!value || typeof value !== 'object') return false
@@ -175,7 +162,7 @@ const BEBEDOUROS_CSS = `
 .st-crit{border:1.5px solid #991b1b;background:#fef2f2;color:#991b1b}
 .st-none{border-style:dashed;color:#4f5f56}
 .st-nometa{border-color:transparent;background:transparent;color:#4f5f56}
-.table-legend{font-size:11px;color:#63736a;margin-top:-3mm}
+.legend-head th,.cron-table .legend-head th,.dia-table .legend-head th{background:#fff!important;color:#63736a;font-size:10px;font-weight:400;padding:0 0 4px;text-align:left;letter-spacing:0}
 .cron-table td,.dia-table td{height:${ROW_H}mm;line-height:${ROW_H}mm;padding-top:0;padding-bottom:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
 .cron-table tbody tr:nth-child(even) td,.dia-table tbody tr:nth-child(even) td,.ocorr-table tbody tr:nth-child(even) td{background:#f7faf8}
 .cron-table td.strong,.dia-table td.strong{font-weight:700;color:#26352e}
@@ -208,7 +195,10 @@ const BEBEDOUROS_CSS = `
 .ocorr-item{margin:0 0 2px}
 .ocorr-item b{font-weight:700;color:#26352e}
 .no-ocorr-box{background:#F0FDF4;border:1px solid #BBF7D0;border-radius:5px;padding:10px;text-align:center;color:#15803d;font-size:13px;margin-top:4mm}
-.ocorr-resumo{font-size:12px;color:#4f5f56;margin-top:3mm;line-height:1.5}
+.ocorr-resumo{font-size:12px;color:#4f5f56;line-height:1.5}
+.beb-nota{font-size:12px;color:#4f5f56;margin:0;padding:8px 10px;border:1px solid #d8e0db;border-radius:5px;background:#f7faf8}
+.beb-chart{height:52mm}
+.beb-chart .chart-card{height:100%}
 `
 
 // === Chart init JS (roda dentro do Chromium headless) ===
@@ -314,7 +304,7 @@ function legendaStatusHtml(modo) {
   const itens = modo === 'dia'
     ? ['● Dentro da meta', '▲ Acima da meta', '■ Muito acima da meta', '○ Primeira limpeza']
     : ['● Em dia', '▲ Atrasado', '■ Atraso crítico', '○ Sem registro', '– Sem meta']
-  return `<div class="table-legend">Legenda: ${itens.join(' · ')} · ! prazo vencido</div>`
+  return `Legenda: ${itens.join(' · ')}${modo === 'dia' ? '' : ' · ! prazo vencido'}`
 }
 
 function periodBadgeHtml(dados) {
@@ -347,7 +337,7 @@ function cap(texto, max = MAX_TEXTO_OCORRENCIA) {
 // === Tabelas ===
 
 function cronogramaTableHtml(chunk) {
-  const header = '<thead><tr><th>Bebedouro</th><th>Última limpeza</th><th>Próxima limpeza</th><th>Prazo</th><th>Status</th><th>Meta</th><th>Responsável (última)</th><th>No período</th></tr></thead>'
+  const header = `<thead><tr class="legend-head"><th colspan="8">${legendaStatusHtml('periodo')}</th></tr><tr><th>Bebedouro</th><th>Última limpeza</th><th>Próxima limpeza</th><th>Prazo</th><th>Status</th><th>Meta</th><th>Responsável (última)</th><th>No período</th></tr></thead>`
   const rows = chunk
     .map((i) => {
       const venc = i.diasParaProxima !== null && i.diasParaProxima < 0
@@ -356,11 +346,11 @@ function cronogramaTableHtml(chunk) {
       return `<tr class="${venc ? 'row-venc' : ''}"><td>${escapeHtml(i.nome)}</td><td>${i.ultima ? dateFmt(i.ultima) : '—'}</td><td class="strong">${escapeHtml(proximaTxt)}</td><td>${escapeHtml(prazo)}</td><td>${statusBadge(i.statusLabel)}</td><td class="num">${i.meta ? `${i.meta}d` : '—'}</td><td>${escapeHtml(i.responsavelUltima || '—')}</td><td class="num">${i.limpezasNoPeriodo ?? 0}</td></tr>`
     })
     .join('')
-  return `<table class="cron-table">${header}<tbody>${rows}</tbody></table>`
+  return `<div class="table-block"><h3 class="table-title">Última e próxima limpeza por bebedouro<span>${chunk.length} ${chunk.length === 1 ? 'bebedouro' : 'bebedouros'}</span></h3><table class="cron-table">${header}<tbody>${rows}</tbody></table></div>`
 }
 
 function diaTableHtml(chunk) {
-  const header = '<thead><tr><th>Bebedouro</th><th>Limpeza anterior</th><th>Limpeza do dia</th><th>Próxima prevista</th><th>Status</th><th>Intervalo / meta</th><th>Responsável</th></tr></thead>'
+  const header = `<thead><tr class="legend-head"><th colspan="7">${legendaStatusHtml('dia')}</th></tr><tr><th>Bebedouro</th><th>Limpeza anterior</th><th>Limpeza do dia</th><th>Próxima prevista</th><th>Status</th><th>Intervalo / meta</th><th>Responsável</th></tr></thead>`
   const rows = chunk
     .map((l) => {
       const meta = l.meta > 0 ? l.meta : null
@@ -371,7 +361,7 @@ function diaTableHtml(chunk) {
       return `<tr><td>${escapeHtml(l.nome)}</td><td>${l.dataLimpezaAnterior ? dateFmt(l.dataLimpezaAnterior) : '—'}</td><td>${dateFmt(l.dataLimpeza)}</td><td class="strong">${proxima ? dateFmt(proxima) : 'Sem meta'}</td><td>${statusBadge(l.statusLabel)}</td><td>${interv} / ${meta ? `${meta}d` : '—'}</td><td>${escapeHtml(l.responsavel || '—')}</td></tr>`
     })
     .join('')
-  return `<table class="dia-table">${header}<tbody>${rows}</tbody></table>`
+  return `<div class="table-block"><h3 class="table-title">Bebedouros limpos no dia<span>${chunk.length} ${chunk.length === 1 ? 'bebedouro' : 'bebedouros'}</span></h3><table class="dia-table">${header}<tbody>${rows}</tbody></table></div>`
 }
 
 // Itens negativos com observação pareada. Aceita payload antigo (strings).
@@ -394,38 +384,7 @@ function ocorrenciasTableHtml(chunk) {
       return `<tr><td>${dateFmt(o.data)}</td><td>${escapeHtml(o.bebedouro)}</td><td>${itens}</td><td>${escapeHtml(cap(o.obsGeral) || '—')}</td><td>${escapeHtml(o.responsavel || '—')}</td></tr>`
     })
     .join('')
-  return `<table class="ocorr-table">${header}<tbody>${rows}</tbody></table>`
-}
-
-// Altura estimada (mm) de uma linha de ocorrência, para paginar por espaço.
-function alturaOcorrenciaMm(o) {
-  const itens = itensOcorrencia(o)
-  const linhasItens = itens.reduce(
-    (soma, i) => soma + Math.max(1, Math.ceil((i.label.length + 4 + Math.min(i.obs.length, MAX_TEXTO_OCORRENCIA)) / 88)),
-    0,
-  )
-  const linhasGeral = Math.max(1, Math.ceil(Math.min(String(o.obsGeral || '').length, MAX_TEXTO_OCORRENCIA) / 44))
-  const linhas = Math.max(linhasItens, linhasGeral)
-  return linhas * 4.1 + 3.5
-}
-
-function paginarOcorrencias(lista) {
-  const orcamento = TOTAL_CONTENT_H - KICKER_H - TITLE_H - TABLE_HEAD_H - SAFETY - 4
-  const paginas = []
-  let atual = []
-  let usado = 0
-  for (const o of lista) {
-    const h = Math.min(alturaOcorrenciaMm(o), orcamento)
-    if (atual.length > 0 && usado + h > orcamento) {
-      paginas.push(atual)
-      atual = []
-      usado = 0
-    }
-    atual.push(o)
-    usado += h
-  }
-  if (atual.length > 0) paginas.push(atual)
-  return paginas
+  return `<div class="table-block"><h3 class="table-title">Ocorrências negativas<span>${chunk.length} ocorrência(s)</span></h3><table class="ocorr-table">${header}<tbody>${rows}</tbody></table></div>`
 }
 
 // === KPIs ===
@@ -480,23 +439,9 @@ function proximasSemanaTexto(proximas) {
   return `${proximas.length} bebedouro(s): ${nomes}${extra}.`
 }
 
-// === Paginação genérica ===
-
-function chunkPorTamanhos(items, primeiro, demais) {
-  if (items.length === 0) return []
-  const chunks = []
-  let i = 0
-  let isFirst = true
-  while (i < items.length) {
-    const max = Math.max(1, isFirst ? primeiro : demais)
-    chunks.push(items.slice(i, i + max))
-    i += max
-    isFirst = false
-  }
-  return chunks
-}
-
-// === Montagem das páginas ===
+// === Montagem em fluxo ===
+// Cada relatório declara blocos; o motor (flowEngine) mede o conteúdo real no
+// navegador e distribui em quantas páginas forem necessárias.
 
 export async function renderBebedourosHtml(input) {
   const { titulo, fazendaNome, logoGestao, logoFazenda } = input
@@ -509,161 +454,85 @@ export async function renderBebedourosHtml(input) {
   const limpezasDoDia = input.limpezasDoDia || []
   const proximas = input.proximasSemana || []
   const ocorrencias = input.ocorrencias || []
+  const ranking = input.itensRanking || []
+  const kpisChk = input.checklistKPIs
 
-  const temAlertaAtraso = !ehDiaUnico && !!input.maisAtrasado
-  const temAlertaProximas = !ehDiaUnico && proximas.length > 0
+  const sec1 = { sec: 'Cronograma de limpeza', lbl: 'Seção 1' }
+  const sec2 = { sec: 'Pontos de atenção', lbl: 'Seção 2' }
+  const secOcorr = { sec: 'Ocorrências', lbl: 'Seção 2' }
 
-  // Capacidade (linhas) das páginas de tabela do cronograma
-  const topoPeriodo = KICKER_H + BADGE_H + TITLE_H + KPI_PERIOD_H
-    + (temAlertaAtraso ? ALERT_H : 0) + (temAlertaProximas ? ALERT_H : 0) + TABLE_HEAD_H + SAFETY + FIRST_PAGE_EXTRA + LEGEND_H
-  const rowsFirst = Math.floor((TOTAL_CONTENT_H - topoPeriodo) / ROW_H)
-  const rowsCont = Math.floor((TOTAL_CONTENT_H - KICKER_H - TABLE_HEAD_H - SAFETY - LEGEND_H) / ROW_H)
-  const topoDia = KICKER_H + BADGE_H + TITLE_H + KPI_PERIOD_H + 9 + TABLE_HEAD_H + SAFETY + FIRST_PAGE_EXTRA + LEGEND_H
-  const diaRowsFirst = Math.floor((TOTAL_CONTENT_H - topoDia) / ROW_H)
-
-  const pageDescriptors = []
-
-  if (ehDiaUnico) {
-    const tabela = chunkPorTamanhos(limpezasDoDia, diaRowsFirst, rowsCont)
-    if (tabela.length === 0) pageDescriptors.push({ type: 'dia-tabela', chunk: [], isFirst: true })
-    tabela.forEach((chunk, i) => pageDescriptors.push({ type: 'dia-tabela', chunk, isFirst: i === 0 }))
-  } else {
-    const tabela = chunkPorTamanhos(cronograma, rowsFirst, rowsCont)
-    if (tabela.length === 0) pageDescriptors.push({ type: 'cron-tabela', chunk: [], isFirst: true, total: 0, startRow: 0 })
-    let linha = 0
-    tabela.forEach((chunk, i) => {
-      pageDescriptors.push({ type: 'cron-tabela', chunk, isFirst: i === 0, total: cronograma.length, startRow: linha })
-      linha += chunk.length
-    })
-  }
-
-  // Seção 2: KPIs + gráfico de problemas, depois tabela de ocorrências
-  pageDescriptors.push({ type: 'secao2-kpis' })
-  const occPages = ocorrencias.length > 0 ? paginarOcorrencias(ocorrencias) : []
-  let ocorrenciasMostradas = 0
-  occPages.forEach((chunk, i) => {
-    pageDescriptors.push({
-      type: 'secao2-ocorrencias',
-      chunk,
-      total: ocorrencias.length,
-      startRow: ocorrenciasMostradas,
-      multi: occPages.length > 1,
-      isFirst: i === 0,
-    })
-    ocorrenciasMostradas += chunk.length
-  })
-
-  const totalPages = pageDescriptors.length
-
-  // === Monta HTML de cada página ===
   const chartsData = []
-  const pagesHtml = []
-  let pageNumber = 0
+  const blocks = []
 
-  for (const desc of pageDescriptors) {
-    pageNumber++
-    let html = ''
-
-    if (desc.type === 'cron-tabela') {
-      let content = `
-        ${renderHeader({ ...brand, reportTitle: titulo, section: desc.isFirst ? 'Cronograma de limpeza' : 'Continuação', sectionLabel: 'Seção 1' })}
-        <p class="section-kicker">${desc.isFirst ? 'Resumo do período' : 'Cronograma de limpeza (continuação)'}</p>
-      `
-      if (desc.isFirst) {
-        content += `
-          ${periodBadgeHtml(dados)}
-          <div class="insight-box"><span class="insight-label">1. Cronograma de limpeza dos bebedouros</span>Última e próxima limpeza de cada bebedouro (próxima = última + meta), com prazo em relação a ${escapeHtml(dateFmt(input.dataFim))}.</div>
-          ${input.limpezaKPIs ? kpisPeriodoHtml(input.limpezaKPIs) : ''}
-          ${temAlertaAtraso ? alertBox(`${input.maisAtrasado.nome} com ${input.maisAtrasado.dias} dias desde a última limpeza. Meta: ${input.maisAtrasado.meta} dias.`, 'crit', 'CRÍTICO — maior atraso:') : ''}
-          ${temAlertaProximas ? alertBox(proximasSemanaTexto(proximas), 'warn', 'PRÓXIMOS 7 DIAS — limpezas previstas:') : ''}
-        `
-      }
-      content += desc.chunk.length > 0
-        ? `<div class="table-block">${cronogramaTableHtml(desc.chunk)}</div>${legendaStatusHtml('periodo')}`
-        : '<div class="empty-chart" style="height:40mm">Nenhum bebedouro cadastrado</div>'
-      content += footerHtml(dados, pageNumber, totalPages)
-      html = pageSection(content)
-    } else if (desc.type === 'dia-tabela') {
-      let content = `
-        ${renderHeader({ ...brand, reportTitle: titulo, section: desc.isFirst ? 'Limpeza do dia' : 'Continuação', sectionLabel: 'Seção 1' })}
-        <p class="section-kicker">${desc.isFirst ? 'Resumo do período' : 'Limpeza do dia (continuação)'}</p>
-      `
-      if (desc.isFirst) {
-        content += `
-          ${periodBadgeHtml(dados)}
-          <div class="insight-box"><span class="insight-label">1. Bebedouros limpos em ${escapeHtml(dateFmt(diaUnico))}</span>Limpeza anterior, limpeza do dia e próxima limpeza prevista (limpeza do dia + meta).</div>
-          ${input.limpezaDiaKPIs ? kpisDiaHtml(input.limpezaDiaKPIs) : ''}
-        `
-      }
-      content += desc.chunk.length > 0
-        ? `<div class="table-block">${diaTableHtml(desc.chunk)}</div>${legendaStatusHtml('dia')}`
-        : '<div class="empty-chart" style="height:40mm">Nenhum bebedouro foi limpo neste dia</div>'
-      content += footerHtml(dados, pageNumber, totalPages)
-      html = pageSection(content)
-    } else if (desc.type === 'secao2-kpis') {
-      const hasData = input.itensRanking.length > 0 && input.itensRanking.some((r) => r.total > 0)
-      const cardH = hasData
-        ? Math.max(50, Math.min(input.itensRanking.length * 10 + 14, 70))
-        : 40
-      if (hasData) {
-        chartsData.push({
-          canvasId: 'chart-problemas',
-          kind: 'problemas',
-          items: input.itensRanking.map((r) => ({
-            label: r.label,
-            valor: r.pctNegativo,
-            negativos: r.negativos,
-            total: r.total,
-          })),
-        })
-      }
-      let content = `
-        ${renderHeader({ ...brand, reportTitle: titulo, section: 'Pontos de atenção', sectionLabel: 'Seção 2' })}
-        <p class="section-kicker">Resumo do período</p>
-        ${periodBadgeHtml(dados)}
-        <div class="insight-box"><span class="insight-label">2. Pontos de atenção nos bebedouros</span>Pontos de atenção nos checklists dos bebedouros.</div>
-        ${kpisChecklistHtml(input.checklistKPIs)}
-        ${chartCardLocal({
-          canvasId: 'chart-problemas',
-          title: 'Problemas mais frequentes nos checklists',
-          hasData,
-          height: `${cardH}mm`,
-          emptyMsg: 'Nenhum checklist respondido no período',
-        })}
-      `
-      const porBeb = input.ocorrenciasPorBebedouro || []
-      if (porBeb.length > 0) {
-        const lista = porBeb.slice(0, 12).map((p) => `${escapeHtml(p.bebedouro)}: ${p.quantidade}`).join(' · ')
-        const extra = porBeb.length > 12 ? ` · e mais ${porBeb.length - 12}` : ''
-        content += `<div class="ocorr-resumo"><b>Ocorrências por bebedouro:</b> ${lista}${extra}</div>`
-      }
-      if (ocorrencias.length === 0) {
-        content += '<div class="no-ocorr-box">Nenhuma ocorrência negativa nos checklists do período.</div>'
-      }
-      content += footerHtml(dados, pageNumber, totalPages)
-      html = pageSection(content)
-    } else if (desc.type === 'secao2-ocorrencias') {
-      const { chunk, total, startRow, multi } = desc
-      const suffix = multi
-        ? ` <span>· exibindo ${startRow + 1}–${startRow + chunk.length} de ${total}</span>`
-        : ` <span>${total} ocorrência(s)</span>`
-      html = pageSection(`
-        ${renderHeader({ ...brand, reportTitle: titulo, section: 'Ocorrências', sectionLabel: 'Seção 2' })}
-        <p class="section-kicker">Ocorrências negativas nos checklists</p>
-        <h2 class="table-title">Ocorrências negativas${suffix}</h2>
-        <div class="table-block">${ocorrenciasTableHtml(chunk)}</div>
-        ${footerHtml(dados, pageNumber, totalPages)}
-      `)
+  // --- Seção 1 ---
+  blocks.push(flowBlock(flowIntro('Resumo do período', periodBadgeHtml(dados)), { ...sec1, keepNext: true }))
+  if (ehDiaUnico) {
+    blocks.push(flowBlock(`<div class="insight-box"><span class="insight-label">1. Bebedouros limpos em ${escapeHtml(dateFmt(diaUnico))}</span>Limpeza anterior, limpeza do dia e próxima limpeza prevista (limpeza do dia + meta).</div>`, sec1))
+    if (input.limpezaDiaKPIs) blocks.push(flowBlock(kpisDiaHtml(input.limpezaDiaKPIs), sec1))
+    if (limpezasDoDia.length > 0) {
+      blocks.push(flowTable(diaTableHtml(limpezasDoDia), sec1))
+    } else {
+      blocks.push(flowBlock('<p class="beb-nota">Nenhum bebedouro foi limpo neste dia.</p>', sec1))
     }
-
-    pagesHtml.push(html)
+  } else {
+    blocks.push(flowBlock(`<div class="insight-box"><span class="insight-label">1. Cronograma de limpeza dos bebedouros</span>Última e próxima limpeza de cada bebedouro (próxima = última + meta), com prazo em relação a ${escapeHtml(dateFmt(input.dataFim))}.</div>`, sec1))
+    if (input.limpezaKPIs) blocks.push(flowBlock(kpisPeriodoHtml(input.limpezaKPIs), sec1))
+    if (input.maisAtrasado) {
+      blocks.push(flowBlock(alertBox(`${input.maisAtrasado.nome} com ${input.maisAtrasado.dias} dias desde a última limpeza. Meta: ${input.maisAtrasado.meta} dias.`, 'crit', 'CRÍTICO — maior atraso:'), sec1))
+    }
+    if (proximas.length > 0) {
+      blocks.push(flowBlock(alertBox(proximasSemanaTexto(proximas), 'warn', 'PRÓXIMOS 7 DIAS — limpezas previstas:'), sec1))
+    }
+    if (cronograma.length > 0) {
+      blocks.push(flowTable(cronogramaTableHtml(cronograma), sec1))
+    } else {
+      blocks.push(flowBlock('<p class="beb-nota">Nenhum bebedouro cadastrado.</p>', sec1))
+    }
   }
+
+  // --- Seção 2 ---
+  blocks.push(flowBlock(flowIntro('2. Pontos de atenção nos checklists dos bebedouros', ''), { ...sec2, keepNext: true }))
+  blocks.push(flowBlock(kpisChecklistHtml(kpisChk), sec2))
+
+  // Gráfico de problemas só quando há algum problema a mostrar; senão, uma
+  // nota curta (barras todas em 0% não informam nada além do texto).
+  const algumNegativo = ranking.some((r) => r.negativos > 0)
+  if (algumNegativo) {
+    chartsData.push({
+      canvasId: 'chart-problemas',
+      kind: 'problemas',
+      items: ranking.map((r) => ({ label: r.label, valor: r.pctNegativo, negativos: r.negativos, total: r.total })),
+    })
+    blocks.push(flowBlock(`<div class="beb-chart">${chartCardLocal({ canvasId: 'chart-problemas', title: 'Problemas mais frequentes nos checklists', hasData: true })}</div>`, sec2))
+  } else if (kpisChk.comChecklist > 0) {
+    blocks.push(flowBlock(`<p class="beb-nota">Nenhuma resposta negativa nos ${kpisChk.comChecklist} checklist(s) do período (0% em todos os itens avaliados).</p>`, sec2))
+  } else {
+    blocks.push(flowBlock('<p class="beb-nota">Nenhum checklist respondido no período.</p>', sec2))
+  }
+
+  const porBeb = input.ocorrenciasPorBebedouro || []
+  if (porBeb.length > 0) {
+    const lista = porBeb.slice(0, 12).map((p) => `${escapeHtml(p.bebedouro)}: ${p.quantidade}`).join(' · ')
+    const extra = porBeb.length > 12 ? ` · e mais ${porBeb.length - 12}` : ''
+    blocks.push(flowBlock(`<div class="ocorr-resumo"><b>Ocorrências por bebedouro:</b> ${lista}${extra}</div>`, sec2))
+  }
+  if (ocorrencias.length > 0) {
+    blocks.push(flowTable(ocorrenciasTableHtml(ocorrencias), secOcorr))
+  } else if (algumNegativo || kpisChk.comChecklist > 0) {
+    blocks.push(flowBlock('<div class="no-ocorr-box">Nenhuma ocorrência negativa nos checklists do período.</div>', sec2))
+  }
+
+  const body = flowSection({
+    headerHtml: renderHeader({ ...brand, reportTitle: titulo, section: '__SEC__', sectionLabel: '__LBL__' }),
+    footerHtml: footerHtml(dados, 0, 0),
+    blocks,
+  })
 
   const chartJsScript = await getChartJsScript()
   return htmlDocument({
     title: titulo,
     extraCss: BEBEDOUROS_CSS,
-    body: pagesHtml.join(''),
+    body,
     chartJsScript,
     chartsInit: CHARTS_INIT_JS,
     dataJson: { charts: chartsData },

@@ -17,7 +17,7 @@ const cover = {
 }
 
 describe('compositor do relatório geral', () => {
-  it('cria capa e uma página vazia com paginação global', async () => {
+  it('cria capa e encerramento e omite a seção sem registros', async () => {
     const html = await composeReports({
       cover,
       reports: [{
@@ -32,14 +32,15 @@ describe('compositor do relatório geral', () => {
       }],
     })
     expect(html).toContain('Infográfico Mensal')
-    expect(html).toContain('Sem registros no período')
+    expect(html).not.toContain('Sem registros no período')
+    expect(html).not.toContain('Relatório de Mortalidade')
     expect(html).toContain('Atenciosamente,')
     expect(html).toContain("<div class=\"final-company\">Gesta'Up</div>")
     expect(html).not.toContain('Encerramento')
     expect(html).not.toContain('Gestão integrada da fazenda · Fazenda Teste')
-    expect(html).toContain('Página 1 de 3')
-    expect(html).toContain('Página 2 de 3')
-    expect(html).toContain('Página 3 de 3')
+    expect(html).toContain('Página 1 de 2')
+    expect(html).toContain('Página 2 de 2')
+    expect(html).not.toContain('Página 3 de')
     expect(html).toContain('padding:12mm 14mm 25mm')
     expect(html).toContain('z-index:2')
     expect(html).toContain('.cover-brand img{width:64px;height:64px')

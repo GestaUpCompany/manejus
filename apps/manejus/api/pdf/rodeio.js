@@ -22,18 +22,13 @@ import {
   renderHeader,
   renderFooter,
   kpi,
-  page as pageSection,
   chartCard,
   htmlDocument,
 } from './_shared/template.js'
+import { flowBlock, flowIntro, flowSection, flowTable } from './_shared/flowEngine.js'
 
 const MAX_REGISTROS = 20000
 const MAX_BODY_BYTES = 8_000_000
-
-// Linhas por página do detalhamento (A4 landscape, ~140mm úteis). Com a
-// equipe abreviada e a composição em uma coluna, as linhas ficam curtas;
-// a coluna de alertas ainda pode quebrar em 2 linhas.
-const DETAIL_ROWS_PER_PAGE = 14
 
 const CATEGORIAS = [
   { key: 'vaca', label: 'Vacas', short: 'Vac' },
@@ -98,8 +93,9 @@ const RODEIO_CSS = `
 .farm-logo{max-height:56px;max-width:120px}
 .page{display:flex;flex-direction:column}
 .rodeio-content{flex:1;display:flex;flex-direction:column;min-height:0}
-.rodeio-charts{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1;min-height:0}
+.rodeio-charts{display:grid;grid-template-columns:repeat(var(--cols,2),1fr);gap:8px;height:58mm}
 .rodeio-charts .chart-card{height:100%}
+.rodeio-nota{font-size:12px;color:#7a8981;margin:0}
 .rodeio-alertas-mini{border:1px solid #efd8d6;border-left:3px solid #c94d46;border-radius:0 5px 5px 0;background:#fdf6f5;padding:6px 10px;margin-bottom:3mm}
 .rodeio-alertas-mini .am-title{color:#c94d46;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
 .rodeio-alertas-mini .am-item{font-size:11px;color:#7a4a45;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -107,7 +103,6 @@ const RODEIO_CSS = `
 .rodeio-alertas-mini .am-more{font-size:10px;color:#a08a86;margin-top:2px}
 .rodeio-alertas-table td{font-size:10px;padding:4px 5px;line-height:1.3}
 .rodeio-alertas-table th{font-size:10px;padding:5px}
-.rodeio-resumo-wrap{margin-top:6mm}
 .rodeio-resumo-table td, .rodeio-detail-table td{font-size:11px;padding:5px 4px;line-height:1.25}
 .rodeio-resumo-table th, .rodeio-detail-table th{font-size:10px;padding:5px 4px}
 .rodeio-resumo-table th, .rodeio-resumo-table td,
@@ -440,15 +435,6 @@ function detailTableHtml(registros, total) {
   return `<div class="table-block"><h3 class="table-title">Registros detalhados<span>${total} registro(s)</span></h3><table class="rodeio-detail-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
 }
 
-function chunkArray(arr, size) {
-  if (arr.length <= size) return [arr]
-  const chunks = []
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size))
-  }
-  return chunks
-}
-
 export async function renderRodeioHtml(input) {
   const { dataInicio, dataFim, fazendaNome, logoGestao, logoFazenda, resumo, registros } = input
   const brand = { logoGestao, logoFazenda, fazendaNome }
@@ -482,28 +468,12 @@ export async function renderRodeioHtml(input) {
   // período tem meta_intervalo_rodeio_dias configurada.
   const temMeta = Number(resumo.rodeios_com_meta) > 0
 
-  // Resumo por lote paginado: na página 2 ele divide espaço com a lista de
-  // alertas (~12 linhas); continuações levam ~20 linhas por página extra.
-  // Com a coluna Meta as linhas podem ganhar uma sub-linha ("N fora"), o
-  // que quase dobra a altura — por isso o limite cai quando temMeta.
-  const resumoRowsP2 = alertas.length ? (temMeta ? 8 : 12) : temMeta ? 14 : 18
-  const resumoPrimeiraParte = porLote.slice(0, resumoRowsP2)
-  const resumoRestoChunks = chunkArray(porLote.slice(resumoRowsP2), temMeta ? 14 : 20)
-
-  const detailChunks = chunkArray(registros, DETAIL_ROWS_PER_PAGE)
-  const totalPages = 2
-    + (porLote.length > resumoRowsP2 ? resumoRestoChunks.length : 0)
-    + (registros.length > 0 ? detailChunks.length : 0)
-
   const chartsData = []
-  const pagesHtml = []
-  let pageIndex = 0
 
-  // Página 1: resumo (KPIs + insights + faixa de alertas + gráficos)
-  pageIndex += 1
   const canvasCabecas = 'chart-rodeio-cabecas'
   const canvasEscore = 'chart-rodeio-escore'
-  if (serie.length && categoriasComDados.length) {
+  const temCabecas = serie.length > 0 && categoriasComDados.length > 0
+  if (temCabecas) {
     chartsData.push({ canvasId: canvasCabecas, kind: 'cabecas', serie, categorias: categoriasComDados })
   }
   if (temEscore) {
@@ -512,71 +482,53 @@ export async function renderRodeioHtml(input) {
   const totalAlertas = resumo.alertas_sanitarios + resumo.pendencias_infra
   const metaClassificaveis = (resumo.dentro_meta || 0) + (resumo.fora_meta || 0)
   const metaPct = metaClassificaveis > 0 ? Math.round((resumo.dentro_meta / metaClassificaveis) * 100) : null
-  pagesHtml.push(
-    pageSection(`
-      ${renderHeader({ ...brand, reportTitle: 'Relatório de Rodeio de Gado', section: 'Resumo executivo', sectionLabel: 'Visão geral' })}
-      <p class="section-kicker">Resumo do período</p>
-      <div class="period-badge">${dateFmt(dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(dataFim)}</div>
-      ${resumo.insights ? `<div class="insight-box"><span class="insight-label">Resumo</span>${escapeHtml(resumo.insights)}</div>` : ''}
-      <div class="${temMeta ? 'kpi-grid' : 'kpi-grid secondary'}">
+
+  // Gráficos: só entram os que têm dados; o número de colunas acompanha.
+  const cards = []
+  if (temCabecas) cards.push(chartCard({ canvasId: canvasCabecas, title: 'Cabeças contadas por dia', subtitle: 'Composição por categoria', hasData: true }))
+  if (temEscore) cards.push(chartCard({ canvasId: canvasEscore, title: 'Distribuição de escore', subtitle: 'Rodeios por faixa de escore (gado e fezes)', hasData: true }))
+  const chartsHtml = cards.length
+    ? `<div class="rodeio-charts" style="--cols:${cards.length}">${cards.join('')}</div>`
+    : '<p class="rodeio-nota">Sem contagem de cabeças nem escores registrados no período.</p>'
+
+  const kpisHtml = `<div class="${temMeta ? 'kpi-grid' : 'kpi-grid secondary'}">
         ${kpi(intFmt(resumo.total_rodeios), 'Rodeios realizados', 'No período selecionado')}
         ${kpi(resumo.escore_gado_medio != null ? numFmt(resumo.escore_gado_medio, 1) : '—', 'Escore médio do gado', `Fezes: ${resumo.escore_fezes_medio != null ? numFmt(resumo.escore_fezes_medio, 1) : '—'} (1-5)`)}
         ${kpi(intFmt(totalAlertas), 'Alertas de diagnóstico', `${intFmt(resumo.alertas_sanitarios)} sanitários · ${intFmt(resumo.pendencias_infra)} infra · ${intFmt(resumo.rodeios_com_alerta)} rodeio(s)`, totalAlertas > 0 ? 'red' : 'green')}
         ${temMeta ? kpi(metaPct != null ? `${metaPct}%` : '—', 'Aderência à meta de intervalo', `${intFmt(resumo.dentro_meta)} dentro · ${intFmt(resumo.fora_meta)} fora · ${intFmt(metaClassificaveis)} avaliados`, resumo.fora_meta > 0 ? 'red' : 'green') : ''}
-      </div>
-      ${alertasMiniHtml(alertas)}
-      <div class="rodeio-charts">
-        ${chartCard({ canvasId: canvasCabecas, title: 'Cabeças contadas por dia', subtitle: 'Composição por categoria', hasData: serie.length > 0 && categoriasComDados.length > 0 })}
-        ${chartCard({ canvasId: canvasEscore, title: 'Distribuição de escore', subtitle: 'Rodeios por faixa de escore (gado e fezes)', hasData: temEscore })}
-      </div>
-      ${renderFooter({ ...period, page: pageIndex, totalPages })}
-    `),
-  )
+      </div>`
 
-  // Página 2: lista de alertas + resumo único por lote
-  pageIndex += 1
-  pagesHtml.push(
-    pageSection(`
-      ${renderHeader({ ...brand, reportTitle: 'Relatório de Rodeio de Gado', section: 'Diagnósticos e locais', sectionLabel: 'Análise' })}
-      <p class="section-kicker">Alertas e distribuição por lote</p>
-      ${alertasTableHtml(alertas)}
-      <div class="rodeio-resumo-wrap">${resumoPrimeiraParte.length ? resumoLoteTableHtml(resumoPrimeiraParte, pastoPorLote, porLote.length, temMeta) : ''}</div>
-      ${renderFooter({ ...period, page: pageIndex, totalPages })}
-    `),
-  )
+  const periodBadge = `<div class="period-badge">${dateFmt(dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(dataFim)}</div>`
+  const resumoSec = { sec: 'Resumo executivo', lbl: 'Visão geral' }
+  const analiseSec = { sec: 'Diagnósticos e locais', lbl: 'Análise' }
+  const registrosSec = { sec: 'Detalhamento', lbl: 'Registros' }
 
-  // Páginas extras de análise: continuação da tabela "Resumo por lote"
-  // quando ela não cabe inteira na página 2.
-  resumoRestoChunks.forEach((chunk, i) => {
-    pageIndex += 1
-    pagesHtml.push(
-      pageSection(`
-        ${renderHeader({ ...brand, reportTitle: 'Relatório de Rodeio de Gado', section: `Diagnósticos e locais (${i + 2}/${resumoRestoChunks.length + 1})`, sectionLabel: 'Análise' })}
-        <p class="section-kicker">Distribuição por lote (continuação)</p>
-        ${resumoLoteTableHtml(chunk, pastoPorLote, porLote.length, temMeta)}
-        ${renderFooter({ ...period, page: pageIndex, totalPages })}
-      `),
-    )
-  })
+  // Cada bloco só existe se há conteúdo; o motor de fluxo (flowEngine) mede
+  // e distribui em quantas páginas forem necessárias.
+  const blocks = [
+    flowBlock(flowIntro('Resumo do período', periodBadge), { ...resumoSec, keepNext: true }),
+    flowBlock(resumo.insights ? `<div class="insight-box"><span class="insight-label">Resumo</span>${escapeHtml(resumo.insights)}</div>` : '', resumoSec),
+    flowBlock(kpisHtml, resumoSec),
+    flowBlock(alertasMiniHtml(alertas), resumoSec),
+    flowBlock(chartsHtml, resumoSec),
+    alertas.length
+      ? flowTable(alertasTableHtml(alertas), analiseSec)
+      : flowBlock(alertasTableHtml(alertas), analiseSec),
+    flowTable(resumoLoteTableHtml(porLote, pastoPorLote, porLote.length, temMeta), analiseSec),
+    flowTable(detailTableHtml(registros, registros.length), registrosSec),
+  ]
 
-  // Páginas 3+: detalhamento dos registros
-  detailChunks.forEach((chunk, i) => {
-    pageIndex += 1
-    pagesHtml.push(
-      pageSection(`
-        ${renderHeader({ ...brand, reportTitle: 'Relatório de Rodeio de Gado', section: `Detalhamento${detailChunks.length > 1 ? ` (${i + 1}/${detailChunks.length})` : ''}`, sectionLabel: 'Registros' })}
-        <p class="section-kicker">Registros de rodeio</p>
-        <div class="rodeio-content">${detailTableHtml(chunk, registros.length)}</div>
-        ${renderFooter({ ...period, page: pageIndex, totalPages })}
-      `),
-    )
+  const body = flowSection({
+    headerHtml: renderHeader({ ...brand, reportTitle: 'Relatório de Rodeio de Gado', section: '__SEC__', sectionLabel: '__LBL__' }),
+    footerHtml: renderFooter({ ...period, page: 0, totalPages: 0 }),
+    blocks,
   })
 
   const chartJsScript = await getChartJsScript()
   return htmlDocument({
     title: 'Relatório de Rodeio de Gado',
     extraCss: RODEIO_CSS,
-    body: pagesHtml.join(''),
+    body,
     chartJsScript,
     chartsInit: CHARTS_INIT_JS,
     dataJson: { charts: chartsData },

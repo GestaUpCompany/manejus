@@ -1,5 +1,6 @@
 import { escapeHtml } from './_shared/formatters.js'
-import { htmlDocument, page as pageSection, renderHeader } from './_shared/template.js'
+import { htmlDocument, renderHeader } from './_shared/template.js'
+import { flowBlock, flowIntro, flowSection, flowTable } from './_shared/flowEngine.js'
 
 const BOLETIM_CSS = `
 .boletim-table{margin-top:3mm;border-radius:6px;overflow:hidden}
@@ -80,27 +81,37 @@ function renderSaldoFinalResumo(dados) {
   return `<div class="saldo-final-resumo"><div class="saldo-local-card${classeDensidade}"><div class="saldo-local-header"><span class="saldo-local-title">Saldo final por local</span><span class="saldo-final-kpi"><span class="saldo-label">Saldo final geral</span><span class="saldo-valor">${formatValue(saldoGeral)}</span></span></div>${barras}</div></div>`
 }
 
-function renderTable(registros) {
+function renderTable(registros, titulo) {
   const total = totalizar(registros)
   const rows = registros.map((registro, index) => `<tr class="${index % 2 ? 'striped' : ''}"><td>${escapeHtml(registro.descricao)}</td>${COLUMNS.map(([campo]) => `<td class="numeric">${formatValue(registro[campo])}</td>`).join('')}</tr>`).join('')
   const totalRow = `<tr><td>Total do rebanho</td>${COLUMNS.map(([campo]) => `<td class="numeric">${formatValue(total[campo])}</td>`).join('')}</tr>`
-  return `<table class="boletim-table"><thead><tr><th>Categoria</th>${COLUMNS.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${rows}${totalRow}</tbody></table>`
+  return `<div class="table-block"><h3 class="table-title">${escapeHtml(titulo)}<span>${registros.length} ${registros.length === 1 ? 'categoria' : 'categorias'}</span></h3><table class="boletim-table"><thead><tr><th>Categoria</th>${COLUMNS.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${rows}${totalRow}</tbody></table></div>`
 }
 
-function renderFooter({ mes, ano }) {
-  return `<footer class="report-footer"><span>Gesta'Up · Boletim de Rebanho · ${escapeHtml(mes)} de ${ano}</span><span>Página 1 de 1</span></footer>`
-}
-
-function renderPage({ dados, registros, section, sectionLabel }) {
-  const resumoSaldo = section === 'Resumo geral' ? renderSaldoFinalResumo(dados) : ''
-  const content = `${renderHeader({ logoGestao: dados.logoGestao, logoFazenda: dados.logoFazenda, fazendaNome: dados.fazendaNome, reportTitle: 'Boletim de Rebanho', section, sectionLabel })}<p class="section-kicker">Composição do rebanho</p><p class="period-badge">${escapeHtml(section === 'Resumo geral' ? `Consolidado anual · ${dados.ano}` : `${dados.mesReferencia} de ${dados.ano}`)}</p><p class="boletim-intro">Quantidade de animais por categoria e movimentação registrada na fonte do boletim.</p>${renderTable(registros)}${resumoSaldo}<p class="boletim-note">Células sem registro na planilha são exibidas como -.</p>${renderFooter({ mes: section === 'Resumo geral' ? `Consolidado anual` : dados.mesReferencia, ano: dados.ano })}`
-  return pageSection(content)
+// Cada aba (geral e cada local) vira um conjunto de blocos; o motor de fluxo
+// decide quantas páginas são necessárias (tabelas curtas podem dividir página).
+function renderBlocos({ dados, registros, section, sectionLabel }) {
+  const geral = section === 'Resumo geral'
+  const opts = { sec: section, lbl: sectionLabel }
+  const badge = `<p class="period-badge">${escapeHtml(geral ? `Consolidado anual · ${dados.ano}` : `${dados.mesReferencia} de ${dados.ano}`)}</p>`
+  return [
+    flowBlock(flowIntro('Composição do rebanho', badge), { ...opts, keepNext: true }),
+    flowBlock('<p class="boletim-intro">Quantidade de animais por categoria e movimentação registrada na fonte do boletim.</p>', { ...opts, keepNext: true }),
+    flowTable(renderTable(registros, geral ? 'Resumo geral' : section), opts),
+    flowBlock(geral ? renderSaldoFinalResumo(dados) : '', opts),
+    flowBlock('<p class="boletim-note">Células sem registro na planilha são exibidas como -.</p>', opts),
+  ]
 }
 
 export function renderBoletimRebanhoHtml(dados) {
-  const paginas = [renderPage({ dados, registros: dados.geral, section: 'Resumo geral', sectionLabel: 'Aba GERAL' })]
+  const blocks = [...renderBlocos({ dados, registros: dados.geral, section: 'Resumo geral', sectionLabel: 'Aba GERAL' })]
   for (const local of dados.locais) {
-    paginas.push(renderPage({ dados, registros: local.registros, section: local.fazenda, sectionLabel: `Mês de referência: ${dados.mesReferencia}` }))
+    blocks.push(...renderBlocos({ dados, registros: local.registros, section: local.fazenda, sectionLabel: `Mês de referência: ${dados.mesReferencia}` }))
   }
-  return htmlDocument({ title: 'Boletim de Rebanho', extraCss: BOLETIM_CSS, body: paginas.join('') })
+  const body = flowSection({
+    headerHtml: renderHeader({ logoGestao: dados.logoGestao, logoFazenda: dados.logoFazenda, fazendaNome: dados.fazendaNome, reportTitle: 'Boletim de Rebanho', section: '__SEC__', sectionLabel: '__LBL__' }),
+    footerHtml: `<footer class="report-footer"><span>Gesta'Up · Boletim de Rebanho · ${escapeHtml(dados.mesReferencia)} de ${dados.ano}</span><span>Página 0 de 0</span></footer>`,
+    blocks,
+  })
+  return htmlDocument({ title: 'Boletim de Rebanho', extraCss: BOLETIM_CSS, body })
 }

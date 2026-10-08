@@ -13,8 +13,9 @@
 // Puppeteer sem redesenhar CSS.
 
 import { escapeHtml, dateFmt } from './formatters.js'
+import { FLOW_CSS, FLOW_ENGINE_JS } from './flowEngine.js'
 
-export const BASE_CSS = `
+const BASE_CSS_CORE = `
 @page{size:A4 landscape;margin:0}
 *{box-sizing:border-box}
 body{margin:0;background:#e9eeeb;color:#26352e;font-family:Arial,Helvetica,sans-serif;font-size:14px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -47,7 +48,7 @@ body{margin:0;background:#e9eeeb;color:#26352e;font-family:Arial,Helvetica,sans-
 .kpi-label{color:#63736a;font-size:12px;margin-top:5px}
 .kpi-sub{color:#8a9890;font-size:11px;margin-top:2px}
 .chart-card{height:75mm;border:1px solid #dce5df;border-radius:6px;padding:8px;background:#fff;overflow:hidden;display:flex;flex-direction:column}
-.chart-heading{height:8mm;display:flex;flex-direction:column;gap:2px}
+.chart-heading{min-height:8mm;display:flex;flex-direction:column;gap:2px;margin-bottom:2mm}
 .chart-heading strong{font-size:16px;color:#30463a}
 .chart-heading span{font-size:13px;color:#63736a}
 .chart-body{flex:1;min-height:0;position:relative}
@@ -63,6 +64,8 @@ td.numeric{text-align:right;font-variant-numeric:tabular-nums}
 .striped{background:#f7faf8}
 .report-footer{position:absolute;z-index:2;bottom:7mm;left:14mm;right:14mm;border-top:1px solid #dce5df;padding-top:3mm;background:#fff;color:#84938a;font-size:11px;display:flex;justify-content:space-between}
 `
+
+export const BASE_CSS = BASE_CSS_CORE + FLOW_CSS
 
 const imageTag = (src, alt, className = '') =>
   src ? `<img class="${className}" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">` : ''
@@ -128,5 +131,5 @@ export function htmlDocument({ title, extraCss = '', extraScripts = [], body, ch
     : chartsInit
       ? `<script>${chartsInit}</script>`
       : ''
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${BASE_CSS}${extraCss}</style></head><body>${body}${dataScript}${vendorScripts}${chartsScript}</body></html>`
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${BASE_CSS}${extraCss}</style><script>${FLOW_ENGINE_JS}</script></head><body>${body}<script>window.__paginateFlows()</script>${dataScript}${vendorScripts}${chartsScript}<script>window.__numberPages()</script></body></html>`
 }
