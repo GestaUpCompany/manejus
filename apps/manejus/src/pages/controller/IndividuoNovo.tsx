@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '@gestaup/shared'
+import { useAuth, toFarmDateOnly } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import { Button, Card, NumericInput, Modal, useToast } from '@gestaup/ui'
 import {
@@ -11,6 +11,7 @@ import {
   categoriasFemea,
   origens,
   statusEditaveis,
+  toNumber,
 } from '../../utils/individualValidation'
 import {
   checkDuplicateIdentification,
@@ -18,6 +19,7 @@ import {
   type IdentificationField,
 } from '../../utils/checkDuplicateIdentification'
 import { getFazendaIdForUser } from '@gestaup/shared'
+import { montarMovimentacoesIndividuo, mudouLocal } from '../../utils/movimentacaoIndividuo'
 import { useLotes } from '@gestaup/shared'
 
 interface SelectOption {
@@ -453,6 +455,45 @@ export function IndividuoNovo() {
     await executeSubmit()
   }
 
+  const registrarMovimentacaoIndividuo = async (params: {
+    individuoId: string
+    origem: { loteId: string | null | undefined; categoria: string | null | undefined }
+    destino: { loteId: string | null | undefined; categoria: string | null | undefined }
+    contexto: 'realocacao' | 'cadastro'
+  }) => {
+    const { destino } = params
+    let pesoMedioDestinoKg: number | null = null
+    if (destino.loteId && destino.categoria) {
+      const { data: cat } = await supabase
+        .from('lote_categorias')
+        .select('peso_vivo_atual_kg_cab')
+        .eq('lote_id', destino.loteId)
+        .ilike('categoria', destino.categoria)
+        .eq('ativo', true)
+        .maybeSingle()
+      pesoMedioDestinoKg = cat?.peso_vivo_atual_kg_cab != null ? Number(cat.peso_vivo_atual_kg_cab) : null
+    }
+
+    const pesoInformado = form.peso_atual_kg ? toNumber(form.peso_atual_kg) : null
+    const linhas = montarMovimentacoesIndividuo({
+      fazendaId: fazendaId!,
+      individuoId: params.individuoId,
+      identificacao: form.id_brinco || form.id_chip || form.id_manejo || form.id_provisorio_cria || 'Indivíduo',
+      origem: params.origem,
+      destino: params.destino,
+      data: toFarmDateOnly(new Date().toISOString()) ?? new Date().toISOString().split('T')[0],
+      pesoKg: pesoInformado !== null && Number.isFinite(pesoInformado) ? pesoInformado : null,
+      pesoMedioDestinoKg,
+      contexto: params.contexto,
+    })
+
+    // Em ordem: a Saída precisa existir antes da Entrada para os contadores refletirem a sequência
+    for (const linha of linhas) {
+      const { error } = await supabase.from('registros_movimentacao').insert(linha)
+      if (error) throw error
+    }
+  }
+
   const executeSubmit = async () => {
     setSubmitting(true)
 
@@ -558,70 +599,18 @@ export function IndividuoNovo() {
           }
         }
 
-        // Realocar indivíduo para novo lote/categoria quando alterado
-        if (loteOriginal && (loteOriginal !== form.lote_atual || categoriaOriginal !== form.categoria)) {
+        // Registrar a movimentação quando o lote ou a categoria mudou. O trigger do banco recalcula quant_atual.
+        if (mudouLocal({ loteId: loteOriginal, categoria: categoriaOriginal }, { loteId: form.lote_atual, categoria: form.categoria })) {
           try {
-            const dataMovimentacao = new Date().toISOString()
-            const identificacao = form.id_brinco || form.id_chip || form.id_manejo || 'Indivíduo'
-
-            // Registrar saída do lote/categoria original
-            if (loteOriginal && categoriaOriginal) {
-              await supabase.from('registros_movimentacao').insert({
-                fazenda_id: fazendaId,
-                lote_origem_id: loteOriginal,
-                lote_destino_id: null,
-                categoria: categoriaOriginal,
-                numero_cabecas: 1,
-                data: dataMovimentacao.split('T')[0],
-                peso_vivo_atual_kg: form.peso_atual_kg ? Number(String(form.peso_atual_kg).replace(',', '.')) : null,
-                motivo_movimentacao: 'Saída',
-                causa_observacao: `Saída por realocação de ${identificacao}`,
-                individuo_id: editId || null,
-              })
-
-              // Decrementar quantidade da categoria original
-              const { data: categoriaSaida } = await supabase
-                .from('lote_categorias')
-                .select('quant_atual')
-                .eq('lote_id', loteOriginal)
-                .eq('categoria', categoriaOriginal)
-                .eq('ativo', true)
-                .single()
-
-              if (categoriaSaida && (categoriaSaida.quant_atual || 0) > 0) {
-                await supabase
-                  .from('lote_categorias')
-                  .update({ quant_atual: categoriaSaida.quant_atual - 1 })
-                  .eq('lote_id', loteOriginal)
-                  .eq('categoria', categoriaOriginal)
-                  .eq('ativo', true)
-              }
-            }
-
-            // Registrar entrada no lote/categoria atual
-            if (form.lote_atual && form.categoria) {
-              await supabase.from('registros_movimentacao').insert({
-                fazenda_id: fazendaId,
-                lote_origem_id: null,
-                lote_destino_id: form.lote_atual,
-                categoria: form.categoria,
-                numero_cabecas: 1,
-                data: dataMovimentacao.split('T')[0],
-                peso_vivo_atual_kg: form.peso_atual_kg ? Number(String(form.peso_atual_kg).replace(',', '.')) : null,
-                motivo_movimentacao: 'Entrada',
-                causa_observacao: `Entrada por realocação de ${identificacao}`,
-                individuo_id: editId || null,
-              })
-
-              await supabase.rpc('update_quant_atual_with_data', {
-                p_lote_id: form.lote_atual,
-                p_categoria: form.categoria,
-                p_raca: form.raca,
-                p_sexo: form.sexo,
-              })
-            }
+            await registrarMovimentacaoIndividuo({
+              individuoId: editId!,
+              origem: { loteId: loteOriginal, categoria: categoriaOriginal },
+              destino: { loteId: form.lote_atual, categoria: form.categoria },
+              contexto: 'realocacao',
+            })
           } catch (movError) {
             console.error('Erro ao registrar realocação de lote:', movError)
+            toast.error('Indivíduo salvo, mas não foi possível registrar a movimentação de lote.')
           }
         }
 
@@ -713,33 +702,18 @@ export function IndividuoNovo() {
                 .eq('id', data.id)
             }
 
-            // Registrar entrada no histórico do lote (unificado em registros_movimentacao)
-            const historicoData = {
-              fazenda_id: fazendaId,
-              lote_origem_id: null,
-              lote_destino_id: form.lote_atual,
-              categoria: form.categoria,
-              numero_cabecas: 1,
-              data: new Date().toISOString().split('T')[0],
-              individuo_id: data.id,
-              peso_vivo_atual_kg: form.peso_atual_kg ? Number(String(form.peso_atual_kg).replace(',', '.')) : null,
-              motivo_movimentacao: 'Entrada' as const,
-              causa_observacao: `Entrada de indivíduo: ${form.id_brinco || form.id_chip || form.id_manejo || form.id_provisorio_cria || 'Sem identificação'}`
-            }
-
-            await supabase.from('registros_movimentacao').insert(historicoData)
-
-            // Atualizar quantidade e dados na categoria do lote
-            await supabase.rpc('update_quant_atual_with_data', {
-              p_lote_id: form.lote_atual,
-              p_categoria: form.categoria,
-              p_raca: form.raca,
-              p_sexo: form.sexo
+            // Registrar a entrada no lote (unificado em registros_movimentacao). O trigger do banco recalcula quant_atual.
+            await registrarMovimentacaoIndividuo({
+              individuoId: data.id,
+              origem: { loteId: null, categoria: null },
+              destino: { loteId: form.lote_atual, categoria: form.categoria },
+              contexto: 'cadastro',
             })
 
           } catch (histError) {
             console.error('Erro ao registrar histórico do lote:', histError)
-            // Não falhar a criação do indivíduo se o histórico falhar
+            // Não falhar a criação do indivíduo se o histórico falhar, mas avisar
+            toast.error('Indivíduo criado, mas não foi possível registrar a entrada no lote.')
           }
         }
 
