@@ -4,6 +4,19 @@ import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveCo
 import logoManejus from '/images/manejus360.png'
 import { ordenarPeriodo } from '../../features/relatorioGeral/periodo'
 import { gerarRelatorioBebedourosPDFPuppeteer } from '../../utils/relatorioBebedourosPDFPuppeteer'
+import {
+  calcularChecklist,
+  calcularCronograma,
+  calcularKPIsCronograma,
+  calcularLimpezasDoDia,
+  calcularMaisAtrasado,
+  proximasNaJanela,
+  textoPrazo,
+  type ItemCronograma,
+  type LimpezaDoDiaItem,
+  type OcorrenciaCalculada,
+} from '../../features/relatorioBebedouros/calculos'
+import { cronogramaParaPDF, limpezaDoDiaParaPDF, ocorrenciaParaPDF } from '../../features/relatorioBebedouros/paraPdf'
 
 const GREEN_DARK = '#0F6437'
 
@@ -29,14 +42,6 @@ const CHART_NO_FOCUS_CSS = `
 }
 .recharts-active-dot { display: none !important; }
 `
-
-const CHECKLIST_ITEMS: { key: string; label: string }[] = [
-  { key: 'agua_suficiente', label: 'Água insuficiente' },
-  { key: 'vazao_bebedouro_ideal', label: 'Vazão não ideal' },
-  { key: 'espacamento_bebedouro_ideal', label: 'Espaçamento não ideal' },
-  { key: 'boia_protecao_boas_condicoes', label: 'Bóia/proteção em más condições' },
-  { key: 'aterro_acesso_bebedouro_ideal', label: 'Aterro/acesso não ideal' },
-]
 
 interface RelatorioInfo {
   fazenda_id: string
@@ -75,67 +80,6 @@ interface RegistroBebedouro {
   checklist: Record<string, { valor: boolean; observacao: string }> | null
 }
 
-interface StatusLimpeza {
-  bebedouro: Bebedouro
-  ultimaLimpeza: string | null
-  diasDesdeUltima: number | null
-  meta: number | null
-  statusLabel: string
-  statusCor: string
-  limpezasNoPeriodo: number
-  observacaoUltima: string | null
-}
-
-interface OcorrenciaChecklist {
-  id: string
-  data: string
-  bebedouro: string
-  responsavel: string | null
-  itensNegativos: { key: string; label: string; observacao: string }[]
-  observacaoGeral: string | null
-}
-
-interface LimpezaKPIs {
-  total: number
-  emDia: number
-  atrasado: number
-  critico: number
-  semRegistro: number
-  pctEmDia: number
-}
-
-interface ChecklistItemRanking {
-  key: string
-  label: string
-  conformes: number
-  negativos: number
-  total: number
-  pctConforme: number
-  pctNegativo: number
-}
-
-interface ChecklistKPIs {
-  totalRegistros: number
-  comChecklist: number
-  negativos: number
-  pctNegativos: number
-  itensRanking: ChecklistItemRanking[]
-  itemMaisProblematico: ChecklistItemRanking | null
-}
-
-interface LimpezaDoDia {
-  id: string
-  nome: string
-  dataLimpeza: string
-  responsavel: string | null
-  observacao: string | null
-  intervalo: number | null
-  meta: number | null
-  statusLabel: string
-  statusCor: string
-  dataLimpezaAnterior: string | null
-}
-
 interface Props {
   token: string
   relatorioInfo: RelatorioInfo
@@ -146,14 +90,6 @@ function formatarData(iso: string): string {
   const partes = iso.split('T')[0].split('-')
   if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`
   return iso
-}
-
-function statusLimpeza(diasDesde: number | null, meta: number | null): { label: string; cor: string } {
-  if (diasDesde === null) return { label: 'Sem registro', cor: '#6B7280' }
-  if (!meta || meta <= 0) return { label: `${diasDesde}d`, cor: '#6B7280' }
-  if (diasDesde <= meta) return { label: 'Em dia', cor: '#22C55E' }
-  if (diasDesde <= Math.ceil(meta * 1.3)) return { label: 'Atrasado', cor: '#F59E0B' }
-  return { label: 'Atraso crítico', cor: '#EF4444' }
 }
 
 export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
@@ -312,26 +248,6 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
     return bebedouros.filter((b) => bebedourosSelecionados.includes(b.id))
   }, [bebedouros, bebedourosSelecionados])
 
-  const limpezasFiltradas = useMemo(() => {
-    const inicio = periodoInicio
-    const fim = periodoFim
-    return todasLimpezas.filter((l) => {
-      if (bebedourosSelecionados.length > 0 && !bebedourosSelecionados.includes(l.bebedouro_id)) return false
-      const data = l.data_limpeza.split('T')[0]
-      return data >= inicio && data <= fim
-    }).map((l) => {
-      const dataLimpeza = l.data_limpeza.split('T')[0]
-      const registroMatch = registros.find((r) => {
-        const dataRegistro = r.data.split('T')[0]
-        return r.numero_bebedouro === l.bebedouro_nome && dataRegistro === dataLimpeza
-      })
-      return {
-        ...l,
-        observacao: registroMatch?.observacao || null,
-      }
-    })
-  }, [todasLimpezas, periodoInicio, periodoFim, registros, bebedourosSelecionados])
-
   const registrosFiltrados = useMemo(() => {
     if (bebedourosSelecionados.length === 0) return registros
     const nomesSelecionados = bebedouros
@@ -340,149 +256,24 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
     return registros.filter((r) => r.numero_bebedouro && nomesSelecionados.includes(r.numero_bebedouro))
   }, [registros, bebedourosSelecionados, bebedouros])
 
-  const statusPorBebedouro: StatusLimpeza[] = useMemo(() => {
-    const fim = periodoFim
-    // Normaliza para date-only (meia-noite local) para que a diferenca seja sempre
-    // um numero inteiro de dias de calendario, independente de timezone ou horario.
-    const toDateOnly = (dateStr: string) => {
-      const d = new Date(dateStr.split('T')[0] + 'T00:00:00')
-      d.setHours(0, 0, 0, 0)
-      return d
-    }
-    const dataReferencia = toDateOnly(fim)
-
-    return bebedourosFiltrados.map((b) => {
-      const limpezasDoBebedouro = todasLimpezas
-        .filter((l) => l.bebedouro_id === b.id)
-        .sort((a, b2) => toDateOnly(b2.data_limpeza).getTime() - toDateOnly(a.data_limpeza).getTime())
-
-      const ultima = limpezasDoBebedouro[0] || null
-      const diasDesdeUltima = ultima
-        ? Math.max(Math.round((dataReferencia.getTime() - toDateOnly(ultima.data_limpeza).getTime()) / (1000 * 60 * 60 * 24)), 0)
-        : null
-
-      const status = statusLimpeza(diasDesdeUltima, b.meta_intervalo_limpeza)
-      const limpezasNoPeriodo = limpezasFiltradas.filter((l) => l.bebedouro_id === b.id).length
-
-      return {
-        bebedouro: b,
-        ultimaLimpeza: ultima?.data_limpeza || null,
-        diasDesdeUltima,
-        meta: b.meta_intervalo_limpeza,
-        statusLabel: status.label,
-        statusCor: status.cor,
-        limpezasNoPeriodo,
-        observacaoUltima: ultima?.observacao || null,
-      }
-    })
-  }, [bebedourosFiltrados, todasLimpezas, limpezasFiltradas, periodoFim])
-
-  const limpezaKPIs: LimpezaKPIs = useMemo(() => {
-    const total = statusPorBebedouro.length
-    const emDia = statusPorBebedouro.filter((s) => s.statusLabel === 'Em dia').length
-    const atrasado = statusPorBebedouro.filter((s) => s.statusLabel === 'Atrasado').length
-    const critico = statusPorBebedouro.filter((s) => s.statusLabel === 'Atraso crítico').length
-    const semRegistro = statusPorBebedouro.filter((s) => s.statusLabel === 'Sem registro').length
-    const pctEmDia = total > 0 ? Math.round((emDia / total) * 100) : 0
-    return { total, emDia, atrasado, critico, semRegistro, pctEmDia }
-  }, [statusPorBebedouro])
-
-  const maisAtrasado = useMemo(() => {
-    const comDias = statusPorBebedouro.filter((s) => s.diasDesdeUltima !== null && s.statusLabel !== 'Em dia')
-    if (comDias.length === 0) return null
-    return comDias.reduce((max, s) => (s.diasDesdeUltima! > max.diasDesdeUltima! ? s : max))
-  }, [statusPorBebedouro])
+  const cronograma = useMemo(
+    () => calcularCronograma(bebedourosFiltrados, todasLimpezas, periodoFim, periodoInicio, periodoFim),
+    [bebedourosFiltrados, todasLimpezas, periodoInicio, periodoFim],
+  )
+  const limpezaKPIs = useMemo(() => calcularKPIsCronograma(cronograma), [cronograma])
+  const maisAtrasado = useMemo(() => calcularMaisAtrasado(cronograma), [cronograma])
+  const proximasSemana = useMemo(() => proximasNaJanela(cronograma, 7), [cronograma])
 
   const ehDiaUnico = diaUnico !== '' || (dataInicio !== '' && dataFim !== '' && dataInicio === dataFim)
   const diaUnicoEfetivo = diaUnico || (dataInicio !== '' && dataFim !== '' && dataInicio === dataFim ? dataInicio : '')
 
-  const limpezasDoDia = useMemo(() => {
-    if (!ehDiaUnico) return []
-    const dia = diaUnicoEfetivo
-    return bebedourosFiltrados
-      .map((b) => {
-        const limpezasDoBebedouro = todasLimpezas
-          .filter((l) => l.bebedouro_id === b.id)
-          .sort((a, b2) => new Date(b2.data_limpeza).getTime() - new Date(a.data_limpeza).getTime())
-        const limpezaDoDia = limpezasDoBebedouro.find((l) => l.data_limpeza.split('T')[0] === dia)
-        if (!limpezaDoDia) return null
-        const idx = limpezasDoBebedouro.indexOf(limpezaDoDia)
-        const anterior = limpezasDoBebedouro[idx + 1] || null
-        const intervalo = anterior
-          ? Math.max(Math.round((new Date(limpezaDoDia.data_limpeza).getTime() - new Date(anterior.data_limpeza).getTime()) / (1000 * 60 * 60 * 24)), 0)
-          : null
-        const meta = b.meta_intervalo_limpeza
-        const status = !meta || meta <= 0
-          ? { label: `${intervalo ?? 0}d`, cor: '#6B7280' }
-          : intervalo === null
-            ? { label: 'Primeira limpeza', cor: '#6B7280' }
-            : intervalo <= meta
-              ? { label: 'Dentro da meta', cor: '#22C55E' }
-              : intervalo <= Math.ceil(meta * 1.3)
-                ? { label: 'Acima da meta', cor: '#F59E0B' }
-                : { label: 'Muito acima da meta', cor: '#EF4444' }
-        return {
-          id: b.id,
-          nome: b.nome,
-          dataLimpeza: limpezaDoDia.data_limpeza,
-          responsavel: limpezaDoDia.responsavel,
-          observacao: limpezaDoDia.observacao,
-          intervalo,
-          meta,
-          statusLabel: status.label,
-          statusCor: status.cor,
-          dataLimpezaAnterior: anterior?.data_limpeza || null,
-        }
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null)
-      .sort((a, b) => (b.intervalo ?? 0) - (a.intervalo ?? 0))
-  }, [ehDiaUnico, diaUnicoEfetivo, bebedourosFiltrados, todasLimpezas])
+  const limpezasDoDia = useMemo(
+    () => (ehDiaUnico ? calcularLimpezasDoDia(bebedourosFiltrados, todasLimpezas, diaUnicoEfetivo) : []),
+    [ehDiaUnico, diaUnicoEfetivo, bebedourosFiltrados, todasLimpezas],
+  )
 
-  const checklistKPIs: ChecklistKPIs = useMemo(() => {
-    const totalRegistros = registrosFiltrados.length
-    const comChecklist = registrosFiltrados.filter((r) => r.checklist && Object.keys(r.checklist).length > 0)
-    const negativos = comChecklist.filter((r) =>
-      CHECKLIST_ITEMS.some((item) => r.checklist?.[item.key]?.valor === false)
-    )
-    const pctNegativos = comChecklist.length > 0 ? Math.round((negativos.length / comChecklist.length) * 100) : 0
-
-    const itensRanking: ChecklistItemRanking[] = CHECKLIST_ITEMS.map((item) => {
-      const total = comChecklist.length
-      const conformes = comChecklist.filter((r) => r.checklist?.[item.key]?.valor === true).length
-      const negativosItem = comChecklist.filter((r) => r.checklist?.[item.key]?.valor === false).length
-      const pctConforme = total > 0 ? Math.round((conformes / total) * 100) : 0
-      const pctNegativo = total > 0 ? Math.round((negativosItem / total) * 100) : 0
-      return { key: item.key, label: item.label, conformes, negativos: negativosItem, total, pctConforme, pctNegativo }
-    }).sort((a, b) => b.pctNegativo - a.pctNegativo)
-
-    const itemMaisProblematico = itensRanking[0]?.pctNegativo > 0 ? itensRanking[0] : null
-
-    return { totalRegistros, comChecklist: comChecklist.length, negativos: negativos.length, pctNegativos, itensRanking, itemMaisProblematico }
-  }, [registrosFiltrados])
-
-  const ocorrenciasNegativas: OcorrenciaChecklist[] = useMemo(() => {
-    return registrosFiltrados
-      .filter((r) => r.checklist)
-      .map((r) => {
-        const itensNegativos = CHECKLIST_ITEMS
-          .filter((item) => r.checklist?.[item.key]?.valor === false)
-          .map((item) => ({
-            key: item.key,
-            label: item.label,
-            observacao: r.checklist?.[item.key]?.observacao || '',
-          }))
-        return {
-          id: r.id,
-          data: r.data,
-          bebedouro: r.numero_bebedouro || 'Sem identificação',
-          responsavel: r.responsavel,
-          itensNegativos,
-          observacaoGeral: r.observacao,
-        }
-      })
-      .filter((o) => o.itensNegativos.length > 0)
-      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-  }, [registrosFiltrados])
+  const checklist = useMemo(() => calcularChecklist(registrosFiltrados), [registrosFiltrados])
+  const checklistKPIs = checklist.kpis
 
   const exportarPDF = async () => {
     if (bebedouros.length === 0) return
@@ -501,42 +292,6 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
         })(),
       } : undefined
 
-      const limpezasDoDiaPDF = ehDiaUnico ? limpezasDoDia.map((l) => ({
-        nome: l.nome,
-        intervalo: l.intervalo,
-        cor: l.statusCor,
-        meta: l.meta,
-        dataLimpeza: l.dataLimpeza,
-        dataLimpezaAnterior: l.dataLimpezaAnterior,
-        statusLabel: l.statusLabel,
-        responsavel: l.responsavel,
-      })) : undefined
-
-      const statusPorBebedouroPDF = !ehDiaUnico ? statusPorBebedouro.map((s) => ({
-        nome: s.bebedouro.nome,
-        dias: s.diasDesdeUltima,
-        cor: s.statusCor,
-        meta: s.meta,
-        ultimaLimpeza: s.ultimaLimpeza,
-        limpezasNoPeriodo: s.limpezasNoPeriodo,
-        statusLabel: s.statusLabel,
-      })) : undefined
-
-      const maisAtrasadoPDF = maisAtrasado ? {
-        nome: maisAtrasado.bebedouro.nome,
-        dias: maisAtrasado.diasDesdeUltima!,
-        meta: maisAtrasado.meta!,
-      } : null
-
-      const ocorrenciasPDF = ocorrenciasNegativas.map((o) => ({
-        data: o.data,
-        bebedouro: o.bebedouro,
-        itensNegativos: o.itensNegativos.map((i) => i.label).join(', '),
-        obsItens: o.itensNegativos.map((i) => i.observacao).filter(Boolean).join('; '),
-        obsGeral: o.observacaoGeral || '',
-        responsavel: o.responsavel || '',
-      }))
-
       const blob = await gerarRelatorioBebedourosPDFPuppeteer({
         titulo: relatorioInfo.titulo || 'Relatório de Bebedouros',
         fazendaNome: relatorioInfo.fazenda_nome,
@@ -546,29 +301,15 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
         ehDiaUnico,
         diaUnico: diaUnicoEfetivo || undefined,
         limpezaKPIs: !ehDiaUnico ? limpezaKPIs : undefined,
-        maisAtrasado: !ehDiaUnico ? maisAtrasadoPDF : null,
-        statusPorBebedouro: statusPorBebedouroPDF,
+        maisAtrasado: !ehDiaUnico ? maisAtrasado : null,
+        statusPorBebedouro: !ehDiaUnico ? cronograma.map(cronogramaParaPDF) : undefined,
+        proximasSemana: !ehDiaUnico ? proximasSemana : undefined,
         limpezaDiaKPIs,
-        limpezasDoDia: limpezasDoDiaPDF,
-        checklistKPIs: {
-          totalRegistros: checklistKPIs.totalRegistros,
-          comChecklist: checklistKPIs.comChecklist,
-          negativos: checklistKPIs.negativos,
-          pctNegativos: checklistKPIs.pctNegativos,
-          itemMaisProblematico: checklistKPIs.itemMaisProblematico ? {
-            label: checklistKPIs.itemMaisProblematico.label,
-            pctNegativo: checklistKPIs.itemMaisProblematico.pctNegativo,
-            negativos: checklistKPIs.itemMaisProblematico.negativos,
-            total: checklistKPIs.itemMaisProblematico.total,
-          } : null,
-        },
-        itensRanking: checklistKPIs.itensRanking.map((r) => ({
-          label: r.label,
-          pctNegativo: r.pctNegativo,
-          negativos: r.negativos,
-          total: r.total,
-        })),
-        ocorrencias: ocorrenciasPDF,
+        limpezasDoDia: ehDiaUnico ? limpezasDoDia.map(limpezaDoDiaParaPDF) : undefined,
+        checklistKPIs: checklistKPIs,
+        itensRanking: checklist.ranking.map(({ label, pctNegativo, negativos, total }) => ({ label, pctNegativo, negativos, total })),
+        ocorrencias: checklist.ocorrencias.map(ocorrenciaParaPDF),
+        ocorrenciasPorBebedouro: checklist.ocorrenciasPorBebedouro,
       })
 
       const url = URL.createObjectURL(blob)
@@ -694,53 +435,27 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
           }}
         />
 
-        <Secao titulo="1. Status de limpeza dos bebedouros">
+        <Secao titulo="1. Cronograma de limpeza dos bebedouros">
           {ehDiaUnico ? (
             <>
-              <KPIsLimpezaDia limpezas={limpezasDoDia} data={diaUnicoEfetivo} />
-              <GraficoLimpezaDia limpezas={limpezasDoDia} onSelecionar={setBebedourosSelecionados} />
+              <KPIsLimpezaDia limpezas={limpezasDoDia} />
+              <TabelaLimpezasDia limpezas={limpezasDoDia} />
             </>
           ) : (
             <>
-              <KPIsLimpeza kpis={limpezaKPIs} maisAtrasado={maisAtrasado} />
-              <GraficoLimpeza status={statusPorBebedouro} onSelecionar={setBebedourosSelecionados} dataReferencia={diaUnico || dataFim || 'hoje'} />
+              <KPIsLimpeza kpis={limpezaKPIs} maisAtrasado={maisAtrasado} proximas={proximasSemana} />
+              <TabelaCronograma itens={cronograma} dataReferencia={periodoFim} />
             </>
           )}
         </Secao>
 
         <Secao titulo="2. Pontos de atenção nos bebedouros">
           <KPIsChecklist kpis={checklistKPIs} />
-          <GraficoProblemas ranking={checklistKPIs.itensRanking} />
-          <TabelaOcorrencias ocorrencias={ocorrenciasNegativas} />
+          <GraficoProblemas ranking={checklist.ranking} />
+          <OcorrenciasPorBebedouro itens={checklist.ocorrenciasPorBebedouro} />
+          <TabelaOcorrencias ocorrencias={checklist.ocorrencias} />
         </Secao>
       </div>
-    </div>
-  )
-}
-
-function LegendaStatus({ diaUnico }: { diaUnico: boolean }) {
-  const itens = diaUnico
-    ? [
-        { cor: '#22C55E', label: 'Dentro da meta', desc: 'intervalo até a meta' },
-        { cor: '#F59E0B', label: 'Acima da meta', desc: 'passou até ~30% da meta' },
-        { cor: '#EF4444', label: 'Muito acima da meta', desc: 'passou mais de ~30% da meta' },
-        { cor: '#6B7280', label: 'Primeira limpeza', desc: 'sem intervalo anterior' },
-      ]
-    : [
-        { cor: '#22C55E', label: 'Em dia', desc: 'limpo dentro da meta' },
-        { cor: '#F59E0B', label: 'Atrasado', desc: 'passou até ~30% da meta' },
-        { cor: '#EF4444', label: 'Atraso crítico', desc: 'passou mais de ~30% da meta' },
-        { cor: '#6B7280', label: 'Sem registro', desc: 'nenhuma limpeza registrada' },
-      ]
-  return (
-    <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-500 bg-gray-50 rounded-lg p-2.5 border border-gray-100">
-      {itens.map((i) => (
-        <span key={i.label} className="inline-flex items-center gap-2">
-          <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: i.cor }} />
-          <span className="font-medium text-gray-700">{i.label}</span>
-          <span className="hidden sm:inline text-gray-400">({i.desc})</span>
-        </span>
-      ))}
     </div>
   )
 }
@@ -749,7 +464,7 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
   return (
     <section className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100" style={{ backgroundColor: '#FAFAF9' }}>
-        <h2 className="text-base font-semibold text-gray-900">{titulo}</h2>
+        <h2 className="text-base font-bold" style={{ color: '#0b6a42' }}>{titulo}</h2>
       </div>
       <div className="p-4 space-y-4">{children}</div>
     </section>
@@ -934,361 +649,282 @@ function Filtros({
   )
 }
 
-function KPIsLimpeza({ kpis, maisAtrasado }: { kpis: LimpezaKPIs; maisAtrasado: StatusLimpeza | null }) {
-  const cards = [
-    { label: 'Bebedouros cadastrados', valor: kpis.total, cor: '#111827' },
-    { label: 'Dentro da meta', valor: kpis.emDia, subtitulo: `${kpis.pctEmDia}%`, cor: '#22C55E' },
-    { label: 'Atrasados', valor: kpis.atrasado, cor: '#F59E0B' },
-    { label: 'Atraso crítico', valor: kpis.critico, cor: '#EF4444' },
-    { label: 'Sem registro', valor: kpis.semRegistro, cor: '#6B7280' },
-  ]
+// === Componentes no padrão visual do PDF (kpi, alertas, selos, tabelas) ===
+// Mesmas cores/estrutura do PDF; o status nunca depende só da cor (texto + símbolo).
 
+const TONS_KPI: Record<string, { borda: string; valor: string; larg: number }> = {
+  green: { borda: '#0b6a42', valor: '#0b6a42', larg: 3 },
+  gold: { borda: '#c28a27', valor: '#9a6b17', larg: 3 },
+  red: { borda: '#c94d46', valor: '#c94d46', larg: 5 },
+  gray: { borda: '#9aa5a0', valor: '#4f5f56', larg: 3 },
+}
+
+function KpiCard({ valor, label, tom, simbolo, sub }: { valor: string | number; label: string; tom: keyof typeof TONS_KPI; simbolo?: string; sub?: string }) {
+  const t = TONS_KPI[tom]
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {cards.map((c) => (
-          <div key={c.label} className="rounded-xl border border-gray-200 p-4 text-center" style={{ borderLeftWidth: 4, borderLeftColor: c.cor }}>
-            <p className="text-xs text-gray-500 uppercase tracking-wide">{c.label}</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: c.cor }}>{c.valor}</p>
-            {c.subtitulo && <p className="text-xs text-gray-500 mt-1">{c.subtitulo}</p>}
-          </div>
-        ))}
-      </div>
+    <div className="rounded-md bg-white p-3" style={{ border: '1px solid #dce5df', borderTop: `${t.larg}px solid ${t.borda}`, minHeight: 88 }}>
+      <div className="text-xl font-bold leading-tight" style={{ color: t.valor }}>{valor}</div>
+      <div className="mt-1.5 text-xs" style={{ color: '#63736a' }}>{simbolo ? `${simbolo} ` : ''}{label}</div>
+      {sub && <div className="mt-0.5 text-[11px]" style={{ color: '#8a9890' }}>{sub}</div>}
+    </div>
+  )
+}
+
+function KpiGrid({ children, colunas }: { children: React.ReactNode; colunas: number }) {
+  const cls = colunas >= 6 ? 'md:grid-cols-6' : colunas === 5 ? 'md:grid-cols-5' : colunas === 4 ? 'md:grid-cols-4' : 'md:grid-cols-3'
+  return <div className={`grid grid-cols-2 gap-3 ${cls}`}>{children}</div>
+}
+
+function AlertLine({ prefixo, texto, tom }: { prefixo: string; texto: string; tom: 'warn' | 'crit' }) {
+  const crit = tom === 'crit'
+  return (
+    <div
+      className="rounded-r-md px-3 py-2 text-sm"
+      style={{
+        borderLeft: `${crit ? 5 : 3}px solid ${crit ? '#c94d46' : '#c28a27'}`,
+        backgroundColor: crit ? '#fef2f2' : '#fffaf0',
+        color: '#52635a',
+      }}
+    >
+      <strong style={{ color: crit ? '#991b1b' : '#805d12' }}>{prefixo}</strong> {texto}
+    </div>
+  )
+}
+
+const ESTILOS_SELO = {
+  ok: { simbolo: '●', cor: '#0b6a42', fundo: '#e9f5ee', borda: '#9ccfb2', estilo: 'solid', larg: 1 },
+  warn: { simbolo: '▲', cor: '#805d12', fundo: '#fffaf0', borda: '#e3c27a', estilo: 'solid', larg: 1 },
+  crit: { simbolo: '■', cor: '#991b1b', fundo: '#fef2f2', borda: '#991b1b', estilo: 'solid', larg: 1.5 },
+  none: { simbolo: '○', cor: '#4f5f56', fundo: '#ffffff', borda: '#9aa5a0', estilo: 'dashed', larg: 1 },
+  nometa: { simbolo: '–', cor: '#4f5f56', fundo: 'transparent', borda: 'transparent', estilo: 'solid', larg: 1 },
+} as const
+
+const TIPO_POR_LABEL: Record<string, keyof typeof ESTILOS_SELO> = {
+  'Em dia': 'ok',
+  'Dentro da meta': 'ok',
+  Atrasado: 'warn',
+  'Acima da meta': 'warn',
+  'Atraso crítico': 'crit',
+  'Muito acima da meta': 'crit',
+  'Sem registro': 'none',
+  'Primeira limpeza': 'none',
+  'Sem meta': 'nometa',
+}
+
+function Selo({ label }: { label: string }) {
+  const e = ESTILOS_SELO[TIPO_POR_LABEL[label] ?? 'nometa']
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2 py-px text-[11px] font-bold whitespace-nowrap"
+      style={{ color: e.cor, backgroundColor: e.fundo, border: `${e.larg}px ${e.estilo} ${e.borda}` }}
+    >
+      <span aria-hidden="true">{e.simbolo}</span>
+      {label}
+    </span>
+  )
+}
+
+function LegendaTabela({ diaUnico }: { diaUnico: boolean }) {
+  const itens = diaUnico
+    ? ['● Dentro da meta', '▲ Acima da meta', '■ Muito acima da meta', '○ Primeira limpeza']
+    : ['● Em dia', '▲ Atrasado', '■ Atraso crítico', '○ Sem registro', '– Sem meta']
+  return (
+    <p className="text-xs" style={{ color: '#63736a' }}>
+      Legenda: {itens.join(' · ')}{diaUnico ? '' : ' · ! prazo vencido'}
+    </p>
+  )
+}
+
+const TH = 'py-2 px-3 text-left text-[11px] font-bold text-white whitespace-nowrap'
+const TH_STYLE = { backgroundColor: '#0b6a42' }
+
+function TabelaVerde({ children, cabecalho }: { children: React.ReactNode; cabecalho: React.ReactNode }) {
+  return (
+    <div className="overflow-x-auto rounded-md border" style={{ borderColor: '#dce5df' }}>
+      <table className="min-w-full text-[13px]">
+        <thead><tr>{cabecalho}</tr></thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  )
+}
+
+function KPIsLimpeza({ kpis, maisAtrasado, proximas }: {
+  kpis: ReturnType<typeof calcularKPIsCronograma>
+  maisAtrasado: { nome: string; dias: number; meta: number } | null
+  proximas: { nome: string; proximaLimpeza: string; diasParaProxima: number }[]
+}) {
+  const cards = [
+    <KpiCard key="t" valor={kpis.total} label="Cadastrados" tom="green" />,
+    <KpiCard key="o" valor={kpis.emDia} label="Dentro da meta" tom="green" simbolo="●" sub={`${kpis.pctEmDia}% dos bebedouros`} />,
+    <KpiCard key="a" valor={kpis.atrasado} label="Atrasados" tom="gold" simbolo="▲" />,
+    <KpiCard key="c" valor={kpis.critico} label="Atraso crítico" tom="red" simbolo="■" />,
+    <KpiCard key="r" valor={kpis.semRegistro} label="Sem registro" tom="gray" simbolo="○" />,
+  ]
+  if (kpis.semMeta > 0) cards.push(<KpiCard key="m" valor={kpis.semMeta} label="Sem meta" tom="gray" simbolo="–" />)
+  return (
+    <div className="space-y-3">
+      <KpiGrid colunas={cards.length}>{cards}</KpiGrid>
       {maisAtrasado && (
-        <div className="rounded-lg p-3 border" style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA' }}>
-          <p className="text-sm text-gray-800">
-            <span className="font-semibold">Maior atraso:</span> {maisAtrasado.bebedouro.nome} com {maisAtrasado.diasDesdeUltima} dias desde a última limpeza. Meta: {maisAtrasado.meta} dias.
-          </p>
-        </div>
+        <AlertLine
+          tom="crit"
+          prefixo="CRÍTICO — maior atraso:"
+          texto={`${maisAtrasado.nome} com ${maisAtrasado.dias} dias desde a última limpeza. Meta: ${maisAtrasado.meta} dias.`}
+        />
+      )}
+      {proximas.length > 0 && (
+        <AlertLine
+          tom="warn"
+          prefixo="PRÓXIMOS 7 DIAS — limpezas previstas:"
+          texto={`${proximas.length} bebedouro(s): ${proximas.slice(0, 8).map((p) => `${p.nome} (${formatarData(p.proximaLimpeza)})`).join(', ')}${proximas.length > 8 ? ` e mais ${proximas.length - 8}` : ''}.`}
+        />
       )}
     </div>
   )
 }
 
-function KPIsLimpezaDia({ limpezas, data }: { limpezas: LimpezaDoDia[]; data: string }) {
-  const total = limpezas.length
-  const dentroMeta = limpezas.filter((l) => l.statusLabel === 'Dentro da meta').length
-  const acimaMeta = limpezas.filter((l) => l.statusLabel === 'Acima da meta').length
-  const muitoAcima = limpezas.filter((l) => l.statusLabel === 'Muito acima da meta').length
-  const primeiraLimpeza = limpezas.filter((l) => l.statusLabel === 'Primeira limpeza').length
+function KPIsLimpezaDia({ limpezas }: { limpezas: LimpezaDoDiaItem[] }) {
+  const conta = (label: string) => limpezas.filter((l) => l.statusLabel === label).length
   const intervalos = limpezas.map((l) => l.intervalo).filter((v): v is number => v !== null)
   const intervaloMedio = intervalos.length > 0 ? Math.round(intervalos.reduce((s, v) => s + v, 0) / intervalos.length) : null
-
-  const cards = [
-    { label: 'Limpos no dia', valor: total, cor: '#111827' },
-    { label: 'Dentro da meta', valor: dentroMeta, cor: '#22C55E' },
-    { label: 'Acima da meta', valor: acimaMeta, cor: '#F59E0B' },
-    { label: 'Muito acima da meta', valor: muitoAcima, cor: '#EF4444' },
-  ]
-
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {cards.map((c) => (
-          <div key={c.label} className="rounded-xl border border-gray-200 p-4 text-center" style={{ borderLeftWidth: 4, borderLeftColor: c.cor }}>
-            <p className="text-xs text-gray-500 uppercase tracking-wide">{c.label}</p>
-            <p className="text-3xl font-bold mt-1" style={{ color: c.cor }}>{c.valor}</p>
-          </div>
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-3 text-xs text-gray-600">
-        {primeiraLimpeza > 0 && <span className="px-2 py-1 rounded-full bg-gray-100">{primeiraLimpeza} primeira limpeza (sem intervalo)</span>}
-        {intervaloMedio !== null && <span className="px-2 py-1 rounded-full bg-gray-100">Intervalo médio: {intervaloMedio}d</span>}
-        <span className="px-2 py-1 rounded-full bg-gray-100">Data: {formatarData(data)}</span>
-      </div>
+    <div className="space-y-3">
+      <KpiGrid colunas={4}>
+        <KpiCard valor={limpezas.length} label="Limpos no dia" tom="green" />
+        <KpiCard valor={conta('Dentro da meta')} label="Dentro da meta" tom="green" simbolo="●" />
+        <KpiCard valor={conta('Acima da meta')} label="Acima da meta" tom="gold" simbolo="▲" />
+        <KpiCard valor={conta('Muito acima da meta')} label="Muito acima da meta" tom="red" simbolo="■" />
+      </KpiGrid>
+      {intervaloMedio !== null && (
+        <span className="inline-block rounded-full px-3 py-0.5 text-xs font-bold" style={{ color: '#0b6a42', backgroundColor: '#f0f6f2', border: '1px solid #d3e4d9' }}>
+          Intervalo médio: {intervaloMedio}d
+        </span>
+      )}
     </div>
   )
 }
 
-function GraficoLimpezaDia({ limpezas, onSelecionar }: { limpezas: LimpezaDoDia[]; onSelecionar: (ids: string[]) => void }) {
+function TabelaCronograma({ itens, dataReferencia }: { itens: ItemCronograma[]; dataReferencia: string }) {
+  if (itens.length === 0) {
+    return <div className="text-center text-gray-400 py-8 bg-gray-50 rounded-lg">Nenhum bebedouro cadastrado.</div>
+  }
+  return (
+    <div className="space-y-2">
+      <p className="text-xs" style={{ color: '#63736a' }}>
+        Última e próxima limpeza de cada bebedouro (próxima = última + meta), com prazo em relação a {formatarData(dataReferencia)}.
+      </p>
+      <TabelaVerde
+        cabecalho={
+          <>
+            <th className={TH} style={TH_STYLE}>Bebedouro</th>
+            <th className={TH} style={TH_STYLE}>Última limpeza</th>
+            <th className={TH} style={TH_STYLE}>Próxima limpeza</th>
+            <th className={TH} style={TH_STYLE}>Prazo</th>
+            <th className={TH} style={TH_STYLE}>Status</th>
+            <th className={`${TH} text-right`} style={TH_STYLE}>Meta</th>
+            <th className={TH} style={TH_STYLE}>Responsável (última)</th>
+            <th className={`${TH} text-right`} style={TH_STYLE}>No período</th>
+          </>
+        }
+      >
+        {itens.map((i, idx) => {
+          const vencida = i.diasParaProxima !== null && i.diasParaProxima < 0
+          const base = {
+            backgroundColor: idx % 2 === 1 ? '#f7faf8' : '#fff',
+            borderBottom: '1px solid #e5ebe7',
+            color: vencida ? '#991b1b' : '#4f5f56',
+            fontWeight: vencida ? 700 : 400,
+          } as const
+          return (
+            <tr key={i.id}>
+              <td className="py-2 px-3 whitespace-nowrap" style={{ ...base, borderLeft: vencida ? '4px solid #c94d46' : '4px solid transparent' }}>{i.nome}</td>
+              <td className="py-2 px-3 whitespace-nowrap" style={base}>{i.ultimaLimpeza ? formatarData(i.ultimaLimpeza) : '—'}</td>
+              <td className="py-2 px-3 whitespace-nowrap" style={{ ...base, fontWeight: 700, color: vencida ? '#991b1b' : '#26352e' }}>
+                {i.proximaLimpeza ? formatarData(i.proximaLimpeza) : i.ultimaLimpeza ? 'Sem meta' : 'Pendente'}
+              </td>
+              <td className="py-2 px-3 whitespace-nowrap" style={base}>{vencida ? '! ' : ''}{textoPrazo(i.diasParaProxima)}</td>
+              <td className="py-2 px-3" style={base}><Selo label={i.status.label} /></td>
+              <td className="py-2 px-3 text-right" style={base}>{i.meta ? `${i.meta}d` : '—'}</td>
+              <td className="py-2 px-3 whitespace-nowrap" style={base}>{i.responsavelUltima || '—'}</td>
+              <td className="py-2 px-3 text-right" style={base}>{i.limpezasNoPeriodo}</td>
+            </tr>
+          )
+        })}
+      </TabelaVerde>
+      <LegendaTabela diaUnico={false} />
+    </div>
+  )
+}
+
+function TabelaLimpezasDia({ limpezas }: { limpezas: LimpezaDoDiaItem[] }) {
   if (limpezas.length === 0) {
-    return (
-      <div className="text-center text-gray-400 py-8 bg-gray-50 rounded-lg">
-        Nenhum bebedouro foi limpo neste dia.
-      </div>
-    )
+    return <div className="text-center text-gray-400 py-8 bg-gray-50 rounded-lg">Nenhum bebedouro foi limpo neste dia.</div>
   }
-
-  const dados = limpezas.map((l) => ({
-    nome: l.nome,
-    intervalo: l.intervalo ?? 0,
-    semIntervalo: l.intervalo === null,
-    cor: l.statusCor,
-    meta: l.meta,
-    responsavel: l.responsavel,
-    observacao: l.observacao,
-    statusLabel: l.statusLabel,
-    dataLimpeza: l.dataLimpeza,
-    dataLimpezaAnterior: l.dataLimpezaAnterior,
-    id: l.id,
-  }))
-
-  const metas = dados.filter((d) => d.meta && d.meta > 0)
-  const temMeta = metas.length > 0
-  const maxMeta = temMeta ? Math.max(...metas.map((d) => d.meta!)) : 0
-  const maxIntervalo = Math.max(...dados.map((d) => d.intervalo), maxMeta, 1)
-  const limiteX = Math.ceil(maxIntervalo * 1.15)
-
-  const renderBarraComMeta = (props: any) => {
-    const { x, y, width, height, payload, fill } = props
-    const meta = payload?.meta
-    const intervalo = payload?.intervalo
-    const elements: any[] = [
-      <rect key="bar" x={x} y={y} width={Math.max(width, intervalo === 0 ? 4 : 0)} height={height} fill={fill} rx={4} ry={4} />
-    ]
-    if (meta && meta > 0 && intervalo > 0 && width > 0) {
-      const metaX = x + (meta * width / intervalo)
-      elements.push(
-        <line
-          key="meta"
-          x1={metaX}
-          y1={y - 3}
-          x2={metaX}
-          y2={y + height + 3}
-          stroke="#0F6437"
-          strokeWidth={2}
-          strokeDasharray="4 3"
-        />
-      )
-    }
-    return <g>{elements}</g>
-  }
-
-  const handleClick = (d: any) => {
-    const id = d.id ?? d.payload?.id
-    onSelecionar([id])
-  }
-
   return (
-    <div>
-      <LegendaStatus diaUnico={true} />
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-700 mt-2">Intervalo desde a limpeza anterior</h3>
-        <p className="text-xs text-gray-500">
-          {temMeta ? 'Marca verde tracejada = meta individual' : 'Sem meta configurada'}
-        </p>
-      </div>
-      <div style={{ width: '100%', height: Math.max(220, dados.length * 38) }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={dados} layout="vertical" margin={{ top: 5, right: 40, bottom: 5, left: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
-            <XAxis
-              type="number"
-              domain={[0, limiteX]}
-              tick={{ fontSize: 11, fill: '#6B7280' }}
-              tickFormatter={(v) => `${v}d`}
-            />
-            <YAxis
-              type="category"
-              dataKey="nome"
-              tick={{ fontSize: 11, fill: '#374151' }}
-              width={110}
-            />
-            <Tooltip
-              cursor={{ fill: '#F9FAFB' }}
-              content={({ active, payload }) => {
-                if (!active || !payload || !payload.length) return null
-                const d = payload[0].payload as typeof dados[number]
-                return (
-                  <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs space-y-1">
-                    <p className="font-semibold text-gray-900">{d.nome}</p>
-                    <p className="text-gray-600">Limpo em: <span className="font-medium">{formatarData(d.dataLimpeza)}</span></p>
-                    <p className="text-gray-600">Status: <span style={{ color: d.cor }} className="font-medium">{d.statusLabel}</span></p>
-                    <p className="text-gray-600">Intervalo: <span className="font-medium">{d.semIntervalo ? 'Primeira limpeza' : `${d.intervalo}d`}</span></p>
-                    <p className="text-gray-600">Meta: <span className="font-medium">{d.meta ? `${d.meta}d` : '—'}</span></p>
-                    {d.dataLimpezaAnterior && <p className="text-gray-600">Limpeza anterior: <span className="font-medium">{formatarData(d.dataLimpezaAnterior)}</span></p>}
-                    {d.responsavel && <p className="text-gray-600">Responsável: <span className="font-medium">{d.responsavel}</span></p>}
-                    {d.observacao && <p className="text-gray-600">Obs: {d.observacao}</p>}
-                    <p className="text-gray-400 italic mt-1">Clique na barra para filtrar</p>
-                  </div>
-                )
-              }}
-            />
-            <Bar dataKey="intervalo" shape={renderBarraComMeta} activeBar={false} cursor="pointer" onClick={handleClick}>
-              {dados.map((d, i) => (
-                <Cell key={i} fill={d.cor} />
-              ))}
-              <LabelList
-                dataKey="intervalo"
-                position="right"
-                formatter={((v: any, _entry: any, props: any) => {
-                  const d = dados[props?.index ?? 0]
-                  return d?.semIntervalo ? '1ª' : `${v}d`
-                }) as any}
-                style={{ fontSize: 10, fill: '#6B7280' }}
-              />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="space-y-2">
+      <TabelaVerde
+        cabecalho={
+          <>
+            <th className={TH} style={TH_STYLE}>Bebedouro</th>
+            <th className={TH} style={TH_STYLE}>Limpeza anterior</th>
+            <th className={TH} style={TH_STYLE}>Limpeza do dia</th>
+            <th className={TH} style={TH_STYLE}>Próxima prevista</th>
+            <th className={TH} style={TH_STYLE}>Status</th>
+            <th className={TH} style={TH_STYLE}>Intervalo / meta</th>
+            <th className={TH} style={TH_STYLE}>Responsável</th>
+          </>
+        }
+      >
+        {limpezas.map((l, idx) => {
+          const base = { backgroundColor: idx % 2 === 1 ? '#f7faf8' : '#fff', borderBottom: '1px solid #e5ebe7', color: '#4f5f56' } as const
+          return (
+            <tr key={l.id}>
+              <td className="py-2 px-3 whitespace-nowrap" style={base}>{l.nome}</td>
+              <td className="py-2 px-3 whitespace-nowrap" style={base}>{l.dataLimpezaAnterior ? formatarData(l.dataLimpezaAnterior) : '—'}</td>
+              <td className="py-2 px-3 whitespace-nowrap" style={base}>{formatarData(l.dataLimpeza)}</td>
+              <td className="py-2 px-3 whitespace-nowrap font-bold" style={{ ...base, color: '#26352e' }}>{l.proximaPrevista ? formatarData(l.proximaPrevista) : 'Sem meta'}</td>
+              <td className="py-2 px-3" style={base}><Selo label={l.statusLabel} /></td>
+              <td className="py-2 px-3 whitespace-nowrap" style={base}>{l.intervalo === null ? '—' : `${l.intervalo}d`} / {l.meta ? `${l.meta}d` : '—'}</td>
+              <td className="py-2 px-3 whitespace-nowrap" style={base}>{l.responsavel || '—'}</td>
+            </tr>
+          )
+        })}
+      </TabelaVerde>
+      <LegendaTabela diaUnico />
     </div>
   )
 }
 
-function GraficoLimpeza({ status, onSelecionar, dataReferencia }: { status: StatusLimpeza[]; onSelecionar: (ids: string[]) => void; dataReferencia: string }) {
-  if (status.length === 0) {
-    return (
-      <div className="text-center text-gray-400 py-8 bg-gray-50 rounded-lg">
-        Nenhum bebedouro cadastrado.
-      </div>
-    )
-  }
-
-  const todos = status
-    .map((s) => ({
-      nome: s.bebedouro.nome,
-      dias: s.diasDesdeUltima ?? 0,
-      semRegistro: s.diasDesdeUltima === null,
-      cor: s.statusCor,
-      meta: s.meta,
-      ultimaLimpeza: s.ultimaLimpeza,
-      limpezasNoPeriodo: s.limpezasNoPeriodo,
-      observacao: s.observacaoUltima,
-      statusLabel: s.statusLabel,
-      id: s.bebedouro.id,
-    }))
-    .sort((a, b) => b.dias - a.dias)
-
-  const dados = todos.filter((d) => !d.semRegistro)
-  const semRegistro = todos.filter((d) => d.semRegistro)
-
-  const metas = dados.filter((d) => d.meta && d.meta > 0)
-  const temMeta = metas.length > 0
-  const maxMeta = temMeta ? Math.max(...metas.map((d) => d.meta!)) : 0
-  const maxDias = Math.max(...dados.map((d) => d.dias), maxMeta, 1)
-  const limiteX = Math.ceil(maxDias * 1.15)
-
-  const renderBarraComMeta = (props: any) => {
-    const { x, y, width, height, payload, fill } = props
-    const meta = payload?.meta
-    const dias = payload?.dias
-    const elements: any[] = [
-      <rect key="bar" x={x} y={y} width={Math.max(width, dias === 0 ? 4 : 0)} height={height} fill={fill} rx={4} ry={4} />
-    ]
-    if (meta && meta > 0 && dias > 0 && width > 0) {
-      const metaX = x + (meta * width / dias)
-      elements.push(
-        <line
-          key="meta"
-          x1={metaX}
-          y1={y - 3}
-          x2={metaX}
-          y2={y + height + 3}
-          stroke="#0F6437"
-          strokeWidth={2}
-          strokeDasharray="4 3"
-        />
-      )
-    }
-    return <g>{elements}</g>
-  }
-
+function OcorrenciasPorBebedouro({ itens }: { itens: { bebedouro: string; quantidade: number }[] }) {
+  if (itens.length === 0) return null
   return (
-    <div>
-      <LegendaStatus diaUnico={false} />
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-700 mt-2">Dias desde a última limpeza por bebedouro</h3>
-        <p className="text-xs text-gray-500">
-          {temMeta ? 'Marca verde tracejada = meta individual de cada bebedouro' : 'Sem meta configurada'} · Referência: {dataReferencia === 'hoje' ? 'hoje' : formatarData(dataReferencia)}
-        </p>
-      </div>
-      <div style={{ width: '100%', height: Math.max(220, dados.length * 38) }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={dados} layout="vertical" margin={{ top: 5, right: 40, bottom: 5, left: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
-            <XAxis
-              type="number"
-              domain={[0, limiteX]}
-              tick={{ fontSize: 11, fill: '#6B7280' }}
-              tickFormatter={(v) => `${v}d`}
-            />
-            <YAxis
-              type="category"
-              dataKey="nome"
-              tick={{ fontSize: 11, fill: '#374151' }}
-              width={110}
-            />
-            <Tooltip
-              cursor={{ fill: '#F9FAFB' }}
-              content={({ active, payload }) => {
-                if (!active || !payload || !payload.length) return null
-                const d = payload[0].payload as typeof dados[number]
-                return (
-                  <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs space-y-1">
-                    <p className="font-semibold text-gray-900">{d.nome}</p>
-                    <p className="text-gray-600">Status: <span style={{ color: d.cor }} className="font-medium">{d.statusLabel}</span></p>
-                    <p className="text-gray-600">Dias desde última: <span className="font-medium">{d.semRegistro ? 'Sem registro' : `${d.dias}d`}</span></p>
-                    <p className="text-gray-600">Meta: <span className="font-medium">{d.meta ? `${d.meta}d` : '—'}</span></p>
-                    <p className="text-gray-600">Última limpeza: <span className="font-medium">{formatarData(d.ultimaLimpeza || '')}</span></p>
-                    <p className="text-gray-600">Limpezas no período: <span className="font-medium">{d.limpezasNoPeriodo}</span></p>
-                    {d.observacao && <p className="text-gray-600">Obs: {d.observacao}</p>}
-                    <p className="text-gray-400 italic mt-1">Clique na barra para filtrar</p>
-                  </div>
-                )
-              }}
-            />
-            <Bar dataKey="dias" shape={renderBarraComMeta} activeBar={false} cursor="pointer" onClick={(d: any) => {
-              const id = d.id ?? d.payload?.id
-              onSelecionar([id])
-            }}>
-              {dados.map((d, i) => (
-                <Cell key={i} fill={d.cor} />
-              ))}
-              <LabelList
-                dataKey="dias"
-                position="right"
-                formatter={((v: any) => `${v}d`) as any}
-                style={{ fontSize: 10, fill: '#6B7280' }}
-              />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      {semRegistro.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-gray-600">
-          <span className="font-medium text-gray-700">Bebedouros sem registros:</span>
-          {semRegistro.map((d) => (
-            <span key={d.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-              {d.nome}
-            </span>
-          ))}
-        </div>
+    <p className="text-sm" style={{ color: '#4f5f56' }}>
+      <strong>Ocorrências por bebedouro:</strong> {itens.map((i) => `${i.bebedouro}: ${i.quantidade}`).join(' · ')}
+    </p>
+  )
+}
+
+function KPIsChecklist({ kpis }: { kpis: ReturnType<typeof calcularChecklist>['kpis'] }) {
+  const ipm = kpis.itemMaisProblematico
+  return (
+    <div className="space-y-3">
+      <KpiGrid colunas={3}>
+        <KpiCard valor={kpis.totalRegistros} label="Registros no período" tom="green" />
+        <KpiCard valor={kpis.comChecklist} label="Registros com checklist" tom="green" />
+        <KpiCard valor={`${kpis.negativos} (${kpis.pctNegativos}%)`} label="Registros com ponto de atenção" tom="red" simbolo="!" />
+      </KpiGrid>
+      {ipm && (
+        <AlertLine
+          tom="warn"
+          prefixo="ATENÇÃO — item mais problemático:"
+          texto={`${ipm.label} com ${ipm.pctNegativo}% de respostas negativas (${ipm.negativos}/${ipm.total}).`}
+        />
       )}
     </div>
   )
 }
 
-function KPIsChecklist({ kpis }: { kpis: ChecklistKPIs }) {
-  const { totalRegistros, comChecklist, negativos, pctNegativos, itemMaisProblematico } = kpis
-  const corNegativos = '#EF4444'
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <div className="rounded-xl border border-gray-200 p-4 text-center" style={{ borderLeftWidth: 4, borderLeftColor: '#6B7280' }}>
-        <p className="text-xs text-gray-500 uppercase tracking-wide">Registros no período</p>
-        <p className="text-3xl font-bold text-gray-900 mt-1">{totalRegistros}</p>
-      </div>
-      <div className="rounded-xl border border-gray-200 p-4 text-center" style={{ borderLeftWidth: 4, borderLeftColor: '#6B7280' }}>
-        <p className="text-xs text-gray-500 uppercase tracking-wide">Registros com checklist</p>
-        <p className="text-3xl font-bold text-gray-900 mt-1">{comChecklist}</p>
-      </div>
-      <div className="rounded-xl border border-gray-200 p-4 text-center" style={{ borderLeftWidth: 4, borderLeftColor: corNegativos }}>
-        <p className="text-xs text-gray-500 uppercase tracking-wide">Registros com ponto de atenção</p>
-        <p className="text-3xl font-bold mt-1" style={{ color: corNegativos }}>{negativos}</p>
-        <p className="text-xs text-gray-500 mt-1">{comChecklist > 0 ? `${pctNegativos}% dos registros` : '—'}</p>
-      </div>
-      {itemMaisProblematico && (
-        <div className="md:col-span-3 rounded-lg p-3 border" style={{ backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }}>
-          <p className="text-sm text-gray-800">
-            <span className="font-semibold">Item mais problemático:</span> {itemMaisProblematico.label} com {itemMaisProblematico.pctNegativo}% de respostas negativas ({itemMaisProblematico.negativos}/{itemMaisProblematico.total}).
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function GraficoProblemas({ ranking }: { ranking: ChecklistItemRanking[] }) {
+function GraficoProblemas({ ranking }: { ranking: ReturnType<typeof calcularChecklist>['ranking'] }) {
   if (ranking.length === 0 || ranking.every((r) => r.total === 0)) {
     return (
       <div className="text-center text-gray-400 py-6 bg-gray-50 rounded-lg">
@@ -1302,15 +938,15 @@ function GraficoProblemas({ ranking }: { ranking: ChecklistItemRanking[] }) {
     pctNegativo: item.pctNegativo,
     negativos: item.negativos,
     total: item.total,
-    cor: '#EF4444',
+    cor: '#c94d46',
   }))
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-gray-700 mb-2">Problemas mais frequentes nos checklists</h3>
+      <h3 className="text-sm font-semibold mb-2" style={{ color: '#30463a' }}>Problemas mais frequentes nos checklists</h3>
       <div style={{ width: '100%', height: Math.max(180, dados.length * 44) }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={dados} layout="vertical" margin={{ top: 5, right: 50, bottom: 5, left: 8 }}>
+          <BarChart data={dados} layout="vertical" margin={{ top: 5, right: 80, bottom: 5, left: 8 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
             <XAxis
               type="number"
@@ -1346,7 +982,7 @@ function GraficoProblemas({ ranking }: { ranking: ChecklistItemRanking[] }) {
               <LabelList
                 dataKey="pctNegativo"
                 position="right"
-                formatter={(v: any) => `${v}%`}
+                formatter={((v: any, _e: any, props: any) => { const d = dados[props?.index ?? 0]; return d ? `${v}% (${d.negativos}/${d.total})` : `${v}%` }) as any}
                 style={{ fontSize: 10, fill: '#6B7280' }}
               />
             </Bar>
@@ -1357,58 +993,51 @@ function GraficoProblemas({ ranking }: { ranking: ChecklistItemRanking[] }) {
   )
 }
 
-function TabelaOcorrencias({ ocorrencias }: { ocorrencias: OcorrenciaChecklist[] }) {
+function TabelaOcorrencias({ ocorrencias }: { ocorrencias: OcorrenciaCalculada[] }) {
   if (ocorrencias.length === 0) {
     return (
-      <div className="rounded-lg p-4 text-center text-gray-500" style={{ backgroundColor: '#F0FDF4' }}>
+      <div className="rounded-md p-3 text-center text-sm" style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803d' }}>
         Nenhuma ocorrência negativa nos checklists do período.
       </div>
     )
   }
 
   return (
-    <div>
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Ocorrências negativas</h3>
-      <div className="overflow-x-auto rounded-lg border border-gray-200 max-h-96">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 sticky top-0">
-            <tr>
-              <th className="text-left py-3 px-4 font-medium text-gray-600">Data</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-600">Bebedouro</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-600">Itens negativos</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-600">Observação do item</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-600">Observação geral</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-600">Responsável</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ocorrencias.map((o) => (
-              <tr key={o.id} className="border-t border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-4 text-gray-600 whitespace-nowrap">{formatarData(o.data)}</td>
-                <td className="py-3 px-4 font-medium text-gray-900">{o.bebedouro}</td>
-                <td className="py-3 px-4">
-                  <div className="flex flex-wrap gap-1">
-                    {o.itensNegativos.map((item) => (
-                      <span
-                        key={item.key}
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                        style={{ backgroundColor: '#EF4444' }}
-                      >
-                        {item.label}
-                      </span>
-                    ))}
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold" style={{ color: '#30463a' }}>
+        Ocorrências negativas <span className="font-normal text-xs" style={{ color: '#8a9890' }}>· {ocorrencias.length} ocorrência(s)</span>
+      </h3>
+      <TabelaVerde
+        cabecalho={
+          <>
+            <th className={TH} style={TH_STYLE}>Data</th>
+            <th className={TH} style={TH_STYLE}>Bebedouro</th>
+            <th className={TH} style={TH_STYLE}>Itens negativos e observação de cada item</th>
+            <th className={TH} style={TH_STYLE}>Observação geral</th>
+            <th className={TH} style={TH_STYLE}>Responsável</th>
+          </>
+        }
+      >
+        {ocorrencias.map((o, idx) => {
+          const base = { backgroundColor: idx % 2 === 1 ? '#f7faf8' : '#fff', borderBottom: '1px solid #e5ebe7', color: '#4f5f56' } as const
+          return (
+            <tr key={`${o.data}-${o.bebedouro}-${idx}`} className="align-top">
+              <td className="py-2 px-3 whitespace-nowrap" style={base}>{formatarData(o.data)}</td>
+              <td className="py-2 px-3" style={base}>{o.bebedouro}</td>
+              <td className="py-2 px-3" style={base}>
+                {o.itens.map((item) => (
+                  <div key={item.label} className="mb-0.5">
+                    <b style={{ color: '#26352e' }}>✕ {item.label}</b>
+                    {item.obs && <span> — {item.obs}</span>}
                   </div>
-                </td>
-                <td className="py-3 px-4 text-gray-600 max-w-xs truncate">
-                  {o.itensNegativos.map((i) => i.observacao).filter(Boolean).join('; ') || '—'}
-                </td>
-                <td className="py-3 px-4 text-gray-600 max-w-xs truncate">{o.observacaoGeral || '—'}</td>
-                <td className="py-3 px-4 text-gray-600 whitespace-nowrap">{o.responsavel || '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                ))}
+              </td>
+              <td className="py-2 px-3" style={base}>{o.obsGeral || '—'}</td>
+              <td className="py-2 px-3 whitespace-nowrap" style={base}>{o.responsavel || '—'}</td>
+            </tr>
+          )
+        })}
+      </TabelaVerde>
     </div>
   )
 }

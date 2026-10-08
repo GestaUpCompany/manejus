@@ -18,6 +18,11 @@ export interface StatusBebedouroPDF {
   ultimaLimpeza: string | null
   limpezasNoPeriodo: number
   statusLabel: string
+  simbolo?: string
+  proximaLimpeza?: string | null
+  diasParaProxima?: number | null
+  responsavelUltima?: string | null
+  observacaoUltima?: string | null
 }
 
 export interface LimpezaDoDiaPDF {
@@ -29,6 +34,8 @@ export interface LimpezaDoDiaPDF {
   dataLimpezaAnterior: string | null
   statusLabel: string
   responsavel: string | null
+  simbolo?: string
+  proximaPrevista?: string | null
 }
 
 export interface LimpezaKPIsPDF {
@@ -37,6 +44,7 @@ export interface LimpezaKPIsPDF {
   atrasado: number
   critico: number
   semRegistro: number
+  semMeta?: number
   pctEmDia: number
 }
 
@@ -62,6 +70,19 @@ export interface OcorrenciaPDF {
   obsItens: string
   obsGeral: string
   responsavel: string
+  // Itens negativos com a observação pareada (substitui itensNegativos/obsItens na renderização).
+  itens?: { label: string; obs: string }[]
+}
+
+export interface ProximaLimpezaPDF {
+  nome: string
+  proximaLimpeza: string
+  diasParaProxima: number
+}
+
+export interface OcorrenciaPorBebedouroPDF {
+  bebedouro: string
+  quantidade: number
 }
 
 export interface DadosPDFBebedouros {
@@ -76,6 +97,7 @@ export interface DadosPDFBebedouros {
   limpezaKPIs?: LimpezaKPIsPDF
   maisAtrasado?: { nome: string; dias: number; meta: number } | null
   statusPorBebedouro?: StatusBebedouroPDF[]
+  proximasSemana?: ProximaLimpezaPDF[]
   // Seção 1 - modo dia único
   limpezaDiaKPIs?: LimpezaDiaKPIsPDF
   limpezasDoDia?: LimpezaDoDiaPDF[]
@@ -89,6 +111,7 @@ export interface DadosPDFBebedouros {
   }
   itensRanking: ChecklistItemRankingPDF[]
   ocorrencias: OcorrenciaPDF[]
+  ocorrenciasPorBebedouro?: OcorrenciaPorBebedouroPDF[]
 }
 
 // === Helpers ===

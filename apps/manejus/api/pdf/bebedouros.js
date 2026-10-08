@@ -1,63 +1,61 @@
 // Endpoint fino do relatório de Bebedouros. Mesmo padrão do morte.js,
 // consumo.js e abastecimento.js: só existe aqui o que é específico deste
-// relatório (KPIs com barra lateral de status, ramificação dia-único vs
-// período, gráfico de período paginado por espaço, tabela de ocorrências
-// paginada). Toda a infraestrutura (Chrome, Chart.js, template base,
+// relatório. Toda a infraestrutura (Chrome, Chart.js, template base,
 // formatadores) vem do _shared/.
 //
-// Diferenças estruturais em relação aos três relatórios já migrados (ver
-// docs/ArquiteturaRelatoriosPDF.md):
-//  - Dois modos mutuamente exclusivos na Seção 1: "dia único" (KPIs de
-//    limpezas do dia + gráfico de intervalo) e "período" (KPIs de status +
-//    alerta de maior atraso + gráfico de dias desde última limpeza com
-//    paginação dinâmica por espaço vertical).
-//  - KPIs com barra lateral colorida por status (verde/ambar/vermelho/cinza),
-//    não o bloco verde preenchido do kpi() do template. Componente local
-//    kpiStatus() preserva a codificação semântica de cor.
-//  - Gráficos de barra horizontal com linha tracejada de meta INDIVIDUAL por
-//    bebedouro (plugin metaLinha sobre a barra).
-//  - Tabela de ocorrências com texto livre (obsItens/obsGeral), paginada em
-//    15 linhas por página (mesmo padrão do abastecimento, sem cap de 60).
+// Estrutura (A4 paisagem):
+//  Seção 1 — Cronograma de limpeza
+//    modo período:   KPIs + alertas + TABELA (última / próxima limpeza por
+//                    bebedouro, paginada) + gráfico de apoio (dias desde a
+//                    última limpeza).
+//    modo dia único: KPIs + TABELA (anterior / do dia / próxima prevista) +
+//                    gráfico de intervalo.
+//  Seção 2 — Pontos de atenção: KPIs de checklist + gráfico de problemas +
+//    ocorrências por bebedouro + tabela de ocorrências (item e observação
+//    pareados, sem truncar por clamp).
+//
+// Layout e paleta seguem o padrão dos demais relatórios (clima, morte, consumo):
+// kpi() do template, insight-box, cabeçalhos de tabela verdes, linhas
+// zebradas. O PDF é colorido, mas montado para continuar interpretável se
+// impresso em preto e branco: o status nunca depende só da cor (sempre texto +
+// símbolo ● ▲ ■ ○ –, e o atraso crítico ganha negrito e peso de borda).
+// Não há gráfico de "dias desde a última limpeza": a tabela de cronograma
+// (última / próxima limpeza) cobre essa leitura.
 
 import { escapeHtml, dateFmt } from './_shared/formatters.js'
 import { getChartJsScript } from './_shared/chartjs.js'
 import { generatePdf } from './_shared/puppeteer.js'
 import {
   renderHeader,
+  kpi,
   page as pageSection,
   htmlDocument,
 } from './_shared/template.js'
 
 // === Limites do body ===
-// O payload do bebedouros tem: statusPorBebedouro (~80 bytes/item) +
-// limpezasDoDia (~80 bytes/item) + itensRanking (~60 bytes/item) +
-// ocorrencias com texto livre (~560 bytes/item: data + bebedouro +
-// itensNegativos + obsItens + obsGeral + responsavel). 5000 ocorrências =
-// ~2.8MB, bem dentro de 8MB com folga para logos.
 const MAX_BEBEDOUROS = 2000
 const MAX_OCORRENCIAS = 5000
 const MAX_BODY_BYTES = 8_000_000
 
-// Linhas de ocorrências por página. Cada <tr> com 6 colunas de texto livre
-// e font-size 11px pode chegar a ~70px quando as observações quebram em
-// várias linhas; as células de texto livre levam clamp de 3 linhas para
-// limitar a altura da linha.
-const OCCURRENCES_PER_PAGE = 6
+// Limite de caracteres por campo de texto livre na tabela de ocorrências.
+// Não há clamp de linhas: o texto aparece inteiro até este limite.
+const MAX_TEXTO_OCORRENCIA = 500
 
-// === Dimensões para paginação dinâmica do gráfico de período ===
-// A4 landscape = 297x210mm. Após padding (12+16mm), header (22+5mm) e footer
-// (absolute, dentro do padding inferior), a área útil de conteúdo é ~155mm.
-// Da primeira página, subtrai-se kicker+badge+título+KPIs+alerta; das
-// continuações, só o kicker.
+// === Dimensões para paginação (mm) ===
+// A4 landscape = 297x210mm. Área útil de conteúdo ≈ 155mm.
 const TOTAL_CONTENT_H = 155
 const KICKER_H = 6
 const BADGE_H = 10
 const TITLE_H = 6
-const KPI_PERIOD_H = 18
+const KPI_PERIOD_H = 27
 const ALERT_H = 11
-const BAR_H = 9
-const CHART_PAD = 14
+const LEGEND_H = 8
+const TABLE_HEAD_H = 8
+const ROW_H = 7 // altura fixa de linha das tabelas de cronograma
 const SAFETY = 3
+// Folga extra da 1ª página (selo de período, caixa de insight e margens dos KPIs
+// ocupam mais que as constantes nominais).
+const FIRST_PAGE_EXTRA = 9
 
 function isPDFData(value) {
   if (!value || typeof value !== 'object') return false
@@ -72,57 +70,152 @@ function isPDFData(value) {
   return true
 }
 
-// === CSS específico do bebedouros ===
-// kpiStatus: card com barra lateral esquerda colorida por status (não o
-// border-top do kpi() padrão). Preserva a codificação semântica de cor que
-// existe no jsPDF original. Inclui também alert-box, info-pill,
-// sem-registro-list, tabela de ocorrências e box de "nenhuma ocorrência".
+// === Status: texto + símbolo + tipo (padrão visual em P&B) ===
+const STATUS = {
+  'Em dia': { sim: '●', kind: 'ok' },
+  'Dentro da meta': { sim: '●', kind: 'ok' },
+  Atrasado: { sim: '▲', kind: 'warn' },
+  'Acima da meta': { sim: '▲', kind: 'warn' },
+  'Atraso crítico': { sim: '■', kind: 'crit' },
+  'Muito acima da meta': { sim: '■', kind: 'crit' },
+  'Sem registro': { sim: '○', kind: 'none' },
+  'Primeira limpeza': { sim: '○', kind: 'none' },
+  'Sem meta': { sim: '–', kind: 'nometa' },
+}
+
+function statusInfo(label) {
+  return STATUS[label] || { sim: '–', kind: 'nometa' }
+}
+
+function statusBadge(label) {
+  const s = statusInfo(label)
+  return `<span class="st st-${s.kind}"><span class="st-sim">${s.sim}</span> ${escapeHtml(label)}</span>`
+}
+
+// === Datas (date-only, UTC para evitar deriva de fuso) ===
+function ymd(v) {
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : null
+}
+
+function utcDay(s) {
+  const [y, m, d] = s.split('-').map(Number)
+  return Date.UTC(y, m - 1, d)
+}
+
+function addDays(s, n) {
+  return new Date(utcDay(s) + n * 86_400_000).toISOString().slice(0, 10)
+}
+
+function diffDays(a, b) {
+  return Math.round((utcDay(b) - utcDay(a)) / 86_400_000)
+}
+
+function prazoTexto(d) {
+  if (d === null || d === undefined) return '—'
+  if (d === 0) return 'hoje'
+  if (d > 0) return `em ${d} ${d === 1 ? 'dia' : 'dias'}`
+  const a = Math.abs(d)
+  return `vencida há ${a} ${a === 1 ? 'dia' : 'dias'}`
+}
+
+// Normaliza o cronograma: aceita payload novo (proximaLimpeza/diasParaProxima)
+// e calcula no servidor quando o cliente é antigo. Ordena: vencidas (mais
+// atrasada primeiro) → próximas por data → sem meta → sem registro.
+function normalizarCronograma(lista, dataFim) {
+  const ref = ymd(dataFim)
+  const itens = lista.map((s) => {
+    const ultima = ymd(s.ultimaLimpeza)
+    const meta = s.meta > 0 ? s.meta : null
+    const proxima = s.proximaLimpeza !== undefined
+      ? ymd(s.proximaLimpeza)
+      : (ultima && meta ? addDays(ultima, meta) : null)
+    const dias = s.diasParaProxima !== undefined
+      ? s.diasParaProxima
+      : (proxima && ref ? diffDays(ref, proxima) : null)
+    return { ...s, ultima, meta, proxima, diasParaProxima: dias }
+  })
+  const grupo = (i) => {
+    if (i.diasParaProxima !== null && i.diasParaProxima < 0) return 0
+    if (i.diasParaProxima !== null) return 1
+    if (i.ultima) return 2
+    return 3
+  }
+  return itens.sort((a, b) => {
+    const ga = grupo(a)
+    const gb = grupo(b)
+    if (ga !== gb) return ga - gb
+    if (a.diasParaProxima !== null && b.diasParaProxima !== null && a.diasParaProxima !== b.diasParaProxima) {
+      return a.diasParaProxima - b.diasParaProxima
+    }
+    return String(a.nome).localeCompare(String(b.nome))
+  })
+}
+
+// === CSS específico ===
+// Só o que o template base não cobre: tom neutro de KPI, selos de status
+// (cor + símbolo + texto), tabelas de cronograma/dia, ocorrências e alertas.
 const BEBEDOUROS_CSS = `
 .page{display:flex;flex-direction:column}
-.kpi-status-grid{display:grid;gap:7px;margin-bottom:3mm}
-.kpi-status-grid.cols-5{grid-template-columns:repeat(5,1fr)}
-.kpi-status-grid.cols-4{grid-template-columns:repeat(4,1fr)}
-.kpi-status-grid.cols-3{grid-template-columns:repeat(3,1fr)}
-.kpi-status-card{display:flex;align-items:stretch;border:1px solid #dce5df;border-radius:5px;background:#fff;overflow:hidden;min-height:15mm}
-.kpi-status-bar{width:4px;flex-shrink:0}
-.kpi-status-body{padding:5px 8px;display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0}
-.kpi-status-value{font-size:16px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.kpi-status-label{font-size:11px;color:#6B7280;margin-top:2px}
-.alert-box{display:flex;align-items:stretch;border-radius:5px;overflow:hidden;margin-bottom:3mm;border:1px solid #dce5df}
-.alert-bar{width:4px;flex-shrink:0}
-.alert-body{padding:5px 10px;font-size:12px;color:#1F2937;line-height:1.4}
-.alert-box.tone-red{background:#FEF2F2}
-.alert-box.tone-red .alert-bar{background:#FECACA}
-.alert-box.tone-amber{background:#FFFBEB}
-.alert-box.tone-amber .alert-bar{background:#FDE68A}
-.info-pill{display:inline-block;background:#F3F4F6;border-radius:10px;padding:3px 10px;font-size:12px;color:#1F2937;margin-top:3mm}
-.sem-registro-list{margin-top:3mm;font-size:12px;color:#1F2937;line-height:1.5}
-.sem-registro-list strong{font-weight:700}
-.ocorr-table th:nth-child(1){width:10%}
-.ocorr-table th:nth-child(2){width:15%}
-.ocorr-table th:nth-child(3){width:22%}
-.ocorr-table th:nth-child(4){width:22%}
-.ocorr-table th:nth-child(5){width:18%}
-.ocorr-table th:nth-child(6){width:13%}
-.ocorr-table th{background:#EF4444}
-.ocorr-table th,.ocorr-table td{border-right:1px solid #d8e0db}
+.kpi-grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.kpi-grid.cols-4{grid-template-columns:repeat(4,1fr)}
+.kpi-grid.cols-5{grid-template-columns:repeat(5,1fr)}
+.kpi-grid.cols-6{grid-template-columns:repeat(6,1fr)}
+.kpi-card.tone-gray{border-top-color:#9aa5a0}
+.tone-gray .kpi-value{color:#4f5f56}
+.kpi-card.tone-red{border-top-width:5px}
+.alert-line{border-left:3px solid #c28a27;background:#fffaf0;border-radius:0 5px 5px 0;padding:6px 10px;margin:0 0 3mm;color:#52635a;font-size:13px;line-height:1.35}
+.alert-line strong{color:#805d12}
+.alert-line.tone-crit{border-left:5px solid #c94d46;background:#fef2f2}
+.alert-line.tone-crit strong{color:#991b1b}
+.info-pill{display:inline-block;border:1px solid #d3e4d9;background:#f0f6f2;border-radius:10px;padding:3px 10px;font-size:12px;color:#0b6a42;font-weight:700;margin-bottom:3mm}
+.st{display:inline-block;padding:1px 7px;border:1px solid #9aa5a0;border-radius:9px;font-size:10.5px;font-weight:700;white-space:nowrap;line-height:1.3;color:#4f5f56;background:#fff}
+.st-ok{border-color:#9ccfb2;background:#e9f5ee;color:#0b6a42}
+.st-warn{border-color:#e3c27a;background:#fffaf0;color:#805d12}
+.st-crit{border:1.5px solid #991b1b;background:#fef2f2;color:#991b1b}
+.st-none{border-style:dashed;color:#4f5f56}
+.st-nometa{border-color:transparent;background:transparent;color:#4f5f56}
+.table-legend{font-size:11px;color:#63736a;margin-top:-3mm}
+.cron-table td,.dia-table td{height:${ROW_H}mm;line-height:${ROW_H}mm;padding-top:0;padding-bottom:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+.cron-table tbody tr:nth-child(even) td,.dia-table tbody tr:nth-child(even) td,.ocorr-table tbody tr:nth-child(even) td{background:#f7faf8}
+.cron-table td.strong,.dia-table td.strong{font-weight:700;color:#26352e}
+.cron-table td.num{text-align:right}
+.cron-table tr.row-venc td{font-weight:700;color:#991b1b}
+.cron-table tr.row-venc td:first-child{border-left:4px solid #c94d46}
+.cron-table th:nth-child(1){width:19%}
+.cron-table th:nth-child(2){width:11%}
+.cron-table th:nth-child(3){width:11%}
+.cron-table th:nth-child(4){width:15%}
+.cron-table th:nth-child(5){width:16%}
+.cron-table th:nth-child(6){width:6%;text-align:right}
+.cron-table th:nth-child(7){width:15%}
+.cron-table th:nth-child(8){width:7%;text-align:right}
+.dia-table th:nth-child(1){width:20%}
+.dia-table th:nth-child(2){width:12%}
+.dia-table th:nth-child(3){width:12%}
+.dia-table th:nth-child(4){width:13%}
+.dia-table th:nth-child(5){width:19%}
+.dia-table th:nth-child(6){width:10%}
+.dia-table th:nth-child(7){width:14%}
+.ocorr-table th:nth-child(1){width:9%}
+.ocorr-table th:nth-child(2){width:14%}
+.ocorr-table th:nth-child(3){width:41%}
+.ocorr-table th:nth-child(4){width:24%}
+.ocorr-table th:nth-child(5){width:12%}
+.ocorr-table th{border-right:1px solid #d8e0db}
 .ocorr-table th:last-child,.ocorr-table td:last-child{border-right:none}
-.ocorr-table tbody tr:nth-child(even){background:#fef2f2}
-.ocorr-table td{font-size:11px;padding:5px;line-height:1.3;vertical-align:top;overflow-wrap:anywhere}
-.ocorr-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.ocorr-table th{font-size:11px;padding:6px 5px;text-align:left}
-.no-ocorr-box{background:#F0FDF4;border:1px solid #BBF7D0;border-radius:5px;padding:10px;text-align:center;color:#22C55E;font-size:13px;margin-top:4mm}
-.beb-chart-legend{font-size:11px;color:#6B7280;margin-top:1mm}
+.ocorr-table td{line-height:1.3;border-right:1px solid #e5ebe7}
+.ocorr-item{margin:0 0 2px}
+.ocorr-item b{font-weight:700;color:#26352e}
+.no-ocorr-box{background:#F0FDF4;border:1px solid #BBF7D0;border-radius:5px;padding:10px;text-align:center;color:#15803d;font-size:13px;margin-top:4mm}
+.ocorr-resumo{font-size:12px;color:#4f5f56;margin-top:3mm;line-height:1.5}
 `
 
 // === Chart init JS (roda dentro do Chromium headless) ===
-// Porta os 3 plugins do jsPDF: rótulo à direita da barra, linha tracejada
-// de meta individual (limpeza/limpezaDia), e rótulo de % (problemas).
-// Cada chart vem de window.__reportData.charts com kind + items.
+// Único gráfico do relatório: % de respostas negativas por item do checklist,
+// com valor escrito ao lado de cada barra (legível também em P&B).
 const CHARTS_INIT_JS = `
 (function(){
-  var GREEN_DARK = '#0F6437'
-  var MEDIUM_TEXT = '#6B7280'
   var Chart = window.Chart
   if (!Chart) { window.__chartsReady = true; return }
   Chart.defaults.animation = false
@@ -130,196 +223,17 @@ const CHARTS_INIT_JS = `
   Chart.defaults.font.family = 'Arial, Helvetica, sans-serif'
 
   var charts = (window.__reportData && window.__reportData.charts) || []
+  if (charts.length === 0) { window.__chartsReady = true; return }
   var remaining = charts.length
-  if (remaining === 0) { window.__chartsReady = true; return }
+  function maybeDone() { remaining--; if (remaining <= 0) window.__chartsReady = true }
 
-  function maybeDone() {
-    remaining--
-    if (remaining <= 0) window.__chartsReady = true
-  }
-
-  function drawLimpeza(canvasId, items) {
-    var el = document.getElementById(canvasId)
+  function drawProblemas(entry) {
+    var el = document.getElementById(entry.canvasId)
+    var items = entry.items
     if (!el || !items || !items.length) { maybeDone(); return }
     var labels = items.map(function(d) { return d.label })
     var valores = items.map(function(d) { return d.valor })
-    var cores = items.map(function(d) { return d.cor })
-    var metas = items.map(function(d) { return d.meta })
-    var maxVal = Math.max.apply(null, valores.concat(metas.map(function(m) { return m || 0 })).concat([1]))
-    var limiteX = Math.ceil(maxVal * 1.15)
-    var baseFont = items.length > 18 ? 8 : 10
-    new Chart(el, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Dias desde última limpeza',
-          data: valores,
-          backgroundColor: cores,
-          borderRadius: 4,
-          borderSkipped: false,
-          minBarLength: 20,
-          barPercentage: 0.7,
-          categoryPercentage: 0.8,
-        }],
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: { right: 50 } },
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: {
-          x: {
-            beginAtZero: true,
-            max: limiteX,
-            grid: { color: '#E5E7EB' },
-            ticks: { color: MEDIUM_TEXT, font: { size: baseFont } },
-          },
-          y: {
-            grid: { display: false },
-            ticks: { color: '#374151', font: { size: baseFont }, autoSkip: false },
-          },
-        },
-      },
-      plugins: [{
-        id: 'labels',
-        afterDatasetsDraw: function(chart) {
-          var ctx = chart.ctx
-          var meta = chart.getDatasetMeta(0)
-          ctx.save()
-          ctx.font = baseFont + 'px Arial'
-          ctx.fillStyle = MEDIUM_TEXT
-          ctx.textAlign = 'left'
-          ctx.textBaseline = 'middle'
-          meta.data.forEach(function(bar, i) {
-            var label = valores[i] + 'd'
-            ctx.fillText(label, bar.x + 4, bar.y)
-          })
-          ctx.restore()
-        },
-      }, {
-        id: 'metaLinha',
-        afterDatasetsDraw: function(chart) {
-          var ctx = chart.ctx
-          var xScale = chart.scales.x
-          var meta = chart.getDatasetMeta(0)
-          ctx.save()
-          meta.data.forEach(function(bar, i) {
-            var m = metas[i]
-            if (!m || m <= 0) return
-            if (valores[i] <= 0) return
-            var metaX = xScale.getPixelForValue(m)
-            var yTop = bar.y - bar.height / 2 - 3
-            var yBot = bar.y + bar.height / 2 + 3
-            ctx.strokeStyle = GREEN_DARK
-            ctx.lineWidth = 1.5
-            ctx.setLineDash([4, 3])
-            ctx.beginPath()
-            ctx.moveTo(metaX, yTop)
-            ctx.lineTo(metaX, yBot)
-            ctx.stroke()
-          })
-          ctx.setLineDash([])
-          ctx.restore()
-        },
-      }],
-    })
-    maybeDone()
-  }
-
-  function drawLimpezaDia(canvasId, items) {
-    var el = document.getElementById(canvasId)
-    if (!el || !items || !items.length) { maybeDone(); return }
-    var labels = items.map(function(d) { return d.label })
-    var valores = items.map(function(d) { return d.valor })
-    var cores = items.map(function(d) { return d.cor })
-    var metas = items.map(function(d) { return d.meta })
-    var primeiras = items.map(function(d) { return d.primeira })
-    var maxVal = Math.max.apply(null, valores.concat(metas.map(function(m) { return m || 0 })).concat([1]))
-    var limiteX = Math.ceil(maxVal * 1.15)
-    new Chart(el, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Intervalo desde limpeza anterior (dias)',
-          data: valores,
-          backgroundColor: cores,
-          borderRadius: 4,
-          borderSkipped: false,
-          barPercentage: 0.7,
-          categoryPercentage: 0.8,
-        }],
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: { right: 50 } },
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: {
-          x: {
-            beginAtZero: true,
-            max: limiteX,
-            grid: { color: '#E5E7EB' },
-            ticks: { color: MEDIUM_TEXT, font: { size: 10 } },
-          },
-          y: {
-            grid: { display: false },
-            ticks: { color: '#374151', font: { size: 10 } },
-          },
-        },
-      },
-      plugins: [{
-        id: 'labelsDia',
-        afterDatasetsDraw: function(chart) {
-          var ctx = chart.ctx
-          var meta = chart.getDatasetMeta(0)
-          ctx.save()
-          ctx.font = '10px Arial'
-          ctx.fillStyle = MEDIUM_TEXT
-          ctx.textAlign = 'left'
-          ctx.textBaseline = 'middle'
-          meta.data.forEach(function(bar, i) {
-            var label = primeiras[i] ? '1ª' : valores[i] + 'd'
-            ctx.fillText(label, bar.x + 4, bar.y)
-          })
-          ctx.restore()
-        },
-      }, {
-        id: 'metaLinhaDia',
-        afterDatasetsDraw: function(chart) {
-          var ctx = chart.ctx
-          var xScale = chart.scales.x
-          var meta = chart.getDatasetMeta(0)
-          ctx.save()
-          meta.data.forEach(function(bar, i) {
-            var m = metas[i]
-            if (!m || m <= 0) return
-            if (valores[i] <= 0) return
-            var metaX = xScale.getPixelForValue(m)
-            var yTop = bar.y - bar.height / 2 - 3
-            var yBot = bar.y + bar.height / 2 + 3
-            ctx.strokeStyle = GREEN_DARK
-            ctx.lineWidth = 1.5
-            ctx.setLineDash([4, 3])
-            ctx.beginPath()
-            ctx.moveTo(metaX, yTop)
-            ctx.lineTo(metaX, yBot)
-            ctx.stroke()
-          })
-          ctx.setLineDash([])
-          ctx.restore()
-        },
-      }],
-    })
-    maybeDone()
-  }
-
-  function drawProblemas(canvasId, items) {
-    var el = document.getElementById(canvasId)
-    if (!el || !items || !items.length) { maybeDone(); return }
-    var labels = items.map(function(d) { return d.label })
-    var valores = items.map(function(d) { return d.valor })
+    var textos = items.map(function(d) { return d.valor + '% (' + d.negativos + '/' + d.total + ')' })
     new Chart(el, {
       type: 'bar',
       data: {
@@ -327,9 +241,10 @@ const CHARTS_INIT_JS = `
         datasets: [{
           label: '% negativo',
           data: valores,
-          backgroundColor: '#EF4444',
+          backgroundColor: '#c94d46',
           borderRadius: 4,
           borderSkipped: false,
+          minBarLength: 3,
           barPercentage: 0.7,
           categoryPercentage: 0.8,
         }],
@@ -337,14 +252,14 @@ const CHARTS_INIT_JS = `
       options: {
         indexAxis: 'y',
         responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: { right: 50 } },
+        layout: { padding: { right: 80 } },
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
         scales: {
           x: {
             beginAtZero: true,
             max: 100,
             grid: { color: '#E5E7EB' },
-            ticks: { color: MEDIUM_TEXT, font: { size: 10 }, callback: function(v) { return v + '%' } },
+            ticks: { color: '#6B7280', font: { size: 10 }, callback: function(v) { return v + '%' } },
           },
           y: {
             grid: { display: false },
@@ -359,12 +274,10 @@ const CHARTS_INIT_JS = `
           var meta = chart.getDatasetMeta(0)
           ctx.save()
           ctx.font = '10px Arial'
-          ctx.fillStyle = MEDIUM_TEXT
+          ctx.fillStyle = '#374151'
           ctx.textAlign = 'left'
           ctx.textBaseline = 'middle'
-          meta.data.forEach(function(bar, i) {
-            ctx.fillText(valores[i] + '%', bar.x + 4, bar.y)
-          })
+          meta.data.forEach(function(bar, i) { ctx.fillText(textos[i], bar.x + 5, bar.y) })
           ctx.restore()
         },
       }],
@@ -373,9 +286,7 @@ const CHARTS_INIT_JS = `
   }
 
   charts.forEach(function(entry) {
-    if (entry.kind === 'limpeza') drawLimpeza(entry.canvasId, entry.items)
-    else if (entry.kind === 'limpezaDia') drawLimpezaDia(entry.canvasId, entry.items)
-    else if (entry.kind === 'problemas') drawProblemas(entry.canvasId, entry.items)
+    if (entry.kind === 'problemas') drawProblemas(entry)
     else maybeDone()
   })
 })();
@@ -383,16 +294,27 @@ const CHARTS_INIT_JS = `
 
 // === Helpers HTML ===
 
-function kpiStatus(value, label, cor) {
-  return `<div class="kpi-status-card"><div class="kpi-status-bar" style="background:${cor}"></div><div class="kpi-status-body"><div class="kpi-status-value" style="color:${cor}">${escapeHtml(value)}</div><div class="kpi-status-label">${escapeHtml(label)}</div></div></div>`
+// Cartões de KPI usam kpi() do template. `sim` é o símbolo textual que
+// acompanha a cor (leitura em P&B).
+function kpiCard(value, label, tone, sim = '', sub = '') {
+  const prefix = sim ? `${sim} ` : ''
+  return kpi(value, prefix + label, sub, tone)
 }
 
-function kpiStatusGrid(cards, cols) {
-  return `<div class="kpi-status-grid cols-${cols}">${cards.join('')}</div>`
+function kpiGrid(cards, cols) {
+  return `<div class="kpi-grid cols-${cols}">${cards.join('')}</div>`
 }
 
-function alertBox(text, tone) {
-  return `<div class="alert-box tone-${tone}"><div class="alert-bar"></div><div class="alert-body">${escapeHtml(text)}</div></div>`
+// tone: 'crit' (vermelho, borda grossa) | 'warn' (dourado); prefixo em texto
+function alertBox(text, tone, prefix) {
+  return `<div class="alert-line tone-${tone}"><strong>${escapeHtml(prefix)}</strong> ${escapeHtml(text)}</div>`
+}
+
+function legendaStatusHtml(modo) {
+  const itens = modo === 'dia'
+    ? ['● Dentro da meta', '▲ Acima da meta', '■ Muito acima da meta', '○ Primeira limpeza']
+    : ['● Em dia', '▲ Atrasado', '■ Atraso crítico', '○ Sem registro', '– Sem meta']
+  return `<div class="table-legend">Legenda: ${itens.join(' · ')} · ! prazo vencido</div>`
 }
 
 function periodBadgeHtml(dados) {
@@ -417,42 +339,117 @@ function chartCardLocal({ canvasId, title, subtitle = '', hasData = true, height
   return `<div class="chart-card"${style}><div class="chart-heading"><strong>${escapeHtml(title)}</strong>${subtitle ? `<span>${escapeHtml(subtitle)}</span>` : ''}</div>${body}</div>`
 }
 
-function semRegistroListHtml(semRegistro) {
-  const nomes = semRegistro.map((s) => escapeHtml(s.nome)).join(', ')
-  return `<div class="sem-registro-list"><strong>Bebedouros sem registros:</strong> ${nomes}</div>`
+function cap(texto, max = MAX_TEXTO_OCORRENCIA) {
+  const s = String(texto ?? '')
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s
+}
+
+// === Tabelas ===
+
+function cronogramaTableHtml(chunk) {
+  const header = '<thead><tr><th>Bebedouro</th><th>Última limpeza</th><th>Próxima limpeza</th><th>Prazo</th><th>Status</th><th>Meta</th><th>Responsável (última)</th><th>No período</th></tr></thead>'
+  const rows = chunk
+    .map((i) => {
+      const venc = i.diasParaProxima !== null && i.diasParaProxima < 0
+      const proximaTxt = i.proxima ? dateFmt(i.proxima) : (i.ultima ? 'Sem meta' : 'Pendente')
+      const prazo = `${venc ? '! ' : ''}${prazoTexto(i.diasParaProxima)}`
+      return `<tr class="${venc ? 'row-venc' : ''}"><td>${escapeHtml(i.nome)}</td><td>${i.ultima ? dateFmt(i.ultima) : '—'}</td><td class="strong">${escapeHtml(proximaTxt)}</td><td>${escapeHtml(prazo)}</td><td>${statusBadge(i.statusLabel)}</td><td class="num">${i.meta ? `${i.meta}d` : '—'}</td><td>${escapeHtml(i.responsavelUltima || '—')}</td><td class="num">${i.limpezasNoPeriodo ?? 0}</td></tr>`
+    })
+    .join('')
+  return `<table class="cron-table">${header}<tbody>${rows}</tbody></table>`
+}
+
+function diaTableHtml(chunk) {
+  const header = '<thead><tr><th>Bebedouro</th><th>Limpeza anterior</th><th>Limpeza do dia</th><th>Próxima prevista</th><th>Status</th><th>Intervalo / meta</th><th>Responsável</th></tr></thead>'
+  const rows = chunk
+    .map((l) => {
+      const meta = l.meta > 0 ? l.meta : null
+      const proxima = l.proximaPrevista !== undefined
+        ? ymd(l.proximaPrevista)
+        : (meta && ymd(l.dataLimpeza) ? addDays(ymd(l.dataLimpeza), meta) : null)
+      const interv = l.intervalo === null || l.intervalo === undefined ? '—' : `${l.intervalo}d`
+      return `<tr><td>${escapeHtml(l.nome)}</td><td>${l.dataLimpezaAnterior ? dateFmt(l.dataLimpezaAnterior) : '—'}</td><td>${dateFmt(l.dataLimpeza)}</td><td class="strong">${proxima ? dateFmt(proxima) : 'Sem meta'}</td><td>${statusBadge(l.statusLabel)}</td><td>${interv} / ${meta ? `${meta}d` : '—'}</td><td>${escapeHtml(l.responsavel || '—')}</td></tr>`
+    })
+    .join('')
+  return `<table class="dia-table">${header}<tbody>${rows}</tbody></table>`
+}
+
+// Itens negativos com observação pareada. Aceita payload antigo (strings).
+function itensOcorrencia(o) {
+  if (Array.isArray(o.itens) && o.itens.length > 0) {
+    return o.itens.map((i) => ({ label: String(i.label ?? ''), obs: String(i.obs ?? '') }))
+  }
+  const labels = String(o.itensNegativos || '').split(',').map((s) => s.trim()).filter(Boolean)
+  const obs = String(o.obsItens || '')
+  return labels.map((label, idx) => ({ label, obs: idx === 0 ? obs : '' }))
 }
 
 function ocorrenciasTableHtml(chunk) {
-  const header = `<thead><tr><th>Data</th><th>Bebedouro</th><th>Itens negativos</th><th>Obs. do item</th><th>Obs. geral</th><th>Responsável</th></tr></thead>`
+  const header = '<thead><tr><th>Data</th><th>Bebedouro</th><th>Itens negativos e observação de cada item</th><th>Observação geral</th><th>Responsável</th></tr></thead>'
   const rows = chunk
-    .map((o) =>
-      `<tr><td>${dateFmt(o.data)}</td><td>${escapeHtml(o.bebedouro)}</td><td><div class="ocorr-clamp">${escapeHtml(o.itensNegativos)}</div></td><td><div class="ocorr-clamp">${escapeHtml(o.obsItens || '—')}</div></td><td><div class="ocorr-clamp">${escapeHtml(o.obsGeral || '—')}</div></td><td>${escapeHtml(o.responsavel || '—')}</td></tr>`,
-    )
+    .map((o) => {
+      const itens = itensOcorrencia(o)
+        .map((i) => `<div class="ocorr-item"><b>✕ ${escapeHtml(i.label)}</b>${i.obs ? ` — ${escapeHtml(cap(i.obs))}` : ''}</div>`)
+        .join('')
+      return `<tr><td>${dateFmt(o.data)}</td><td>${escapeHtml(o.bebedouro)}</td><td>${itens}</td><td>${escapeHtml(cap(o.obsGeral) || '—')}</td><td>${escapeHtml(o.responsavel || '—')}</td></tr>`
+    })
     .join('')
   return `<table class="ocorr-table">${header}<tbody>${rows}</tbody></table>`
 }
 
-// === KPIs HTML ===
+// Altura estimada (mm) de uma linha de ocorrência, para paginar por espaço.
+function alturaOcorrenciaMm(o) {
+  const itens = itensOcorrencia(o)
+  const linhasItens = itens.reduce(
+    (soma, i) => soma + Math.max(1, Math.ceil((i.label.length + 4 + Math.min(i.obs.length, MAX_TEXTO_OCORRENCIA)) / 88)),
+    0,
+  )
+  const linhasGeral = Math.max(1, Math.ceil(Math.min(String(o.obsGeral || '').length, MAX_TEXTO_OCORRENCIA) / 44))
+  const linhas = Math.max(linhasItens, linhasGeral)
+  return linhas * 4.1 + 3.5
+}
+
+function paginarOcorrencias(lista) {
+  const orcamento = TOTAL_CONTENT_H - KICKER_H - TITLE_H - TABLE_HEAD_H - SAFETY - 4
+  const paginas = []
+  let atual = []
+  let usado = 0
+  for (const o of lista) {
+    const h = Math.min(alturaOcorrenciaMm(o), orcamento)
+    if (atual.length > 0 && usado + h > orcamento) {
+      paginas.push(atual)
+      atual = []
+      usado = 0
+    }
+    atual.push(o)
+    usado += h
+  }
+  if (atual.length > 0) paginas.push(atual)
+  return paginas
+}
+
+// === KPIs ===
 
 function kpisPeriodoHtml(kpis) {
   const cards = [
-    kpiStatus(String(kpis.total), 'Cadastrados', '#1F2937'),
-    kpiStatus(`${kpis.emDia} (${kpis.pctEmDia}%)`, 'Dentro da meta', '#22C55E'),
-    kpiStatus(String(kpis.atrasado), 'Atrasados', '#F59E0B'),
-    kpiStatus(String(kpis.critico), 'Atraso crítico', '#EF4444'),
-    kpiStatus(String(kpis.semRegistro), 'Sem registro', '#6B7280'),
+    kpiCard(String(kpis.total), 'Cadastrados', 'green'),
+    kpiCard(`${kpis.emDia}`, 'Dentro da meta', 'green', '●', `${kpis.pctEmDia}% dos bebedouros`),
+    kpiCard(String(kpis.atrasado), 'Atrasados', 'gold', '▲'),
+    kpiCard(String(kpis.critico), 'Atraso crítico', 'red', '■'),
+    kpiCard(String(kpis.semRegistro), 'Sem registro', 'gray', '○'),
   ]
-  return kpiStatusGrid(cards, 5)
+  if (kpis.semMeta > 0) cards.push(kpiCard(String(kpis.semMeta), 'Sem meta', 'gray', '–'))
+  return kpiGrid(cards, cards.length)
 }
 
 function kpisDiaHtml(kpis) {
   const cards = [
-    kpiStatus(String(kpis.limposNoDia), 'Limpos no dia', '#1F2937'),
-    kpiStatus(String(kpis.dentroMeta), 'Dentro da meta', '#22C55E'),
-    kpiStatus(String(kpis.acimaMeta), 'Acima da meta', '#F59E0B'),
-    kpiStatus(String(kpis.muitoAcima), 'Muito acima', '#EF4444'),
+    kpiCard(String(kpis.limposNoDia), 'Limpos no dia', 'green'),
+    kpiCard(String(kpis.dentroMeta), 'Dentro da meta', 'green', '●'),
+    kpiCard(String(kpis.acimaMeta), 'Acima da meta', 'gold', '▲'),
+    kpiCard(String(kpis.muitoAcima), 'Muito acima da meta', 'red', '■'),
   ]
-  let html = kpiStatusGrid(cards, 4)
+  let html = kpiGrid(cards, 4)
   if (kpis.intervaloMedio !== null && kpis.intervaloMedio !== undefined) {
     html += `<div class="info-pill">Intervalo médio: ${kpis.intervaloMedio}d</div>`
   }
@@ -461,41 +458,40 @@ function kpisDiaHtml(kpis) {
 
 function kpisChecklistHtml(kpis) {
   const cards = [
-    kpiStatus(String(kpis.totalRegistros), 'Registros no período', '#1F2937'),
-    kpiStatus(String(kpis.comChecklist), 'Registros com checklist', '#1F2937'),
-    kpiStatus(`${kpis.negativos} (${kpis.pctNegativos}%)`, 'Registros com ponto de atenção', '#EF4444'),
+    kpiCard(String(kpis.totalRegistros), 'Registros no período', 'green'),
+    kpiCard(String(kpis.comChecklist), 'Registros com checklist', 'green'),
+    kpiCard(`${kpis.negativos} (${kpis.pctNegativos}%)`, 'Registros com ponto de atenção', 'red', '!'),
   ]
-  let html = kpiStatusGrid(cards, 3)
+  let html = kpiGrid(cards, 3)
   if (kpis.itemMaisProblematico) {
     const ipm = kpis.itemMaisProblematico
-    const txt = `Item mais problemático: ${ipm.label} com ${ipm.pctNegativo}% de respostas negativas (${ipm.negativos}/${ipm.total}).`
-    html += alertBox(txt, 'amber')
+    const txt = `${ipm.label} com ${ipm.pctNegativo}% de respostas negativas (${ipm.negativos}/${ipm.total}).`
+    html += alertBox(txt, 'warn', 'ATENÇÃO — item mais problemático:')
   }
   return html
 }
 
-// === Pre-chunk dinâmico do gráfico de período ===
+function proximasSemanaTexto(proximas) {
+  const nomes = proximas
+    .slice(0, 8)
+    .map((p) => `${p.nome} (${dateFmt(p.proximaLimpeza)})`)
+    .join(', ')
+  const extra = proximas.length > 8 ? ` e mais ${proximas.length - 8}` : ''
+  return `${proximas.length} bebedouro(s): ${nomes}${extra}.`
+}
 
-function preChunkStatus(items, maxFirst, maxCont) {
+// === Paginação genérica ===
+
+function chunkPorTamanhos(items, primeiro, demais) {
   if (items.length === 0) return []
   const chunks = []
   let i = 0
   let isFirst = true
   while (i < items.length) {
-    const max = isFirst ? maxFirst : maxCont
-    const size = Math.min(items.length - i, max)
-    chunks.push(items.slice(i, i + size))
-    i += size
+    const max = Math.max(1, isFirst ? primeiro : demais)
+    chunks.push(items.slice(i, i + max))
+    i += max
     isFirst = false
-  }
-  return chunks
-}
-
-function chunkArray(arr, size) {
-  if (arr.length <= size) return [arr]
-  const chunks = []
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size))
   }
   return chunks
 }
@@ -509,245 +505,106 @@ export async function renderBebedourosHtml(input) {
   const diaUnico = input.diaUnico
   const dados = { ...input, ehDiaUnico, diaUnico }
 
-  // Normaliza arrays que podem ser undefined
-  const statusPorBebedouro = input.statusPorBebedouro || []
+  const cronograma = normalizarCronograma(input.statusPorBebedouro || [], input.dataFim)
   const limpezasDoDia = input.limpezasDoDia || []
-
-  // Separa com/sem registro (modo período)
-  const comRegistro = statusPorBebedouro
-    .filter((s) => s.dias !== null)
-    .slice()
-    .sort((a, b) => b.dias - a.dias)
-  const semRegistro = statusPorBebedouro
-    .filter((s) => s.dias === null)
-    .slice()
-    .sort((a, b) => a.nome.localeCompare(b.nome))
-
-  // Calcula maxPerPage dinâmico para o gráfico de período
-  const temAlerta = !ehDiaUnico && input.maisAtrasado
-  const firstPageExtra = KICKER_H + BADGE_H + TITLE_H + KPI_PERIOD_H + (temAlerta ? ALERT_H : 0)
-  const firstAvail = TOTAL_CONTENT_H - firstPageExtra
-  const contAvail = TOTAL_CONTENT_H - KICKER_H
-  const maxFirst = Math.max(1, Math.floor((firstAvail - CHART_PAD - SAFETY) / BAR_H))
-  const maxCont = Math.max(1, Math.floor((contAvail - CHART_PAD - SAFETY) / BAR_H))
-
-  // Pre-chunk o gráfico de período
-  const periodChunks = ehDiaUnico ? [] : preChunkStatus(comRegistro, maxFirst, maxCont)
-
-  // Decide se a lista de sem registro cabe na última página do gráfico
-  let semRegistroNaUltimaPagina = false
-  let semRegistroPaginaPropria = false
-  if (!ehDiaUnico && semRegistro.length > 0) {
-    if (periodChunks.length === 0) {
-      // Sem gráfico, a lista vai na página de KPIs
-      semRegistroNaUltimaPagina = true
-    } else {
-      const ultimoChunkLen = periodChunks[periodChunks.length - 1].length
-      if (ultimoChunkLen < maxCont - 3) {
-        semRegistroNaUltimaPagina = true
-      } else {
-        semRegistroPaginaPropria = true
-      }
-    }
-  }
-
-  // Pre-chunk a tabela de ocorrências
+  const proximas = input.proximasSemana || []
   const ocorrencias = input.ocorrencias || []
-  const occChunks = ocorrencias.length > 0 ? chunkArray(ocorrencias, OCCURRENCES_PER_PAGE) : []
 
-  // Calcula total de páginas
-  let totalPages = 0
+  const temAlertaAtraso = !ehDiaUnico && !!input.maisAtrasado
+  const temAlertaProximas = !ehDiaUnico && proximas.length > 0
+
+  // Capacidade (linhas) das páginas de tabela do cronograma
+  const topoPeriodo = KICKER_H + BADGE_H + TITLE_H + KPI_PERIOD_H
+    + (temAlertaAtraso ? ALERT_H : 0) + (temAlertaProximas ? ALERT_H : 0) + TABLE_HEAD_H + SAFETY + FIRST_PAGE_EXTRA + LEGEND_H
+  const rowsFirst = Math.floor((TOTAL_CONTENT_H - topoPeriodo) / ROW_H)
+  const rowsCont = Math.floor((TOTAL_CONTENT_H - KICKER_H - TABLE_HEAD_H - SAFETY - LEGEND_H) / ROW_H)
+  const topoDia = KICKER_H + BADGE_H + TITLE_H + KPI_PERIOD_H + 9 + TABLE_HEAD_H + SAFETY + FIRST_PAGE_EXTRA + LEGEND_H
+  const diaRowsFirst = Math.floor((TOTAL_CONTENT_H - topoDia) / ROW_H)
+
   const pageDescriptors = []
 
   if (ehDiaUnico) {
-    pageDescriptors.push({ type: 'secao1-dia' })
-    totalPages++
-  } else if (comRegistro.length === 0 && semRegistro.length === 0) {
-    pageDescriptors.push({ type: 'secao1-vazio' })
-    totalPages++
-  } else if (comRegistro.length === 0) {
-    pageDescriptors.push({ type: 'secao1-sem-registro-only' })
-    totalPages++
+    const tabela = chunkPorTamanhos(limpezasDoDia, diaRowsFirst, rowsCont)
+    if (tabela.length === 0) pageDescriptors.push({ type: 'dia-tabela', chunk: [], isFirst: true })
+    tabela.forEach((chunk, i) => pageDescriptors.push({ type: 'dia-tabela', chunk, isFirst: i === 0 }))
   } else {
-    periodChunks.forEach((chunk, i) => {
-      const isLast = i === periodChunks.length - 1
-      pageDescriptors.push({
-        type: 'secao1-grafico',
-        chunk,
-        isFirst: i === 0,
-        isLast,
-        semRegistro: isLast && semRegistroNaUltimaPagina ? semRegistro : [],
-      })
-      totalPages++
+    const tabela = chunkPorTamanhos(cronograma, rowsFirst, rowsCont)
+    if (tabela.length === 0) pageDescriptors.push({ type: 'cron-tabela', chunk: [], isFirst: true, total: 0, startRow: 0 })
+    let linha = 0
+    tabela.forEach((chunk, i) => {
+      pageDescriptors.push({ type: 'cron-tabela', chunk, isFirst: i === 0, total: cronograma.length, startRow: linha })
+      linha += chunk.length
     })
-    if (semRegistroPaginaPropria) {
-      pageDescriptors.push({ type: 'secao1-sem-registro', semRegistro })
-      totalPages++
-    }
   }
 
-  // Seção 2: KPIs + gráfico de problemas
+  // Seção 2: KPIs + gráfico de problemas, depois tabela de ocorrências
   pageDescriptors.push({ type: 'secao2-kpis' })
-  totalPages++
-
-  // Páginas de ocorrências
-  occChunks.forEach((chunk, i) => {
+  const occPages = ocorrencias.length > 0 ? paginarOcorrencias(ocorrencias) : []
+  let ocorrenciasMostradas = 0
+  occPages.forEach((chunk, i) => {
     pageDescriptors.push({
       type: 'secao2-ocorrencias',
       chunk,
-      isFirst: i === 0,
-      isLast: i === occChunks.length - 1,
       total: ocorrencias.length,
-      startRow: i * OCCURRENCES_PER_PAGE,
+      startRow: ocorrenciasMostradas,
+      multi: occPages.length > 1,
+      isFirst: i === 0,
     })
-    totalPages++
+    ocorrenciasMostradas += chunk.length
   })
+
+  const totalPages = pageDescriptors.length
 
   // === Monta HTML de cada página ===
   const chartsData = []
   const pagesHtml = []
   let pageNumber = 0
-  let periodChartIdx = 0
 
   for (const desc of pageDescriptors) {
     pageNumber++
     let html = ''
 
-    if (desc.type === 'secao1-dia') {
-      // Modo dia único: KPIs + gráfico de intervalo
-      const tituloSecao = `1. Bebedouros limpos em ${dateFmt(diaUnico)}`
-      const hasData = limpezasDoDia.length > 0
-      const cardH = hasData
-        ? Math.max(50, Math.min(limpezasDoDia.length * 10 + 14, 120))
-        : 60
-      if (hasData) {
-        chartsData.push({
-          canvasId: 'chart-dia',
-          kind: 'limpezaDia',
-          items: limpezasDoDia.map((l) => ({
-            label: l.nome,
-            valor: l.intervalo ?? 0,
-            cor: l.cor,
-            meta: l.meta,
-            primeira: l.intervalo === null,
-          })),
-        })
-      }
-      html = pageSection(`
-        ${renderHeader({ ...brand, reportTitle: titulo, section: 'Limpeza do dia', sectionLabel: 'Seção 1' })}
-        <p class="section-kicker">Resumo do período</p>
-        ${periodBadgeHtml(dados)}
-        <div class="insight-box"><span class="insight-label">1. Bebedouros limpos no dia</span>${escapeHtml(dateFmt(diaUnico))}</div>
-        ${input.limpezaDiaKPIs ? kpisDiaHtml(input.limpezaDiaKPIs) : ''}
-        ${chartCardLocal({
-          canvasId: 'chart-dia',
-          title: 'Intervalo desde a limpeza anterior',
-          subtitle: 'Marca verde tracejada = meta individual de cada bebedouro',
-          hasData,
-          height: `${cardH}mm`,
-          emptyMsg: 'Nenhum bebedouro foi limpo neste dia',
-        })}
-        ${footerHtml(dados, pageNumber, totalPages)}
-      `)
-    } else if (desc.type === 'secao1-vazio') {
-      // Período sem nenhum bebedouro
-      html = pageSection(`
-        ${renderHeader({ ...brand, reportTitle: titulo, section: 'Status de limpeza', sectionLabel: 'Seção 1' })}
-        <p class="section-kicker">Resumo do período</p>
-        ${periodBadgeHtml(dados)}
-        <div class="insight-box"><span class="insight-label">1. Status de limpeza dos bebedouros</span>Status de limpeza dos bebedouros no período.</div>
-        ${input.limpezaKPIs ? kpisPeriodoHtml(input.limpezaKPIs) : ''}
-        ${input.maisAtrasado ? alertBox(`Maior atraso: ${input.maisAtrasado.nome} com ${input.maisAtrasado.dias} dias desde a última limpeza. Meta: ${input.maisAtrasado.meta} dias.`, 'red') : ''}
-        ${chartCardLocal({
-          canvasId: 'chart-period-empty',
-          title: 'Dias desde a última limpeza por bebedouro',
-          subtitle: 'Marca verde tracejada = meta individual de cada bebedouro',
-          hasData: false,
-          height: '60mm',
-          emptyMsg: 'Nenhum bebedouro cadastrado',
-        })}
-        ${footerHtml(dados, pageNumber, totalPages)}
-      `)
-    } else if (desc.type === 'secao1-sem-registro-only') {
-      // Período com só bebedouros sem registro
-      html = pageSection(`
-        ${renderHeader({ ...brand, reportTitle: titulo, section: 'Status de limpeza', sectionLabel: 'Seção 1' })}
-        <p class="section-kicker">Resumo do período</p>
-        ${periodBadgeHtml(dados)}
-        <div class="insight-box"><span class="insight-label">1. Status de limpeza dos bebedouros</span>Status de limpeza dos bebedouros no período.</div>
-        ${input.limpezaKPIs ? kpisPeriodoHtml(input.limpezaKPIs) : ''}
-        ${input.maisAtrasado ? alertBox(`Maior atraso: ${input.maisAtrasado.nome} com ${input.maisAtrasado.dias} dias desde a última limpeza. Meta: ${input.maisAtrasado.meta} dias.`, 'red') : ''}
-        ${chartCardLocal({
-          canvasId: 'chart-period-empty',
-          title: 'Dias desde a última limpeza por bebedouro',
-          hasData: false,
-          height: '60mm',
-          emptyMsg: 'Nenhum bebedouro com registro de limpeza no período',
-        })}
-        ${semRegistroListHtml(semRegistro)}
-        ${footerHtml(dados, pageNumber, totalPages)}
-      `)
-    } else if (desc.type === 'secao1-grafico') {
-      // Período: chunk do gráfico de status
-      const { chunk, isFirst, isLast, semRegistro: semReg } = desc
-      const canvasId = `chart-period-${periodChartIdx++}`
-      const cardH = chunk.length * BAR_H + CHART_PAD
-      chartsData.push({
-        canvasId,
-        kind: 'limpeza',
-        items: chunk.map((s) => ({
-          label: s.nome,
-          valor: s.dias ?? 0,
-          cor: s.cor,
-          meta: s.meta,
-        })),
-      })
-      const tituloGrafico = isFirst
-        ? 'Dias desde a última limpeza por bebedouro'
-        : 'Dias desde a última limpeza por bebedouro (continuação)'
-      const subtitulo = isFirst ? 'Marca verde tracejada = meta individual de cada bebedouro' : ''
-      const sectionLabel = isFirst ? 'Status de limpeza' : 'Status (continuação)'
-      const section = isFirst ? 'Status de limpeza' : 'Continuação'
-
+    if (desc.type === 'cron-tabela') {
       let content = `
-        ${renderHeader({ ...brand, reportTitle: titulo, section, sectionLabel: 'Seção 1' })}
-        <p class="section-kicker">Resumo do período</p>
+        ${renderHeader({ ...brand, reportTitle: titulo, section: desc.isFirst ? 'Cronograma de limpeza' : 'Continuação', sectionLabel: 'Seção 1' })}
+        <p class="section-kicker">${desc.isFirst ? 'Resumo do período' : 'Cronograma de limpeza (continuação)'}</p>
       `
-      if (isFirst) {
+      if (desc.isFirst) {
         content += `
           ${periodBadgeHtml(dados)}
-          <div class="insight-box"><span class="insight-label">1. Status de limpeza dos bebedouros</span>Status de limpeza dos bebedouros no período.</div>
+          <div class="insight-box"><span class="insight-label">1. Cronograma de limpeza dos bebedouros</span>Última e próxima limpeza de cada bebedouro (próxima = última + meta), com prazo em relação a ${escapeHtml(dateFmt(input.dataFim))}.</div>
           ${input.limpezaKPIs ? kpisPeriodoHtml(input.limpezaKPIs) : ''}
-          ${input.maisAtrasado ? alertBox(`Maior atraso: ${input.maisAtrasado.nome} com ${input.maisAtrasado.dias} dias desde a última limpeza. Meta: ${input.maisAtrasado.meta} dias.`, 'red') : ''}
+          ${temAlertaAtraso ? alertBox(`${input.maisAtrasado.nome} com ${input.maisAtrasado.dias} dias desde a última limpeza. Meta: ${input.maisAtrasado.meta} dias.`, 'crit', 'CRÍTICO — maior atraso:') : ''}
+          ${temAlertaProximas ? alertBox(proximasSemanaTexto(proximas), 'warn', 'PRÓXIMOS 7 DIAS — limpezas previstas:') : ''}
         `
       }
-      content += chartCardLocal({
-        canvasId,
-        title: tituloGrafico,
-        subtitle: subtitulo,
-        hasData: true,
-        height: `${cardH}mm`,
-      })
-      if (isLast && semReg && semReg.length > 0) {
-        content += semRegistroListHtml(semReg)
-      }
+      content += desc.chunk.length > 0
+        ? `<div class="table-block">${cronogramaTableHtml(desc.chunk)}</div>${legendaStatusHtml('periodo')}`
+        : '<div class="empty-chart" style="height:40mm">Nenhum bebedouro cadastrado</div>'
       content += footerHtml(dados, pageNumber, totalPages)
       html = pageSection(content)
-    } else if (desc.type === 'secao1-sem-registro') {
-      // Página própria para lista de sem registro
-      html = pageSection(`
-        ${renderHeader({ ...brand, reportTitle: titulo, section: 'Sem registro', sectionLabel: 'Seção 1' })}
-        <p class="section-kicker">Bebedouros sem registro de limpeza</p>
-        ${periodBadgeHtml(dados)}
-        ${semRegistroListHtml(desc.semRegistro)}
-        ${footerHtml(dados, pageNumber, totalPages)}
-      `)
+    } else if (desc.type === 'dia-tabela') {
+      let content = `
+        ${renderHeader({ ...brand, reportTitle: titulo, section: desc.isFirst ? 'Limpeza do dia' : 'Continuação', sectionLabel: 'Seção 1' })}
+        <p class="section-kicker">${desc.isFirst ? 'Resumo do período' : 'Limpeza do dia (continuação)'}</p>
+      `
+      if (desc.isFirst) {
+        content += `
+          ${periodBadgeHtml(dados)}
+          <div class="insight-box"><span class="insight-label">1. Bebedouros limpos em ${escapeHtml(dateFmt(diaUnico))}</span>Limpeza anterior, limpeza do dia e próxima limpeza prevista (limpeza do dia + meta).</div>
+          ${input.limpezaDiaKPIs ? kpisDiaHtml(input.limpezaDiaKPIs) : ''}
+        `
+      }
+      content += desc.chunk.length > 0
+        ? `<div class="table-block">${diaTableHtml(desc.chunk)}</div>${legendaStatusHtml('dia')}`
+        : '<div class="empty-chart" style="height:40mm">Nenhum bebedouro foi limpo neste dia</div>'
+      content += footerHtml(dados, pageNumber, totalPages)
+      html = pageSection(content)
     } else if (desc.type === 'secao2-kpis') {
-      // Seção 2: KPIs checklist + gráfico de problemas + box verde (se 0 ocorrências)
-      const hasData = input.itensRanking.length > 0
+      const hasData = input.itensRanking.length > 0 && input.itensRanking.some((r) => r.total > 0)
       const cardH = hasData
-        ? Math.max(50, Math.min(input.itensRanking.length * 10 + 14, 80))
-        : 60
+        ? Math.max(50, Math.min(input.itensRanking.length * 10 + 14, 70))
+        : 40
       if (hasData) {
         chartsData.push({
           canvasId: 'chart-problemas',
@@ -755,6 +612,8 @@ export async function renderBebedourosHtml(input) {
           items: input.itensRanking.map((r) => ({
             label: r.label,
             valor: r.pctNegativo,
+            negativos: r.negativos,
+            total: r.total,
           })),
         })
       }
@@ -772,15 +631,22 @@ export async function renderBebedourosHtml(input) {
           emptyMsg: 'Nenhum checklist respondido no período',
         })}
       `
+      const porBeb = input.ocorrenciasPorBebedouro || []
+      if (porBeb.length > 0) {
+        const lista = porBeb.slice(0, 12).map((p) => `${escapeHtml(p.bebedouro)}: ${p.quantidade}`).join(' · ')
+        const extra = porBeb.length > 12 ? ` · e mais ${porBeb.length - 12}` : ''
+        content += `<div class="ocorr-resumo"><b>Ocorrências por bebedouro:</b> ${lista}${extra}</div>`
+      }
       if (ocorrencias.length === 0) {
-        content += `<div class="no-ocorr-box">Nenhuma ocorrência negativa nos checklists do período.</div>`
+        content += '<div class="no-ocorr-box">Nenhuma ocorrência negativa nos checklists do período.</div>'
       }
       content += footerHtml(dados, pageNumber, totalPages)
       html = pageSection(content)
     } else if (desc.type === 'secao2-ocorrencias') {
-      // Tabela de ocorrências paginada
-      const { chunk, total, startRow } = desc
-      const suffix = occChunks.length > 1 ? ` <span>· exibindo ${startRow + 1}–${startRow + chunk.length} de ${total}</span>` : ` <span>${total} ocorrência(s)</span>`
+      const { chunk, total, startRow, multi } = desc
+      const suffix = multi
+        ? ` <span>· exibindo ${startRow + 1}–${startRow + chunk.length} de ${total}</span>`
+        : ` <span>${total} ocorrência(s)</span>`
       html = pageSection(`
         ${renderHeader({ ...brand, reportTitle: titulo, section: 'Ocorrências', sectionLabel: 'Seção 2' })}
         <p class="section-kicker">Ocorrências negativas nos checklists</p>

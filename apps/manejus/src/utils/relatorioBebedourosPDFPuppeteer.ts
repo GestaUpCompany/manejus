@@ -34,11 +34,13 @@ export async function gerarRelatorioBebedourosPDFPuppeteer(
     limpezaKPIs: dados.limpezaKPIs,
     maisAtrasado: dados.maisAtrasado,
     statusPorBebedouro: dados.statusPorBebedouro,
+    proximasSemana: dados.proximasSemana,
     limpezaDiaKPIs: dados.limpezaDiaKPIs,
     limpezasDoDia: dados.limpezasDoDia,
     checklistKPIs: dados.checklistKPIs,
     itensRanking: dados.itensRanking,
     ocorrencias: dados.ocorrencias,
+    ocorrenciasPorBebedouro: dados.ocorrenciasPorBebedouro,
   }
 
   const response = await fetch('/api/pdf/bebedouros', {

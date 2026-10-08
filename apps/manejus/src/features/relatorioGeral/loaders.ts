@@ -1,6 +1,22 @@
 import { supabase } from '@gestaup/supabase'
 import type { DadosPDFRelatorioAbastecimento } from '../../utils/relatorioAbastecimentoPDF'
 import type { DadosPDFBebedouros } from '../../utils/relatorioBebedourosPDF'
+import {
+  calcularChecklist,
+  calcularCronograma,
+  calcularKPIsCronograma,
+  calcularLimpezasDoDia,
+  calcularMaisAtrasado,
+  proximasNaJanela,
+  type BebedouroBase,
+  type LimpezaBase,
+  type RegistroChecklistBase,
+} from '../relatorioBebedouros/calculos'
+import {
+  cronogramaParaPDF,
+  limpezaDoDiaParaPDF,
+  ocorrenciaParaPDF,
+} from '../relatorioBebedouros/paraPdf'
 import type { LoteRelatorio } from '../../utils/relatorioConsumoPDF'
 import type { LinhaMorte, ParametrosRelatorioMorte, PastoGeo, ResumoMorte } from '../../utils/relatorioMortePDF'
 import type { ParametrosRelatorioRodeio } from '../../utils/relatorioRodeioPDFPuppeteer'
@@ -31,28 +47,6 @@ interface RegistroAbastecimento {
   unidade_trabalho?: string | null
 }
 
-interface Bebedouro {
-  id: string
-  nome: string
-  meta_intervalo_limpeza: number | null
-}
-
-interface Limpeza {
-  bebedouro_id: string
-  bebedouro_nome: string
-  data_limpeza: string
-  responsavel: string | null
-}
-
-interface RegistroBebedouro {
-  id: string
-  data: string
-  numero_bebedouro: string | null
-  responsavel: string | null
-  observacao: string | null
-  checklist: Record<string, { valor: boolean; observacao?: string }> | null
-}
-
 interface DadosMorteRpc {
   linhas: LinhaMorte[]
   resumo: ResumoMorte
@@ -71,14 +65,6 @@ export type PayloadRelatorioGeral =
   | { tipo: 'pastagens'; dados: ParametrosRelatorioPastagens }
   | { tipo: 'estoque'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null } & DadosRelatorioEstoque }
   | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
-
-const CHECKLIST_ITEMS = [
-  { key: 'agua_suficiente', label: 'Água insuficiente' },
-  { key: 'vazao_bebedouro_ideal', label: 'Vazão não ideal' },
-  { key: 'espacamento_bebedouro_ideal', label: 'Espaçamento não ideal' },
-  { key: 'boia_protecao_boas_condicoes', label: 'Bóia/proteção em más condições' },
-  { key: 'aterro_acesso_bebedouro_ideal', label: 'Aterro/acesso não ideal' },
-]
 
 const PRECOS_KG_DEFAULT: Record<string, number> = {
   Bezerro: 12,
@@ -202,18 +188,6 @@ async function carregarConsumo(
   }
 }
 
-function statusLimpeza(dias: number | null, meta: number | null) {
-  if (dias === null) return { label: 'Sem registro', cor: '#6B7280' }
-  if (!meta || meta <= 0) return { label: `${dias}d`, cor: '#6B7280' }
-  if (dias <= meta) return { label: 'Em dia', cor: '#22C55E' }
-  if (dias <= Math.ceil(meta * 1.3)) return { label: 'Atrasado', cor: '#F59E0B' }
-  return { label: 'Atraso crítico', cor: '#EF4444' }
-}
-
-function dataLocal(valor: string) {
-  return new Date(`${valor.split('T')[0]}T00:00:00`)
-}
-
 async function carregarBebedouros(
   fazenda: FazendaRelatorio,
   dataInicio: string,
@@ -226,93 +200,22 @@ async function carregarBebedouros(
   const idsPermitidos = new Set((permitidos.data ?? []).map((item: { bebedouro_id: string }) => item.bebedouro_id))
   const [bebedourosRes, limpezasRes, registrosRes] = await Promise.all([
     supabase.from('bebedouros').select('id, nome, meta_intervalo_limpeza').eq('fazenda_id', fazenda.id).is('deleted_at', null).order('nome'),
-    supabase.from('historico_limpezas_bebedouros').select('bebedouro_id, data_limpeza, responsavel, bebedouro:bebedouros(nome)').eq('fazenda_id', fazenda.id).lte('data_limpeza', `${dataFim}T23:59:59`).order('data_limpeza', { ascending: false }),
+    supabase.from('historico_limpezas_bebedouros').select('bebedouro_id, data_limpeza, responsavel').eq('fazenda_id', fazenda.id).lte('data_limpeza', `${dataFim}T23:59:59`).order('data_limpeza', { ascending: false }),
     supabase.from('registros_bebedouros').select('id, data, numero_bebedouro, responsavel, observacao, checklist').eq('fazenda_id', fazenda.id).is('deleted_at', null).gte('data', `${dataInicio}T00:00:00`).lte('data', `${dataFim}T23:59:59`).order('data', { ascending: false }),
   ])
   const erro = bebedourosRes.error || limpezasRes.error || registrosRes.error
   if (erro) throw erro
-  const bebedouros = (bebedourosRes.data ?? []).filter((item) => idsPermitidos.has(item.id)) as Bebedouro[]
+  const bebedouros = (bebedourosRes.data ?? []).filter((item) => idsPermitidos.has(item.id)) as BebedouroBase[]
   const nomes = new Set(bebedouros.map((item) => item.nome))
-  const limpezas = (limpezasRes.data ?? [])
-    .filter((item) => idsPermitidos.has(item.bebedouro_id))
-    .map((item) => ({
-      bebedouro_id: item.bebedouro_id,
-      bebedouro_nome: Array.isArray(item.bebedouro) ? item.bebedouro[0]?.nome ?? '' : (item.bebedouro as { nome?: string } | null)?.nome ?? '',
-      data_limpeza: item.data_limpeza,
-      responsavel: item.responsavel,
-    })) as Limpeza[]
-  const registros = (registrosRes.data ?? []).filter((item) => item.numero_bebedouro && nomes.has(item.numero_bebedouro)) as RegistroBebedouro[]
-  const dataReferencia = dataLocal(dataFim)
-  const status = bebedouros.map((bebedouro) => {
-    const historico = limpezas.filter((item) => item.bebedouro_id === bebedouro.id).sort((a, b) => dataLocal(b.data_limpeza).getTime() - dataLocal(a.data_limpeza).getTime())
-    const ultima = historico[0]
-    const dias = ultima ? Math.max(Math.round((dataReferencia.getTime() - dataLocal(ultima.data_limpeza).getTime()) / 86_400_000), 0) : null
-    const situacao = statusLimpeza(dias, bebedouro.meta_intervalo_limpeza)
-    return {
-      nome: bebedouro.nome,
-      dias,
-      cor: situacao.cor,
-      meta: bebedouro.meta_intervalo_limpeza,
-      ultimaLimpeza: ultima?.data_limpeza ?? null,
-      limpezasNoPeriodo: historico.filter((item) => item.data_limpeza.split('T')[0] >= dataInicio && item.data_limpeza.split('T')[0] <= dataFim).length,
-      statusLabel: situacao.label,
-    }
-  })
-  const total = status.length
-  const emDia = status.filter((item) => item.statusLabel === 'Em dia').length
-  const atrasado = status.filter((item) => item.statusLabel === 'Atrasado').length
-  const critico = status.filter((item) => item.statusLabel === 'Atraso crítico').length
-  const semRegistro = status.filter((item) => item.statusLabel === 'Sem registro').length
-  const comChecklist = registros.filter((item) => item.checklist && Object.keys(item.checklist).length > 0)
-  const ocorrencias = comChecklist.flatMap((registro) => {
-    const negativos = CHECKLIST_ITEMS.filter((item) => registro.checklist?.[item.key]?.valor === false)
-    if (!negativos.length) return []
-    return [{
-      data: registro.data,
-      bebedouro: registro.numero_bebedouro ?? 'Sem identificação',
-      itensNegativos: negativos.map((item) => item.label).join(', '),
-      obsItens: negativos.map((item) => registro.checklist?.[item.key]?.observacao).filter(Boolean).join('; '),
-      obsGeral: registro.observacao ?? '',
-      responsavel: registro.responsavel ?? '',
-    }]
-  })
-  const itensRanking = CHECKLIST_ITEMS.map((item) => {
-    const negativosItem = comChecklist.filter((registro) => registro.checklist?.[item.key]?.valor === false).length
-    return {
-      label: item.label,
-      pctNegativo: comChecklist.length ? Math.round((negativosItem / comChecklist.length) * 100) : 0,
-      negativos: negativosItem,
-      total: comChecklist.length,
-    }
-  }).sort((a, b) => b.pctNegativo - a.pctNegativo)
-  const maisProblematico = itensRanking[0]?.pctNegativo > 0 ? itensRanking[0] : null
-  const maisAtrasado = status.filter((item) => item.dias !== null && item.statusLabel !== 'Em dia').sort((a, b) => (b.dias ?? 0) - (a.dias ?? 0))[0]
+  const limpezas = (limpezasRes.data ?? []).filter((item) => idsPermitidos.has(item.bebedouro_id)) as LimpezaBase[]
+  const registros = (registrosRes.data ?? []).filter((item) => item.numero_bebedouro && nomes.has(item.numero_bebedouro)) as RegistroChecklistBase[]
+
   const ehDiaUnico = dataInicio === dataFim
-  const limpezasDoDia = ehDiaUnico ? bebedouros.flatMap((bebedouro) => {
-    const historico = limpezas.filter((item) => item.bebedouro_id === bebedouro.id).sort((a, b) => dataLocal(b.data_limpeza).getTime() - dataLocal(a.data_limpeza).getTime())
-    const atual = historico.find((item) => item.data_limpeza.split('T')[0] === dataInicio)
-    if (!atual) return []
-    const anterior = historico[historico.indexOf(atual) + 1]
-    const intervalo = anterior ? Math.max(Math.round((dataLocal(atual.data_limpeza).getTime() - dataLocal(anterior.data_limpeza).getTime()) / 86_400_000), 0) : null
-    const situacao = intervalo === null || !bebedouro.meta_intervalo_limpeza
-      ? { label: 'Primeira limpeza', cor: '#6B7280' }
-      : intervalo <= bebedouro.meta_intervalo_limpeza
-        ? { label: 'Dentro da meta', cor: '#22C55E' }
-        : intervalo <= Math.ceil(bebedouro.meta_intervalo_limpeza * 1.3)
-          ? { label: 'Acima da meta', cor: '#F59E0B' }
-          : { label: 'Muito acima da meta', cor: '#EF4444' }
-    return [{
-      nome: bebedouro.nome,
-      intervalo,
-      cor: situacao.cor,
-      meta: bebedouro.meta_intervalo_limpeza,
-      dataLimpeza: atual.data_limpeza,
-      dataLimpezaAnterior: anterior?.data_limpeza ?? null,
-      statusLabel: situacao.label,
-      responsavel: atual.responsavel,
-    }]
-  }) : []
+  const cronograma = calcularCronograma(bebedouros, limpezas, dataFim, dataInicio, dataFim)
+  const limpezasDoDia = ehDiaUnico ? calcularLimpezasDoDia(bebedouros, limpezas, dataInicio) : []
   const intervalos = limpezasDoDia.map((item) => item.intervalo).filter((item): item is number => item !== null)
+  const checklist = calcularChecklist(registros)
+
   return {
     tipo: 'bebedouros',
     dados: {
@@ -323,7 +226,7 @@ async function carregarBebedouros(
       dataFim,
       ehDiaUnico,
       diaUnico: ehDiaUnico ? dataInicio : undefined,
-      limpezaKPIs: ehDiaUnico ? undefined : { total, emDia, atrasado, critico, semRegistro, pctEmDia: total ? Math.round((emDia / total) * 100) : 0 },
+      limpezaKPIs: ehDiaUnico ? undefined : calcularKPIsCronograma(cronograma),
       limpezaDiaKPIs: ehDiaUnico ? {
         limposNoDia: limpezasDoDia.length,
         dentroMeta: limpezasDoDia.filter((item) => item.statusLabel === 'Dentro da meta').length,
@@ -331,18 +234,17 @@ async function carregarBebedouros(
         muitoAcima: limpezasDoDia.filter((item) => item.statusLabel === 'Muito acima da meta').length,
         intervaloMedio: intervalos.length ? Math.round(intervalos.reduce((soma, item) => soma + item, 0) / intervalos.length) : null,
       } : undefined,
-      limpezasDoDia: ehDiaUnico ? limpezasDoDia : undefined,
-      maisAtrasado: !ehDiaUnico && maisAtrasado?.dias !== null && maisAtrasado?.meta != null ? { nome: maisAtrasado.nome, dias: maisAtrasado.dias, meta: maisAtrasado.meta } : null,
-      statusPorBebedouro: ehDiaUnico ? undefined : status,
+      limpezasDoDia: ehDiaUnico ? limpezasDoDia.map(limpezaDoDiaParaPDF) : undefined,
+      maisAtrasado: ehDiaUnico ? null : calcularMaisAtrasado(cronograma),
+      statusPorBebedouro: ehDiaUnico ? undefined : cronograma.map(cronogramaParaPDF),
+      proximasSemana: ehDiaUnico ? undefined : proximasNaJanela(cronograma, 7),
       checklistKPIs: {
-        totalRegistros: registros.length,
-        comChecklist: comChecklist.length,
-        negativos: ocorrencias.length,
-        pctNegativos: comChecklist.length ? Math.round((ocorrencias.length / comChecklist.length) * 100) : 0,
-        itemMaisProblematico: maisProblematico,
+        ...checklist.kpis,
+        itemMaisProblematico: checklist.kpis.itemMaisProblematico,
       },
-      itensRanking,
-      ocorrencias,
+      itensRanking: checklist.ranking.map(({ label, pctNegativo, negativos, total }) => ({ label, pctNegativo, negativos, total })),
+      ocorrencias: checklist.ocorrencias.map(ocorrenciaParaPDF),
+      ocorrenciasPorBebedouro: checklist.ocorrenciasPorBebedouro,
     },
   }
 }
