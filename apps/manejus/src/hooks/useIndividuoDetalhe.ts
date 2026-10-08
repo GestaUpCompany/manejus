@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@gestaup/supabase'
+import type { DadosBaixa } from '../utils/baixaIndividuo'
 
 export interface IndividuoDetalhe {
   id: string
@@ -43,6 +44,9 @@ export interface IndividuoDetalhe {
   peso_meta_kg?: number | string | null
   data_insercao_rastreabilidade?: string | null
   data_liberacao_sisbov?: string | null
+  data_saida?: string | null
+  motivo_saida?: string | null
+  destino_saida?: string | null
   created_at: string
   updated_at: string
 }
@@ -242,11 +246,11 @@ export function useIndividuoAcoes(individuo: IndividuoDetalhe | null | undefined
   const invalidar = () => queryClient.invalidateQueries({ queryKey: ['individuo', individuo?.id] })
 
   const alterarStatus = useMutation({
-    mutationFn: async (status: string) => {
+    mutationFn: async (dados: DadosBaixa) => {
       if (!individuo) throw new Error('Indivíduo não carregado')
       const { error } = await supabase
         .from('individuos')
-        .update({ status })
+        .update(dados)
         .eq('id', individuo.id)
         .eq('fazenda_id', individuo.fazenda_id)
       if (error) throw error

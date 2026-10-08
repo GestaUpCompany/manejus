@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { formatDate, formatDateTime } from '@gestaup/shared'
+import { formatDate, formatDateTime, toFarmDateOnly } from '@gestaup/shared'
 import {
   Button,
   Card,
@@ -9,6 +9,7 @@ import {
   DetailLayout,
   DetailSection,
   EmptyState,
+  Input,
   Modal,
   Select,
   formatValue,
@@ -23,6 +24,7 @@ import {
 } from '../../hooks/useIndividuoDetalhe'
 import { calcularEvolucaoPeso, calcularIdade, escalaPeso, gmdPeriodo, type PesagemEvolucao } from '../../utils/individuoPesagens'
 import { statusEditaveis } from '../../utils/individualValidation'
+import { montarDadosBaixa, motivoPadrao, motivosSaida, validarBaixa } from '../../utils/baixaIndividuo'
 
 type Aba = 'resumo' | 'pesagens' | 'movimentacoes' | 'genealogia' | 'maternidade'
 
@@ -198,23 +200,35 @@ export function IndividuoDetalhe() {
 
   const [modalStatus, setModalStatus] = useState(false)
   const [novoStatus, setNovoStatus] = useState('')
+  const [dataSaida, setDataSaida] = useState('')
+  const [motivoSaida, setMotivoSaida] = useState('')
+  const [destinoSaida, setDestinoSaida] = useState('')
+  const [errosBaixa, setErrosBaixa] = useState<Record<string, string>>({})
   const [modalExcluir, setModalExcluir] = useState(false)
 
   const evolucao = useMemo(() => calcularEvolucaoPeso(pesagens.data || []), [pesagens.data])
   const gmdMedio = gmdPeriodo(evolucao)
   const idade = calcularIdade(ind?.data_nascimento)
 
+  const hojeFazenda = toFarmDateOnly(new Date().toISOString()) ?? new Date().toISOString().split('T')[0]
+
   const abrirIndividuo = (outroId: string) => navigate(`/controller/individuos/${outroId}`)
   const voltar = () => navigate('/controller/individuos')
 
+  const trocarStatusNoModal = (status: string) => {
+    setNovoStatus(status)
+    setErrosBaixa({})
+    if (status !== 'Vivo' && !motivoSaida) setMotivoSaida(motivoPadrao(status))
+  }
+
   const confirmarStatus = async () => {
-    if (!novoStatus || novoStatus === ind?.status) {
-      setModalStatus(false)
-      return
-    }
+    const form = { status: novoStatus, dataSaida, motivoSaida, destinoSaida }
+    const erros = validarBaixa(form, hojeFazenda)
+    setErrosBaixa(erros)
+    if (Object.keys(erros).length > 0) return
     try {
-      await alterarStatus.mutateAsync(novoStatus)
-      toast.success(`Status alterado para ${novoStatus}.`)
+      await alterarStatus.mutateAsync(montarDadosBaixa(form))
+      toast.success(novoStatus === 'Vivo' ? 'Animal reativado como Vivo.' : `Baixa registrada: ${novoStatus}.`)
       setModalStatus(false)
     } catch (error) {
       console.error('Erro ao alterar status:', error)
@@ -251,11 +265,16 @@ export function IndividuoDetalhe() {
             <Button
               variant="secondary"
               onClick={() => {
-                setNovoStatus(statusEditaveis.includes(ind.status) ? ind.status : 'Vivo')
+                const status = statusEditaveis.includes(ind.status) ? ind.status : 'Vivo'
+                setNovoStatus(status)
+                setDataSaida(ind.data_saida ?? hojeFazenda)
+                setMotivoSaida(ind.motivo_saida && motivosSaida.includes(ind.motivo_saida) ? ind.motivo_saida : motivoPadrao(status))
+                setDestinoSaida(ind.destino_saida ?? '')
+                setErrosBaixa({})
                 setModalStatus(true)
               }}
             >
-              Alterar status
+              Dar baixa / alterar status
             </Button>
             <Button variant="secondary" onClick={() => setModalExcluir(true)}>
               Excluir
@@ -373,6 +392,16 @@ export function IndividuoDetalhe() {
                     <DetailField label="Liberação SISBOV" value={formatDate(ind!.data_liberacao_sisbov)} />
                   </div>
                 </DetailSection>
+
+                {ind!.status !== 'Vivo' && (
+                  <DetailSection title="Saída do rebanho" highlighted>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <DetailField label="Data da saída" value={formatDate(ind!.data_saida)} />
+                      <DetailField label="Motivo" value={formatValue(ind!.motivo_saida)} />
+                      <DetailField label="Destino" value={formatValue(ind!.destino_saida)} />
+                    </div>
+                  </DetailSection>
+                )}
 
                 <DetailSection title="Registro">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -597,17 +626,41 @@ export function IndividuoDetalhe() {
             </Card>
           )}
         </div>
-      <Modal isOpen={modalStatus} onClose={() => setModalStatus(false)} title="Alterar status" size="sm">
+      <Modal isOpen={modalStatus} onClose={() => setModalStatus(false)} title="Dar baixa / alterar status" size="sm">
         <div className="space-y-4">
           <Select
             label="Novo status"
             value={novoStatus}
-            onChange={setNovoStatus}
+            onChange={trocarStatusNoModal}
             options={statusEditaveis.map((s) => ({ value: s, label: s }))}
             placeholder="Selecione"
           />
+          {errosBaixa.status && <p className="text-red-500 text-xs">{errosBaixa.status}</p>}
+          {novoStatus && novoStatus !== 'Vivo' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-content mb-1">Data da saída</label>
+                <Input type="date" value={dataSaida} max={hojeFazenda} onChange={(e) => setDataSaida(e.target.value)} />
+                {errosBaixa.dataSaida && <p className="text-red-500 text-xs mt-1">{errosBaixa.dataSaida}</p>}
+              </div>
+              <div>
+                <Select
+                  label="Motivo da saída"
+                  value={motivoSaida}
+                  onChange={setMotivoSaida}
+                  options={motivosSaida.map((m) => ({ value: m, label: m }))}
+                  placeholder="Selecione"
+                />
+                {errosBaixa.motivoSaida && <p className="text-red-500 text-xs mt-1">{errosBaixa.motivoSaida}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-content mb-1">Destino (opcional)</label>
+                <Input type="text" value={destinoSaida} placeholder="Comprador, frigorífico, fazenda..." onChange={(e) => setDestinoSaida(e.target.value)} />
+              </div>
+            </>
+          )}
           <p className="text-xs text-content-muted">
-            Altera só o status do indivíduo. Não gera movimentação de saída nem muda a quantidade do lote. Para vendas, abates e transferências use a Ordem de Serviço. Morte é registrada pela Caderneta de Morte.
+            Registra o status, a data, o motivo e o destino do indivíduo. Não gera movimentação de saída nem muda a quantidade do lote. Para vendas, abates e transferências em lote use a Ordem de Serviço. Morte é registrada pela Caderneta de Morte.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setModalStatus(false)}>
