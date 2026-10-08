@@ -10,6 +10,7 @@ import {
   categoriasMacho,
   categoriasFemea,
   origens,
+  statusEditaveis,
 } from '../../utils/individualValidation'
 import {
   checkDuplicateIdentification,
@@ -183,8 +184,14 @@ export function IndividuoNovo() {
     const mapOptions = (data: any[] | null): SelectOption[] =>
       (data || []).map((item) => ({ id: item.id, nome: item.nome }))
 
+    // Um animal não pode ser pai/mãe de si mesmo
+    const idAtual = searchParams.get('edit') || (() => {
+      const last = window.location.pathname.split('/').pop()
+      return last && last !== 'novo' ? last : null
+    })()
+
     const mapIndividuos = (data: any[] | null): SelectOption[] =>
-      (data || []).map((item) => ({
+      (data || []).filter((item) => item.id !== idAtual).map((item) => ({
         id: item.id,
         nome:
           item.id_brinco ||
@@ -310,11 +317,12 @@ export function IndividuoNovo() {
     }
   }, [errors])
 
-  const confirmLoteChange = useCallback(() => {
+  // Sem useCallback: precisa enxergar o form atual ao confirmar a troca de lote
+  const confirmLoteChange = () => {
     setShowLoteChangeModal(false)
     setPendingLoteChange(null)
     executeSubmit()
-  }, [])
+  }
 
   const cancelLoteChange = useCallback(() => {
     setShowLoteChangeModal(false)
@@ -714,7 +722,7 @@ export function IndividuoNovo() {
               numero_cabecas: 1,
               data: new Date().toISOString().split('T')[0],
               individuo_id: data.id,
-              peso_vivo_atual_kg: form.peso_atual_kg ? Number(form.peso_atual_kg) : null,
+              peso_vivo_atual_kg: form.peso_atual_kg ? Number(String(form.peso_atual_kg).replace(',', '.')) : null,
               motivo_movimentacao: 'Entrada' as const,
               causa_observacao: `Entrada de indivíduo: ${form.id_brinco || form.id_chip || form.id_manejo || form.id_provisorio_cria || 'Sem identificação'}`
             }
@@ -784,10 +792,11 @@ export function IndividuoNovo() {
               {/* Identificação */}
               <div className="space-y-4">
                 <h4 className="text-sm font-medium text-content uppercase tracking-wider">Identificação</h4>
+                {errors.identificacao && <p className="text-red-500 text-xs">{errors.identificacao}</p>}
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
-                      Brinco <span className="text-red-500">*</span>
+                      Brinco
                     </label>
                     <input
                       type="text"
@@ -879,9 +888,12 @@ export function IndividuoNovo() {
                       onChange={(e) => handleChange('status', e.target.value)}
                       className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     >
-                      <option value="Vivo">Vivo</option>
-                      <option value="Morto">Morto</option>
-                      <option value="Vendido">Vendido</option>
+                      {(statusEditaveis.includes(form.status) || !form.status
+                        ? statusEditaveis
+                        : [form.status, ...statusEditaveis]
+                      ).map((s: string) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
