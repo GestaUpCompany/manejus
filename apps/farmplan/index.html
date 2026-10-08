@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Tarefas da Semana (login, quadro do gestor e aplicativo da equipe) — visual do protótipo -->
+<html lang="pt-BR" class="sempre-claro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Farm Plan · Gesta'Up</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#FFFFFF">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Farm Plan">
+</head>
+<body>
+<!-- ============ TELA 1: ENTRAR ============ -->
+<div id="telaLogin" class="login escondido">
+  <form class="card" id="formLogin">
+    <div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div>
+    <h1>Farm Plan</h1>
+    <p>Digite o Usuário e a Senha que o Gestor Passou para Você.</p>
+    <label class="fl">Usuário ou E-mail<input class="in" id="email" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></label>
+    <label class="fl">Senha<input class="in" id="senha" type="password" autocomplete="current-password" required></label>
+    <button class="btn pri" type="submit">Entrar</button>
+    <div id="erro" class="erro"></div>
+  </form>
+</div>
+
+<!-- ============ TELA 2: QUADRO DA SEMANA (gestor, administrativo e consultor no computador) ============ -->
+<div id="telaWeb" class="shell escondido">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button data-sair="1">Sair</button></div>
+  </aside>
+  <div class="main" id="web"></div>
+</div>
+
+<!-- ============ TELA 3: APLICATIVO (líder e colaborador, e todos no celular) ============ -->
+<div id="telaApp" class="appw ap escondido"></div>
+
+<script type="module">
+  import { supabase, ANO, SEMANAS_NO_ANO, STATUS, PAPEL, DIAS_CURTO, DIAS_LONGO, MESES_LONGO, tc, esc, semanaDe, quemSouEu, buscarTudo,
+           diaDaSemana, ddmm, periodoDaSemana, montarMenu, ic, emailDoLogin, aoMudar, graficoStatus, inicioDaSemana, congelar, recongelar } from './comum.js';
+  import { buscarMidias, abrirAnexos, selos, prepararVisual, abrirResumoWhatsApp, anotarRelatorio } from './midia.js';
+  import { abrirAjuda } from './ajuda.js';
+  import { comMic } from './voz.js';
+  import { abrirPop, guardarPops, temPop } from './pop.js';
+  import { agrupar, fmtDur, hhmm, metaDe, textoMeta, seloExec, PAUSAS, META } from './tempo.js';
+  import { guardar, ler, apagarGuardado, enfileirar, naFila, tirarDaFila, uid, comPrazo, aoMudarFila, marcarSemSinal, faixaSinal, estado, sincronizar } from './offline.js';
+  const $ = (id) => document.getElementById(id);
+  const VE_TUDO = ['consultor', 'gestor', 'administrativo'];   // esses veem e dão baixa em tudo
+  const MOTIVOS = ['Chuva', 'Máquina Quebrada', 'Faltou Gente', 'Faltou Insumo', 'Outra Prioridade'];
+  const HOJE = new Date(), SEMANA_HOJE = semanaDe(HOJE), DIA_HOJE = (HOJE.getDay() + 6) % 7;   // 0 = segunda
+
+  // Tudo o que a tela usa fica guardado aqui
+  let eu = null, minhaPessoa = null, minhasEquipes = {}, veTudo = false;
+  let pessoas = [], equipes = [], setores = [];
+  let semana = Math.min(SEMANAS_NO_ANO, Math.max(1, +new URLSearchParams(location.search).get('semana') || SEMANA_HOJE)), linhas = [], baixas = {};          // baixas["idAtividade|dia"] = { feito, motivo }
+  let virada = undefined;   // registro da virada automática desta semana
+  let aba = 'pessoa', fSetor = (() => { try { return sessionStorage.getItem('fp-filtro-sem') || ''; } catch { return ''; } })(), abertos = {}, diaApp = DIA_HOJE, detalhe = null, naoDeuAberto = null, chkAberto = null;
+  const chkMarcados = {};   // lista de conferência: itens marcados por atividade (só na tela)
+  let fora = [], foraAberto = false;   // lançamentos fora do plano da semana
+  let midias = null;                   // fotos, vídeos, áudios e recados da semana (null = falta o SQL 021)
+  let meusRelatorios = {};             // dia -> quando mandei o Relatório do Dia no grupo (SQL 022)
+  let semSinal = false, dadosDe = null;  // trabalhando sem internet, com a semana guardada no celular
+  let eventos = null, pausaAberta = null; // cronômetro das atividades (SQL 023)
+  const PRM = new URLSearchParams(location.search), FORCAR_APP = PRM.has('app');
+  let preview = null;                   // gestor vendo o app como um colaborador (tela Aplicativo do site)
+  const soLeitura = () => { if (!preview) return false; aviso('👁 Só Visualização: Quem Marca É o Colaborador, no Celular Dele'); return true; };
+
+  function aviso(msg, ms = 2400) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
+
+  // ---------- 1. ENTRAR e SAIR ----------
+  $('formLogin').onsubmit = async (e) => {
+    e.preventDefault();
+    $('erro').textContent = 'Entrando…';
+    const { error } = await supabase.auth.signInWithPassword({ email: emailDoLogin($('email').value), password: $('senha').value });
+    if (error) { $('erro').textContent = 'Usuário ou Senha Incorretos.'; return; }
+    $('erro').textContent = '';
+    iniciar();
+  };
+  document.addEventListener('click', async (e) => {
+    if (!e.target.closest('[data-sair]')) return;
+    if (estado.pend && !confirm(`Ainda Tem ${estado.pend} ${estado.pend === 1 ? 'Item Guardado' : 'Itens Guardados'} no Celular Esperando Sinal.\nSe Sair Agora, Só Serão Enviados Quando Você Entrar de Novo.\n\nSair Mesmo?`)) return;
+    await apagarGuardado('eu');
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {}); location.reload();
+  });
+
+  // ---------- 2. QUEM ENTROU ----------
+  async function iniciar() {
+    // Com sinal: confere no banco. Sem sinal: usa quem entrou da última vez neste celular.
+    const net = await comPrazo(quemSouEu(), 9000).catch(() => undefined);
+    const salvo = await ler('eu');
+    if (net?.fazenda) { eu = net; semSinal = false; }
+    else if (salvo && (!net || net.user?.id === salvo.user.id)) { eu = { ...salvo }; semSinal = true; marcarSemSinal(true); }
+    else if (net === undefined) { $('telaLogin').classList.remove('escondido'); $('erro').textContent = 'Sem Internet. Na Primeira Vez, Entre Onde Tem Sinal: Depois o App Funciona sem Internet.'; return; }
+    else if (!net) { $('telaLogin').classList.remove('escondido'); return; }
+    else { document.body.innerHTML = '<div class="empty">Você Ainda Não Tem Acesso a Nenhuma Fazenda.</div>'; return; }
+    $('telaLogin').classList.add('escondido');
+    veTudo = VE_TUDO.includes(eu.papel);
+    const fz = eu.fazenda.id;
+    let base = semSinal ? null : await comPrazo(Promise.all([
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido, user_id, setor_id').eq('fazenda_id', fz).order('apelido')),
+      buscarTudo(() => supabase.from('equipes').select('id, nome, lider_id').eq('fazenda_id', fz).order('nome')),
+      buscarTudo(() => supabase.from('setores').select('id, nome').eq('fazenda_id', fz).order('nome')),
+      buscarTudo(() => supabase.from('equipe_membros').select('equipe_id, pessoa_id, equipes!inner(fazenda_id)').eq('equipes.fazenda_id', fz))
+    ]), 15000).then(([p, e, st, m]) => ({ pessoas: p, equipes: e, setores: st, membros: m.map(x => ({ equipe_id: x.equipe_id, pessoa_id: x.pessoa_id })) })).catch(() => null);
+    if (base) guardar('base:' + fz, base);
+    else { base = await ler('base:' + fz); semSinal = true; marcarSemSinal(true);
+      if (!base) { document.body.innerHTML = '<div class="empty">Sem Internet e Nada Guardado Ainda neste Celular.<br>Abra o App Uma Vez Onde Tem Sinal.</div>'; return; } }
+    ({ pessoas, equipes, setores } = base);
+    minhaPessoa = pessoas.find(p => p.user_id === eu.user.id) || null;
+    if (PRM.get('como') && veTudo) { preview = pessoas.find(p => p.id === PRM.get('como')) || null; if (preview) { minhaPessoa = preview; veTudo = false; } }
+    minhasEquipes = {};
+    if (minhaPessoa) (base.membros || []).filter(x => x.pessoa_id === minhaPessoa.id).forEach(x => minhasEquipes[x.equipe_id] = equipes.find(e => e.id === x.equipe_id));
+    if (!semSinal) guardar('eu', { user: { id: eu.user.id, email: eu.user.email }, fazenda: eu.fazenda, papel: eu.papel, fazendas: (eu.fazendas || []).map(f => ({ id: f.id, nome: f.nome, uf: f.uf, papel: f.papel })) });
+    const nome = tc((preview || minhaPessoa)?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    eu.nome = nome;
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+    montarMenu('index.html');
+    aoMudarFila((e) => { const el = $('sinal'); if (el) el.innerHTML = faixaSinal(e); });
+    await carregar();
+    conferirAvisos();
+    // No computador, o quadro da semana se atualiza sozinho com o que a equipe faz no app
+    if (veTudo && !preview) aoMudar(eu.fazenda.id, ['baixas', 'planejamento', 'execucoes', 'fora_do_plano', 'midias'], () => modoApp() ? null : carregar());
+  }
+
+  // ---------- 3. BUSCA A SEMANA (no banco, ou guardada no celular) ----------
+  async function buscarSemana(fz, w) {
+    const [pl, bx] = await Promise.all([
+      buscarTudo(() => supabase.from('planejamento')
+        .select('atividade_id, status, observacao, atividades(id, nome, dias, local, como_fazer, setor_id, coordenador_id, executor_pessoa_id, executor_equipe_id)')
+        .eq('fazenda_id', fz).eq('ano', ANO).eq('semana', w)),
+      buscarTudo(() => supabase.from('baixas').select('atividade_id, dia, feito, motivo').eq('fazenda_id', fz).eq('ano', ANO).eq('semana', w))
+    ]);
+    const fp = await supabase.from('fora_do_plano').select('*').eq('fazenda_id', fz).eq('ano', ANO).eq('semana', w).order('registrado_em');
+    if (fp.error && /fetch|network/i.test(fp.error.message)) throw new Error('sem sinal');
+    const md = await buscarMidias(fz, ANO, w);
+    const rd = await supabase.from('relatorios_dia').select('dia, enviado_em, user_id').eq('fazenda_id', fz).eq('ano', ANO).eq('semana', w).eq('user_id', eu.user.id);
+    let vr = null;
+    if (veTudo) { const r = await supabase.from('viradas').select('*').eq('fazenda_id', fz).eq('ano', ANO).eq('semana', SEMANA_HOJE).maybeSingle(); vr = r.error ? null : (r.data || false); }
+    const ex = await supabase.from('execucoes').select('*, atividades(nome, como_fazer)').eq('fazenda_id', fz).gte('em', new Date(Date.now() - 21 * 864e5).toISOString()).order('em');
+    return { pl, bx, fora: fp.error ? null : (fp.data || []), midias: md, rel: rd.data || [], virada: vr, execucoes: ex.error ? null : (ex.data || []), salvo_em: new Date().toISOString() };
+  }
+  async function carregar() {
+    const fz = eu.fazenda.id, chave = `semana:${fz}:${ANO}:${semana}`;
+    let s = navigator.onLine ? await comPrazo(buscarSemana(fz, semana), 15000).catch(() => null) : null;
+    if (s) {
+      semSinal = false; marcarSemSinal(false); guardar(chave, s);
+      if (semana === SEMANA_HOJE && semana < SEMANAS_NO_ANO) comPrazo(buscarSemana(fz, semana + 1), 20000).then(p => guardar(`semana:${fz}:${ANO}:${semana + 1}`, p)).catch(() => {});   // já deixa a próxima semana no celular
+    } else {
+      s = await ler(chave); semSinal = true; marcarSemSinal(true);
+      if (!s) { $('telaApp').classList.remove('escondido'); $('telaApp').innerHTML = `<div class="a-top"><h2>Sem Sinal</h2><small>A Semana ${semana} Ainda Não Foi Baixada neste Celular.</small><div id="sinal">${faixaSinal()}</div></div><div class="a-body"><div class="a-card a-empty">Abra o App Uma Vez Onde Tem Internet (na Sede, por Exemplo) para Baixar as Tarefas da Semana.<br><br><button class="btn pri" onclick="location.reload()">Tentar de Novo</button></div></div>`; return; }
+    }
+    dadosDe = s.salvo_em;
+    linhas = (s.pl || []).filter(l => l.atividades);
+    // Líder e colaborador: só as próprias tarefas e as das suas equipes
+    if (!veTudo) linhas = linhas.filter(l => (minhaPessoa && (l.atividades.executor_pessoa_id === minhaPessoa.id || l.atividades.coordenador_id === minhaPessoa.id)) || minhasEquipes[l.atividades.executor_equipe_id]);   // quem faz e quem coordena
+    linhas.sort((x, y) => x.atividades.nome.localeCompare(y.atividades.nome, 'pt'));
+    setTimeout(() => guardarPops(linhas.map(l => l.atividades)).catch(() => {}), 3000);   // POPs ficam no celular para abrir sem sinal
+    baixas = {}; (s.bx || []).forEach(b => baixas[b.atividade_id + '|' + b.dia] = b);
+    fora = s.fora ? [...s.fora] : null;
+    if (fora && !veTudo) fora = fora.filter(x => x.registrado_por === eu.user.id || (minhaPessoa && x.pessoa_id === minhaPessoa.id) || minhasEquipes[x.equipe_id]);
+    midias = s.midias ? s.midias.map(r => ({ ...r })) : null;
+    meusRelatorios = {}; (s.rel || []).forEach(x => meusRelatorios[x.dia] = x.enviado_em);
+    if (veTudo) virada = s.virada;
+    eventos = s.execucoes ? [...s.execucoes] : null;
+    await aplicarFila();
+    desenhar();
+  }
+  // O que está guardado na fila (ainda sem sinal) aparece na tela como já feito
+  async function aplicarFila() {
+    for (const op of await naFila()) {
+      const d = op.dados || {};
+      if (op.tipo === 'baixa' && d.ano === ANO && d.semana === semana) baixas[d.atividade_id + '|' + d.dia] = d;
+      else if (op.tipo === 'desfazer' && op.chave.ano === ANO && op.chave.semana === semana) delete baixas[op.chave.atividade_id + '|' + op.chave.dia];
+      else if (op.tipo === 'fora' && d.semana === semana && fora && !fora.some(x => x.id === d.id)) fora.push({ ...d, pendente: true });
+      else if (op.tipo === 'remover_fora' && fora) fora = fora.filter(x => x.id !== op.ref);
+      else if (op.tipo === 'midia' && d.semana === semana) { midias = midias || []; if (!midias.some(x => x.id === d.id)) midias.push({ ...d, pendente: true, url: op.blob ? URL.createObjectURL(op.blob) : null }); }
+      else if (op.tipo === 'apagar_midia' && midias) midias = midias.filter(x => x.id !== op.ref);
+      else if (op.tipo === 'relatorio' && d.semana === semana && d.user_id === eu.user.id) meusRelatorios[d.dia] = d.enviado_em;
+      else if (op.tipo === 'execucao' && eventos && !eventos.some(x => x.id === d.id)) eventos.push({ ...d, atividades: op.ativ || null, pendente: true });
+    }
+  }
+
+  // ---------- 4. REGRAS E NOMES ----------
+  const nomePessoa = (id) => tc(pessoas.find(p => p.id === id)?.apelido) || '';
+  const nomeSetor = (id) => tc(setores.find(s => s.id === id)?.nome) || '';
+  const nomeQuem = (a) => nomePessoa(a.executor_pessoa_id) || tc(equipes.find(e => e.id === a.executor_equipe_id)?.nome) || '—';
+  // Conta como feito: baixa 'Feito' no dia, ou a semana inteira marcada como Concluído no Plano Anual
+  const feito = (l, d) => { const b = baixas[l.atividade_id + '|' + d]; return b ? b.feito : l.status === 2; };
+  const atrasada = (l) => l.observacao && l.observacao.startsWith('Atrasada');
+  // Quem pode dar baixa: gestor/administrativo/consultor em tudo; a própria pessoa; numa equipe, só o líder
+  function podeDarBaixa(a) {
+    if (veTudo) return true;
+    if (!minhaPessoa) return false;
+    if (a.executor_pessoa_id === minhaPessoa.id || a.coordenador_id === minhaPessoa.id) return true;   // quem coordena também dá baixa
+    const eq = minhasEquipes[a.executor_equipe_id];
+    return !!(eq && eq.lider_id === minhaPessoa.id);
+  }
+  function quemDaBaixa(a) {
+    const eq = equipes.find(e => e.id === a.executor_equipe_id);
+    return eq?.lider_id ? 'Baixa pelo Líder: ' + nomePessoa(eq.lider_id) : 'Baixa pelo Gestor ou Administrativo';
+  }
+  // Só dá baixa na semana atual, até o dia de hoje
+  const diaAberto = (d) => semana === SEMANA_HOJE && d <= DIA_HOJE;
+
+  // Grava ou apaga a baixa de um dia: vai para a fila do celular e sobe quando tiver sinal
+  async function darBaixa(id, d, feito, motivo, obs) {
+    if (soLeitura()) return;
+    const reg = { fazenda_id: eu.fazenda.id, atividade_id: id, ano: ANO, semana, dia: d,
+      feito, motivo: motivo || null, observacao: obs || null, registrado_por: eu.user.id, registrado_em: new Date().toISOString() };
+    try { await enfileirar({ tipo: 'baixa', dados: reg }); } catch (e) { return aviso('Não Foi Possível Guardar: ' + e.message); }
+    baixas[id + '|' + d] = reg;
+    naoDeuAberto = null; chkAberto = null; desenhar(); aviso(feito ? 'Tarefa Concluída' : 'Registrado: ' + motivo);
+  }
+  async function desfazerBaixa(id, d) {
+    if (soLeitura()) return;
+    for (const o of (await naFila()).filter(o => o.tipo === 'baixa' && o.dados.atividade_id === id && o.dados.dia === d && o.dados.semana === semana && o.dados.ano === ANO)) await tirarDaFila(o.id);
+    await enfileirar({ tipo: 'desfazer', chave: { atividade_id: id, ano: ANO, semana, dia: d } });
+    delete baixas[id + '|' + d]; naoDeuAberto = null; desenhar(); aviso('Baixa Desfeita');
+  }
+
+  // Aplicativo para líder e colaborador; no celular, para todos
+  const modoApp = () => FORCAR_APP || !veTudo || innerWidth < 860;
+  // No aplicativo cada pessoa vê só as tarefas dela (e das equipes dela). Gestor e administrativo
+  // podem tocar em "👥 Ver Toda a Fazenda"; consultor sem cadastro de pessoa vê a fazenda toda.
+  let verFazenda = false;
+  const ehMinha = (a) => !!minhaPessoa && (a.executor_pessoa_id === minhaPessoa.id || a.coordenador_id === minhaPessoa.id || !!minhasEquipes[a.executor_equipe_id]);   // quem faz e quem coordena
+  const verTudoApp = () => veTudo && (verFazenda || !minhaPessoa);
+  const linhasApp = () => verTudoApp() ? linhas : linhas.filter(l => ehMinha(l.atividades));
+  const foraMeu = (x) => x.registrado_por === eu.user.id || (!!minhaPessoa && x.pessoa_id === minhaPessoa.id) || !!minhasEquipes[x.equipe_id];
+  function desenhar() {
+    fecharMenu();
+    const app = modoApp();
+    $('telaApp').classList.toggle('escondido', !app);
+    document.documentElement.classList.toggle('sempre-claro', app);   // aplicativo: sempre claro e limpo
+    $('telaWeb').classList.toggle('escondido', app);
+    if (app) desenharApp(); else desenharWeb();
+  }
+  let largura = innerWidth;
+  addEventListener('resize', () => { if ((largura < 860) !== (innerWidth < 860)) { largura = innerWidth; if (eu) desenhar(); } });
+
+  // Gráfico das semanas do mês, com as situações (só no computador)
+  // Gráfico da semana presente: situação das atividades (barra empilhada) + % feita
+  function semGraf(L, pct, feitas, total) {   // balão "% Feita" com a barrinha da situação da semana dentro
+    const C = [[2, 'Concluídas'], [3, 'Em Andamento'], [4, 'Atrasadas'], [5, 'Pausadas'], [1, 'A Fazer']];
+    const n = {}; L.forEach(l => { const k = l.status || 1; n[k] = (n[k] || 0) + 1; }); const t = L.length || 1;
+    return `<span class="rc rm rbar" title="${feitas} de ${total} Tarefas Feitas · ${C.filter(([k]) => n[k]).map(([k, r]) => n[k] + ' ' + r).join(' · ')}">✅ <b>${pct}%</b> Feita
+      <span class="mbx">${C.filter(([k]) => n[k]).map(([k]) => `<i style="width:${n[k] / t * 100}%;background:var(--s${k})"></i>`).join('')}</span></span>`;
+  }
+  // ---------- 5. QUADRO DA SEMANA (computador) ----------
+  function desenharWeb() {
+    const L = linhas.filter(l => !fSetor || l.atividades.setor_id === fSetor);
+    let total = 0, feitas = 0;
+    L.forEach(l => l.atividades.dias.forEach((v, d) => { if (v) { total++; if (feito(l, d)) feitas++; } }));
+    const pct = total ? Math.round(feitas / total * 100) : 0;
+    const ehHoje = (d) => semana === SEMANA_HOJE && d === DIA_HOJE;
+    let corpo;
+    if (aba === 'lista') {
+      corpo = `<div class="card"><div class="scroll" id="tabSem"><table class="tbl"><thead><tr><th>Atividade</th><th>Local</th><th>Quem Faz</th><th>Dias</th><th>Metodologia · 2º M</th><th>Máquinas · 3º M</th><th>Materiais · 4º M</th><th>Meta · 5º M</th><th>Status</th></tr></thead><tbody>
+        ${L.map(l => { const a = l.atividades, m = a.como_fazer || {};
+          return `<tr><td><b>${esc(tc(a.nome))}</b><div class="sub">Coordena: ${esc(nomePessoa(a.coordenador_id) || '—')}</div></td><td class="sub">${esc(a.local || '—')}</td><td>${esc(nomeQuem(a))}</td>
+            <td class="sub">${a.dias.map((v, i) => v ? DIAS_CURTO[i] : '').filter(Boolean).join(' ')}</td>
+            ${['m2','m3','m4','m5'].map(k => `<td class="sub" style="max-width:180px">${m[k] ? esc(m[k]) : '—'}</td>`).join('')}
+            <td><span class="pill p${l.status}">${STATUS[l.status]}</span></td></tr>`; }).join('')}
+        </tbody></table></div>${L.length ? '' : '<div class="empty">Nada Planejado nesta Semana.</div>'}</div>`;
+    } else {
+      const grupos = {};
+      L.forEach(l => { const k = aba === 'setor' ? (nomeSetor(l.atividades.setor_id) || 'Sem Setor') : nomeQuem(l.atividades); (grupos[k] ||= []).push(l); });
+      const G = Object.entries(grupos).sort((x, y) => y[1].length - x[1].length);
+      corpo = `<div class="card"><div class="scroll" id="tabSem"><div class="wb"><div class="wh">${aba === 'setor' ? 'SETOR' : 'QUEM FAZ'}</div>
+        ${DIAS_CURTO.map((n, d) => `<div class="wh ${ehHoje(d) ? 'today' : ''}"><b>${n}</b>${ddmm(diaDaSemana(semana, d))}</div>`).join('')}
+        ${G.map(([k, arr]) => {
+          let tot = 0, ok = 0; arr.forEach(l => l.atividades.dias.forEach((v, d) => { if (v) { tot++; if (feito(l, d)) ok++; } }));
+          return `<div class="who"><b>${esc(k)}</b><small>${ok} de ${tot} Feitas</small></div>` + DIAS_CURTO.map((_, d) => {
+            const t = arr.filter(l => l.atividades.dias[d]).sort((x, y) => (atrasada(y) ? 1 : 0) - (atrasada(x) ? 1 : 0));
+            const ex = abertos[k + d], vis = ex ? t : t.slice(0, 4);
+            return `<div class="${ehHoje(d) ? 'today' : ''}">${vis.map(l => {
+              const b = baixas[l.atividade_id + '|' + d], cls = b ? (b.feito ? 'd' : 's4') : (l.status === 2 ? 'd' : 's' + l.status);
+              const dica = `${tc(l.atividades.nome)}${l.atividades.local ? ' · ' + l.atividades.local : ''}${b && !b.feito ? ' · Não Deu: ' + tc(b.motivo) : ''}`;
+              const nm = midTarefa(l.atividade_id, d).length;
+              return `<button class="chip ${cls} ${atrasada(l) && !b?.feito ? 'cr' : ''}" data-ch="${l.atividade_id}" data-d="${d}" title="${esc(dica)}${nm ? ' · ' + nm + ' Foto/Vídeo/Áudio' : ''}"><i></i><span>${esc(tc(l.atividades.nome))}</span>${nm ? '<em class="late" style="color:var(--s3)">📷</em>' : ''}${atrasada(l) && !b?.feito ? '<em class="late">↻</em>' : ''}</button>`;
+            }).join('')}${t.length > 4 ? `<button class="more" data-ex="${esc(k) + d}">${ex ? 'Mostrar Menos' : '+' + (t.length - 4) + ' Tarefas'}</button>` : ''}</div>`;
+          }).join('');
+        }).join('')}
+        </div></div>${G.length ? '' : '<div class="empty">Nada Planejado nesta Semana. Marque Semanas no Plano Anual ou Crie uma Nova Atividade.</div>'}
+        <div class="foot"><span>Clique numa Tarefa para Dar Baixa no Dia</span><span class="legend"><span><i style="background:var(--s2)"></i>Feito no Dia</span><span><i style="background:var(--s4)"></i>Não Deu</span><span><i style="background:var(--s3)"></i>Em Andamento</span><span><i style="background:var(--s1)"></i>A Fazer</span><span><em class="late">↻</em> Veio Atrasada</span></span></div></div>`;
+    }
+    $('web').innerHTML = `
+      <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="index.html" selected>Tarefas da Semana</option><option value="plano.html">Plano Anual</option><option value="cadastros.html">Cadastros</option></select></div>
+      <div class="phead"><div><h1>Plano Semanal · Semana ${semana}</h1><div class="resumo">
+          <span class="rc ${L.length < linhas.length ? 'rf' : ''}">📋 <b>${L.length < linhas.length ? L.length + ' de ' + linhas.length : linhas.length}</b> Atividades${L.length < linhas.length ? ' (Filtradas)' : ''}</span>
+          ${semGraf(L, pct, feitas, total)}
+          <span class="rc rand">🔄 <b>${L.filter(l => l.status === 3).length}</b> Em Andamento</span>
+          <span class="rc ratr">⚠️ <b>${L.filter(l => l.status === 4).length}</b> ${L.filter(l => l.status === 4).length === 1 ? 'Atrasada' : 'Atrasadas'}</span>
+          <span class="rc ra">📅 ${periodoDaSemana(semana)}${semana === SEMANA_HOJE ? ' · <b>Semana Atual</b>' : ''}</span></div></div>
+        <div class="acts"><button class="btn" data-sw="-1">‹ Anterior</button>${semana !== SEMANA_HOJE ? '<button class="btn" data-sw="0">Semana Atual</button>' : ''}<button class="btn" data-sw="1">Próxima ›</button>
+        <a class="btn" href="galeria.html?semana=${semana}" style="text-decoration:none">📷 Fotos e Vídeos${midias?.length ? ' · ' + midias.filter(r => r.tipo !== 'texto').length : ''}</a>
+        <a class="btn dark" href="semana-pdf.html?semana=${semana}" style="text-decoration:none">📄 PDF da Semana</a><a class="btn" href="semana-pdf.html?semana=${semana}&excel=1" style="text-decoration:none">📊 Excel da Semana</a>
+        <a class="btn pri" href="plano.html?nova=1" style="text-decoration:none">${ic('plus')}Nova Atividade</a></div></div>
+      <div class="filters"><div class="seg">${[['pessoa','Por Pessoa'],['setor','Por Setor'],['lista','Lista com 5M']].map(([k, n]) => `<button data-aba="${k}" class="${aba === k ? 'on' : ''}">${n}</button>`).join('')}</div>
+        <div class="acts"><label class="sel">Setor<select id="fSetor"><option value="">Todos</option>${setores.map(s => `<option value="${s.id}" ${s.id === fSetor ? 'selected' : ''}>${esc(tc(s.nome))}</option>`).join('')}</select></label>${fSetor ? '<button class="btn limpaf" id="limparF" type="button">✕ Limpar Filtros</button>' : ''}</div></div>
+      ${avisoVirada()}
+      ${corpo}`;
+    congelar(document.getElementById('tabSem'));
+    montarMenu('index.html');
+  }
+  // Aviso da virada automática (só na semana atual)
+  function avisoVirada() {
+    if (semana !== SEMANA_HOJE || virada === null || virada === undefined) return '';
+    if (virada) {
+      const d = new Date(virada.feito_em), quando = `${DIAS_LONGO[(d.getDay() + 6) % 7]} ${ddmm(d)} às ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      return `<div class="card" style="padding:10px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:center;background:var(--s3-soft);border-color:var(--s3)">
+        <span style="font-size:18px">↻</span><div style="font-size:13px"><b>Virada da Semana Feita</b> (${virada.feito_por === 'manual' ? 'Manual' : 'Automática'}) · ${quando} ·
+        <b>${virada.trazidas}</b> ${virada.trazidas === 1 ? 'Tarefa Atrasada Veio' : 'Tarefas Atrasadas Vieram'} da Semana ${semana - 1} · <b>${virada.concluidas}</b> Concluídas pelas Baixas</div></div>`;
+    }
+    return `<div class="card" style="padding:10px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--s5-soft);border-color:var(--s5)">
+      <div style="font-size:13px"><b>A Virada desta Semana Ainda Não Foi Feita.</b> Ela Roda Sozinha Toda Segunda às 02:00. Se Precisar, Faça Agora.</div>
+      <button class="btn sm dark" data-virar="1">↻ Fazer Virada Agora</button></div>`;
+  }
+
+  const guardarF = () => { try { sessionStorage.setItem('fp-filtro-sem', fSetor); } catch {} };
+  $('web').addEventListener('change', (e) => { if (e.target.id === 'fSetor') { fSetor = e.target.value; guardarF(); desenhar(); } });
+  $('web').addEventListener('click', (e) => { if (e.target.closest('#limparF')) { fSetor = ''; guardarF(); desenhar(); } });
+  $('web').addEventListener('click', (e) => {
+    if (e.target.closest('[data-virar]')) return virarAgora();
+    const gs = e.target.closest('[data-gs]'); if (gs) { semana = +gs.dataset.gs; return carregar(); }
+    const sw = e.target.closest('[data-sw]'); if (sw) { const v = +sw.dataset.sw; semana = v ? Math.min(SEMANAS_NO_ANO, Math.max(1, semana + v)) : SEMANA_HOJE; return carregar(); }
+    const ab = e.target.closest('[data-aba]'); if (ab) { aba = ab.dataset.aba; return desenhar(); }
+    const ex = e.target.closest('[data-ex]'); if (ex) { abertos[ex.dataset.ex] = !abertos[ex.dataset.ex]; return desenhar(); }
+    const ch = e.target.closest('[data-ch]'); if (ch) abrirMenu(ch, ch.dataset.ch, +ch.dataset.d);
+  });
+
+  async function virarAgora() {
+    if (!confirm('Fazer a Virada da Semana Agora?\n\nO Que Não Foi Concluído na Semana ' + (SEMANA_HOJE - 1) + ' Vem para Esta Semana como Atrasado.')) return;
+    const { data, error } = await supabase.rpc('virar_semana', { p_fazenda: eu.fazenda.id });
+    if (error) return aviso('Erro: ' + error.message);
+    const r = data?.[0];
+    aviso(r ? `Virada Feita · ${r.trazidas} Tarefas Atrasadas Trazidas` : 'A Virada Já Tinha Sido Feita');
+    virada = undefined; carregar();
+  }
+
+  // Menu da tarefa no quadro: Feito / Não Deu / Desfazer
+  function fecharMenu() { document.querySelector('.pop')?.remove(); }
+  function abrirMenu(el, id, d) {
+    fecharMenu();
+    const l = linhas.find(x => x.atividade_id === id), a = l.atividades, b = baixas[id + '|' + d];
+    const pop = document.createElement('div'); pop.className = 'pop';
+    let opc;
+    if (!diaAberto(d)) opc = `<div class="t">${semana === SEMANA_HOJE ? 'Esse Dia Ainda Não Chegou.' : 'Baixa Só na Semana Atual.'}</div>`;
+    else if (!podeDarBaixa(a)) opc = `<div class="t">${quemDaBaixa(a)}</div>`;
+    else opc = `<button data-f="1" class="${b?.feito ? 'on' : ''}"><i style="background:var(--s2)"></i>Feito${b?.feito ? ' ✓' : ''}</button>`
+      + `<div class="t" style="border:0;margin:0;padding:6px 8px 2px">Não Deu, Por Quê?</div>`
+      + MOTIVOS.map(m => `<button data-m="${m}" class="${b && !b.feito && b.motivo === m ? 'on' : ''}"><i style="background:var(--s4)"></i>${m}</button>`).join('')
+      + (b ? `<div style="border-top:1px solid var(--line2);margin:4px 0"></div><button data-u="1">↺ Desfazer Baixa</button>` : '');
+    const nm = midTarefa(id, d).length;
+    if (midias !== null && (nm || diaAberto(d))) opc += `<div style="border-top:1px solid var(--line2);margin:4px 0"></div><button data-anx1="1">📎 Fotos, Vídeos e Áudios${nm ? ' (' + nm + ')' : ''}</button>`;
+    pop.innerHTML = `<div class="t"><b>${esc(tc(a.nome))}</b>${DIAS_LONGO[d]}, ${ddmm(diaDaSemana(semana, d))} · ${esc(nomeQuem(a))}${b && !b.feito ? ' · Não Deu: ' + esc(tc(b.motivo)) : ''}</div>` + opc;
+    document.body.appendChild(pop);
+    const r = el.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    pop.style.left = Math.max(8, Math.min(innerWidth - pw - 8, r.left)) + 'px';
+    pop.style.top = (r.bottom + ph + 8 > innerHeight ? Math.max(8, r.top - ph - 4) : r.bottom + 4) + 'px';
+    pop.onclick = (e) => {
+      const bt = e.target.closest('button'); if (!bt) return;
+      fecharMenu();
+      if (bt.dataset.f) darBaixa(id, d, true);
+      else if (bt.dataset.m) darBaixa(id, d, false, bt.dataset.m);
+      else if (bt.dataset.u) desfazerBaixa(id, d);
+      else if (bt.dataset.anx1) anexos('baixa', id, d);
+    };
+    setTimeout(() => document.addEventListener('pointerdown', function fora(ev) {
+      if (!pop.contains(ev.target)) { fecharMenu(); document.removeEventListener('pointerdown', fora, true); }
+    }, true), 0);
+  }
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') fecharMenu(); });
+
+  // ---------- 6a. FORA DO PLANO (no aplicativo) ----------
+  const quemFora = (x) => tc(pessoas.find(p => p.id === x.pessoa_id)?.apelido || equipes.find(e => e.id === x.equipe_id)?.nome || '');
+  const IMPREVISTOS = ['Máquina Quebrou', 'Animal Doente', 'Animal Morto', 'Cerca Arrebentada', 'Falta de Água', 'Acidente', 'Gado Fugiu'];
+  const ehImp = (x) => x.tipo === 'imprevisto';
+  function blocoFora(d, novo = false) {
+    if (fora === null) return '';
+    const X = fora.filter(x => x.dia === d), pode = diaAberto(d), imp = foraAberto === 'imprevisto';
+    const opQuem = veTudo ? [...equipes.map(e => ['e:' + e.id, tc(e.nome)]), ...pessoas.map(p => ['p:' + p.id, tc(p.apelido)])]
+      : [...(minhaPessoa ? [['p:' + minhaPessoa.id, tc(minhaPessoa.apelido)]] : []), ...Object.values(minhasEquipes).filter(Boolean).map(e => ['e:' + e.id, tc(e.nome)])];
+    const nomes = [...new Set(linhas.map(l => tc(l.atividades.nome)))].sort((a, b) => a.localeCompare(b, 'pt'));
+    const item = (x) => `<div class="a-task"><span class="circle ${ehImp(x) ? 'imp' : 'done'}">${ehImp(x) ? '!' : '✓'}</span><div class="t"><b>${esc(tc(x.nome))}</b><small>${esc([quemFora(x), x.obs].filter(Boolean).join(' · ')) || '&nbsp;'}</small><span class="tag ${ehImp(x) ? 'im' : 'fp'}">${ehImp(x) ? 'Imprevisto' : 'Fora do Plano'}</span></div>${botaoAnexo(`data-anxf="${x.id}"`, midFora(x.id))}${pode && (veTudo || x.registrado_por === eu.user.id) ? `<button class="btn sm ghost" data-fprem="${x.id}">Remover</button>` : ''}</div>`;
+    const form = `<form class="a-card fs" id="fFora" data-tipo="${imp ? 'imprevisto' : 'fora'}"><b style="font-size:14px">${imp ? '⚠ O Que Aconteceu?' : 'O Que Você Fez Fora do Plano?'}</b>
+        ${imp ? `<div class="motg">${IMPREVISTOS.map(m => `<button type="button" data-impr="${m}">${m}</button>`).join('')}</div>` : ''}
+        ${comMic(`<input class="in" name="nome" ${imp ? '' : 'list="libFora"'} required placeholder="${imp ? 'Ex.: Trator 7 Quebrou na Roçada' : 'Ex.: Consertar Cerca do D.12'}" autocomplete="off">`, '#fFora [name=nome]')}${imp ? '' : `<datalist id="libFora">${nomes.map(n => `<option value="${esc(n)}">`).join('')}</datalist>`}
+        <select class="in" name="quem" required>${opQuem.length > 1 && veTudo ? `<option value="">${imp ? 'Quem Registrou?' : 'Quem Fez?'}</option>` : ''}${opQuem.map(([v, n]) => `<option value="${v}">${esc(n)}</option>`).join('')}</select>
+        ${comMic(`<input class="in" name="obs" placeholder="${imp ? 'Onde Foi? O Que Precisa Fazer? (Pode Falar 🎤)' : 'Observação (Local, Lote, o Que Aconteceu)'}">`, '#fFora [name=obs]')}
+        <div style="display:flex;gap:8px"><button class="btn pri" style="flex:1">Salvar</button><button type="button" class="btn" data-fpabrir="0">Cancelar</button></div></form>`;
+    return `${X.length ? `${novo ? `<div class="ap-sec"><span>📝</span>Fora do Plano e Problemas<b>${X.length}</b></div>` : `<div class="a-sec">Fora do Plano e Imprevistos · ${X.length}</div>`}<div class="a-card">${X.map(item).join('')}</div>` : ''}
+      ${pode ? (foraAberto ? form : novo ? '' : `<div class="fpbt"><button class="btn" data-fpabrir="fora">+ Fiz Fora do Plano</button><button class="btn imp" data-fpabrir="imprevisto">⚠ Imprevisto</button></div>`) : ''}
+      ${pode && midias !== null && !novo ? `<div class="fpbt" style="grid-template-columns:1fr">${(() => { const n = midDe(r => r.origem === 'recado' && r.dia === d && r.registrado_por === eu.user.id).length;
+        return `<button class="btn" data-recado="1">💬 Recado para o Gestor ${n ? `<span class="mx-badge">${n} Enviado${n > 1 ? 's' : ''}</span>` : '<span class="sub" style="font-weight:500">· Foto, Vídeo ou Áudio</span>'}</button>`; })()}</div>` : ''}
+      ${pode && !novo ? `<div class="fpbt" style="grid-template-columns:1fr;margin-top:14px"><button class="btn pri" data-whats="1" style="justify-content:center;padding:13px">📲 ${veTudo ? 'Resumo da Fazenda para o WhatsApp' : meusRelatorios[d] ? 'Mandar de Novo no Grupo' : 'Mandar Meu Relatório do Dia no Grupo'}</button>
+        ${meusRelatorios[d] ? `<div class="sub" style="text-align:center;font-size:12.5px;color:var(--s2);font-weight:600">✓ Relatório Mandado no Grupo às ${new Date(meusRelatorios[d]).toTimeString().slice(0, 5)}</div>` : ''}</div>` : ''}`;
+  }
+  function setorDe(q) {   // setor do cadastro da pessoa, ou o mais comum nas atividades dela/da equipe
+    const id = q.slice(2), ehPessoa = q.startsWith('p:');
+    if (ehPessoa) { const p = pessoas.find(x => x.id === id); if (p?.setor_id) return p.setor_id; }
+    const cont = {}; linhas.forEach(l => { const a = l.atividades; if ((ehPessoa ? a.executor_pessoa_id : a.executor_equipe_id) === id && a.setor_id) cont[a.setor_id] = (cont[a.setor_id] || 0) + 1; });
+    return Object.entries(cont).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  }
+  async function salvarFora(f) {
+    if (soLeitura()) return;
+    const q = f.quem.value; if (!q) return aviso('Escolha Quem Fez');
+    const reg = { id: uid(), fazenda_id: eu.fazenda.id, ano: ANO, semana, dia: diaApp, nome: f.nome.value.trim(), obs: f.obs.value.trim() || null,
+      pessoa_id: q.startsWith('p:') ? q.slice(2) : null, equipe_id: q.startsWith('e:') ? q.slice(2) : null, registrado_por: eu.user.id, setor_id: setorDe(q), tipo: f.dataset.tipo,
+      registrado_em: new Date().toISOString() };
+    try { await enfileirar({ tipo: 'fora', dados: reg }); } catch (e) { return aviso('Não Foi Possível Guardar: ' + e.message); }
+    fora.push({ ...reg, pendente: true }); foraAberto = false; desenhar(); aviso(reg.tipo === 'imprevisto' ? 'Imprevisto Registrado' : 'Lançado Fora do Plano');
+    if (midias !== null) anexos('fora', reg.id, diaApp);   // já oferece mandar foto do que aconteceu
+  }
+  async function removerFora(id) {
+    if (soLeitura()) return;
+    const fila = await naFila(), pend = fila.find(o => o.tipo === 'fora' && o.dados.id === id);
+    for (const o of fila.filter(o => o.tipo === 'midia' && o.dados.fora_id === id)) await tirarDaFila(o.id);
+    if (pend) await tirarDaFila(pend.id);   // ainda não tinha subido: é só esquecer
+    else await enfileirar({ tipo: 'remover_fora', ref: id, caminhos: midFora(id).filter(r => r.caminho && !r.pendente).map(r => r.caminho) });
+    fora = fora.filter(x => x.id !== id); if (midias) midias = midias.filter(r => r.fora_id !== id);
+    desenhar(); aviso('Removido');
+  }
+
+  // ---------- 6b. FOTOS, VÍDEOS, ÁUDIOS E RECADOS ----------
+  prepararVisual();
+  const midDe = (filtro) => (midias || []).filter(filtro);
+  const midTarefa = (id, d) => midDe(r => r.origem === 'baixa' && r.atividade_id === id && r.dia === d);
+  const midFora = (id) => midDe(r => r.origem === 'fora' && r.fora_id === id);
+  const botaoAnexo = (attr, lista) => midias === null ? '' : `<button class="mx-anx" ${attr} aria-label="Fotos, Vídeos e Áudios">📎${lista.length ? `<b>${lista.length}</b>` : ''}</button>`;
+  function nomeDaMidia(r) {
+    const quem = nomePessoa(r.pessoa_id) || 'Gestor';
+    if (r.origem === 'baixa') { const l = linhas.find(x => x.atividade_id === r.atividade_id); return (l ? tc(l.atividades.nome) : 'Tarefa') + ' · ' + quem; }
+    if (r.origem === 'fora') { const x = (fora || []).find(f => f.id === r.fora_id); return (x ? tc(x.nome) : 'Fora do Plano') + ' · ' + quem; }
+    return 'Recado de ' + quem;
+  }
+  function anexos(origem, ref, d) {
+    if (preview) return soLeitura();
+    const lista = origem === 'baixa' ? midTarefa(ref, d) : origem === 'fora' ? midFora(ref) : midDe(r => r.origem === 'recado' && r.dia === d && r.registrado_por === eu.user.id);
+    const base = { fz: eu.fazenda.id, ano: ANO, semana, dia: d, origem, lista, pessoa_id: minhaPessoa?.id || null, userId: eu.user.id, nomeDe: nomeDaMidia,
+      podeEnviar: diaAberto(d), podeApagar: (r) => veTudo || r.registrado_por === eu.user.id,
+      aoMudar: (lista) => { midias = (midias || []).filter(r => !(r.origem === origem && (origem === 'recado' ? r.registrado_por === eu.user.id && r.dia === d : origem === 'fora' ? r.fora_id === ref : r.atividade_id === ref && r.dia === d))).concat(lista); desenhar(); } };
+    const quando = `${DIAS_LONGO[d]}, ${ddmm(diaDaSemana(semana, d))}`;
+    if (origem === 'baixa') { const l = linhas.find(x => x.atividade_id === ref); const b = baixas[ref + '|' + d];
+      return abrirAnexos({ ...base, atividade_id: ref, titulo: tc(l.atividades.nome), sub: `${quando} · ${nomeQuem(l.atividades)}${b ? (b.feito ? ' · Feito ✓' : ' · Não Deu: ' + tc(b.motivo)) : ''}` }); }
+    if (origem === 'fora') { const x = fora.find(f => f.id === ref);
+      return abrirAnexos({ ...base, fora_id: ref, titulo: (ehImp(x) ? '⚠ ' : '') + tc(x.nome), sub: `${quando} · ${ehImp(x) ? 'Imprevisto' : 'Fora do Plano'}${quemFora(x) ? ' · ' + quemFora(x) : ''}` }); }
+    return abrirAnexos({ ...base, titulo: '💬 Recado para o Gestor', sub: quando + ' · Foto, Vídeo, Áudio ou Texto' });
+  }
+  function resumoWhatsApp(d) {
+    if (soLeitura()) return;
+    // No app, cada pessoa manda o relatório só com as tarefas dela; o resumo da fazenda inteira
+    // é só para gestor/administrativo no computador ou com "👥 Ver Toda a Fazenda" ligado
+    const daFazenda = !modoApp() ? veTudo : verTudoApp();
+    const doDia = (daFazenda ? linhas : linhas.filter(l => ehMinha(l.atividades))).filter(l => l.atividades.dias[d]);
+    abrirResumoWhatsApp({
+      quem: daFazenda ? null : eu.nome,
+      fazenda: tc(eu.fazenda.nome), data: diaDaSemana(semana, d), semana, meta: 80, site: daFazenda ? location.origin + '/galeria.html' : '',
+      tarefas: doDia.map(l => { const b = baixas[l.atividade_id + '|' + d]; return { nome: tc(l.atividades.nome), quem: nomeQuem(l.atividades), feito: feito(l, d), motivo: b && !b.feito ? tc(b.motivo) : null }; }),
+      fora: (fora || []).filter(x => x.dia === d && (daFazenda || foraMeu(x))).map(x => ({ nome: tc(x.nome), quem: quemFora(x), imp: ehImp(x), obs: x.obs })),
+      midias: midDe(r => r.dia === d && (daFazenda || r.registrado_por === eu.user.id)), nomeDe: nomeDaMidia,
+      aoEnviar: async (canal) => {
+        const r = await anotarRelatorio({ fz: eu.fazenda.id, ano: ANO, semana, dia: d, pessoa_id: minhaPessoa?.id, userId: eu.user.id,
+          feitas: doDia.filter(l => feito(l, d)).length, total: doDia.length, canal });
+        if (r) { meusRelatorios[d] = r.enviado_em || new Date().toISOString(); desenhar(); }
+      }
+    });
+  }
+
+  // ---------- 6d. CRONÔMETRO DA ATIVIDADE (início, pausas, fim e meta) ----------
+  const execs = () => eventos ? agrupar(eventos) : [];
+  const abertaDe = (aid) => execs().find(x => x.atividade_id === aid && x.estado !== 'fim');
+  const hojeStr = new Date().toDateString();
+  const terminadasHoje = (aid) => execs().filter(x => x.atividade_id === aid && x.estado === 'fim' && new Date(x.fim).toDateString() === hojeStr);
+  const ativDe = (aid, x) => linhas.find(l => l.atividade_id === aid)?.atividades || { id: aid, nome: x?.ativ?.nome || 'Atividade', como_fazer: x?.ativ?.como_fazer || {} };
+  const podeTempo = (a) => semana === SEMANA_HOJE && (linhas.some(l => l.atividade_id === a.id) ? podeDarBaixa(a) : true);
+  async function marcarTempo(aid, evento, extra = {}) {
+    if (soLeitura()) return;
+    const ab = abertaDe(aid), a = ativDe(aid, ab);
+    const dados = { id: uid(), execucao_id: evento === 'inicio' ? uid() : ab?.id, fazenda_id: eu.fazenda.id, atividade_id: aid, ano: ANO, semana: SEMANA_HOJE, dia: DIA_HOJE,
+      evento, motivo: extra.motivo || null, em: new Date().toISOString(), pessoa_id: minhaPessoa?.id || null, user_id: eu.user.id,
+      meta_status: extra.meta_status || null, meta_feito: extra.meta_feito ?? null, obs: extra.obs || null };
+    if (!dados.execucao_id) return;
+    const ativ = { nome: a.nome, como_fazer: a.como_fazer || {} };
+    try { await enfileirar({ tipo: 'execucao', dados, ativ }); } catch (e) { return aviso('Não Foi Possível Guardar: ' + e.message); }
+    eventos.push({ ...dados, atividades: ativ, pendente: true });
+    pausaAberta = null; desenhar();
+    aviso({ inicio: '▶ Cronômetro Ligado', pausa: '⏸ Pausado: ' + (extra.motivo || ''), retomada: '▶ Retomado', fim: '■ Atividade Terminada' }[evento]);
+  }
+  function textoTempo(x) { return (x.estado === 'rodando' ? '<i class="tm-dot"></i> Trabalhando' : '⏸ Pausado' + (x.motivoPausa ? ': ' + esc(x.motivoPausa) : '')) + ' · ' + fmtDur(x.trabalhado); }
+  function blocoTempo(a) {
+    if (eventos === null) return '';
+    const ab = abertaDe(a.id), pode = podeTempo(a);
+    if (ab) {
+      let h = `<div class="tm ${ab.estado === 'rodando' ? 'on' : 'pa'}"><span class="tm-t" data-tmv="${ab.id}">${textoTempo(ab)}</span>`;
+      if (pode) h += (ab.estado === 'rodando' ? `<button class="btn sm" data-tpausa="${a.id}">⏸ Pausar</button>` : `<button class="btn sm" data-tvolta="${a.id}">▶ Retomar</button>`) + `<button class="btn sm pri" data-tfim="${a.id}">■ Terminar</button>`;
+      h += '</div>';
+      if (pausaAberta === a.id) h += `<div class="a-det"><b style="font-size:13px">Por Que Vai Pausar?</b><div class="motg">${PAUSAS.map(([m, e]) => `<button data-tmot="${m}" data-id="${a.id}">${e} ${m}</button>`).join('')}</div></div>`;
+      return h;
+    }
+    const fe = terminadasHoje(a.id);
+    return fe.length ? `<div class="tm ok">${fe.map(seloExec).join(' ')}</div>` : '';
+  }
+  // Atualiza o tempo na tela a cada 30 segundos, sem redesenhar tudo
+  setInterval(() => { const X = execs(); document.querySelectorAll('[data-tmv]').forEach(el => { const x = X.find(y => y.id === el.dataset.tmv); if (x) el.innerHTML = textoTempo(x); }); }, 30000);
+  function abrirTerminar(aid) {
+    if (soLeitura()) return;
+    const ab = abertaDe(aid); if (!ab) return;
+    const a = ativDe(aid, ab), m = metaDe(a);
+    let st = null;
+    const el = document.createElement('div');
+    el.innerHTML = `<div class="mx-scrim" data-x="1"></div><div class="mx-sheet"><div class="mx-h"><div><b>■ Terminar: ${esc(tc(a.nome))}</b><small>Trabalhado: ${fmtDur(ab.trabalhado)} (sem Contar as Pausas)${ab.dias > 1 ? ' · em ' + ab.dias + ' Dias' : ''}</small></div><button class="mx-x" data-x="1">✕</button></div>
+      <div class="mx-b">
+        <div class="a-card" style="padding:12px 14px;background:var(--s3-soft);border-color:var(--s3)"><b style="font-size:13px">🎯 Meta da Atividade</b><div style="font-size:14px;margin-top:3px">${esc(textoMeta(m)) || '<span class="sub">Sem Meta Cadastrada no 5M (Plano Anual)</span>'}</div>
+          ${m.horas != null ? `<div class="sub" style="font-size:12.5px;margin-top:3px">Tempo Gasto: <b>${fmtDur(ab.trabalhado)}</b> · Previsto: <b>${String(m.horas).replace('.', ',')} h</b></div>` : ''}</div>
+        ${m.qtd != null ? `<label class="fl">Quanto Foi Feito?${m.unid ? ' (' + esc(m.unid) + ')' : ''}<input class="in" id="tQtd" type="number" inputmode="decimal" min="0" step="any" placeholder="Meta: ${String(m.qtd).replace('.', ',')}"></label>` : ''}
+        <div><b style="font-size:13px">A Meta Foi Batida?</b><div class="motg" id="tMs" style="margin-top:6px">${Object.entries(META).map(([k, [e, n]]) => `<button type="button" data-ms="${k}">${e} ${n}</button>`).join('')}</div></div>
+        <label class="fl">Observação (Opcional)${comMic('<textarea class="in" id="tObs" placeholder="O Que Aconteceu? Por Que Não Bateu? (Pode Falar 🎤)"></textarea>', '#tObs')}</label>
+        <button class="btn pri" data-tsalvar="1" style="justify-content:center;padding:12px">✓ Terminar e Dar Baixa</button>
+        <div class="mx-st" id="tSt"></div></div></div>`;
+    document.body.appendChild(el);
+    const marcar = (k) => { st = k; el.querySelectorAll('[data-ms]').forEach(b => b.classList.toggle('on', b.dataset.ms === k)); };
+    el.querySelector('#tQtd')?.addEventListener('input', (e) => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(v)) marcar(v >= m.qtd ? 'bateu' : v > 0 ? 'parcial' : 'nao'); });
+    el.onclick = async (e) => {
+      if (e.target.closest('[data-x]')) return el.remove();
+      const ms = e.target.closest('[data-ms]'); if (ms) return marcar(ms.dataset.ms);
+      if (e.target.closest('[data-tsalvar]')) {
+        if (!st && (m.qtd != null || m.txt)) { el.querySelector('#tSt').textContent = 'Marque se a Meta Foi Batida.'; el.querySelector('#tSt').className = 'mx-st erro'; return; }
+        const q = el.querySelector('#tQtd') ? parseFloat(String(el.querySelector('#tQtd').value).replace(',', '.')) : null;
+        el.remove();
+        await marcarTempo(aid, 'fim', { meta_status: st, meta_feito: isNaN(q) ? null : q, obs: el.querySelector('#tObs').value.trim() });
+        // Terminou hoje: já dá a baixa de Feito no dia, se a tarefa estava planejada para hoje
+        const l = linhas.find(x => x.atividade_id === aid);
+        if (l && l.atividades.dias[DIA_HOJE] && !baixas[aid + '|' + DIA_HOJE]?.feito && podeDarBaixa(l.atividades)) {
+          if (((l.atividades.como_fazer || {}).checklist || []).length) { diaApp = DIA_HOJE; chkAberto = aid; desenhar(); aviso('☑ Confira a Lista para Dar Feito'); }
+          else darBaixa(aid, DIA_HOJE, true);
+        }
+      }
+    };
+  }
+
+  // ---------- 6. APLICATIVO (celular) · visual para o campo: letra grande, ícones, pouca leitura ----------
+  const semAcento = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const ICONES = [
+    [/bebedouro|agua|poco|bomba|caixa d|represa|hidraul/, '💧'], [/fabrica|racao|trato|cocho|\bsal\b|silag|mistur|confinam/, '🌽'],
+    [/vacin|curral|gado|\bboi|bezerr|vaca|embarq|pesag|aparta|manejo|desmam|rebanho|nascim|\bcria\b|novilh|touro|brinc|marcac/, '🐄'],
+    [/pasto|rocad|capin|pastag|adub|semente|planti|calcar|invasora|piquete/, '🌾'], [/trator|maquin|implement|oficina|manutenc|oleo|pneu|veicul|caminh|motor/, '🚜'],
+    [/cerca|porteira|mourao|arame|lascam/, '🪵'], [/galinh|\bovo|frango/, '🐔'], [/tropa|cavalo|egua|mula|ferrage|arreio/, '🐎'],
+    [/fogo|aceiro|queimad/, '🔥'], [/estrada|ponte|bueiro|cascalh/, '🛣'], [/almoxarif|estoque|compra|insumo|deposito/, '📦'],
+    [/sede|casa|solar|horta|jardim|limpez|pintur|alojam|cozinh/, '🏠'], [/reuniao|relatorio|planilha|gestao|controle|lancament|pagament|nota|escritorio/, '📋']];
+  const iconeDe = (a) => { for (const txt of [a.nome, nomeSetor(a.setor_id), a.local]) { const s = semAcento(txt); const i = s && ICONES.find(([r]) => r.test(s)); if (i) return i[1]; } return '🔹'; };
+  const MOTIVO_IC = { 'Chuva': '🌧', 'Máquina Quebrada': '🔧', 'Faltou Gente': '👥', 'Faltou Insumo': '📦', 'Outra Prioridade': '⏭' };
+  const PODE_FALAR = 'speechSynthesis' in window;
+  function falar(txt) {
+    if (!PODE_FALAR) return aviso('Este Celular Não Tem Leitura em Voz');
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(txt); u.lang = 'pt-BR'; u.rate = .92;
+    const v = speechSynthesis.getVoices().find(x => /pt[-_]BR/i.test(x.lang)); if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  }
+  function textoFalado(a) {
+    const m = textoMeta(metaDe(a));
+    return [tc(a.nome), a.local ? 'Local: ' + tc(a.local) : '', 'Quem faz: ' + nomeQuem(a), m ? 'Meta: ' + m : ''].filter(Boolean).join('. ') + '.';
+  }
+  let zoom = 1; try { zoom = +localStorage.getItem('fp-zoom') || 1; } catch {}
+  const vibrar = (ms) => { try { navigator.vibrate?.(ms); } catch {} };
+  function festa() {
+    vibrar([60, 60, 120]);
+    const box = document.createElement('div'); box.className = 'ap-festa';
+    box.innerHTML = Array.from({ length: 26 }, (_, i) => `<i style="left:${Math.random() * 100}%;animation-delay:${Math.random() * .5}s;font-size:${22 + Math.random() * 18}px">${['🎉', '⭐', '✅', '🐄', '👏'][i % 5]}</i>`).join('');
+    document.body.appendChild(box); setTimeout(() => box.remove(), 2600);
+  }
+  function anel(feitas, total) {
+    const r = 34, c = 2 * Math.PI * r, p = total ? feitas / total : 0;
+    return `<svg viewBox="0 0 84 84" class="ap-anel" aria-hidden="true"><circle cx="42" cy="42" r="${r}" class="f"/><circle cx="42" cy="42" r="${r}" class="v" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - p)}"/></svg>
+      <div class="ap-anel-n"><b>${feitas}</b><span>de ${total}</span></div>`;
+  }
+  let festaFeita = '';
+  function desenharApp() {
+    if (semana !== SEMANA_HOJE) { semana = SEMANA_HOJE; return carregar(); }
+    const d = diaApp;
+    const doDia = linhasApp().filter(l => l.atividades.dias[d]);
+    const bx = (l) => baixas[l.atividade_id + '|' + d];
+    // Atividades com cronômetro ligado ou pausado (mesmo de outro dia): ficam no topo, em "Em Andamento"
+    const ids = new Set(linhasApp().map(l => l.atividade_id));
+    const andando = semana === SEMANA_HOJE ? execs().filter(x => x.estado !== 'fim' && (verTudoApp() || ids.has(x.atividade_id) || x.user_id === eu.user.id)) : [];
+    const emAnd = new Set(andando.map(x => x.atividade_id));
+    const feitas = doDia.filter(l => feito(l, d)), naoDeu = doDia.filter(l => bx(l) && !bx(l).feito), fazer = doDia.filter(l => !bx(l) && l.status !== 2 && !emAnd.has(l.atividade_id));
+    const ehHoje = d === DIA_HOJE, aberto = diaAberto(d), tudo = doDia.length > 0 && feitas.length === doDia.length;
+    const botaoFoto = (aid, lista) => midias === null ? '' : `<button class="ap-b2" data-anx="${aid}">📷 Foto${lista.length ? ` <b class="ap-n">${lista.length}</b>` : ''}</button>`;
+    const cartao = (a, corpo, extra = '') => {
+      const info = [a.local ? '📍 ' + tc(a.local) : '', verTudoApp() || a.executor_equipe_id || (minhaPessoa && a.coordenador_id === minhaPessoa.id && a.executor_pessoa_id !== minhaPessoa.id) ? '👤 ' + nomeQuem(a) : ''].filter(Boolean).join('   ');
+      return `<div class="ap-t ${extra}">
+        <div class="ap-h"><span class="ap-ic">${iconeDe(a)}</span>
+          <div class="ap-nm" data-ao="${a.id}"><b>${esc(tc(a.nome))}</b>${info ? `<small>${esc(info)}</small>` : ''}</div>
+          ${temPop(a) ? `<button class="ap-ouvir ap-pop" data-pop="${a.id}" aria-label="Abrir o POP" title="POP · ${esc(a.como_fazer.pop.nome || '')}">📄</button>` : ''}
+          ${PODE_FALAR ? `<button class="ap-ouvir" data-falar="${a.id}" aria-label="Ouvir a Tarefa">🔊</button>` : ''}</div>
+        ${corpo}</div>`;
+    };
+    const det5M = (a) => { const m = a.como_fazer || {};
+      return `<div class="ap-5m"><div class="r"><em>👤</em><div>Coordena: <b>${esc(nomePessoa(a.coordenador_id) || '—')}</b><br>Quem Faz: <b>${esc(nomeQuem(a))}</b></div></div>
+        ${[['📝', 'Como Fazer', m.m2], ['🛠', 'Máquinas e Ferramentas', m.m3], ['📦', 'Materiais', m.m4], ['🎯', 'Meta', textoMeta(metaDe(a))]].map(([e, t, v]) =>
+          `<div class="r"><em>${e}</em><div><b>${t}</b><div>${v ? esc(v) : '<span class="sub">Não Cadastrado</span>'}</div></div></div>`).join('')}
+        ${m.pop?.caminho ? `<div class="r"><em>📄</em><div><b>POP · Procedimento Operacional Padrão</b><div><button class="ap-b2" data-pop="${a.id}">📄 Abrir: ${esc(m.pop.nome || 'POP')}</button></div></div></div>` : ''}
+        ${(m.checklist || []).length ? `<div class="r"><em>☑</em><div><b>Lista de Conferência</b>${m.checklist.map(x => `<div>• ${esc(x)}</div>`).join('')}</div></div>` : ''}
+        <button class="ap-b2" data-ao="${a.id}" style="width:100%">▲ Fechar</button></div>`; };
+    const tarefa = (l) => {
+      const a = l.atividades, b = bx(l), pode = podeDarBaixa(a) && aberto, mt = midTarefa(a.id, d), fe = feito(l, d);
+      let corpo = '';
+      if (atrasada(l) && !fe) corpo += `<div class="ap-tag at">↻ Veio da Semana Passada</div>`;
+      if (detalhe === a.id) corpo += det5M(a);
+      corpo += blocoTempo(a);
+      if (fe) corpo += `<div class="ap-st ok"><span>✅ Feito</span>${pode && b ? `<button data-un="${a.id}">↩ Desfazer</button>` : ''}</div>${aberto || mt.length ? `<div class="ap-ac2">${botaoFoto(a.id, mt)}</div>` : ''}`;
+      else if (b) corpo += `<div class="ap-st no"><span>${MOTIVO_IC[b.motivo] || '❌'} Não Deu: ${esc(tc(b.motivo))}</span>${pode ? `<button data-un="${a.id}">↩ Desfazer</button>` : ''}</div>${aberto || mt.length ? `<div class="ap-ac2">${botaoFoto(a.id, mt)}</div>` : ''}`;
+      else if (pode) {
+        if (naoDeuAberto === a.id) corpo += `<div class="ap-mot"><b>Por Que Não Deu?</b>${comMic(`<input class="in" id="ndo-${a.id}" maxlength="300" placeholder="Explique (Opcional): Fale 🎤 ou Escreva">`, '#ndo-' + a.id)}<div>${MOTIVOS.map(mo => `<button data-mo="${mo}" data-id="${a.id}"><i>${MOTIVO_IC[mo]}</i>${mo}</button>`).join('')}</div>
+          <button class="ap-b2" data-nd="${a.id}" style="width:100%">Voltar</button></div>`;
+        else {
+          const ini = eventos !== null && ehHoje && semana === SEMANA_HOJE && !abertaDe(a.id) && podeTempo(a) ? `<button class="ap-b2 go" data-tini="${a.id}">▶ Começar</button>` : '';
+          const lista = (a.como_fazer || {}).checklist || [];
+          if (lista.length && chkAberto === a.id) {
+            const mk = chkMarcados[a.id] || new Set(), k = lista.filter((_, i) => mk.has(i)).length, todos = k === lista.length;
+            corpo += `<div class="ap-chk"><b>☑ Lista de Conferência · ${k} de ${lista.length}</b>
+              ${lista.map((it, i) => `<button class="${mk.has(i) ? 'on' : ''}" data-chki="${a.id}|${i}"><i>${mk.has(i) ? '✓' : ''}</i><span>${esc(it)}</span></button>`).join('')}
+              <button class="ap-ok" data-atchk="${a.id}" ${todos ? '' : 'disabled'}><i>✓</i>${todos ? 'Tudo Conferido · Feito' : 'Falta Conferir ' + (lista.length - k)}</button>
+              <button class="ap-b2" data-chk="${a.id}" style="width:100%">Voltar</button></div>`;
+          } else
+          corpo += `<div class="ap-ac">${lista.length ? `<button class="ap-ok" data-chk="${a.id}"><i>☑</i>Conferir e Dar Feito</button>` : `<button class="ap-ok" data-at="${a.id}"><i>✓</i>Feito</button>`}<button class="ap-no" data-nd="${a.id}"><i>✗</i>Não Deu</button></div>
+            ${ini || midias !== null ? `<div class="ap-ac2">${ini}${botaoFoto(a.id, mt)}</div>` : ''}`;
+        }
+      } else corpo += aberto ? `<div class="ap-st lock">👷 ${esc(quemDaBaixa(a))}</div>` : `<div class="ap-st fut">📅 Ainda Não Chegou o Dia</div>`;
+      return cartao(a, corpo, fe ? 'done' : b ? 'nd' : '');
+    };
+    const sec = (ic, titulo, arr, cor = '') => arr.length ? `<div class="ap-sec ${cor}"><span>${ic}</span>${titulo}<b>${arr.length}</b></div>${arr.map(tarefa).join('')}` : '';
+    const nRec = midias === null ? 0 : midDe(r => r.origem === 'recado' && r.dia === d && r.registrado_por === eu.user.id).length;
+    const app = $('telaApp'); app.style.setProperty('--z', zoom);
+    app.innerHTML = `
+      <div class="ap-top">
+        <div class="ap-row"><img src="symbol.png" alt=""><span class="ap-data">${DIAS_LONGO[DIA_HOJE]}, ${HOJE.getDate()}/${String(HOJE.getMonth() + 1).padStart(2, '0')}</span>
+          <button data-atualizar="1" aria-label="Atualizar o Aplicativo" title="Atualizar">↻</button><button data-zoom="1" aria-label="Aumentar a Letra">A<sup>+</sup></button><button data-ajuda="1" aria-label="Ajuda">❓</button>${preview ? '' : (veTudo ? '<a href="plano.html">Plano</a>' : '') + '<button data-sair="1" aria-label="Sair">Sair</button>'}</div>
+        ${preview ? `<div class="sinal off">👁 Vendo o App Como ${esc(tc(preview.apelido))} · Só Visualização</div>` : ''}
+        <div class="ap-ola">
+          <div><h2>Olá, ${esc(eu.nome)}!</h2><small>${esc(tc(eu.fazenda.nome))}${semSinal && dadosDe ? ` · Baixado em ${ddmm(new Date(dadosDe))}` : ''}</small>
+            <div class="ap-pills"><span class="sem" title="Semana ${semana} do Ano">📅 Sem. ${semana}</span>${veTudo && minhaPessoa ? `<button class="vf ${verFazenda ? 'on' : ''}" data-verfaz="1">${verFazenda ? '👤 Só as Minhas' : '👥 Ver Toda a Fazenda'}</button>` : ''}${doDia.length ? `<span>📋 ${doDia.length} ${doDia.length === 1 ? 'Tarefa' : 'Tarefas'}</span>${naoDeu.length ? `<span class="bad">❌ ${naoDeu.length} Não Deu</span>` : ''}` : '<span>Sem Tarefas</span>'}</div>
+            ${PODE_FALAR && doDia.length ? `<button class="ap-ouvirdia" data-falar="dia">🔊 Ouvir as Tarefas</button>` : ''}</div>
+          <div class="ap-anelw ${tudo ? 'cheio' : ''}">${anel(feitas.length, doDia.length)}</div></div>
+        <div id="sinal">${faixaSinal()}</div>
+      </div>
+      <div class="a-body">
+        ${dicaInstalar()}
+        ${dicaAvisos()}
+        <div class="ap-dias">${DIAS_CURTO.map((n, i) => `<button data-dia="${i}" class="${i === d ? 'on' : ''} ${i === DIA_HOJE ? 'hj' : ''}"><b>${i === DIA_HOJE ? 'Hoje' : n}</b><small>${ddmm(diaDaSemana(semana, i))}</small></button>`).join('')}</div>
+        ${tudo && ehHoje ? `<div class="ap-parabens"><i>🎉</i><div><b>Parabéns!</b><br>Tudo Feito Hoje. Agora Mande o Relatório no Grupo 📲</div></div>` : ''}
+        ${andando.length ? `<div class="ap-sec go"><span>⏱</span>Trabalhando Agora<b>${andando.length}</b></div>${andando.map(x => { const a = ativDe(x.atividade_id, x);
+          return cartao(a, `<div class="ap-desde">Começou ${new Date(x.inicio).toDateString() === hojeStr ? 'Hoje' : DIAS_LONGO[(new Date(x.inicio).getDay() + 6) % 7]} às ${hhmm(x.inicio)}${nomePessoa(x.pessoa_id) ? ' · ' + esc(nomePessoa(x.pessoa_id)) : ''}${x.dias > 1 ? ' · ' + x.dias + 'º Dia' : ''}</div>${detalhe === a.id ? det5M(a) : ''}${blocoTempo(a)}${midias !== null && ids.has(a.id) ? `<div class="ap-ac2">${botaoFoto(a.id, midTarefa(a.id, DIA_HOJE))}</div>` : ''}`, 'run'); }).join('')}` : ''}
+        ${sec('👉', ehHoje ? 'Para Fazer Hoje' : d > DIA_HOJE ? 'Para ' + DIAS_LONGO[d] : 'Ficou sem Resposta', fazer)}
+        ${sec('❌', 'Não Deu', naoDeu, 'no')}
+        ${sec('✅', 'Feitas', feitas, 'ok')}
+        ${blocoFora(d, true)}
+        ${doDia.length ? '' : `<div class="ap-vazio"><i>☀️</i>Nenhuma Tarefa ${verTudoApp() ? 'na Fazenda' : 'para Você'} neste Dia.</div>`}
+        <div class="ap-dica">👆 Toque no Nome da Tarefa para Ver Como Fazer</div>
+      </div>
+      ${aberto ? `<nav class="ap-bar">
+        <button data-fpabrir="imprevisto" class="im"><i>⚠️</i>Problema</button>
+        <button data-fpabrir="fora"><i>➕</i>Fiz Outro</button>
+        <button data-recado="1"><i>💬</i>Recado${nRec ? `<b class="ap-n">${nRec}</b>` : ''}</button>
+        <button data-whats="1" class="wa ${meusRelatorios[d] ? 'foi' : ''}"><i>📲</i>${verTudoApp() ? 'Resumo' : 'Relatório'}${meusRelatorios[d] ? '<b class="ap-n">✓</b>' : ''}</button></nav>` : ''}`;
+    document.querySelector('.ap-dias .on')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+    // Terminou tudo hoje: festa (uma vez por dia)
+    const chave = ANO + '-' + semana + '-' + d;
+    if (tudo && ehHoje && !preview && festaFeita !== chave) { let ja = ''; try { ja = localStorage.getItem('fp-festa'); } catch {} festaFeita = chave; if (ja !== chave) { try { localStorage.setItem('fp-festa', chave); } catch {} festa(); } }
+    // Primeira vez no app: abre a ajuda sozinha
+    let viu = true; try { viu = localStorage.getItem('fp-ajuda') === '1'; } catch {}
+    if (!viu && !preview && window.top === window) { try { localStorage.setItem('fp-ajuda', '1'); } catch {} abrirAjuda(true); }
+  }
+  $('telaApp').addEventListener('click', (e) => {
+    const t = (sel) => e.target.closest(sel);
+    let b;
+    if ((b = t('[data-verfaz]'))) { verFazenda = !verFazenda; aviso(verFazenda ? 'Mostrando as Tarefas de Toda a Fazenda' : 'Mostrando Só as Suas Tarefas'); return desenhar(); }
+    if ((b = t('[data-atualizar]'))) {   // ↻ Atualizar: manda o que está guardado, busca a versão nova e recarrega as tarefas
+      if (!navigator.onLine) return aviso('📵 Sem Sinal: Atualize Onde Tem Internet. Pode Continuar Usando Normal.', 3200);
+      b.disabled = true; b.classList.add('girando'); aviso('↻ Atualizando…');
+      (async () => {
+        try { await comPrazo(sincronizar(), 15000); } catch {}
+        try { const r = await navigator.serviceWorker?.getRegistration(); await comPrazo(r?.update() || Promise.resolve(), 8000); } catch {}
+        location.reload();
+      })();
+      return;
+    }
+    if ((b = t('[data-zoom]'))) { zoom = zoom >= 1.3 ? 1 : +(zoom + .15).toFixed(2); try { localStorage.setItem('fp-zoom', zoom); } catch {} aviso(zoom === 1 ? 'Letra Normal' : zoom > 1.2 ? 'Letra Bem Grande' : 'Letra Grande'); return desenhar(); }
+    if ((b = t('[data-pop]'))) { const a = linhas.find(l => l.atividade_id === b.dataset.pop)?.atividades; if (a) abrirPop(a.como_fazer?.pop, aviso); return; }
+    if ((b = t('[data-falar]'))) {
+      if (b.dataset.falar === 'dia') { const doDia = linhasApp().filter(l => l.atividades.dias[diaApp]), falta = doDia.filter(l => !feito(l, diaApp) && !baixas[l.atividade_id + '|' + diaApp]);
+        return falar(`${DIAS_LONGO[diaApp]}. ${doDia.length} tarefas. ${falta.length ? 'Falta fazer: ' + falta.map(l => tc(l.atividades.nome)).join('. ') : 'Todas respondidas. Parabéns!'}`); }
+      const l = linhas.find(x => x.atividade_id === b.dataset.falar); const x = execs().find(y => y.atividade_id === b.dataset.falar);
+      return falar(textoFalado(l ? l.atividades : ativDe(b.dataset.falar, x)));
+    }
+    if ((b = t('[data-dia]'))) { diaApp = +b.dataset.dia; detalhe = naoDeuAberto = null; foraAberto = false; return desenhar(); }
+    if ((b = t('[data-impr]'))) { const n = document.querySelector('#fFora [name=nome]'); n.value = b.dataset.impr; return document.querySelector('#fFora [name=obs]').focus(); }
+    if ((b = t('[data-fpabrir]'))) { foraAberto = b.dataset.fpabrir === '0' ? false : b.dataset.fpabrir; desenhar(); if (foraAberto) { const f = document.getElementById('fFora'); f?.scrollIntoView({ block: 'center', behavior: 'smooth' }); f?.querySelector('[name=nome]')?.focus({ preventScroll: true }); } return; }
+    if ((b = t('[data-fprem]'))) return removerFora(b.dataset.fprem);
+    if ((b = t('[data-ajuda]'))) return abrirAjuda();
+    if ((b = t('[data-tini]'))) { vibrar(40); return marcarTempo(b.dataset.tini, 'inicio'); }
+    if ((b = t('[data-tpausa]'))) { pausaAberta = pausaAberta === b.dataset.tpausa ? null : b.dataset.tpausa; return desenhar(); }
+    if ((b = t('[data-tmot]'))) return marcarTempo(b.dataset.id, 'pausa', { motivo: b.dataset.tmot });
+    if ((b = t('[data-tvolta]'))) { vibrar(40); return marcarTempo(b.dataset.tvolta, 'retomada'); }
+    if ((b = t('[data-tfim]'))) return abrirTerminar(b.dataset.tfim);
+    if ((b = t('[data-anx]'))) return anexos('baixa', b.dataset.anx, diaApp);
+    if ((b = t('[data-anxf]'))) return anexos('fora', b.dataset.anxf, diaApp);
+    if ((b = t('[data-recado]'))) return anexos('recado', null, diaApp);
+    if ((b = t('[data-whats]'))) return resumoWhatsApp(diaApp);
+    if ((b = t('[data-at]'))) {
+      const id = b.dataset.at, bx = baixas[id + '|' + diaApp];
+      if (!bx) vibrar(50);
+      return bx ? desfazerBaixa(id, diaApp) : darBaixa(id, diaApp, true);
+    }
+    if ((b = t('[data-chk]'))) { chkAberto = chkAberto === b.dataset.chk ? null : b.dataset.chk; naoDeuAberto = null; return desenhar(); }
+    if ((b = t('[data-chki]'))) { const [aid, i] = b.dataset.chki.split('|'); const mk = chkMarcados[aid] || (chkMarcados[aid] = new Set()); mk.has(+i) ? mk.delete(+i) : mk.add(+i); vibrar(20); return desenhar(); }
+    if ((b = t('[data-atchk]'))) { const aid = b.dataset.atchk, n = ((linhas.find(l => l.atividade_id === aid)?.atividades.como_fazer || {}).checklist || []).length; vibrar(50); delete chkMarcados[aid];
+      return darBaixa(aid, diaApp, true, null, `Lista de Conferência: ${n} de ${n} Itens Conferidos`); }
+    if ((b = t('[data-nd]'))) { naoDeuAberto = naoDeuAberto === b.dataset.nd ? null : b.dataset.nd; chkAberto = null; return desenhar(); }
+    if ((b = t('[data-mo]'))) { vibrar(30); return darBaixa(b.dataset.id, diaApp, false, b.dataset.mo, document.getElementById('ndo-' + b.dataset.id)?.value.trim()); }
+    if ((b = t('[data-un]'))) return desfazerBaixa(b.dataset.un, diaApp);
+    if ((b = t('[data-ao]'))) { detalhe = detalhe === b.dataset.ao ? null : b.dataset.ao; return desenhar(); }
+  });
+
+  // ---------- 6e. AVISOS NO CELULAR (notificação: tarefas de manhã, relatório às 17h) ----------
+  const VAPID_PUBLICA = 'BLsCPmMW1uu-xSY4vmcvRBsfdXrpv6JO55Bgi_GLBKA-GpkjnVQE0BBnaJ9CX_whWCrt4IahEFPytfYRYjSRBiM';
+  const temPush = () => 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+  const lerFlag = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+  function dicaAvisos() {
+    if (!temPush() || preview || window.top !== window || Notification.permission === 'denied') return '';
+    if (Notification.permission === 'granted' && lerFlag('fp-avisos') === '1') return '';
+    if (lerFlag('fp-avisos-nao') === new Date().toDateString()) return '';
+    return `<div class="ap-aviso"><i>🔔</i><div><b>Ligar os Avisos do Celular</b><small>De manhã: as tarefas do dia. Às 17h: lembrete do relatório.</small></div>
+      <button class="ap-b2 go" data-avisos="1">Ligar</button><button class="ap-x" data-avisosnao="1" aria-label="Agora Não">✕</button></div>`;
+  }
+  const b64 = (s) => { const p = '='.repeat((4 - s.length % 4) % 4), r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(r, c => c.charCodeAt(0)); };
+  async function guardarInscricao(sub) {
+    const j = sub.toJSON();
+    const { error } = await supabase.rpc('inscrever_aviso', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth });
+    if (error) throw new Error(/function|schema/i.test(error.message) ? 'Falta Rodar o SQL 025 no Supabase' : error.message);
+  }
+  async function ligarAvisos() {
+    if (soLeitura()) return;
+    if (!navigator.onLine) return aviso('Precisa de Internet para Ligar os Avisos');
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { desenhar(); return aviso('Avisos Bloqueados. Libere nas Configurações do Celular'); }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID_PUBLICA) });
+      await guardarInscricao(sub);
+      try { localStorage.setItem('fp-avisos', '1'); } catch {}
+      desenhar(); aviso('🔔 Avisos Ligados · Mandando um Aviso de Teste…');
+      const { data, error } = await supabase.functions.invoke('enviar-avisos', { body: { teste: true } });
+      if (error || data?.erro) aviso('Avisos Ligados, mas o Teste Falhou: ' + (data?.erro || 'a Função enviar-avisos Não Respondeu'), 9000);
+      else if (!data?.enviados) aviso('Avisos Ligados, mas Nenhum Aviso Saiu (' + (data?.falhas ? 'Falha no Envio' : 'Celular Não Encontrado') + '). Avise o Consultor.', 9000);
+      else aviso('✓ Aviso de Teste Enviado: Deve Aparecer em Alguns Segundos', 6000);
+    } catch (e) { aviso('Não Foi Possível Ligar os Avisos: ' + (/push service|AbortError|Registration failed/i.test(e.message) ? (navigator.brave ? 'O Brave Bloqueia os Avisos. Abra brave://settings/privacy, Ligue \'Usar os Serviços do Google para Mensagens Push\', Feche e Abra o Brave de Novo. Ou Use o Google Chrome.' : 'O Navegador Bloqueou os Avisos. Use o Google Chrome (ou o Safari no iPhone, com o App Instalado na Tela de Início).') : e.message), 9000); }
+  }
+  // Toda vez que abre com internet: confere se o celular continua inscrito (o endereço pode mudar)
+  async function conferirAvisos() {
+    if (!temPush() || preview || Notification.permission !== 'granted' || !navigator.onLine) return;
+    try { const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); if (sub) { await guardarInscricao(sub); try { localStorage.setItem('fp-avisos', '1'); } catch {} } } catch {}
+  }
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-avisos]')) ligarAvisos(); });   // cartão 🔔 e botão de teste da ❓ Ajuda
+  $('telaApp').addEventListener('click', (e) => {
+    if (e.target.closest('[data-avisosnao]')) { try { localStorage.setItem('fp-avisos-nao', new Date().toDateString()); } catch {} desenhar(); }
+  });
+
+  // ---------- 6c. INSTALAR NA TELA INICIAL (abre sem internet, como aplicativo) ----------
+  let pedidoInstalar = null;
+  addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pedidoInstalar = e; if (eu) desenhar(); });
+  const instalado = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  function dicaInstalar() {
+    let fechada = false; try { fechada = localStorage.getItem('fp-inst') === '1'; } catch {}
+    if (instalado() || fechada || preview || window.top !== window) return '';
+    const ios = /iPhone|iPad/i.test(navigator.userAgent);
+    return `<div class="a-card" style="padding:12px 14px;margin-bottom:10px;border-color:var(--s3);background:var(--s3-soft)"><b style="font-size:14px">📲 Instale o Farm Plan no Celular</b>
+      <div class="sub" style="font-size:12.5px;margin:4px 0 8px">Assim Ele Abre Direto da Tela Inicial e Funciona no Campo, sem Internet.</div>
+      ${pedidoInstalar ? '<button class="btn pri sm" data-instalar="1">Instalar Agora</button>' : `<div style="font-size:12.5px">${ios ? 'No Safari, Toque em <b>Compartilhar ⬆</b> e Depois em <b>Adicionar à Tela de Início</b>.' : 'No Chrome, Toque nos <b>⋮ Três Pontinhos</b> e Depois em <b>Instalar App</b> (ou Adicionar à Tela Inicial).'}</div>`}
+      <button class="btn sm ghost" data-instfechar="1" style="margin-top:6px">Agora Não</button></div>`;
+  }
+  $('telaApp').addEventListener('click', async (e) => {
+    if (e.target.closest('[data-instalar]') && pedidoInstalar) { pedidoInstalar.prompt(); await pedidoInstalar.userChoice.catch(() => {}); pedidoInstalar = null; return desenhar(); }
+    if (e.target.closest('[data-instfechar]')) { try { localStorage.setItem('fp-inst', '1'); } catch {} return desenhar(); }
+    if (e.target.closest('[data-sincronizar]')) sincronizar();
+  });
+
+  $('telaApp').addEventListener('submit', (e) => { if (e.target.id === 'fFora') { e.preventDefault(); salvarFora(e.target); } });
+
+  // ---------- 7. COMEÇO: já estava logado? ----------
+  const { data: { session } } = await comPrazo(supabase.auth.getSession(), 6000).catch(() => ({ data: { session: null } }));
+  if (session || await ler('eu')) iniciar(); else $('telaLogin').classList.remove('escondido');
+</script>
+</body>
+</html>

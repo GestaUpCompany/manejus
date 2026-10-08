@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Galeria da Semana: fotos, vídeos, áudios e recados enviados pelo aplicativo -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fotos e Vídeos · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    .gdia{margin:18px 0 8px;font-family:var(--fd);font-weight:700;font-size:15px;display:flex;gap:8px;align-items:center}
+    .gdia span{font-family:var(--fb);font-weight:600;font-size:12px;color:var(--muted)}
+    .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+    .gcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+    .gcard .mx-th{aspect-ratio:4/3;border-radius:0;border:0;border-bottom:1px solid var(--line)}
+    .gcard .mx-th.tx{aspect-ratio:auto;min-height:110px;font-size:13px}
+    .gcard .gi{padding:8px 10px 10px;font-size:12px;display:grid;gap:2px}
+    .gcard .gi b{font-size:13px;line-height:1.3}
+    .gcard .gi .sub{font-size:11.5px}
+    .gcard .gi .leg{font-size:12.5px;color:var(--ink)}
+    .gt{display:inline-block;border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:700;width:max-content}
+    .gt.baixa{background:var(--s2-soft);color:var(--s2)} .gt.imp{background:var(--s5-soft);color:var(--s5)} .gt.fora{background:var(--s3-soft);color:var(--s3)} .gt.recado{background:var(--navy-soft);color:var(--navy)}
+    .gk{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+    .gk .card{padding:10px 14px;min-width:110px}.gk small{display:block;color:var(--muted);font-size:11.5px}.gk b{font-size:22px}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="galeria.html" selected>Fotos e Vídeos</option><option value="painel.html">Painel</option><option value="index.html">Tarefas da Semana</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, ANO_HOJE, SEMANAS_NO_ANO, PAPEL, DIAS_CURTO, DIAS_LONGO, tc, esc, semanaDe, quemSouEu, buscarTudo, montarMenu, ddmm, diaDaSemana, periodoDaSemana } from './comum.js';
+  import { buscarMidias, comEnderecos, miniatura, abrirVisor, apagarMidia, prepararVisual, ROTULO, EMOJI } from './midia.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  const HOJE = new Date(), SEMANA_HOJE = ANO === ANO_HOJE ? semanaDe(HOJE) : 1;
+  let eu, fz, semana = Math.min(SEMANAS_NO_ANO, Math.max(1, +new URLSearchParams(location.search).get('semana') || SEMANA_HOJE));
+  let pessoas = [], setores = [], atividades = {}, fora = [], lista = [], vis = [];
+  let fDia = '', fTipo = '', fPessoa = '', fSetor = '', fOrigem = '';
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  function aviso(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2400); }
+
+  const nomeP = (id) => tc(pessoas.find(p => p.id === id)?.apelido || '');
+  const foraDe = (r) => fora.find(f => f.id === r.fora_id);
+  const origemDe = (r) => r.origem === 'fora' ? (foraDe(r)?.tipo === 'imprevisto' ? 'imp' : 'fora') : r.origem;
+  const ROT_ORIG = { baixa: 'Tarefa', imp: 'Imprevisto', fora: 'Fora do Plano', recado: 'Recado' };
+  const tituloDe = (r) => r.origem === 'baixa' ? tc(atividades[r.atividade_id]?.nome || 'Tarefa') : r.origem === 'fora' ? tc(foraDe(r)?.nome || 'Fora do Plano') : 'Recado para o Gestor';
+  const setorDe = (r) => r.origem === 'baixa' ? atividades[r.atividade_id]?.setor_id : r.origem === 'fora' ? foraDe(r)?.setor_id : pessoas.find(p => p.id === r.pessoa_id)?.setor_id;
+  const nomeDe = (r) => tituloDe(r) + ' · ' + (nomeP(r.pessoa_id) || 'Gestor');
+  const hora = (iso) => { const d = new Date(iso); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+
+  async function carregar() {
+    $('aviso').textContent = 'Carregando…'; $('aviso').classList.remove('escondido'); $('tela').classList.add('escondido');
+    const [m, fp] = await Promise.all([
+      buscarMidias(fz, ANO, semana),
+      supabase.from('fora_do_plano').select('id, nome, tipo, setor_id').eq('fazenda_id', fz).eq('ano', ANO).eq('semana', semana)
+    ]);
+    if (m === null) { $('aviso').textContent = 'Falta Rodar o SQL 021 (Fotos, Vídeos e Áudios) no Supabase.'; return; }
+    lista = m; fora = fp.data || [];
+    await comEnderecos(lista);
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+
+  function desenhar() {
+    vis = lista.filter(r => (fDia === '' || r.dia === +fDia) && (!fTipo || r.tipo === fTipo) && (!fPessoa || r.pessoa_id === fPessoa)
+      && (!fSetor || setorDe(r) === fSetor) && (!fOrigem || origemDe(r) === fOrigem))
+      .sort((a, b) => b.dia - a.dia || String(b.registrado_em).localeCompare(String(a.registrado_em)));
+    const c = (t) => lista.filter(r => r.tipo === t).length;
+    const quem = [...new Set(lista.map(r => r.pessoa_id).filter(Boolean))].map(id => [id, nomeP(id)]).sort((a, b) => a[1].localeCompare(b[1], 'pt'));
+    const dias = [...new Set(vis.map(r => r.dia))];
+    $('tela').innerHTML = `
+      <div class="phead"><div><div class="eyebrow">Enviado pelo Aplicativo · Semana ${semana}</div><h1>Fotos, Vídeos e Áudios</h1><div class="sub">${periodoDaSemana(semana)}</div></div>
+        <div class="acts"><button class="btn" data-sw="-1">‹ Anterior</button>${semana !== SEMANA_HOJE ? '<button class="btn" data-sw="0">Semana Atual</button>' : ''}<button class="btn" data-sw="1">Próxima ›</button></div></div>
+      <div class="gk">${['foto', 'video', 'audio', 'texto'].map(t => `<div class="card"><small>${EMOJI[t]} ${t === 'texto' ? 'Recados' : ROTULO[t] + 's'}</small><b class="num">${c(t)}</b></div>`).join('')}</div>
+      <div class="filters" style="flex-wrap:wrap;gap:8px">
+        <div class="seg"><button data-fd="" class="${fDia === '' ? 'on' : ''}">Semana Toda</button>${DIAS_CURTO.map((n, d) => `<button data-fd="${d}" class="${fDia === String(d) ? 'on' : ''}">${n} ${diaDaSemana(semana, d).getDate()}</button>`).join('')}</div>
+        <label class="sel">Tipo<select id="fTipo"><option value="">Tudo</option>${['foto', 'video', 'audio', 'texto'].map(t => `<option value="${t}" ${fTipo === t ? 'selected' : ''}>${t === 'texto' ? 'Recados' : ROTULO[t] + 's'}</option>`).join('')}</select></label>
+        <label class="sel">De Onde<select id="fOrigem"><option value="">Tudo</option>${Object.entries(ROT_ORIG).map(([k, n]) => `<option value="${k}" ${fOrigem === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+        <label class="sel">Quem<select id="fPessoa"><option value="">Todos</option>${quem.map(([id, n]) => `<option value="${id}" ${fPessoa === id ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
+        <label class="sel">Setor<select id="fSetor"><option value="">Todos</option>${setores.map(s => `<option value="${s.id}" ${fSetor === s.id ? 'selected' : ''}>${esc(tc(s.nome))}</option>`).join('')}</select></label>
+      </div>
+      ${vis.length ? dias.map(d => { const D = vis.filter(r => r.dia === d); return `<div class="gdia">${DIAS_LONGO[d]}, ${ddmm(diaDaSemana(semana, d))} <span>${D.length} ${D.length === 1 ? 'Envio' : 'Envios'}</span></div>
+        <div class="ggrid">${D.map(r => { const i = vis.indexOf(r), o = origemDe(r); return `<div class="gcard">${miniatura(r, i, PODE.includes(eu.papel))}
+          <div class="gi"><span class="gt ${o}">${ROT_ORIG[o]}</span><b>${esc(tituloDe(r))}</b>
+          <span class="sub">${EMOJI[r.tipo]} ${esc(nomeP(r.pessoa_id) || 'Gestor')} · ${hora(r.registrado_em)}${r.segundos ? ' · ' + Math.round(r.segundos) + 's' : ''}</span>
+          ${r.texto && r.tipo !== 'texto' ? `<span class="leg">${esc(r.texto)}</span>` : ''}</div></div>`; }).join('')}</div>`; }).join('')
+        : `<div class="card empty" style="padding:40px">${lista.length ? 'Nada com Esses Filtros.' : 'Nenhuma Foto, Vídeo, Áudio ou Recado Nesta Semana. A Equipe Envia pelo Aplicativo: Botão 📎 em Cada Tarefa.'}</div>`}`;
+    montarMenu('galeria.html');
+  }
+  $('tela').addEventListener('change', (e) => {
+    const id = e.target.id; if (!id) return;
+    if (id === 'fTipo') fTipo = e.target.value; if (id === 'fPessoa') fPessoa = e.target.value; if (id === 'fSetor') fSetor = e.target.value; if (id === 'fOrigem') fOrigem = e.target.value;
+    desenhar();
+  });
+  $('tela').addEventListener('click', async (e) => {
+    const sw = e.target.closest('[data-sw]'); if (sw) { const v = +sw.dataset.sw; semana = v ? Math.min(SEMANAS_NO_ANO, Math.max(1, semana + v)) : SEMANA_HOJE; history.replaceState(null, '', '?semana=' + semana); return carregar(); }
+    const fd = e.target.closest('[data-fd]'); if (fd) { fDia = fd.dataset.fd; return desenhar(); }
+    const del = e.target.closest('[data-del]');
+    if (del) { e.stopPropagation(); const r = vis[+del.dataset.del];
+      if (!confirm('Apagar Este ' + ROTULO[r.tipo] + '? Não Tem Volta.')) return;
+      try { await apagarMidia(r); lista = lista.filter(x => x.id !== r.id); desenhar(); aviso('Apagado'); } catch (er) { aviso('Erro: ' + er.message); }
+      return; }
+    const vi = e.target.closest('[data-vi]'); if (vi) abrirVisor(vis, +vi.dataset.vi, nomeDe);
+  });
+
+  prepararVisual();
+  eu = await quemSouEu();
+  montarMenu('galeria.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.includes(eu.papel)) $('aviso').textContent = 'A Galeria é Só para Gestor, Administrativo e Consultor.';
+  else {
+    fz = eu.fazenda.id;
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    [pessoas, setores] = await Promise.all([
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido, setor_id, user_id').eq('fazenda_id', fz).order('apelido')),
+      buscarTudo(() => supabase.from('setores').select('id, nome').eq('fazenda_id', fz).order('nome'))
+    ]);
+    const at = await buscarTudo(() => supabase.from('atividades').select('id, nome, setor_id').eq('fazenda_id', fz));
+    at.forEach(a => atividades[a.id] = a);
+    const nome = tc(pessoas.find(p => p.user_id === eu.user.id)?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    await carregar();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Relatório de Imprevistos e Fora do Plano -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Imprevistos e Fora do Plano · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    .sug{display:inline-block;border-radius:6px;padding:2px 8px;font-size:11.5px;font-weight:700;white-space:nowrap}
+    .sug.rot{background:var(--s2-soft);color:var(--s2)} .sug.prev{background:var(--s5-soft);color:var(--s5)} .sug.ja{background:var(--s3-soft);color:var(--s3)} .sug.ac{background:var(--empty);color:var(--muted)}
+    .stk{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;align-items:end;height:150px;padding:6px 18px 0}
+    .stk div{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;font-size:11px}
+    .stk span{width:100%;display:flex;flex-direction:column-reverse;border-radius:5px 5px 2px 2px;overflow:hidden}
+    .stk i{display:block}
+    .wk{font-size:11.5px;color:var(--ink2);line-height:1.5}
+    .tag{display:inline-block;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700;white-space:nowrap}
+    @media print{@page{size:A4 landscape;margin:8mm}.side,.mtop,.acts,.filters,.noprint{display:none!important}.shell{display:block}.main{padding:0!important}.card{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}.scroll{overflow:visible}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="imprevistos.html" selected>Imprevistos</option><option value="painel.html">Painel</option><option value="index.html">Tarefas da Semana</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, SEMANAS_NO_ANO, PAPEL, DIAS_CURTO, MESES_LONGO, tc, esc, semanaDe, inicioDaSemana, quemSouEu, buscarTudo, montarMenu, ddmm, diaDaSemana , aoMudar } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  const W = Math.max(1, Math.min(SEMANAS_NO_ANO, semanaDe(new Date())));
+  const PERIODOS = [['4', 'Últimas 4 Semanas'], ['13', 'Últimos 3 Meses'], ['mes', 'Este Mês'], ['ano', 'Ano Todo']];
+  let eu, fz, lanc = [], atividades = [], pessoas = [], equipes = [], setores = [];
+  let fPer = '13', fTipo = '', fSetor = '', minVezes = 3;
+
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  const mesDa = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();
+  const chave = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '');   // "Consertar Cerca D.12" = "consertar cerca d12"
+  const ehImp = (x) => x.tipo === 'imprevisto';
+  const quemDe = (x) => tc(pessoas.find(p => p.id === x.pessoa_id)?.apelido || equipes.find(e => e.id === x.equipe_id)?.nome || '—');
+  const nomeSetor = (id) => tc(setores.find(s => s.id === id)?.nome || '—');
+  const maisComum = (arr) => { const c = {}; arr.filter(Boolean).forEach(v => c[v] = (c[v] || 0) + 1); return Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0] || ''; };
+
+  async function carregar() {
+    const [l, a, p, e, s] = await Promise.all([
+      buscarTudo(() => supabase.from('fora_do_plano').select('*').eq('fazenda_id', fz).eq('ano', ANO).order('semana').order('dia')).catch(() => null),
+      buscarTudo(() => supabase.from('atividades').select('id, nome').eq('fazenda_id', fz)),
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido').eq('fazenda_id', fz)),
+      buscarTudo(() => supabase.from('equipes').select('id, nome').eq('fazenda_id', fz).order('nome')),
+      buscarTudo(() => supabase.from('setores').select('id, nome').eq('fazenda_id', fz).order('nome'))
+    ]);
+    if (l === null) { $('aviso').textContent = 'Falta Rodar os SQL 013 e 014 no Supabase.'; return; }
+    lanc = l; atividades = a; pessoas = p; equipes = e; setores = s;
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+
+  function semanasDoPeriodo() {
+    if (fPer === 'ano') return [1, W];
+    if (fPer === 'mes') { const ws = []; for (let w = 1; w <= W; w++) if (mesDa(w) === mesDa(W)) ws.push(w); return [ws[0], W]; }
+    return [Math.max(1, W - +fPer + 1), W];
+  }
+
+  function desenhar() {
+    const [w0, w1] = semanasDoPeriodo();
+    const L = lanc.filter(x => x.semana >= w0 && x.semana <= w1 && (!fTipo || (fTipo === 'imprevisto') === ehImp(x)) && (!fSetor || x.setor_id === fSetor));
+    const noPlano = new Set(atividades.map(a => chave(a.nome)));
+    // Agrupa pelo nome (sem acento e sem maiúscula)
+    const G = {}; L.forEach(x => { const k = chave(x.nome); (G[k] = G[k] || []).push(x); });
+    const grupos = Object.entries(G).map(([k, xs]) => {
+      const sems = [...new Set(xs.map(x => x.semana))].sort((a, b) => a - b), imp = xs.filter(ehImp).length, fora = xs.length - imp;
+      const quem = maisComum(xs.map(x => x.pessoa_id ? 'p:' + x.pessoa_id : x.equipe_id ? 'e:' + x.equipe_id : ''));
+      const setor = maisComum(xs.map(x => x.setor_id)), ult = xs[xs.length - 1];
+      const jaExiste = noPlano.has(k);
+      const sug = jaExiste ? ['ja', 'Já Está no Plano: Marcar Mais Semanas']
+        : imp > fora && xs.length >= 2 ? ['prev', 'Repete: Criar Ação Preventiva']
+        : sems.length >= minVezes ? ['rot', 'Virou Rotina: Cadastrar no Plano']
+        : ['ac', 'Acompanhar'];
+      return { k, xs, nome: tc(xs[0].nome), sems, imp, fora, quem, setor, ult, jaExiste, sug };
+    }).sort((a, b) => b.xs.length - a.xs.length || b.sems.length - a.sems.length || a.nome.localeCompare(b.nome, 'pt'));
+    const cand = grupos.filter(g => g.sug[0] !== 'ac');
+    const nImp = L.filter(ehImp).length, nFora = L.length - nImp;
+    // Gráfico por semana
+    const sw = []; for (let w = Math.max(w0, w1 - 15); w <= w1; w++) sw.push(w);
+    const porSem = sw.map(w => [w, L.filter(x => x.semana === w && !ehImp(x)).length, L.filter(x => x.semana === w && ehImp(x)).length]);
+    const mx = Math.max(1, ...porSem.map(([, a, b]) => a + b));
+    const porSetor = {}; L.forEach(x => { const k = nomeSetor(x.setor_id); porSetor[k] = (porSetor[k] || 0) + 1; });
+    const sArr = Object.entries(porSetor).sort((a, b) => b[1] - a[1]), sMax = Math.max(1, ...sArr.map(x => x[1]));
+    const impTop = grupos.filter(g => g.imp).sort((a, b) => b.imp - a.imp).slice(0, 8), iMax = Math.max(1, ...impTop.map(g => g.imp));
+    const link = (g, prev) => `plano.html?nova=1&nome=${encodeURIComponent(prev ? 'Prevenção - ' + g.nome : g.nome)}&setor=${g.setor}&quem=${encodeURIComponent(g.quem)}`;
+    const sel = (id, rot, opc, v, todos) => `<label class="sel">${rot}<select id="${id}">${todos ? `<option value="">${todos}</option>` : ''}${opc.map(([k, n]) => `<option value="${k}" ${String(k) === String(v) ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`;
+    $('tela').innerHTML = `
+      <div class="phead"><div><div class="eyebrow">Resultados · Semanas ${w0} a ${w1} de ${ANO}</div><h1>Imprevistos e Fora do Plano</h1></div>
+        <div class="acts"><button class="btn dark" id="pdf">📄 Gerar PDF</button><button class="btn" data-xls="1">📊 Excel</button></div></div>
+      <div class="filters">${sel('fPer', 'Período', PERIODOS, fPer)}${sel('fTipo', 'Tipo', [['fora', 'Fora do Plano'], ['imprevisto', 'Imprevisto']], fTipo, 'Todos')}${sel('fSetor', 'Setor', setores.map(s => [s.id, tc(s.nome)]), fSetor, 'Todos')}
+        ${sel('fMin', 'Vira Rotina com', [[2, '2 Semanas ou Mais'], [3, '3 Semanas ou Mais'], [4, '4 Semanas ou Mais']], minVezes)}</div>
+      <div class="kpis">
+        <div class="card kpi"><small>Lançamentos</small><b class="num">${L.length}</b><span>${grupos.length} Assuntos Diferentes</span></div>
+        <div class="card kpi"><small>Fora do Plano</small><b class="num" style="color:var(--s3)">${nFora}</b><span>Tarefas Feitas sem Estar Planejadas</span></div>
+        <div class="card kpi"><small>Imprevistos</small><b class="num" style="color:var(--s5)">${nImp}</b><span>Coisas Que Aconteceram</span></div>
+        <div class="card kpi"><small>Candidatos ao Plano Anual</small><b class="num" style="color:var(--s2)">${cand.length}</b><span>Repetem ou Já Viraram Rotina</span></div>
+      </div>
+      <div class="card" style="margin-bottom:16px"><div class="cardh"><h3>Candidatos ao Plano Anual</h3><small>O Que se Repete Deve Ser Planejado · Clique para Cadastrar</small></div>
+        <div class="scroll"><table class="tbl"><thead><tr><th>O Que</th><th style="text-align:center">Vezes</th><th>Semanas</th><th>Quem</th><th>Setor</th><th>Sugestão</th><th class="noprint"></th></tr></thead><tbody>
+        ${grupos.map(g => `<tr><td><b>${esc(g.nome)}</b><div>${g.fora ? `<span class="tag fp">Fora do Plano ${g.fora}</span> ` : ''}${g.imp ? `<span class="tag im">Imprevisto ${g.imp}</span>` : ''}</div></td>
+          <td style="text-align:center"><b class="num" style="font-size:18px">${g.xs.length}</b></td><td class="wk">${g.sems.join(', ')}</td>
+          <td>${esc(g.quem ? (g.quem.startsWith('p:') ? tc(pessoas.find(p => p.id === g.quem.slice(2))?.apelido) : tc(equipes.find(e => e.id === g.quem.slice(2))?.nome)) : '—')}</td>
+          <td class="sub">${esc(nomeSetor(g.setor))}</td><td><span class="sug ${g.sug[0]}">${g.sug[1]}</span></td>
+          <td class="noprint" style="text-align:right">${g.jaExiste ? '<a class="btn sm" href="plano.html" style="text-decoration:none">Abrir Plano Anual</a>' : `<a class="btn sm ${g.sug[0] === 'rot' || g.sug[0] === 'prev' ? 'pri' : ''}" href="${link(g, g.sug[0] === 'prev')}" style="text-decoration:none">+ Cadastrar${g.sug[0] === 'prev' ? ' Prevenção' : ''}</a>`}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">Nenhum Lançamento Neste Período.</td></tr>'}
+        </tbody></table></div>
+        <div class="foot"><span><b>Como Ler:</b> Fora do Plano Que se Repete em ${minVezes}+ Semanas Virou Rotina e Deve Entrar no Plano Anual. Imprevisto Que se Repete Pede uma Ação Preventiva (Ex.: Manutenção do Trator, Revisão da Cerca).</span></div></div>
+      <div class="two"><div class="grid">
+        <div class="card"><div class="cardh"><h3>Por Semana</h3><small><span style="color:var(--s3)">■</span> Fora do Plano · <span style="color:var(--s5)">■</span> Imprevisto</small></div>
+          <div class="stk">${porSem.map(([w, a, b]) => `<div><b class="num">${a + b || ''}</b><span style="height:${Math.max(2, (a + b) / mx * 110)}px;background:var(--empty)">${a ? `<i style="height:${a / (a + b) * 100}%;background:var(--s3)"></i>` : ''}${b ? `<i style="height:${b / (a + b) * 100}%;background:var(--s5)"></i>` : ''}</span><small>${w}</small></div>`).join('')}</div><div style="height:14px"></div></div>
+        <div class="card"><div class="cardh"><h3>Todos os Lançamentos</h3><small>${L.length} no Período</small></div>
+          <div class="scroll"><table class="tbl"><thead><tr><th>Dia</th><th>O Que</th><th>Tipo</th><th>Quem</th><th>Setor</th><th>Observação</th></tr></thead><tbody>
+          ${L.slice().reverse().map(x => `<tr><td class="sub" style="white-space:nowrap">${DIAS_CURTO[x.dia]} ${ddmm(diaDaSemana(x.semana, x.dia))}</td><td><b>${esc(tc(x.nome))}</b></td><td><span class="tag ${ehImp(x) ? 'im' : 'fp'}">${ehImp(x) ? 'Imprevisto' : 'Fora do Plano'}</span></td><td>${esc(quemDe(x))}</td><td class="sub">${esc(nomeSetor(x.setor_id))}</td><td class="sub">${esc(x.obs || '')}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Nada Lançado.</td></tr>'}
+          </tbody></table></div></div>
+      </div><div class="grid">
+        <div class="card bars"><div class="cardh"><h3>Imprevistos Que Mais Aconteceram</h3></div>
+          ${impTop.map(g => `<div class="row" style="grid-template-columns:140px 1fr 36px"><span>${esc(g.nome)}</span><div class="track"><i style="width:${g.imp / iMax * 100}%;background:var(--s5)"></i></div><b class="num" style="text-align:right">${g.imp}</b></div>`).join('') || '<div class="empty">Nenhum Imprevisto.</div>'}<div style="height:12px"></div></div>
+        <div class="card bars"><div class="cardh"><h3>Por Setor</h3></div>
+          ${sArr.map(([k, n]) => `<div class="row"><span>${esc(k)}</span><div class="track"><i style="width:${n / sMax * 100}%;background:var(--navy)"></i></div><b class="num" style="text-align:right">${n}</b></div>`).join('') || '<div class="empty">—</div>'}<div style="height:12px"></div></div>
+      </div></div>`;
+    $('fPer').onchange = (e) => { fPer = e.target.value; desenhar(); };
+    $('fTipo').onchange = (e) => { fTipo = e.target.value; desenhar(); };
+    $('fSetor').onchange = (e) => { fSetor = e.target.value; desenhar(); };
+    $('fMin').onchange = (e) => { minVezes = +e.target.value; desenhar(); };
+    $('pdf').onclick = () => { const t = document.title; document.title = 'Imprevistos e Fora do Plano - Sem ' + w0 + ' a ' + w1; setTimeout(() => { print(); document.title = t; }, 100); };
+  }
+
+  // Entrada
+  eu = await quemSouEu();
+  montarMenu('imprevistos.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.includes(eu.papel)) $('aviso').textContent = 'Este Relatório é Só para Gestor, Administrativo e Consultor.';
+  else {
+    fz = eu.fazenda.id;
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    await carregar();
+    aoMudar(fz, ['fora_do_plano'], carregar);   // o que a equipe faz no app aparece aqui sozinho
+  }
+
+  // 📊 Excel do relatório (o mesmo conteúdo do PDF, com números de verdade)
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-xls]'); if (!b) return; b.disabled = true; const txt = b.textContent; b.textContent = 'Montando…';
+    import('./excel.js').then(m => m.exportarExcel({ titulo: (document.querySelector('#tela h1, h1')?.textContent || document.title).trim() })).catch(er => alert(er.message)).finally(() => { b.disabled = false; b.textContent = txt; }); });
+</script>
+</body>
+</html>

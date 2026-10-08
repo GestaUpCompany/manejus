@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Plano Mensal (visual do protótipo) -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plano Mensal · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>@media print{@page{size:A4 landscape;margin:8mm}}</style>
+</head>
+<body class="mesp">
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="mes.html" selected>Mês</option><option value="index.html">Tarefas da Semana</option><option value="plano.html">Plano Anual</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, SEMANAS_NO_ANO, PAPEL, STATUS, DIAS_CURTO, MESES_LONGO, tc, esc, semanaDe, inicioDaSemana, quemSouEu, buscarTudo, montarMenu, ddmm, diaDaSemana , aoMudar, graficoStatus, congelar } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  const MES_CURTO = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const SEMANA_ATUAL = Math.max(1, Math.min(SEMANAS_NO_ANO, semanaDe(new Date())));
+  let eu, fz, atividades = [], pessoas = [], equipes = [], setores = [], plano = {};   // plano["idAtividade|semana"] = status
+  let mes, fSetor = '', fQuem = '', fStatus = '';
+  try { const g = JSON.parse(sessionStorage.getItem('fp-filtros-mes') || '{}'); fSetor = g.fSetor || ''; fQuem = g.fQuem || ''; fStatus = g.fStatus || ''; } catch {}
+  const guardarF = () => { try { sessionStorage.setItem('fp-filtros-mes', JSON.stringify({ fSetor, fQuem, fStatus })); } catch {} };
+
+  function aviso(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2400); }
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  const mesDa = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();   // mês da quinta-feira
+  const semanasDoMes = (m) => { const r = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (mesDa(w) === m) r.push(w); return r; };
+  const nomeQuem = (a) => tc(pessoas.find(p => p.id === a.executor_pessoa_id)?.apelido || equipes.find(e => e.id === a.executor_equipe_id)?.nome || '—');
+  const nomeSetor = (id) => tc(setores.find(s => s.id === id)?.nome || '—');
+  const quemDe = (a) => a.executor_equipe_id ? 'e:' + a.executor_equipe_id : a.executor_pessoa_id ? 'p:' + a.executor_pessoa_id : '';
+
+  async function carregar() {
+    [atividades, pessoas, equipes, setores] = await Promise.all([
+      buscarTudo(() => supabase.from('atividades').select('id, nome, dias, setor_id, executor_pessoa_id, executor_equipe_id').eq('fazenda_id', fz)),
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido').eq('fazenda_id', fz).order('apelido')),
+      buscarTudo(() => supabase.from('equipes').select('id, nome').eq('fazenda_id', fz).order('nome')),
+      buscarTudo(() => supabase.from('setores').select('id, nome').eq('fazenda_id', fz).order('nome'))
+    ]);
+    const pl = await buscarTudo(() => supabase.from('planejamento').select('atividade_id, semana, status').eq('fazenda_id', fz).eq('ano', ANO));
+    plano = {}; pl.forEach(l => plano[l.atividade_id + '|' + l.semana] = l.status);
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+
+  function desenhar() {
+    const ws = semanasDoMes(mes);
+    const cont = MES_CURTO.map((_, m) => { let t = 0, d = 0; const n = { 1: 0, 3: 0, 4: 0, 5: 0 }; const s = semanasDoMes(m); for (const k in plano) { const w = +k.split('|')[1]; if (s.includes(w)) { t++; if (plano[k] === 2) d++; else n[plano[k]] = (n[plano[k]] || 0) + 1; } } return [t, d, n]; });
+    const mx = Math.max(1, ...cont.map(c => c[0]));
+    const L = atividades.filter(a => ws.some(w => plano[a.id + '|' + w]) && (!fSetor || a.setor_id === fSetor) && (!fQuem || quemDe(a) === fQuem) && (!fStatus || ws.some(w => plano[a.id + '|' + w] === +fStatus)))
+      .sort((a, b) => nomeSetor(a.setor_id).localeCompare(nomeSetor(b.setor_id), 'pt') || a.nome.localeCompare(b.nome, 'pt'));
+    const [occ, feitas] = cont[mes], pct = occ ? Math.round(feitas / occ * 100) : 0;
+    const noMes = atividades.filter(a => ws.some(w => plano[a.id + '|' + w])).length;
+    let andM = 0, atrM = 0; for (const k in plano) { if (ws.includes(+k.split('|')[1])) { if (plano[k] === 3) andM++; if (plano[k] === 4) atrM++; } }
+    const top = cont.map((c, i) => [c[0], i]).sort((a, b) => b[0] - a[0]).slice(0, 3).map(x => MES_CURTO[x[1]]).join(', ');
+    const anda = ws.some(w => w <= SEMANA_ATUAL) && ws.some(w => w > SEMANA_ATUAL);
+    const sel = (id, rot, opc, v, todos = 'Todos') => `<label class="sel">${rot}<select id="${id}"><option value="">${todos}</option>${opc.map(([k, n]) => `<option value="${k}" ${String(k) === String(v) ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`;
+    $('tela').innerHTML = `
+      <div class="phead"><div><h1>Plano Mensal · ${MESES_LONGO[mes]} ${ANO}</h1><div class="resumo">
+          <span class="rc ${L.length < noMes ? 'rf' : ''}">📋 <b>${L.length < noMes ? L.length + ' de ' + noMes : noMes}</b> Atividades${L.length < noMes ? ' (Filtradas)' : ''}</span>
+          <span class="rc rm">✅ <b>${pct}%</b> Concluídas · ${feitas} de ${occ}</span>
+          <span class="rc rand">🔄 <b>${andM}</b> Em Andamento</span>
+          <span class="rc ratr">⚠️ <b>${atrM}</b> ${atrM === 1 ? 'Atrasada' : 'Atrasadas'}</span>
+          <span class="rc ra">📅 ${anda ? `Semana <b>${SEMANA_ATUAL}</b> · Mês em Andamento` : `Semanas <b>${ws[0]}</b> a <b>${ws[ws.length - 1]}</b>`}</span></div></div>
+        <div class="acts"><button class="btn" data-mm="-1">‹ Mês Anterior</button><button class="btn" data-mm="1">Próximo ›</button>
+          <button class="btn dark" id="pdf">📄 Gerar PDF do Mês</button><button class="btn" data-xls="1">📊 Excel</button><a class="btn pri" href="plano.html?nova=1" style="text-decoration:none">+ Nova Atividade</a></div></div>
+      ${graficoStatus(cont.map(([t, d, n], i) => ({ rot: MES_CURTO[i], t, c: { ...n, 2: d }, on: i === mes, attr: `data-mo="${i}"`, tip: `${MESES_LONGO[i]}: ${t} no Total · ${d} Concluídas · ${n[3] || 0} Em Andamento · ${n[4] || 0} Atrasadas${n[5] ? ' · ' + n[5] + ' Pausadas' : ''} · ${n[1] || 0} Planejadas` })), { titulo: 'Atividades por Mês', sub: `${cont.reduce((s, c) => s + c[0], 0)} Ocorrências no Ano · Mais Carregados: ${top}`, dica: 'Clique no Mês para Abrir' })}
+      <div class="filters">
+        ${sel('fSetor', 'Setor', setores.map(s => [s.id, tc(s.nome)]), fSetor)}
+        <label class="sel">Quem Faz<select id="fQuem"><option value="">Todos</option><optgroup label="Equipes">${equipes.map(e => `<option value="e:${e.id}" ${'e:' + e.id === fQuem ? 'selected' : ''}>${esc(tc(e.nome))}</option>`).join('')}</optgroup><optgroup label="Pessoas">${pessoas.map(p => `<option value="p:${p.id}" ${'p:' + p.id === fQuem ? 'selected' : ''}>${esc(tc(p.apelido))}</option>`).join('')}</optgroup></select></label>
+        ${sel('fStatus', 'Status', [1, 3, 2, 4, 5].map(s => [s, STATUS[s]]), fStatus)}${fSetor || fQuem || fStatus ? '<button class="btn limpaf" id="limparF" type="button">✕ Limpar Filtros</button>' : ''}</div>
+      <div class="card"><div class="scroll" id="tabMes"><table class="tbl"><thead><tr><th>O Que Fazer no Mês?</th><th>Quem Faz</th><th>Setor</th>
+        ${ws.map(w => `<th style="text-align:center;${w === SEMANA_ATUAL ? 'color:var(--navy)' : ''}">Sem. ${w}<div style="text-transform:none;letter-spacing:0;font-weight:500">${ddmm(diaDaSemana(w, 0))}–${ddmm(diaDaSemana(w, 6))}</div></th>`).join('')}<th>Feito</th></tr></thead><tbody>
+        ${L.map(a => { const tot = ws.filter(w => plano[a.id + '|' + w]).length, dn = ws.filter(w => plano[a.id + '|' + w] === 2).length;
+          return `<tr><td><b>${esc(tc(a.nome))}</b><div class="sub">${(a.dias || []).map((v, i) => v ? DIAS_CURTO[i] : '').filter(Boolean).join(' · ')}</div></td><td>${esc(nomeQuem(a))}</td><td class="sub">${esc(nomeSetor(a.setor_id))}</td>
+            ${ws.map(w => { const s = plano[a.id + '|' + w] || 0; return `<td style="text-align:center;${w === SEMANA_ATUAL ? 'background:var(--navy-soft)' : ''}"><button class="wcell s${s}" data-a="${a.id}" data-w="${w}">${s ? STATUS[s] : '+'}</button></td>`; }).join('')}
+            <td class="sub">${dn}/${tot}</td></tr>`; }).join('') || `<tr><td colspan="${ws.length + 4}" class="empty">Nada Planejado Neste Mês com Esses Filtros.</td></tr>`}
+      </tbody></table></div><div class="foot"><span>${L.length} Atividades no Mês</span><span>Clique numa Célula para Mudar o Status ou Incluir a Atividade na Semana</span></div></div>`;
+    congelar($('tabMes'));
+    ['fSetor', 'fQuem', 'fStatus'].forEach(id => $(id).onchange = (e) => { if (id === 'fSetor') fSetor = e.target.value; if (id === 'fQuem') fQuem = e.target.value; if (id === 'fStatus') fStatus = e.target.value; guardarF(); desenhar(); });
+    if ($('limparF')) $('limparF').onclick = () => { fSetor = fQuem = fStatus = ''; guardarF(); desenhar(); };
+  }
+
+  // Menu de status da célula
+  function fecharMenu() { document.querySelector('.pop')?.remove(); }
+  function abrirMenu(cel) {
+    fecharMenu();
+    const a = atividades.find(x => x.id === cel.dataset.a), w = +cel.dataset.w, atual = plano[a.id + '|' + w] || 0;
+    const pop = document.createElement('div'); pop.className = 'pop';
+    pop.innerHTML = `<div class="t"><b>${esc(tc(a.nome))}</b>Semana ${w}</div>` + [1, 3, 2, 4, 5].map(s => `<button data-st="${s}" class="${atual === s ? 'on' : ''}"><i style="background:var(--s${s})"></i>${STATUS[s]}${atual === s ? ' ✓' : ''}</button>`).join('')
+      + `<button data-st="0"><i style="background:var(--empty);border:1px solid var(--line)"></i>Tirar desta Semana</button>`;
+    document.body.appendChild(pop);
+    const r = cel.getBoundingClientRect(), ph = pop.offsetHeight;
+    pop.style.left = Math.max(8, Math.min(innerWidth - pop.offsetWidth - 8, r.left)) + 'px';
+    pop.style.top = (r.bottom + ph + 8 > innerHeight ? Math.max(8, r.top - ph - 4) : r.bottom + 4) + 'px';
+    pop.onclick = async (e) => {
+      const b = e.target.closest('[data-st]'); if (!b) return; fecharMenu();
+      const novo = +b.dataset.st, k = a.id + '|' + w;
+      const r = novo ? await supabase.from('planejamento').upsert({ fazenda_id: fz, atividade_id: a.id, ano: ANO, semana: w, status: novo }, { onConflict: 'atividade_id,ano,semana' })
+                     : await supabase.from('planejamento').delete().eq('atividade_id', a.id).eq('ano', ANO).eq('semana', w);
+      if (r.error) return aviso('Erro: ' + r.error.message);
+      if (novo) plano[k] = novo; else delete plano[k];
+      desenhar(); aviso(novo ? STATUS[novo] : 'Tirada da Semana');
+    };
+    setTimeout(() => document.addEventListener('pointerdown', function fora(ev) { if (!pop.contains(ev.target)) { fecharMenu(); document.removeEventListener('pointerdown', fora, true); } }, true), 0);
+  }
+  $('tela').addEventListener('click', (e) => {
+    const mo = e.target.closest('[data-mo]'); if (mo) { mes = +mo.dataset.mo; return desenhar(); }
+    const mm = e.target.closest('[data-mm]'); if (mm) { mes = (mes + +mm.dataset.mm + 12) % 12; return desenhar(); }
+    const c = e.target.closest('.wcell[data-a]'); if (c) return abrirMenu(c);
+    if (e.target.closest('#pdf')) { const t = document.title; document.title = 'Plano Mensal - ' + MESES_LONGO[mes] + ' ' + ANO; setTimeout(() => { print(); document.title = t; }, 100); }
+  });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') fecharMenu(); });
+
+  eu = await quemSouEu();
+  montarMenu('mes.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.includes(eu.papel)) $('aviso').textContent = 'O Plano Mensal é Só para Gestor, Administrativo e Consultor.';
+  else {
+    fz = eu.fazenda.id; { const q = new URLSearchParams(location.search).get('mes'); mes = q !== null && +q >= 0 && +q <= 11 ? +q : mesDa(Math.min(SEMANAS_NO_ANO, Math.max(1, SEMANA_ATUAL))); }
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    await carregar();
+    aoMudar(fz, ['atividades', 'planejamento', 'baixas'], carregar);   // o que a equipe faz no app aparece aqui sozinho
+  }
+
+  // 📊 Excel do relatório (o mesmo conteúdo do PDF, com números de verdade)
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-xls]'); if (!b) return; b.disabled = true; const txt = b.textContent; b.textContent = 'Montando…';
+    import('./excel.js').then(m => m.exportarExcel({ titulo: (document.querySelector('#tela h1, h1')?.textContent || document.title).trim() })).catch(er => alert(er.message)).finally(() => { b.disabled = false; b.textContent = txt; }); });
+</script>
+</body>
+</html>

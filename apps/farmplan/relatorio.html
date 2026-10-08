@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Relatório Mensal da Fazenda (PDF para o produtor) -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relatório Mensal · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    @media screen and (max-width:640px){.folha{padding:16px 12px}.folha table{display:block;overflow-x:auto}}
+    .opts{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
+    .opts label{display:flex;gap:6px;align-items:center;cursor:pointer}
+    .folha{background:#fff;color:#1b2a33;max-width:860px;margin:0 auto;border-radius:12px;box-shadow:var(--shadow);padding:30px 34px;border:1px solid var(--line)}
+    .folha h2{font-family:var(--fd);font-size:17px;color:#114665;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid #20A44B;break-after:avoid}
+    .folha .cab{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:3px solid #114665;padding-bottom:12px}
+    .folha .cab img{height:54px;flex:none}
+    .folha .cab h1{font-size:22px;margin:0;color:#114665}
+    .folha .cab .sub{color:#5B6B75;font-size:12.5px}
+    .rk{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+    .rk div{border:1px solid #E2E0D6;border-radius:9px;padding:8px 10px;background:#F7F6F1}
+    .rk small{display:block;font-size:11px;color:#5B6B75;font-weight:600}
+    .rk b{font-family:var(--fd);font-size:22px}
+    .rk span{display:block;font-size:10.5px;color:#8C9BA2}
+    .folha table{width:100%;border-collapse:collapse;font-size:12.5px}
+    .folha th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#5B6B75;border-bottom:1px solid #E2E0D6;padding:6px 6px}
+    .folha td{padding:6px 6px;border-bottom:1px solid #ECEAE2;vertical-align:top}
+    .folha td.n,.folha th.n{text-align:right;white-space:nowrap}
+    .tg{display:inline-block;border-radius:5px;padding:0 6px;font-size:10.5px;font-weight:700;white-space:nowrap}
+    .g{background:#DDF3E3;color:#1E8A3E} .a{background:#F6EBD2;color:#A87310} .r{background:#F7E0DB;color:#B13A2A} .c{background:#E3E9ED;color:#5B6B75}
+    .barra{height:8px;background:#ECEAE2;border-radius:99px;overflow:hidden;min-width:80px}
+    .barra i{display:block;height:100%}
+    .obs{width:100%;min-height:90px;border:1px solid #E2E0D6;border-radius:8px;padding:10px;font:inherit;font-size:13px;color:#1b2a33;background:#fff;resize:vertical}
+    .rod{margin-top:22px;font-size:10.5px;color:#8C9BA2;display:flex;justify-content:space-between;border-top:1px solid #E2E0D6;padding-top:8px}
+    .sec{break-inside:avoid}
+    @media (max-width:700px){.folha{padding:18px 14px}.rk{grid-template-columns:1fr 1fr}}
+    @media print{@page{size:A4;margin:10mm}.side,.mtop,.phead,.filters,.noprint,.faixa-ano,.toast{display:none!important}.shell{display:block}.main{padding:0!important;background:#fff}
+      .folha{box-shadow:none;border:0;padding:0;max-width:none}.folha *{-webkit-print-color-adjust:exact;print-color-adjust:exact}.obs{border:0!important;outline:none!important;box-shadow:none!important;padding:0;min-height:0;resize:none}.obs:placeholder-shown{display:none}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="relatorio.html" selected>Relatório Mensal</option><option value="painel.html">Painel</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, ANO_HOJE, SEMANAS_NO_ANO, PAPEL, STATUS, MESES_LONGO, tc, esc, semanaDe, inicioDaSemana, quemSouEu, buscarTudo, montarMenu, nf, media, ddmm, diaDaSemana , aoMudar } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  const W_HOJE = semanaDe(new Date()), D_HOJE = (new Date().getDay() + 6) % 7;
+  const mesDa = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();
+  const semanasDoMes = (m) => { const r = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (mesDa(w) === m && (ANO < ANO_HOJE || w <= W_HOJE)) r.push(w); return r; };
+  const SECOES = [['resumo', 'Resumo do Mês'], ['semanas', 'Execução por Semana'], ['setores', 'Por Setor'], ['indicadores', 'Indicadores'], ['equipe', 'Notas da Equipe'], ['imprevistos', 'Imprevistos e Fora do Plano'], ['atrasadas', 'Atividades Atrasadas'], ['compromissos', 'Compromissos dos Líderes'], ['obs', 'Observações do Consultor']];
+  let eu, fz, fazenda, mes, mostrar = new Set(SECOES.map(s => s[0])), obs = '', autor = '';
+  let D = {};   // dados do banco
+
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  const pct = (a, b) => b ? Math.round(a / b * 100) : null;
+  const corP = (p, meta = 80) => p == null ? 'c' : p >= meta ? 'g' : p >= meta - 20 ? 'a' : 'r';
+  const barra = (p, cls) => `<div class="barra"><i style="width:${Math.min(100, p || 0)}%;background:${{ g: '#20A44B', a: '#C98A16', r: '#C23D2B', c: '#ccc' }[cls]}"></i></div>`;
+
+  async function carregar() {
+    const q = (t, cols, extra = (x) => x) => buscarTudo(() => extra(supabase.from(t).select(cols).eq('fazenda_id', fz))).catch(() => []);
+    const [at, st, ps, eq, mb, pl, bx, fp, it, av, ind, iv, cp] = await Promise.all([
+      q('atividades', 'id, nome, dias, setor_id, executor_pessoa_id, executor_equipe_id'),
+      q('setores', 'id, nome'), q('pessoas', 'id, apelido, cargo, ativo'), q('equipes', 'id, nome, lider_id'),
+      buscarTudo(() => supabase.from('equipe_membros').select('equipe_id, pessoa_id, equipes!inner(fazenda_id)').eq('equipes.fazenda_id', fz)).catch(() => []),
+      q('planejamento', 'atividade_id, semana, status, observacao', x => x.eq('ano', ANO)),
+      q('baixas', 'atividade_id, semana, dia, feito, motivo', x => x.eq('ano', ANO)),
+      q('fora_do_plano', 'semana, dia, nome, tipo, obs, pessoa_id, equipe_id', x => x.eq('ano', ANO)),
+      q('contrato_itens', 'id, pessoa_id, tipo', x => x.eq('ativo', true)),
+      q('avaliacoes', 'item_id, semana, nota, nsa', x => x.eq('ano', ANO)),
+      q('indicadores', '*', x => x.order('ordem')),
+      q('indicador_valores', 'indicador_id, mes, valor', x => x.eq('ano', ANO)),
+      q('compromissos', 'pessoa_id, semana, texto, cumprido', x => x.eq('ano', ANO))
+    ]);
+    const notas = {}; av.forEach(x => { if (!x.nsa && x.nota != null) notas[x.item_id + '|' + x.semana] = +x.nota; });
+    const B = {}; bx.forEach(b => B[b.semana + '|' + b.atividade_id + '|' + b.dia] = b);
+    const V = {}; iv.forEach(v => V[v.indicador_id + '|' + v.mes] = +v.valor);
+    D = { at, st, ps, eq, mb, pl, B, fp, it, notas, ind: ind.filter(d => d.ativo), V, cp };
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+
+  // ---------- Cálculos ----------
+  const ativ = (id) => D.at.find(a => a.id === id);
+  const nomeSetor = (id) => tc(D.st.find(s => s.id === id)?.nome || 'Sem Setor');
+  const quem = (pid, eid) => tc(D.ps.find(p => p.id === pid)?.apelido || D.eq.find(e => e.id === eid)?.nome || '—');
+  const feito = (p, d) => { const b = D.B[p.semana + '|' + p.atividade_id + '|' + d]; return b ? b.feito : p.status === 2; };
+  function notaPessoa(pid, ws) {
+    const bloco = (tipo) => media(D.it.filter(i => i.pessoa_id === pid && i.tipo === tipo).map(i => media(ws.map(w => D.notas[i.id + '|' + w]).filter(v => v != null))).filter(v => v != null));
+    const t = bloco('tarefa'), c = bloco('comportamento'), pt = (fazenda.peso_tarefas ?? 70) / 100;
+    return t == null ? c : c == null ? t : t * pt + c * (1 - pt);
+  }
+  function calcular(m) {
+    const ws = semanasDoMes(m), P = D.pl.filter(p => ws.includes(p.semana));
+    let pl = 0, dn = 0; P.forEach(p => { const lim = ANO < ANO_HOJE || p.semana < W_HOJE ? 7 : D_HOJE + 1; (ativ(p.atividade_id)?.dias || []).forEach((v, d) => { if (v && d < lim) { pl++; if (feito(p, d)) dn++; } }); });
+    const sem = ws.map(w => { const L = P.filter(p => p.semana === w); return { w, n: L.length, c: L.filter(p => p.status === 2).length, at: L.filter(p => p.status === 4 || (p.observacao || '').startsWith('Atrasada')).length }; });
+    const set = {}; P.forEach(p => { const k = nomeSetor(ativ(p.atividade_id)?.setor_id); set[k] = set[k] || [0, 0]; set[k][0]++; if (p.status === 2) set[k][1]++; });
+    const F = D.fp.filter(x => ws.includes(x.semana));
+    const pessoasC = [...new Set(D.it.map(i => i.pessoa_id))].map(id => D.ps.find(p => p.id === id)).filter(Boolean);
+    const notas = pessoasC.map(p => ({ p, n: notaPessoa(p.id, ws) })).filter(x => x.n != null).sort((a, b) => b.n - a.n);
+    const equipes = D.eq.map(q => { const ns = D.mb.filter(x => x.equipe_id === q.id).map(x => notas.find(n => n.p.id === x.pessoa_id)).filter(Boolean); return { q, n: ns.length >= 2 ? media(ns.map(x => x.n)) : null, k: ns.length }; }).filter(x => x.n != null).sort((a, b) => b.n - a.n);
+    const ultW = ws[ws.length - 1];
+    const atras = ultW ? D.pl.filter(p => p.semana === ultW && p.status !== 2 && (p.status === 4 || (p.observacao || '').startsWith('Atrasada'))).map(p => ativ(p.atividade_id)).filter(Boolean) : [];
+    const motivos = {}; Object.values(D.B).filter(b => ws.includes(b.semana) && !b.feito && b.motivo).forEach(b => motivos[tc(b.motivo)] = (motivos[tc(b.motivo)] || 0) + 1);
+    return { ws, P, pl, dn, meta: pct(dn, pl), conc: P.filter(p => p.status === 2).length, sem, set, F, notas, equipes, nota: media(notas.map(x => x.n)), atras, motivos };
+  }
+  function indValor(d, m, R) {
+    if (d.auto === 'escore') return R.nota;
+    if (d.auto === 'atividades') return R.P.length ? R.conc / R.P.length * 100 : null;
+    return D.V[d.id + '|' + (m + 1)] ?? null;
+  }
+  const farolInd = (d, v) => { if (v == null || d.verde == null) return ['c', 'Sem Lançamento']; const g = +d.verde, r = +d.vermelho;
+    const f = d.direcao === 'up' ? (v >= g ? 1 : v < r ? 3 : 2) : (v <= g ? 1 : v >= r ? 3 : 2); return [['', 'g', 'a', 'r'][f], ['', 'Dentro da Meta', 'Atenção', 'Fora da Meta'][f]]; };
+
+  // ---------- Tela ----------
+  function desenhar() {
+    const R = calcular(mes), ver = (k) => mostrar.has(k), meta = fazenda.meta_mes ?? 80;
+    const nImp = R.F.filter(x => x.tipo === 'imprevisto').length;
+    const periodo = R.ws.length ? `Semanas ${R.ws[0]} a ${R.ws[R.ws.length - 1]} · ${ddmm(diaDaSemana(R.ws[0], 0))} a ${ddmm(diaDaSemana(R.ws[R.ws.length - 1], 6))}/${ANO}` : 'Mês Ainda Não Começou';
+    $('tela').innerHTML = `
+      <div class="phead"><div><div class="eyebrow">Resultados · Documento para o Produtor</div><h1>Relatório Mensal</h1></div>
+        <div class="acts"><label class="sel">Mês<select id="mes">${MESES_LONGO.map((n, i) => `<option value="${i}" ${i === mes ? 'selected' : ''}>${n} ${ANO}</option>`).join('')}</select></label>
+          <button class="btn dark" id="pdf">📄 Gerar PDF</button><button class="btn" data-xls="1">📊 Excel</button><button class="btn" data-voltar="1">‹ Voltar</button></div></div>
+      <div class="filters noprint"><div class="opts"><b>Incluir:</b>${SECOES.map(([k, n]) => `<label><input type="checkbox" data-sec="${k}" ${ver(k) ? 'checked' : ''}>${n}</label>`).join('')}</div></div>
+      <div class="folha">
+        <div class="cab"><div><h1>Relatório Mensal · ${MESES_LONGO[mes]} ${ANO}</h1><div class="sub"><b>${esc(tc(fazenda.nome))}</b>${fazenda.municipio ? ' · ' + esc(tc(fazenda.municipio)) : ''}${fazenda.uf ? '/' + esc(fazenda.uf) : ''} · ${periodo}</div></div><span style="display:flex;align-items:center;gap:14px"><span class="fpmark"><img src="icon-192.png" alt="Farm Plan"></span><img src="logo.png" alt="Gesta'Up"></span></div>
+
+        ${ver('resumo') ? `<div class="sec"><h2>Resumo do Mês</h2><div class="rk">
+          <div><small>Meta do Mês</small><b style="color:${{ g: '#1E8A3E', a: '#A87310', r: '#B13A2A', c: '#5B6B75' }[corP(R.meta, meta)]}">${R.meta == null ? '—' : R.meta + '%'}</b><span>${R.dn} de ${R.pl} Tarefas-Dia com Baixa · Meta ${meta}%</span></div>
+          <div><small>Atividades Concluídas</small><b>${R.conc}<span style="display:inline;font-size:13px;color:#5B6B75"> / ${R.P.length}</span></b><span>${pct(R.conc, R.P.length) ?? 0}% das Ocorrências Planejadas</span></div>
+          <div><small>Imprevistos · Fora do Plano</small><b>${nImp} · ${R.F.length - nImp}</b><span>Lançados no Mês</span></div>
+          <div><small>Nota Média da Equipe</small><b>${R.nota == null ? '—' : nf(R.nota)}</b><span>${R.equipes[0] ? '🏆 ' + esc(tc(R.equipes[0].q.nome)) + ' · ' + nf(R.equipes[0].n) : 'Sem Equipe do Mês'}</span></div></div>
+          ${Object.keys(R.motivos).length ? `<div style="font-size:12.5px;margin-top:10px"><b>Por Que Não Deu:</b> ${Object.entries(R.motivos).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${esc(k)} (${n})`).join(' · ')}</div>` : ''}</div>` : ''}
+
+        ${ver('semanas') && R.sem.length ? `<div class="sec"><h2>Execução por Semana</h2><table><thead><tr><th>Semana</th><th>Período</th><th class="n">Planejadas</th><th class="n">Concluídas</th><th class="n">Atrasadas</th><th style="width:160px">% Concluído</th></tr></thead><tbody>
+          ${R.sem.map(s => { const p = pct(s.c, s.n); return `<tr><td><b>${s.w}</b></td><td>${ddmm(diaDaSemana(s.w, 0))} a ${ddmm(diaDaSemana(s.w, 6))}</td><td class="n">${s.n}</td><td class="n">${s.c}</td><td class="n">${s.at || '—'}</td><td><div style="display:flex;gap:8px;align-items:center">${barra(p, corP(p))}<b>${p ?? '—'}${p == null ? '' : '%'}</b></div></td></tr>`; }).join('')}</tbody></table></div>` : ''}
+
+        ${ver('setores') && Object.keys(R.set).length ? `<div class="sec"><h2>Por Setor</h2><table><thead><tr><th>Setor</th><th class="n">Planejadas</th><th class="n">Concluídas</th><th style="width:200px">% Concluído</th></tr></thead><tbody>
+          ${Object.entries(R.set).sort((a, b) => b[1][0] - a[1][0]).map(([k, [n, c]]) => { const p = pct(c, n); return `<tr><td><b>${esc(k)}</b></td><td class="n">${n}</td><td class="n">${c}</td><td><div style="display:flex;gap:8px;align-items:center">${barra(p, corP(p))}<b>${p}%</b></div></td></tr>`; }).join('')}</tbody></table></div>` : ''}
+
+        ${ver('indicadores') && D.ind.length ? `<div class="sec"><h2>Indicadores</h2><table><thead><tr><th>Indicador</th><th>Unidade</th><th class="n">Resultado</th><th class="n">Meta</th><th>Situação</th></tr></thead><tbody>
+          ${D.ind.map(d => { const v = indValor(d, mes, R), [cl, tx] = farolInd(d, v); return `<tr><td><b>${esc(tc(d.nome))}</b></td><td>${esc(d.unidade || '')}</td><td class="n"><b>${v == null ? '—' : nf(v, d.casas) + (d.auto === 'atividades' ? '%' : '')}</b></td><td class="n">${d.verde == null ? '—' : (d.direcao === 'up' ? '≥ ' : '≤ ') + nf(+d.verde, d.casas)}</td><td><span class="tg ${cl}">${tx}</span></td></tr>`; }).join('')}</tbody></table></div>` : ''}
+
+        ${ver('equipe') && R.notas.length ? `<div class="sec"><h2>Notas da Equipe</h2>
+          ${R.equipes.length ? `<div style="font-size:12.5px;margin-bottom:6px"><b>Equipes:</b> ${R.equipes.map((e, i) => `${i === 0 ? '🏆 ' : ''}${esc(tc(e.q.nome))} ${nf(e.n)}`).join(' · ')}</div>` : ''}
+          <table><thead><tr><th>Colaborador</th><th>Cargo</th><th class="n">Nota do Mês</th><th>Situação</th></tr></thead><tbody>
+          ${R.notas.map(x => `<tr><td><b>${esc(tc(x.p.apelido))}</b></td><td>${esc(tc(x.p.cargo || ''))}</td><td class="n"><b>${nf(x.n)}</b></td><td><span class="tg ${x.n >= 9.3 ? 'g' : x.n >= 8.5 ? 'a' : 'r'}">${x.n >= 9.3 ? 'Excelente' : x.n >= 8.5 ? 'Bom' : 'Precisa Melhorar'}</span></td></tr>`).join('')}</tbody></table></div>` : ''}
+
+        ${ver('imprevistos') && R.F.length ? `<div class="sec"><h2>Imprevistos e Fora do Plano</h2><table><thead><tr><th>Dia</th><th>O Que</th><th>Tipo</th><th>Quem</th><th>Observação</th></tr></thead><tbody>
+          ${R.F.sort((a, b) => a.semana - b.semana || a.dia - b.dia).map(x => `<tr><td>${ddmm(diaDaSemana(x.semana, x.dia))}</td><td><b>${esc(tc(x.nome))}</b></td><td><span class="tg ${x.tipo === 'imprevisto' ? 'a' : 'c'}">${x.tipo === 'imprevisto' ? 'Imprevisto' : 'Fora do Plano'}</span></td><td>${esc(quem(x.pessoa_id, x.equipe_id))}</td><td>${esc(x.obs || '')}</td></tr>`).join('')}</tbody></table></div>` : ''}
+
+        ${ver('atrasadas') && R.atras.length ? `<div class="sec"><h2>Atividades Atrasadas no Fim do Mês (${R.atras.length})</h2><table><thead><tr><th>Atividade</th><th>Quem Faz</th><th>Setor</th></tr></thead><tbody>
+          ${R.atras.map(a => `<tr><td><b>${esc(tc(a.nome))}</b></td><td>${esc(quem(a.executor_pessoa_id, a.executor_equipe_id))}</td><td>${esc(nomeSetor(a.setor_id))}</td></tr>`).join('')}</tbody></table></div>` : ''}
+
+        ${ver('compromissos') && D.cp.some(c => R.ws.includes(c.semana)) ? `<div class="sec"><h2>Compromissos dos Líderes</h2><table><thead><tr><th>Semana</th><th>Líder</th><th>Compromisso</th><th>Fez?</th></tr></thead><tbody>
+          ${D.cp.filter(c => R.ws.includes(c.semana)).sort((a, b) => a.semana - b.semana).map(c => `<tr><td>${c.semana}</td><td><b>${esc(quem(c.pessoa_id))}</b></td><td>${esc(c.texto)}</td><td><span class="tg ${c.cumprido === true ? 'g' : c.cumprido === false ? 'r' : 'c'}">${c.cumprido === true ? 'Sim' : c.cumprido === false ? 'Não' : 'A Conferir'}</span></td></tr>`).join('')}</tbody></table></div>` : ''}
+
+        ${ver('obs') ? `<div class="sec"><h2>Observações do Consultor</h2><textarea class="obs" id="obs" placeholder="Escreva Aqui as Conclusões e os Próximos Passos (Aparece no PDF)">${esc(obs)}</textarea></div>` : ''}
+
+        <div class="rod"><span>Farm Plan · Gesta'Up · Gestão 360°${autor ? ' · ' + esc(autor) : ''}</span><span>Gerado em ${new Date().toLocaleDateString('pt-BR')}</span></div>
+      </div>`;
+    $('mes').onchange = (e) => { mes = +e.target.value; try { obs = localStorage.getItem(`fp-obs-${fz}-${ANO}-${mes}`) || ''; } catch {} desenhar(); };
+    $('pdf').onclick = () => { const t = document.title; document.title = `Relatório ${MESES_LONGO[mes]} ${ANO} - ${tc(fazenda.nome)}`; setTimeout(() => { print(); document.title = t; }, 100); };
+    document.querySelectorAll('[data-sec]').forEach(c => c.onchange = () => { c.checked ? mostrar.add(c.dataset.sec) : mostrar.delete(c.dataset.sec); desenhar(); });
+    const o = $('obs'); if (o) { o.oninput = () => { obs = o.value; o.style.height = 'auto'; o.style.height = o.scrollHeight + 'px'; try { localStorage.setItem(`fp-obs-${fz}-${ANO}-${mes}`, obs); } catch {} }; o.oninput(); }
+  }
+
+  // Entrada
+  eu = await quemSouEu();
+  montarMenu('relatorio.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.includes(eu.papel)) $('aviso').textContent = 'O Relatório Mensal É para Gestor, Administrativo e Consultor.';
+  else {
+    fz = eu.fazenda.id;
+    const { data: f } = await supabase.from('fazendas').select('*').eq('id', fz).maybeSingle();
+    fazenda = f || eu.fazenda;
+    $('nomeFazenda').textContent = tc(fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    autor = (PAPEL[eu.papel] || '') + ' ' + nome;
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    // Mês padrão: o mês passado (o relatório costuma ser feito no começo do mês seguinte)
+    const atual = ANO === ANO_HOJE ? mesDa(Math.max(1, Math.min(SEMANAS_NO_ANO, W_HOJE))) : ANO < ANO_HOJE ? 11 : 0;
+    mes = ANO === ANO_HOJE && atual > 0 && new Date().getDate() <= 10 ? atual - 1 : atual;
+    try { obs = localStorage.getItem(`fp-obs-${fz}-${ANO}-${mes}`) || ''; } catch {}
+    await carregar();
+    aoMudar(fz, ['baixas', 'planejamento', 'fora_do_plano', 'avaliacoes', 'indicador_valores', 'compromissos'], carregar);   // o que a equipe faz no app aparece aqui sozinho
+  }
+
+  // 📊 Excel do relatório (o mesmo conteúdo do PDF, com números de verdade)
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-voltar]')) { if (history.length > 1 && document.referrer.startsWith(location.origin)) history.back(); else location.href = 'relatorios.html'; } });
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-xls]'); if (!b) return; b.disabled = true; const txt = b.textContent; b.textContent = 'Montando…';
+    import('./excel.js').then(m => m.exportarExcel({ titulo: (document.querySelector('#tela h1, h1')?.textContent || document.title).trim() })).catch(er => alert(er.message)).finally(() => { b.disabled = false; b.textContent = txt; }); });
+</script>
+</body>
+</html>

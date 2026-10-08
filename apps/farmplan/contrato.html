@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Contrato de Resultados (modelo da planilha) com PDF -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contrato de Resultados · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    @media screen and (max-width:640px){.folha{overflow-x:auto}}
+
+    /* ===== Folha do contrato (A4, igual ao modelo da planilha) ===== */
+    .folha{--az:#0E3A55;--vd:#12B04C;--ln:#C9D1D6;--cz:#F2F4F5;background:#fff;color:#16232A;width:794px;max-width:100%;margin:0 auto 24px;padding:18px 22px;border:1px solid var(--ln);font-family:"Public Sans",Arial,sans-serif;font-size:10px;line-height:1.3;box-shadow:var(--shadow)}
+    .folha *{box-sizing:border-box}
+    .folha .faixa{height:6px;background:linear-gradient(var(--az) 0 60%,var(--vd) 60% 100%);margin:-18px -22px 10px}
+    .folha .faixa.b{margin:10px -22px -18px;background:linear-gradient(var(--vd) 0 40%,var(--az) 40% 100%)}
+    .folha .cab{display:flex;align-items:center;gap:14px;border:1px solid var(--ln);padding:6px 10px}
+    .folha .cab img{height:44px}
+    .folha .cab h1{flex:1;text-align:center;font-size:14px;font-style:italic;font-weight:800;margin:0;color:#16232A;font-family:"Public Sans",Arial,sans-serif;letter-spacing:0}
+    .folha table{border-collapse:collapse;width:100%;table-layout:fixed}
+    .folha td,.folha th{border:1px solid var(--ln);padding:3px 5px;vertical-align:middle}
+    .folha th{font-size:8.5px;font-weight:800;font-style:italic;text-transform:uppercase;text-align:center}
+    .folha .az{background:var(--az);color:#fff}
+    .folha .vd{background:var(--vd);color:#fff}
+    .folha .cz{background:var(--cz)}
+    .folha .rot{font-weight:800;font-style:italic;font-size:8.5px;text-align:right;border:0;white-space:nowrap}
+    .folha .cx{border:1px solid var(--ln);background:#fff}
+    .folha .c{text-align:center}
+    .folha .r{text-align:right}
+    .folha .b{font-weight:800}
+    .folha .grande{font-size:13px;font-weight:800;font-style:italic;text-align:center}
+    .folha .txt{font-size:8px;text-align:center;vertical-align:top;white-space:pre-line;height:150px}
+    .folha .lista td{height:21px;font-size:9px}
+    .folha .lista .n{width:22px;text-align:right;border-right:0}
+    .folha .lista .nm{border-left:0}
+    .folha .lista .med{width:38px;text-align:center;font-weight:800}
+    .folha .lista .tri{width:28px;text-align:center;font-size:8.5px}
+    .folha .concord{border:1px solid var(--ln);margin-top:-1px}
+    .folha .concord p{margin:0;padding:14px 10px 6px;text-align:center;font-size:10px}
+    .folha .ass{text-align:center;padding:26px 0 10px;font-size:9.5px}
+    .folha .ass b{display:block;font-style:italic;margin-top:4px}
+    .folha .vazio{color:#9AA5AB}
+    .folha .n-g{background:#E3F4E8!important;color:#13703A!important}
+    .folha .n-a{background:#FFF1D6!important;color:#8A5A00!important}
+    .folha .n-r{background:#FBE3DF!important;color:#B03A28!important}
+    .folha .evo{display:grid;grid-template-columns:1.25fr 1fr;gap:0;margin-top:6px;border:1px solid var(--ln)}
+    .folha .evo > div{padding:6px 10px}
+    .folha .evo > div + div{border-left:1px solid var(--ln)}
+    .folha .evo h5{margin:0 0 4px;font-size:8.5px;font-weight:800;font-style:italic;text-transform:uppercase;color:#16232A}
+    .folha .evo ul{margin:0;padding:0;list-style:none;font-size:8.5px;line-height:1.55}
+    .folha .evo li b{display:inline-block;min-width:30px;text-align:center;border-radius:3px;margin-right:5px}
+    .folha .legn{display:flex;gap:10px;justify-content:flex-end;font-size:7.5px;color:#6E787C;margin-top:3px}
+    .folha .legn i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px;vertical-align:-1px}
+    .controles{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+    .controles .sel select{max-width:210px}
+    @media screen and (min-width:1280px){#folhas .folha{zoom:1.18}}
+    @media screen and (min-width:1600px){#folhas .folha{zoom:1.35}}
+    @media print{
+      @page{size:A4 portrait;margin:7mm}
+      body{background:#fff!important}
+      .side,.mtop,.phead,.controles,.toast,#aviso{display:none!important}
+      .shell{display:block}
+      .main{padding:0!important}
+      .folha{box-shadow:none;margin:0 auto;width:100%;border:0;page-break-after:always;break-after:page;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .folha:last-child{page-break-after:auto;break-after:auto}
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="contrato.html" selected>Contrato de Resultados</option><option value="avaliacao.html">Avaliação de Desempenho</option><option value="index.html">Tarefas da Semana</option><option value="cadastros.html">Cadastros</option></select></div>
+    <div class="phead"><div><h1 id="tituloC" title="Modelo da Planilha · Notas Puxadas da Avaliação de Desempenho">Contrato de Resultados <small id="pesoInfo" style="font-size:12.5px;font-weight:500;color:var(--muted);font-family:var(--fb);letter-spacing:0"></small></h1><div class="resumo" id="resumoC"></div></div>
+    <div class="acts controles escondido" id="controles">
+      <button class="btn" data-cnav="-1" title="Colaborador Anterior">‹</button><label class="sel">Colaborador<select id="quem"></select></label><button class="btn" data-cnav="1" title="Próximo Colaborador">›</button>
+      <label class="sel" style="padding:7px 10px;gap:6px" title="Incluir Salário e Bonificação no Contrato"><input type="checkbox" id="comValores" checked> Com Salário</label>
+      <button class="btn dark" id="pdf">📄 Gerar PDF</button>
+      <button class="btn" id="pdfTodos" title="Gerar PDF de Todos os Colaboradores">📄 Todos</button>
+      <button class="btn" data-xls="1">📊 Excel</button>
+      <a class="btn" id="editar" style="text-decoration:none;color:inherit" href="cadastros.html?aba=colab">✎ Editar</a>
+    </div></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <div id="folhas"></div>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, SEMANAS_NO_ANO, PAPEL, tc, esc, quemSouEu, buscarTudo, montarMenu, inicioDaSemana, media } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  const MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  let PESO_TAREFAS = 0.7, PESO_COMPORT = 0.3;  // vem da fazenda (Cadastros › Geral)   // igual à planilha: 70% tarefas + 30% comportamentos
+  let eu, fz, fazendaNome = '', pessoas = [], setores = [], cargos = [], remun = {}, itens = [], funcoes = {}, criterios = {}, notas = {};
+
+  function aviso(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  const n2 = (v) => v == null || isNaN(v) ? '' : Number(v).toFixed(2).replace('.', ',');
+  const rs = (v) => v == null || isNaN(v) ? '' : 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const mesDaSemana = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();   // mês da quinta-feira
+
+  async function carregar() {
+    const t = (tab, sel = '*') => buscarTudo(() => supabase.from(tab).select(sel).eq('fazenda_id', fz)).catch(() => []);
+    const [p, s, c, r, i, f, cr, a] = await Promise.all([
+      t('pessoas'), t('setores', 'id, nome'), t('cargos'), t('remuneracao'),
+      buscarTudo(() => supabase.from('contrato_itens').select('*').eq('fazenda_id', fz).eq('ativo', true).order('ordem')).catch(() => []),
+      t('funcoes', 'id, nome'), t('criterios', 'id, nome'),
+      buscarTudo(() => supabase.from('avaliacoes').select('item_id, semana, nota, nsa').eq('fazenda_id', fz).eq('ano', ANO)).catch(() => [])
+    ]);
+    pessoas = p.filter(x => x.ativo).sort((x, y) => x.apelido.localeCompare(y.apelido, 'pt'));
+    setores = s; cargos = c; itens = i;
+    remun = {}; r.forEach(x => remun[x.pessoa_id] = x);
+    funcoes = {}; f.forEach(x => funcoes[x.id] = x.nome);
+    criterios = {}; cr.forEach(x => criterios[x.id] = x.nome);
+    notas = {}; a.forEach(x => { if (!x.nsa && x.nota != null) notas[x.item_id + '|' + x.semana] = +x.nota; });
+    const comContrato = pessoas.filter(x => itens.some(it => it.pessoa_id === x.id));
+    $('quem').innerHTML = comContrato.map(x => `<option value="${x.id}">${esc(tc(x.apelido))} · ${esc(tc(x.cargo || '—'))}</option>`).join('')
+      + (pessoas.length > comContrato.length ? '<optgroup label="Sem Contrato Ainda">' + pessoas.filter(x => !comContrato.includes(x)).map(x => `<option value="${x.id}">${esc(tc(x.apelido))}</option>`).join('') + '</optgroup>' : '');
+    const pedido = new URLSearchParams(location.search).get('p');
+    if (pedido && pessoas.some(x => x.id === pedido)) $('quem').value = pedido;
+    $('aviso').classList.add('escondido'); $('controles').classList.remove('escondido');
+    desenhar();
+  }
+
+  // ---------- Cálculos (fórmulas da planilha) ----------
+  const semanasDoMes = (m) => { const ws = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (mesDaSemana(w) === m && inicioDaSemana(w).getFullYear() <= ANO) ws.push(w); return ws; };
+  const mediaItem = (it, semanas) => media(semanas.map(w => notas[it.id + '|' + w]).filter(v => v != null));
+  const mediaBloco = (lista, semanas) => media(lista.map(it => mediaItem(it, semanas)).filter(v => v != null));
+  function notaPonderada(t, c) { if (t == null) return c; if (c == null) return t; return t * PESO_TAREFAS + c * PESO_COMPORT; }
+  function calcular(pid) {
+    const tar = itens.filter(i => i.pessoa_id === pid && i.tipo === 'tarefa'), com = itens.filter(i => i.pessoa_id === pid && i.tipo === 'comportamento');
+    const sMes = MESES.map((_, m) => semanasDoMes(m));
+    const sTri = [0, 1, 2, 3].map(q => sMes.slice(q * 3, q * 3 + 3).flat());
+    const mensal = sMes.map(ws => notaPonderada(mediaBloco(tar, ws), mediaBloco(com, ws)));
+    const trimestral = [0, 1, 2, 3].map(q => media(mensal.slice(q * 3, q * 3 + 3).filter(v => v != null)));
+    const escore = media(trimestral.filter(v => v != null));
+    const linha = (it) => { const tri = sTri.map(ws => mediaItem(it, ws)); return { it, tri, med: media(tri.filter(v => v != null)) }; };
+    const L = { tar: tar.map(linha), com: com.map(linha) };
+    const triBloco = (ls) => [0, 1, 2, 3].map(q => media(ls.map(l => l.tri[q]).filter(v => v != null)));
+    return { mensal, trimestral, escore, L, triT: triBloco(L.tar), triC: triBloco(L.com),
+             medT: media(L.tar.map(l => l.med).filter(v => v != null)), medC: media(L.com.map(l => l.med).filter(v => v != null)) };
+  }
+  const cargoDe = (p) => cargos.find(c => c.nome.trim().toLowerCase() === String(p.cargo || '').trim().toLowerCase()) || {};
+  function superiorDe(p) {
+    const c = cargoDe(p); if (c.superior) return tc(c.superior);
+    const s = pessoas.find(x => x.id === p.superior_id); return s ? tc(s.cargo || s.apelido) : '';
+  }
+
+  // Cor da nota (mesma régua do Painel e da Equipe do Mês): 9,3 ou mais verde · 8,5 a 9,3 amarelo · abaixo de 8,5 vermelho
+  const corN = (v) => v == null ? '' : v >= 9.3 ? 'n-g' : v >= 8.5 ? 'n-a' : 'n-r';
+  function evolucao(mensal) {
+    const W = 300, H = 62, bw = W / 12, y = (v) => H - 12 - Math.max(0, (v - 5) / 5) * (H - 18);
+    const cor = (v) => v >= 9.3 ? '#12B04C' : v >= 8.5 ? '#E0A100' : '#C9452F';
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px">
+      <line x1="0" x2="${W}" y1="${y(8.5)}" y2="${y(8.5)}" stroke="#C9452F" stroke-dasharray="3 2" stroke-width=".8"/><text x="${W - 2}" y="${y(8.5) - 2}" font-size="6" text-anchor="end" fill="#C9452F">8,5</text>
+      ${mensal.map((v, m) => `${v != null ? `<rect x="${m * bw + 4}" y="${y(v)}" width="${bw - 8}" height="${H - 12 - y(v)}" rx="2" fill="${cor(v)}"/><text x="${m * bw + bw / 2}" y="${y(v) - 2}" font-size="6.5" font-weight="700" text-anchor="middle" fill="#16232A">${n2(v)}</text>` : ''}
+        <text x="${m * bw + bw / 2}" y="${H - 2}" font-size="6.5" text-anchor="middle" fill="#6E787C">${MESES[m]}</text>`).join('')}</svg>`;
+  }
+
+  // ---------- A folha do contrato ----------
+  function folha(p, comValores) {
+    const k = calcular(p.id), c = cargoDe(p), rm = remun[p.id] || {};
+    const nome = tc(p.nome || p.apelido), setor = tc(setores.find(s => s.id === p.setor_id)?.nome || '');
+    const sal = rm.salario_base != null ? +rm.salario_base : null, pct = rm.bonus_pct != null ? +rm.bonus_pct : 50;
+    const bonusTri = sal != null ? sal * pct / 100 : null;
+    const desemp = k.trimestral.map(n => n != null && bonusTri != null ? bonusTri * n / 10 : null);
+    const totalBonus = desemp.reduce((a, v) => a + (v || 0), 0);
+    const anual = sal != null ? sal * 13 + totalBonus : null;
+    const V = (v) => comValores ? v : '—';
+    const mes = (m) => `<td class="c ${corN(k.mensal[m])}" style="height:20px">${n2(k.mensal[m])}</td>`;
+    const lista = (ls, triB, med, cor, titulo) => {
+      const linhas = []; for (let i = 0; i < Math.max(10, ls.length); i++) {
+        const l = ls[i], nomeIt = l ? (l.it.tipo === 'tarefa' ? tc(funcoes[l.it.funcao_id] || l.it.texto) : (criterios[l.it.criterio_id] || '')) : '';
+        linhas.push(`<tr><td class="n">${i + 1})</td><td class="nm">${esc(nomeIt)}</td><td class="med ${cor}">${l ? n2(l.med) : ''}</td>${[0,1,2,3].map(q => `<td class="tri ${l ? corN(l.tri[q]) : ''}">${l ? n2(l.tri[q]) : ''}</td>`).join('')}</tr>`);
+      }
+      return `<table class="lista"><colgroup><col style="width:22px"><col><col style="width:40px"><col style="width:30px"><col style="width:30px"><col style="width:30px"><col style="width:30px"></colgroup>
+        <tr><th colspan="2" rowspan="2" class="${cor}" style="font-size:9px">${titulo}</th><th>Média</th>${[1,2,3,4].map(q => `<th>${q}ª Tri</th>`).join('')}</tr>
+        <tr><td class="med ${cor}">${n2(med)}</td>${triB.map(v => `<td class="tri b">${n2(v)}</td>`).join('')}</tr>
+        ${linhas.join('')}</table>`;
+    };
+    return `<div class="folha">
+      <div class="faixa"></div>
+      <div class="cab"><img src="logo.png" alt="Gesta'Up"><h1>${esc(nome)} - Contrato de Resultados - ${esc(tc(fazendaNome))}</h1><span class="fpmark"><img src="icon-192.png" alt="Farm Plan"></span></div>
+      <table style="margin-top:6px">
+        <colgroup><col style="width:13%"><col style="width:27%"><col style="width:13%"><col style="width:27%"><col style="width:20%"></colgroup>
+        <tr><td class="rot">CARGO:</td><td class="cx">${esc(tc(p.cargo || ''))}</td><td class="rot">COLABORADOR:</td><td class="cx cz">${esc(nome)}</td>
+          <td class="cx r" style="font-size:12px">${comValores && anual != null ? '<span style="font-size:7.5px;color:#6E787C">MÉDIA MENSAL </span>' + rs(anual / 12) : ''}</td></tr>
+        <tr><td class="rot">SUPERIOR<br>IMEDIATO:</td><td class="cx">${esc(superiorDe(p))}</td><td class="rot">SETOR:</td><td class="cx">${esc(setor)}</td><td class="cx"></td></tr>
+      </table>
+      <table style="margin-top:6px">
+        <colgroup><col style="width:15%"><col style="width:15%"><col style="width:15%"><col style="width:13%"><col style="width:9%"><col span="6" style="width:5.5%"></colgroup>
+        <tr><th>Atitudes Desejáveis</th><th>Experiência Desejáveis</th><th>Conhecimentos Desejáveis</th>
+          <th class="az">Escore Individual</th><th class="az grande" style="font-size:12px">${n2(k.escore)}</th><th colspan="6" class="az">Avaliação Mensal · <span style="font-size:10px">${esc(setor || 'Setor')}</span></th></tr>
+        <tr><td class="txt" rowspan="4">${esc(c.atitudes || '')}</td><td class="txt" rowspan="4">${esc(c.experiencia || '')}</td><td class="txt" rowspan="4">${esc(c.conhecimentos_desej || '')}</td>
+          <th colspan="2">Salário + Bonificação Anual</th>${MESES.slice(0, 6).map(m => `<th>${m}</th>`).join('')}</tr>
+        <tr><td colspan="2" class="grande">${V(rs(anual))}</td>${[0,1,2,3,4,5].map(mes).join('')}</tr>
+        <tr><th colspan="2">Salário Base</th>${MESES.slice(6).map(m => `<th>${m}</th>`).join('')}</tr>
+        <tr><td colspan="2" class="grande">${V(rs(sal))}</td>${[6,7,8,9,10,11].map(mes).join('')}</tr>
+      </table>
+      <table style="margin-top:6px">
+        <colgroup><col style="width:24%"><col style="width:15.2%"><col style="width:15.2%"><col style="width:15.2%"><col style="width:15.2%"><col style="width:15.2%"></colgroup>
+        <tr><th class="az">Bonificação Anual · ${pct}% do Salário por Trimestre</th>${[1,2,3,4].map(q => `<th class="az">${q}ª Tri</th>`).join('')}<th class="az">Total</th></tr>
+        <tr><td class="b">Valor Possível</td>${[0,1,2,3].map(() => `<td class="c">${V(rs(bonusTri))}</td>`).join('')}<td class="c b">${V(rs(bonusTri != null ? bonusTri * 4 : null))}</td></tr>
+        <tr><td class="b">Nota Trimestral</td>${k.trimestral.map(v => `<td class="c b ${corN(v)}">${n2(v)}</td>`).join('')}<td class="c b ${corN(k.escore)}">${n2(k.escore)}</td></tr>
+        <tr><td class="b az">Avaliação de Desempenho (R$)</td>${desemp.map(v => `<td class="c">${V(rs(v))}</td>`).join('')}<td class="c b">${V(rs(totalBonus))}</td></tr>
+      </table>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:6px">
+        ${lista(k.L.tar, k.triT, k.medT, 'az', 'Atribuições e Tarefas')}
+        ${lista(k.L.com, k.triC, k.medC, 'vd', 'Comportamentos e Atitudes')}
+      </div>
+      <div class="legn"><span><i style="background:#E3F4E8;border:1px solid #13703A"></i>9,3 ou Mais</span><span><i style="background:#FFF1D6;border:1px solid #8A5A00"></i>8,5 a 9,3</span><span><i style="background:#FBE3DF;border:1px solid #B03A28"></i>Abaixo de 8,5</span></div>
+      ${(() => { const todos = [...k.L.tar, ...k.L.com].filter(l => l.med != null).map(l => ({ n: l.it.tipo === 'tarefa' ? tc(funcoes[l.it.funcao_id] || l.it.texto) : (criterios[l.it.criterio_id] || ''), v: l.med })).sort((a, b) => b.v - a.v);
+        const fortes = todos.filter(x => x.v >= 9.3).slice(0, 3), fracos = todos.filter(x => x.v < 9.3).reverse().slice(0, 3);
+        return `<div class="evo"><div><h5>Evolução da Nota Mês a Mês</h5>${evolucao(k.mensal)}</div>
+          <div><h5>Pontos Fortes</h5><ul>${fortes.map(x => `<li><b class="${corN(x.v)}">${n2(x.v)}</b>${esc(x.n)}</li>`).join('') || `<li class="vazio">${todos.length ? 'Nenhum Item com 9,3 ou Mais Ainda' : 'Ainda Sem Notas'}</li>`}</ul>
+          <h5 style="margin-top:6px">Onde Melhorar</h5><ul>${fracos.map(x => `<li><b class="${corN(x.v)}">${n2(x.v)}</b>${esc(x.n)}</li>`).join('') || '<li class="vazio">Nenhum Item Abaixo de 9,3 👏</li>'}</ul></div></div>`; })()}
+      <div class="concord"><div class="az" style="text-align:center;font-weight:800;font-style:italic;font-size:9px;padding:4px;background:#fff;color:#16232A;border-bottom:1px solid #C9D1D6">CONCORDÂNCIA COLABORADOR</div>
+        <p>Eu, ${esc(nome)}, compreendo o compromisso assumido e as responsabilidades a mim atribuídas. Me comprometo a executar com dedicação e empenho todas as tarefas, buscando ajuda quando necessário e auxiliando no cumprimento das metas e desafios da empresa.</p>
+        <div class="ass">Ass.: ______________________________________________<b>${esc(nome)}</b></div></div>
+      <div class="faixa b"></div>
+    </div>`;
+  }
+
+  function desenhar() {
+    const p = pessoas.find(x => x.id === $('quem').value);
+    $('folhas').innerHTML = p ? folha(p, $('comValores').checked) : '<div class="card empty">Nenhum Colaborador.</div>';
+    if (p) {
+      const k = calcular(p.id), rm = remun[p.id] || {}, sal = rm.salario_base != null ? +rm.salario_base : null, pct = rm.bonus_pct != null ? +rm.bonus_pct : 50;
+      const bt = sal != null ? sal * pct / 100 : null, ganho = k.trimestral.reduce((a, n) => a + (n != null && bt != null ? bt * n / 10 : 0), 0);
+      const nMeses = k.mensal.filter(v => v != null).length, cls = k.escore == null ? '' : k.escore >= 9.3 ? 'rm' : k.escore >= 8.5 ? 'rf' : 'ratr';
+      const todos = [...k.L.tar, ...k.L.com].filter(l => l.med != null).sort((a, b) => a.med - b.med);
+      const nomeIt = (l) => l.it.tipo === 'tarefa' ? tc(funcoes[l.it.funcao_id] || l.it.texto) : (criterios[l.it.criterio_id] || '');
+      const baixos = todos.filter(l => l.med < 8.5);
+      $('resumoC').innerHTML = `<span class="rc ${cls}">⭐ <b>${n2(k.escore) || '—'}</b> Escore</span>
+        <span class="rc">📅 <b>${nMeses}</b> ${nMeses === 1 ? 'Mês Avaliado' : 'Meses Avaliados'}</span>
+        ${$('comValores').checked && bt != null ? `<span class="rc rm" title="Possível no Ano: ${rs(bt * 4)}">💰 <b>${rs(ganho)}</b> de Bônus</span>` : ''}
+        <span class="rc ${baixos.length ? 'ratr' : 'rm'}" title="${esc(baixos.map(l => nomeIt(l) + ' (' + n2(l.med) + ')').join(' · ') || 'Todos os Itens com 8,5 ou Mais')}">⚠️ <b>${baixos.length}</b> ${baixos.length === 1 ? 'Item Abaixo de 8,5' : 'Itens Abaixo de 8,5'}</span>`;
+    } else $('resumoC').innerHTML = '';
+    $('editar').href = 'cadastros.html?aba=colab';
+  }
+  $('quem').onchange = desenhar; $('comValores').onchange = desenhar;
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-cnav]'); if (!b) return; const s = $('quem'), i = s.selectedIndex + +b.dataset.cnav; if (i < 0 || i >= s.options.length) return; s.selectedIndex = i; desenhar(); });
+  const imprimir = (titulo) => { const t = document.title; document.title = titulo; setTimeout(() => { window.print(); document.title = t; }, 150); };
+  $('pdf').onclick = () => { const p = pessoas.find(x => x.id === $('quem').value); imprimir('Contrato de Resultados - ' + tc(p.nome || p.apelido)); };
+  $('pdfTodos').onclick = () => {
+    const lista = pessoas.filter(x => itens.some(it => it.pessoa_id === x.id));
+    $('folhas').innerHTML = lista.map(p => folha(p, $('comValores').checked)).join('');
+    aviso(lista.length + ' Contratos Prontos · Escolha "Salvar como PDF"');
+    imprimir('Contratos de Resultados - ' + tc(fazendaNome));
+    addEventListener('afterprint', desenhar, { once: true });
+  };
+
+  // Entrada (fica no fim de propósito)
+  eu = await quemSouEu();
+  montarMenu('contrato.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.includes(eu.papel)) $('aviso').textContent = 'O Contrato de Resultados é Só para Gestor, Administrativo e Consultor.';
+  else {
+    fz = eu.fazenda.id; fazendaNome = eu.fazenda.nome;
+    $('nomeFazenda').textContent = tc(fazendaNome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    const { data: fzd } = await supabase.from('fazendas').select('peso_tarefas').eq('id', fz).maybeSingle();
+    if (fzd?.peso_tarefas != null) { PESO_TAREFAS = fzd.peso_tarefas / 100; PESO_COMPORT = 1 - PESO_TAREFAS; }
+    $('pesoInfo').textContent = ` · Nota = Funções ${Math.round(PESO_TAREFAS * 100)}% + Comportamentos ${Math.round(PESO_COMPORT * 100)}%`;
+    await carregar();
+  }
+
+  // 📊 Excel do relatório (o mesmo conteúdo do PDF, com números de verdade)
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-xls]'); if (!b) return; b.disabled = true; const txt = b.textContent; b.textContent = 'Montando…';
+    import('./excel.js').then(m => m.exportarExcel({ titulo: (document.querySelector('#tela h1, h1')?.textContent || document.title).trim() })).catch(er => alert(er.message)).finally(() => { b.disabled = false; b.textContent = txt; }); });
+</script>
+</body>
+</html>

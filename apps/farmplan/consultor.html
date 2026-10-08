@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Painel do Consultor (todas as fazendas juntas) -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel do Consultor · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    .farol{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;white-space:nowrap}
+    .farol i{width:12px;height:12px;border-radius:50%;display:inline-block}
+    .mini{display:flex;align-items:center;gap:8px;min-width:150px}
+    .mini .mbar{flex:1;height:9px}
+    .mini b{font-family:var(--fd);font-size:15px;min-width:42px;text-align:right}
+    .tbl th[data-ord]{cursor:pointer} .tbl th[data-ord]:hover{color:var(--ink)}
+    .tbl td{vertical-align:middle}
+    .num0{color:var(--muted)}
+    @media print{@page{size:A4 landscape;margin:8mm}.side,.mtop,.acts,.filters,.noprint{display:none!important}.shell{display:block}.main{padding:0!important}.card{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}.scroll{overflow:visible}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="consultor.html" selected>Painel do Consultor</option><option value="painel.html">Painel</option></select></div>
+    <div id="aviso" class="empty">Carregando as Fazendas…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, SEMANAS_NO_ANO, PAPEL, MESES_LONGO, tc, esc, semanaDe, inicioDaSemana, quemSouEu, buscarTudo, montarMenu, trocarFazenda, nf, media, ddmm, diaDaSemana } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const HOJE = new Date(), W = semanaDe(HOJE), D = (HOJE.getDay() + 6) % 7;
+  const mesDa = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();
+  const semanasDoMes = (m) => { const r = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (mesDa(w) === m) r.push(w); return r; };
+  const WS = semanasDoMes(mesDa(W)).filter(w => w <= W);                 // semanas do mês até hoje
+  const WMES_ANT = semanasDoMes((mesDa(W) + 11) % 12);
+  let eu, linhas = [], ordem = 'atencao', soAtencao = false, consultores = null, recado = '', editando = null;
+
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  const lote = (ids, f) => Promise.all(ids.reduce((acc, _, i) => i % 20 ? acc : [...acc, ids.slice(i, i + 20)], []).map(f)).then(r => r.flat());
+
+  async function carregar() {
+    const fzs = (eu.fazendas || []).filter(f => f.papel === 'consultor');
+    const ids = fzs.map(f => f.id);
+    const semNotas = [...new Set([...WS, ...WMES_ANT])];
+    const [det, at, pl, bx, fp, it, av] = await Promise.all([
+      buscarTudo(() => supabase.from('fazendas').select('id, nome, municipio, uf, meta_mes').in('id', ids)),
+      lote(ids, (g) => buscarTudo(() => supabase.from('atividades').select('id, fazenda_id, dias').in('fazenda_id', g))),
+      lote(ids, (g) => buscarTudo(() => supabase.from('planejamento').select('fazenda_id, atividade_id, semana, status, observacao').in('fazenda_id', g).eq('ano', ANO).in('semana', WS))),
+      lote(ids, (g) => buscarTudo(() => supabase.from('baixas').select('fazenda_id, atividade_id, semana, dia, feito, registrado_em').in('fazenda_id', g).eq('ano', ANO).in('semana', WS))),
+      lote(ids, (g) => buscarTudo(() => supabase.from('fora_do_plano').select('fazenda_id, tipo, semana').in('fazenda_id', g).eq('ano', ANO).in('semana', WS)).catch(() => [])),
+      lote(ids, (g) => buscarTudo(() => supabase.from('contrato_itens').select('id, fazenda_id').in('fazenda_id', g).eq('ativo', true)).catch(() => [])),
+      lote(ids, (g) => buscarTudo(() => supabase.from('avaliacoes').select('fazenda_id, semana, nota, nsa').in('fazenda_id', g).eq('ano', ANO).in('semana', semNotas)).catch(() => []))
+    ]);
+    try { await carregarAndamento(ids, det); } catch (e) { console.warn('Andamento:', e); andamento = []; }
+    const dias = {}; at.forEach(a => dias[a.id] = a.dias || []);
+    linhas = det.map(f => {
+      const P = pl.filter(p => p.fazenda_id === f.id), B = {}; let ultima = null;
+      bx.filter(b => b.fazenda_id === f.id).forEach(b => { B[b.semana + '|' + b.atividade_id + '|' + b.dia] = b; if (b.registrado_em && (!ultima || b.registrado_em > ultima)) ultima = b.registrado_em; });
+      const feito = (p, d) => { const b = B[p.semana + '|' + p.atividade_id + '|' + d]; return b ? b.feito : p.status === 2; };
+      // Meta do mês: tarefas-dia já vencidas com baixa
+      let pln = 0, dn = 0;
+      P.forEach(p => { const lim = p.semana < W ? 7 : D + 1; (dias[p.atividade_id] || []).forEach((v, d) => { if (v && d < lim) { pln++; if (feito(p, d)) dn++; } }); });
+      const pct = pln ? Math.round(dn / pln * 100) : null, meta = f.meta_mes ?? 80;
+      // Semana atual
+      const S = P.filter(p => p.semana === W);
+      const concl = S.filter(p => p.status === 2 || ((dias[p.atividade_id] || []).some(Boolean) && (dias[p.atividade_id] || []).every((v, d) => !v || feito(p, d)))).length;
+      const atras = S.filter(p => p.status !== 2 && (p.status === 4 || (p.observacao || '').startsWith('Atrasada'))).length;
+      const semBx = S.filter(p => p.status !== 2 && (dias[p.atividade_id] || []).some((v, d) => v && d < D && !feito(p, d))).length;
+      const F = fp.filter(x => x.fazenda_id === f.id && x.semana === W);
+      const itensF = new Set(it.filter(i => i.fazenda_id === f.id).map(i => i.id));
+      const notaMes = (ws) => media(av.filter(a => a.fazenda_id === f.id && ws.includes(a.semana) && !a.nsa && a.nota != null).map(a => +a.nota));
+      const nota = notaMes(WS), notaAnt = notaMes(WMES_ANT);
+      const diasSemBaixa = ultima ? Math.floor((HOJE - new Date(ultima)) / 864e5) : null;
+      const farol = !P.length ? ['s1', 'Sem Plano'] : diasSemBaixa == null || diasSemBaixa >= 3 ? ['s4', 'Sem Uso no App'] : pct == null ? ['s1', '—'] : pct >= meta ? ['s2', 'Na Meta'] : pct >= meta - 20 ? ['s5', 'Atenção'] : ['s4', 'Abaixo da Meta'];
+      const peso = farol[0] === 's4' ? 0 : farol[0] === 's5' ? 1 : farol[0] === 's1' ? 2 : 3;
+      return { f, pct, meta, dn, pln, sem: S.length, concl, atras, semBx, imp: F.filter(x => x.tipo === 'imprevisto').length, fora: F.filter(x => x.tipo !== 'imprevisto').length,
+        nota, notaAnt, temContrato: itensF.size > 0, ultima, diasSemBaixa, farol, peso };
+    });
+    await carregarConsultores();
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+  // ---------- ANDAMENTO DA IMPLANTAÇÃO: o que falta em cada fazenda para a equipe usar o app ----------
+  let andamento = [], verProntas = false;
+  async function carregarAndamento(ids, det) {
+    const W2 = [W, W + 1].filter(w => w <= SEMANAS_NO_ANO);
+    const nada = () => [];
+    const [pes, eqs, ats, pls, ult, cfg, av] = await Promise.all([
+      lote(ids, (g) => buscarTudo(() => supabase.from('pessoas').select('id, fazenda_id, user_id, ativo').in('fazenda_id', g))).catch(nada),
+      lote(ids, (g) => buscarTudo(() => supabase.from('equipes').select('id, fazenda_id, lider_id').in('fazenda_id', g))).catch(nada),
+      lote(ids, (g) => buscarTudo(() => supabase.from('atividades').select('id, fazenda_id, executor_pessoa_id, executor_equipe_id, como_fazer').in('fazenda_id', g))).catch(nada),
+      lote(ids, (g) => buscarTudo(() => supabase.from('planejamento').select('fazenda_id, atividade_id').in('fazenda_id', g).eq('ano', ANO).in('semana', W2))).catch(nada),
+      Promise.all(ids.map(async id => { const r = await supabase.from('baixas').select('fazenda_id').eq('fazenda_id', id).limit(1); return r.data || []; })).then(r => r.flat(), nada),
+      (async () => { let r = await supabase.from('fazendas').select('id, email_relatorio, whatsapp_relatorio').in('id', ids); if (r.error) r = await supabase.from('fazendas').select('id, email_relatorio').in('id', ids); return r.data || []; })().catch(nada),
+      (async () => { const r = await supabase.rpc('avisos_ligados', { p_fazendas: ids }); return r.error ? null : (Array.isArray(r.data) ? r.data : []); })().catch(() => null)
+    ]);
+    const temBaixa = new Set(ult.map(b => b.fazenda_id)), cf = Object.fromEntries(cfg.map(c => [c.id, c]));
+    const comAviso = av ? new Set(av.map(a => a.pessoa_id)) : null;
+    andamento = det.map(f => {
+      const P = pes.filter(p => p.fazenda_id === f.id && p.ativo), comLogin = P.filter(p => p.user_id);
+      const E = eqs.filter(q => q.fazenda_id === f.id);
+      const noPlano = new Set(pls.filter(x => x.fazenda_id === f.id).map(x => x.atividade_id));
+      const A = ats.filter(a => a.fazenda_id === f.id && noPlano.has(a.id));
+      const semQuem = A.filter(a => !a.executor_pessoa_id && !a.executor_equipe_id).length;
+      const sem5M = A.filter(a => !String(a.como_fazer?.m2 || '').trim()).length;
+      const semAviso = comAviso ? comLogin.filter(p => !comAviso.has(p.id)).length : null;
+      const c = cf[f.id] || {};
+      const it = [
+        ['👥', 'Colaboradores', P.length > 0, 'Nenhum Colaborador', 'cadastros.html?aba=colab'],
+        ['🔑', 'Logins', P.length > 0 && comLogin.length === P.length, `${P.length - comLogin.length} Sem Login`, 'cadastros.html?aba=colab'],
+        ['⭐', 'Líderes', E.every(q => q.lider_id), `${E.filter(q => !q.lider_id).length} ${E.filter(q => !q.lider_id).length === 1 ? 'Equipe' : 'Equipes'} Sem Líder`, 'cadastros.html?aba=equipes'],
+        ['🔔', 'Avisos', semAviso === null ? null : comLogin.length > 0 && semAviso === 0, semAviso === null ? 'Falta Rodar o SQL 031' : comLogin.length ? `${semAviso} Sem Aviso Ligado` : 'Ninguém com Login', 'aplicativo.html'],
+        ['📅', 'Plano', A.length > 0, `Sem Plano nas Semanas ${W2.join(' e ')}`, 'plano.html'],
+        ['🙋', 'Quem Faz', A.length > 0 && semQuem === 0, A.length ? `${semQuem} Sem Quem Faz` : 'Sem Plano', 'plano.html'],
+        ['📝', '5M', A.length > 0 && sem5M === 0, A.length ? `${sem5M} Sem 5M` : 'Sem Plano', 'cadastros.html?aba=cincom'],
+        ['📧', 'Relatório', !!(c.email_relatorio || c.whatsapp_relatorio), 'Sem E-mail ou WhatsApp do Relatório', 'cadastros.html?aba=geral'],
+        ['✅', 'Primeira Baixa', temBaixa.has(f.id), 'Nenhuma Baixa no App Ainda', 'painel.html']
+      ];
+      // Esconde o que depende de algo que ainda falta (ex.: sem colaborador, não adianta cobrar login)
+      const dep = { 1: 0, 3: 1, 5: 4, 6: 4 }; it.forEach((x, i) => { x[5] = dep[i] != null && it[dep[i]][2] === false; });
+      const conta = it.filter(i => i[2] !== null), ok = conta.filter(i => i[2]).length;
+      return { f, it, ok, total: conta.length, pct: conta.length ? Math.round(ok / conta.length * 100) : 0 };
+    }).sort((a, b) => a.pct - b.pct || a.f.nome.localeCompare(b.f.nome, 'pt'));
+  }
+  function blocoAndamento() {
+    if (!andamento.length) return '';
+    const faltam = andamento.filter(a => a.ok < a.total), prontas = andamento.filter(a => a.ok === a.total);
+    const L = verProntas ? andamento : faltam;
+    return `<div class="card" style="margin-top:18px" id="andamento"><div class="cardh"><h3>🚀 Andamento da Implantação</h3>
+        <small>O Que Falta em Cada Fazenda para a Equipe Usar o App · Clique no Que Falta para Resolver</small></div>
+      <style>.anl{display:grid;grid-template-columns:minmax(150px,1fr) 150px 3fr;gap:10px 16px;align-items:center;padding:12px 18px;border-top:1px solid var(--line2)}
+        @media (max-width:760px){.anl{grid-template-columns:1fr auto}.anl>.anf{grid-column:1/-1}}</style>
+      ${L.map(a => { const cor = a.pct === 100 ? 'var(--s2)' : a.pct >= 60 ? 'var(--s5)' : 'var(--s4)';
+        const falta = a.it.filter(i => i[2] !== true && !i[5]);
+        return `<div class="anl"><b style="cursor:pointer" data-abrir="${a.f.id}">${esc(tc(a.f.nome))}</b>
+          <div class="mini"><div class="mbar"><i style="width:${a.pct}%;background:${cor}"></i></div><b>${a.ok}/${a.total}</b></div>
+          <div class="anf" style="display:flex;flex-wrap:wrap;gap:6px">${falta.length ? falta.map(i => `<button class="btn sm" data-ir="${a.f.id}|${i[4]}" title="${i[1]}" style="border-color:${i[2] === null ? 'var(--line)' : 'var(--s4)'};color:${i[2] === null ? 'var(--muted)' : 'var(--s4)'};white-space:normal;text-align:left">${i[0]} ${esc(i[3])}</button>`).join('')
+            : '<span class="pill p3">✓ Tudo Pronto</span>'}</div></div>`; }).join('') || '<div class="empty" style="padding:20px">Todas as Fazendas Estão Prontas. 👏</div>'}
+      <div class="foot"><span>Confere: colaboradores, logins, líderes das equipes, avisos 🔔 ligados, plano e Quem Faz e 5M das Semanas ${W} e ${W + 1}, e-mail ou WhatsApp do relatório e a primeira baixa no app.</span>
+        ${prontas.length ? `<button class="btn sm noprint" data-prontas="1">${verProntas ? 'Esconder' : 'Mostrar'} as ${prontas.length} Prontas</button>` : ''}</div></div>`;
+  }
+  $('tela').addEventListener('click', (e) => {
+    const ir = e.target.closest('[data-ir]');
+    if (ir) { const [fz, url] = ir.dataset.ir.split('|'); try { localStorage.setItem('fp-fazenda', fz); } catch {} location.href = url; return; }
+    if (e.target.closest('[data-prontas]')) { verProntas = !verProntas; desenhar(); }
+  });
+  async function carregarConsultores() {
+    const { data, error } = await supabase.from('consultores').select('user_id, nome, email, ativo').order('nome');
+    consultores = error ? null : data;
+  }
+  const senhaNova = () => { const c = 'abcdefghjkmnpqrstuvwxyz23456789'; let r = ''; for (let i = 0; i < 10; i++) r += c[Math.floor(Math.random() * c.length)]; return r; };
+  function blocoConsultores() {
+    if (consultores === null) return `<div class="card fs noprint" style="margin-top:16px"><h4>👥 Consultores da Gesta'Up</h4><div class="warn">Falta Rodar o SQL 024 (Consultores da Equipe) no Supabase.</div></div>`;
+    return `<div class="card noprint" style="margin-top:16px"><div class="cardh"><h3>👥 Consultores da Gesta'Up</h3><small>Cada Um com o Próprio Login · Todos Veem Todas as Fazendas da Consultoria</small></div>
+      <div class="scroll"><table class="tbl"><thead><tr><th>Nome</th><th>E-mail (Login)</th><th>Situação</th><th class="noprint"></th></tr></thead><tbody>
+      ${consultores.map(c => editando === c.user_id ? `<tr><td colspan="4"><form id="fEdit" data-id="${c.user_id}" style="display:grid;grid-template-columns:1.2fr 1.4fr auto auto;gap:8px;align-items:end">
+          <label class="fl">Nome<input class="in" name="nome" required value="${esc(tc(c.nome))}"></label>
+          <label class="fl">E-mail (Login)<input class="in" name="email" type="email" required value="${esc(c.email)}"></label>
+          <button class="btn pri">✓ Salvar</button><button type="button" class="btn" data-cedit="">Cancelar</button></form>
+          <div class="sub" style="font-size:12px;margin-top:4px">Se Trocar o E-mail, o Consultor Passa a Entrar com o E-mail Novo (a Senha Continua a Mesma).</div></td></tr>` : `<tr><td><b>${esc(tc(c.nome))}</b>${c.user_id === eu.user.id ? ' <span class="sub">(Você)</span>' : ''}</td><td>${esc(c.email)}</td>
+        <td><span class="farol"><i style="background:var(--${c.ativo ? 's2' : 's4'})"></i>${c.ativo ? 'Ativo' : 'Desligado'}</span></td>
+        <td class="noprint" style="text-align:right;white-space:nowrap"><button class="btn sm" data-cedit="${c.user_id}">✎ Editar</button> ${c.user_id === eu.user.id ? '' : `<button class="btn sm" data-csenha="${c.user_id}">Trocar Senha</button> ${c.ativo ? `<button class="btn sm" data-cdes="${c.user_id}">Desligar</button>` : `<button class="btn sm" data-crel="${c.user_id}">Religar</button>`}`}</td></tr>`).join('')}
+      </tbody></table></div>
+      <form id="fCons" class="noprint" style="display:grid;grid-template-columns:1.2fr 1.4fr 1fr auto;gap:8px;padding:14px 18px;border-top:1px solid var(--line2);align-items:end">
+        <label class="fl">Nome<input class="in" name="nome" required placeholder="Ex.: Ana Souza"></label>
+        <label class="fl">E-mail<input class="in" name="email" type="email" required placeholder="ana@gestaup.com"></label>
+        <label class="fl">Senha<input class="in" name="senha" required minlength="8" value="${senhaNova()}"></label>
+        <button class="btn pri">+ Cadastrar Consultor</button></form>
+      <div id="cSt" class="noprint" style="padding:0 18px 14px;font-size:13px">${recado ? `<div class="warn" style="display:block;white-space:pre-line">${esc(recado)}<div style="margin-top:8px"><button type="button" class="btn sm" data-ccopiar="1">📋 Copiar Recado</button></div></div>` : '<span class="sub">O consultor entra em farmplan-lime.vercel.app com o e-mail e a senha, e já vê todas as fazendas. Fazenda nova também aparece para ele sozinha.</span>'}</div></div>`;
+  }
+  async function funcao(body) {
+    const { data, error } = await supabase.functions.invoke('criar-acesso', { body });
+    if (error) { let erro; try { erro = (await error.context.json()).erro; } catch { erro = 'A Função criar-acesso Não Respondeu. Ela Foi Atualizada no Supabase?'; } throw new Error(erro); }
+    if (data?.erro) throw new Error(data.erro);
+    return data;
+  }
+  const mostrarErro = (m) => { const st = document.getElementById('cSt'); if (st) st.innerHTML = `<div class="warn" style="color:var(--s4)">✗ ${esc(m)}</div>`; };
+
+  function desenhar() {
+    const ord = { atencao: (a, b) => a.peso - b.peso || (a.pct ?? -1) - (b.pct ?? -1), nome: (a, b) => a.f.nome.localeCompare(b.f.nome, 'pt'), meta: (a, b) => (b.pct ?? -1) - (a.pct ?? -1),
+      atras: (a, b) => b.atras - a.atras, imp: (a, b) => b.imp - a.imp, nota: (a, b) => (b.nota ?? -1) - (a.nota ?? -1), uso: (a, b) => (a.diasSemBaixa ?? 999) - (b.diasSemBaixa ?? 999) }[ordem];
+    const L = linhas.filter(l => !soAtencao || l.peso < 2).sort(ord);
+    const comPct = linhas.filter(l => l.pct != null), medio = comPct.length ? Math.round(media(comPct.map(l => l.pct))) : null;
+    const abaixo = linhas.filter(l => l.farol[0] === 's4' || l.farol[0] === 's5').length, semUso = linhas.filter(l => l.farol[1] === 'Sem Uso no App').length;
+    const quando = (l) => l.ultima == null ? '<span class="num0">Nunca</span>' : l.diasSemBaixa === 0 ? 'Hoje' : l.diasSemBaixa === 1 ? 'Ontem' : `<span style="color:${l.diasSemBaixa >= 3 ? 'var(--s4)' : 'inherit'}">Há ${l.diasSemBaixa} Dias</span>`;
+    const n = (v, cor) => v ? `<b class="num" style="color:${cor}">${v}</b>` : '<span class="num0">0</span>';
+    const seta = (l) => l.nota == null || l.notaAnt == null ? '' : l.nota > l.notaAnt + 0.005 ? ' <small style="color:var(--s2)">▲</small>' : l.nota < l.notaAnt - 0.005 ? ' <small style="color:var(--s4)">▼</small>' : '';
+    $('tela').innerHTML = `
+      <div class="phead"><div><div class="eyebrow">Consultor · Semana ${W} (${ddmm(diaDaSemana(W, 0))} a ${ddmm(diaDaSemana(W, 6))}) · Meta de ${MESES_LONGO[mesDa(W)]}</div><h1>Painel do Consultor</h1><div class="resumo">
+          <span class="rc">🏡 <b>${linhas.length}</b> ${linhas.length === 1 ? 'Fazenda' : 'Fazendas'}</span>
+          <span class="rc ${medio == null ? '' : medio >= 80 ? 'rm' : medio >= 60 ? 'rf' : 'ratr'}" title="Média das Tarefas com Baixa no Mês">✅ <b>${medio == null ? '—' : medio + '%'}</b> de Baixa no Mês</span>
+          <span class="rc ${abaixo ? 'ratr' : 'rm'}" title="Abaixo da Meta ou Sem Uso">⚠️ <b>${abaixo}</b> Precisam de Atenção</span>
+          <span class="rc ${semUso ? 'ratr' : 'rm'}" title="Equipe Não Está Usando o App">📵 <b>${semUso}</b> Sem Baixa Há 3+ Dias</span>
+          <span class="rc ra">📅 Semana <b>${W}</b> · ${ddmm(diaDaSemana(W, 0))} a ${ddmm(diaDaSemana(W, 6))}</span></div></div>
+        <div class="acts"><button class="btn" data-alertas="1" title="Todo Dia às 8h: Fazendas com 3 Dias sem Baixa ou Abaixo da Meta">🔔 Alertas no Celular</button><button class="btn dark" id="pdf">📄 Gerar PDF</button><button class="btn" data-xls="1">📊 Excel</button><a class="btn pri" href="nova-fazenda.html" style="text-decoration:none">+ Nova Fazenda</a></div></div>
+      <div class="filters"><label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="soAt" ${soAtencao ? 'checked' : ''}> Mostrar Só as Que Precisam de Atenção</label>
+        <span class="sub" style="font-size:12.5px">Clique no Título da Coluna para Ordenar · Clique na Fazenda para Abrir</span></div>
+      <div class="card"><div class="scroll"><table class="tbl"><thead><tr>
+        <th data-ord="nome">Fazenda</th><th data-ord="atencao">Situação</th><th data-ord="meta">Meta do Mês</th><th style="text-align:center">Semana ${W}</th>
+        <th data-ord="atras" style="text-align:center">Atrasadas</th><th style="text-align:center" title="Tarefas da Semana com Dias Que Já Passaram sem Baixa">Tarefas sem Baixa</th><th data-ord="imp" style="text-align:center">Imprev. · Fora</th>
+        <th data-ord="nota" style="text-align:center">Nota do Mês</th><th data-ord="uso">Última Baixa</th><th class="noprint"></th></tr></thead><tbody>
+        ${L.map(l => { const cor = l.pct == null ? 'var(--empty)' : l.pct >= l.meta ? 'var(--s2)' : l.pct >= l.meta - 20 ? 'var(--s5)' : 'var(--s4)';
+          return `<tr><td style="min-width:170px"><b style="cursor:pointer" data-abrir="${l.f.id}">${esc(tc(l.f.nome))}</b><div class="sub">${esc([tc(l.f.municipio || ''), l.f.uf].filter(Boolean).join('/'))}</div></td>
+          <td><span class="farol"><i style="background:var(--${l.farol[0]})"></i>${l.farol[1]}</span></td>
+          <td><div class="mini"><div class="mbar"><i style="width:${Math.min(100, l.pct || 0)}%;background:${cor}"></i><em style="left:${l.meta}%"></em></div><b>${l.pct == null ? '—' : l.pct + '%'}</b></div><div class="sub" style="font-size:11px">${l.dn} de ${l.pln} · Meta ${l.meta}%</div></td>
+          <td style="text-align:center">${l.sem ? `<b class="num">${l.concl}</b><span class="sub">/${l.sem}</span>` : '<span class="num0">—</span>'}</td>
+          <td style="text-align:center">${n(l.atras, 'var(--s4)')}</td><td style="text-align:center">${n(l.semBx, 'var(--s4)')}</td>
+          <td style="text-align:center">${n(l.imp, 'var(--s5)')} · ${n(l.fora, 'var(--s3)')}</td>
+          <td style="text-align:center">${l.nota == null && l.notaAnt != null ? `<b class="num ${l.notaAnt >= 9.3 ? 'sc-g' : l.notaAnt >= 8.5 ? 'sc-a' : 'sc-b'}">${nf(l.notaAnt)}</b><div class="sub" style="font-size:11px">${MESES_LONGO[(mesDa(W) + 11) % 12]}</div>` : l.nota == null ? `<span class="num0">${l.temContrato ? 'Sem Nota' : 'Sem Contrato'}</span>` : `<b class="num ${l.nota >= 9.3 ? 'sc-g' : l.nota >= 8.5 ? 'sc-a' : 'sc-b'}">${nf(l.nota)}</b>${seta(l)}`}</td>
+          <td>${quando(l)}</td>
+          <td class="noprint" style="text-align:right"><button class="btn sm" data-abrir="${l.f.id}">Abrir ›</button></td></tr>`; }).join('') || '<tr><td colspan="10" class="empty">Nenhuma Fazenda Precisa de Atenção. 👏</td></tr>'}
+      </tbody></table></div>
+      <div class="foot"><span><b>Situação:</b> <span style="color:var(--s2)">●</span> Na Meta · <span style="color:var(--s5)">●</span> Até 20 Pontos Abaixo · <span style="color:var(--s4)">●</span> Mais de 20 Pontos Abaixo, ou Nenhuma Baixa Há 3 Dias ou Mais</span></div></div>
+      ${blocoAndamento()}
+      ${blocoConsultores()}`;
+    $('soAt').onchange = (e) => { soAtencao = e.target.checked; desenhar(); };
+    $('pdf').onclick = () => { const t = document.title; document.title = 'Painel do Consultor - Semana ' + W; setTimeout(() => { print(); document.title = t; }, 100); };
+  }
+  $('tela').addEventListener('submit', async (e) => {
+    if (e.target.id !== 'fEdit') return; e.preventDefault();
+    const f = e.target, bt = f.querySelector('button'); bt.disabled = true; bt.textContent = 'Salvando…';
+    try {
+      const nome = tc(f.nome.value.trim()), email = f.email.value.trim().toLowerCase(), antes = consultores.find(x => x.user_id === f.dataset.id);
+      await funcao({ acao: 'consultor_editar', consultor_id: f.dataset.id, nome, email });
+      recado = antes && antes.email !== email ? `Olá, ${nome.split(' ')[0]}! Seu login do Farm Plan mudou.\nEndereço: ${location.origin}\nE-mail: ${email}\nA senha continua a mesma.` : '';
+      editando = null; await carregarConsultores(); desenhar();
+    } catch (er) { bt.disabled = false; bt.textContent = '✓ Salvar'; mostrarErro(er.message); }
+  });
+  $('tela').addEventListener('submit', async (e) => {
+    if (e.target.id !== 'fCons') return; e.preventDefault();
+    const f = e.target, bt = f.querySelector('button'); bt.disabled = true; bt.textContent = 'Criando…';
+    try {
+      const r = await funcao({ acao: 'consultor_criar', nome: tc(f.nome.value.trim()), email: f.email.value.trim(), senha: f.senha.value.trim() });
+      const nF = r.fazendas ?? linhas.length;
+      recado = `Olá, ${tc(f.nome.value.trim()).split(' ')[0]}! Seu acesso de Consultor ao Farm Plan:\nEndereço: ${location.origin}\nE-mail: ${r.email || f.email.value.trim().toLowerCase()}\nSenha: ${f.senha.value.trim()}\nVocê já vê ${nF} Fazenda${nF === 1 ? '' : 's'}. Ative a verificação em 2 etapas e não compartilhe a senha.`;
+      await carregarConsultores(); desenhar();
+    } catch (er) { bt.disabled = false; bt.textContent = '+ Cadastrar Consultor'; mostrarErro(er.message); }
+  });
+  $('tela').addEventListener('click', async (e) => {
+    const ed = e.target.closest('[data-cedit]'); if (ed) { editando = ed.dataset.cedit || null; recado = ''; return desenhar(); }
+    const b = e.target.closest('[data-csenha],[data-cdes],[data-crel],[data-ccopiar]'); if (!b) return;
+    if (b.dataset.ccopiar) { try { await navigator.clipboard.writeText(recado); b.textContent = '✓ Copiado'; } catch {} return; }
+    const id = b.dataset.csenha || b.dataset.cdes || b.dataset.crel, c = consultores.find(x => x.user_id === id);
+    try {
+      if (b.dataset.csenha) { const s = prompt('Nova Senha para ' + tc(c.nome) + ' (Mínimo 8):', senhaNova()); if (!s) return; await funcao({ acao: 'consultor_senha', consultor_id: id, senha: s });
+        recado = `Olá, ${tc(c.nome).split(' ')[0]}! Sua nova senha do Farm Plan: ${s}\nE-mail: ${c.email}`; }
+      if (b.dataset.cdes) { if (!confirm('Desligar ' + tc(c.nome) + '? Ele Perde o Acesso a Todas as Fazendas na Hora.')) return; await funcao({ acao: 'consultor_desligar', consultor_id: id }); recado = ''; }
+      if (b.dataset.crel) { await funcao({ acao: 'consultor_religar', consultor_id: id }); recado = ''; }
+      await carregarConsultores(); desenhar();
+    } catch (er) { mostrarErro(er.message); }
+  });
+  $('tela').addEventListener('click', (e) => {
+    const o = e.target.closest('[data-ord]'); if (o) { ordem = o.dataset.ord; return desenhar(); }
+    const a = e.target.closest('[data-abrir]'); if (a) { try { localStorage.setItem('fp-fazenda', a.dataset.abrir); } catch {} location.href = 'painel.html'; }
+  });
+
+  // Entrada
+  eu = await quemSouEu();
+  montarMenu('consultor.html');
+  if (!eu) location.href = 'index.html';
+  else if (!(eu.fazendas || []).some(f => f.papel === 'consultor')) $('aviso').textContent = 'O Painel do Consultor É Só para o Consultor.';
+  else {
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const { data: euc } = await supabase.from('consultores').select('nome').eq('user_id', eu.user.id).maybeSingle().then(r => r, () => ({ data: null }));
+    const nome = tc(eup?.apelido || euc?.nome || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    await carregar();
+  }
+
+  // 📊 Excel do relatório (o mesmo conteúdo do PDF, com números de verdade)
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-xls]'); if (!b) return; b.disabled = true; const txt = b.textContent; b.textContent = 'Montando…';
+    import('./excel.js').then(m => m.exportarExcel({ titulo: 'Painel do Consultor - Semana ' + W })).catch(er => alert(er.message)).finally(() => { b.disabled = false; b.textContent = txt; }); });
+
+  // 🔔 Alertas do consultor: todo dia às 8h, as fazendas que precisam de atenção (no celular ou no computador)
+  const VAPID_PUBLICA = 'BLsCPmMW1uu-xSY4vmcvRBsfdXrpv6JO55Bgi_GLBKA-GpkjnVQE0BBnaJ9CX_whWCrt4IahEFPytfYRYjSRBiM';
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-alertas]'); if (!b) return;
+    if (!('Notification' in window) || !('PushManager' in window) || !navigator.serviceWorker) return alert('Este Navegador Não Recebe Avisos. No iPhone, Instale o Farm Plan na Tela de Início Primeiro.');
+    try {
+      const perm = await Notification.requestPermission(); if (perm !== 'granted') return alert('Os Avisos Foram Bloqueados. Libere nas Configurações do Navegador.');
+      const reg = await navigator.serviceWorker.ready;
+      const k = VAPID_PUBLICA.replace(/-/g, '+').replace(/_/g, '/'), raw = atob(k + '='.repeat((4 - k.length % 4) % 4));
+      const sub = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Uint8Array.from(raw, c => c.charCodeAt(0)) });
+      const j = sub.toJSON(); const { error } = await supabase.rpc('inscrever_aviso', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth });
+      if (error) throw new Error(error.message);
+      b.textContent = '✓ Alertas Ligados';
+      const r = await supabase.functions.invoke('enviar-avisos', { body: { teste: true } });
+      alert(r.error || r.data?.erro ? 'Alertas Ligados, mas o Teste Falhou: ' + (r.data?.erro || 'a Função enviar-avisos Não Respondeu')
+        : r.data?.enviados ? '✓ Aviso de Teste Enviado (' + r.data.enviados + ' Aparelho' + (r.data.enviados > 1 ? 's' : '') + '). Deve Aparecer em Alguns Segundos.'
+        : 'Alertas Ligados, mas Nenhum Aviso Saiu (' + (r.data?.falhas ? r.data.falhas + ' Falha(s) no Envio' : 'Aparelho Não Encontrado') + ').');
+    } catch (er) { alert('Não Foi Possível Ligar os Alertas: ' + (/push service|AbortError|Registration failed/i.test(er.message) ? (navigator.brave ? 'O Brave Bloqueia os Avisos. Abra brave://settings/privacy, Ligue \'Usar os Serviços do Google para Mensagens Push\', Feche e Abra o Brave de Novo. Ou Use o Google Chrome.' : 'O Navegador Bloqueou os Avisos. Use o Google Chrome (ou o Safari no iPhone, com o App Instalado na Tela de Início).') : er.message)); }
+  });
+</script>
+</body>
+</html>

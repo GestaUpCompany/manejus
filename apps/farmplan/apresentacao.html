@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Página de apresentação para o produtor (pública, sem login)
+     Para editar os depoimentos e o contato, procure DEPOIMENTOS e CONTATO no fim do arquivo. -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Farm Plan · Gesta'Up · O Plano da Fazenda Acontecendo no Campo</title>
+  <meta name="description" content="Farm Plan: planejamento anual da fazenda de corte, aplicativo para a equipe do campo (funciona sem internet) e relatórios para o produtor. Uma solução Gesta'Up.">
+  <meta property="og:title" content="Farm Plan · Gesta'Up">
+  <meta property="og:description" content="O plano da fazenda saindo do papel e acontecendo no campo.">
+  <meta property="og:image" content="apresentacao/painel.jpg">
+  <link rel="icon" href="symbol.png">
+  <meta name="theme-color" content="#114665">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    :root{--navy:#114665;--navy2:#0b2f45;--verde:#20A44B;--verde2:#168a3e;--tinta:#16232A;--tinta2:#44525A;--cinza:#6E787C;--linha:#E3E8E6;--fundo:#F5F7F6;--claro:#E6EEF2;--ok:#E3F5E8;--fd:"Archivo","Public Sans",system-ui,sans-serif;--fb:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+    *{box-sizing:border-box;margin:0}
+    html{scroll-behavior:smooth}
+    body{font-family:var(--fb);color:var(--tinta);background:#fff;line-height:1.55;font-size:17px;-webkit-font-smoothing:antialiased}
+    a{color:inherit}
+    .w{width:min(1120px,100% - 32px);margin:0 auto}
+    h1,h2,h3{font-family:var(--fd);line-height:1.15;letter-spacing:-.01em}
+    h2{font-size:clamp(28px,4vw,40px);color:var(--navy);margin-bottom:10px}
+    .sub{color:var(--tinta2);font-size:18px;max-width:720px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;padding:14px 22px;font-weight:700;text-decoration:none;font-size:16px;border:2px solid transparent;cursor:pointer}
+    .btn.v{background:var(--verde);color:#fff;box-shadow:0 4px 0 var(--verde2)}
+    .btn.b{background:#fff;color:var(--navy);border-color:var(--linha)}
+    .btn.n{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.35)}
+    /* topo */
+    header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--linha)}
+    header .w{display:flex;align-items:center;gap:14px;height:68px}
+    header img{height:42px}
+    header b{font-family:var(--fd);font-size:20px;color:var(--navy);flex:1}
+    header nav{display:flex;gap:18px;font-weight:600;font-size:15px}
+    header nav a{text-decoration:none;color:var(--tinta2)}
+    header .btn{padding:10px 16px;font-size:15px}
+    @media(max-width:860px){header nav{display:none}}
+    /* hero */
+    .hero{background:linear-gradient(160deg,var(--navy),var(--navy2));color:#fff;padding:64px 0 0;overflow:hidden}
+    .hero .w{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center}
+    .hero h1{font-size:clamp(34px,5vw,56px);margin-bottom:16px}
+    .hero h1 em{font-style:normal;color:#5EE08F}
+    .hero p{font-size:19px;opacity:.9;margin-bottom:26px}
+    .hero .acts{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px}
+    .hero ul{list-style:none;padding:0;display:grid;gap:8px;font-weight:600;opacity:.95;margin-bottom:48px}
+    .vit{position:relative;align-self:center;margin-bottom:56px}
+    .vit .pc{width:100%;border-radius:14px;box-shadow:0 -10px 50px rgba(0,0,0,.35);display:block}
+    .vit .cel{position:absolute;right:-6px;bottom:24px;width:31%;border-radius:26px;border:7px solid #16232A;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+    @media(max-width:860px){.hero .w{grid-template-columns:1fr}.vit{margin-top:8px}}
+    section{padding:72px 0}
+    section.cinza{background:var(--fundo)}
+    .tit{text-align:center;margin:0 auto 36px}
+    .tit .sub{margin:0 auto}
+    .eyebrow{display:inline-block;font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--verde);margin-bottom:8px}
+    .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+    @media(max-width:900px){.g3,.g4{grid-template-columns:1fr 1fr}}
+    @media(max-width:560px){.g3,.g4{grid-template-columns:1fr}}
+    .card{background:#fff;border:1px solid var(--linha);border-radius:20px;padding:22px;box-shadow:0 1px 3px rgba(17,70,101,.05),0 10px 30px rgba(17,70,101,.05)}
+    .card i{font-style:normal;font-size:34px;display:block;margin-bottom:10px}
+    .card h3{font-size:20px;color:var(--navy);margin-bottom:6px}
+    .card p{color:var(--tinta2);font-size:15.5px}
+    .passo{position:relative;padding-top:34px}
+    .passo .n{position:absolute;top:-18px;left:22px;width:44px;height:44px;border-radius:50%;background:var(--verde);color:#fff;font-family:var(--fd);font-weight:800;font-size:20px;display:grid;place-items:center;box-shadow:0 4px 0 var(--verde2)}
+    .passo small{display:block;font-weight:700;color:var(--verde);margin-bottom:4px}
+    /* campo */
+    .campo{display:grid;grid-template-columns:1fr 1.15fr;gap:40px;align-items:center}
+    .celus{display:flex;gap:14px;justify-content:center}
+    .celus img{width:min(46%,240px);border-radius:28px;border:7px solid #16232A;box-shadow:0 20px 40px rgba(17,70,101,.22)}
+    .celus img:nth-child(2){margin-top:46px}
+    .lista{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .it{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--linha);border-radius:16px;padding:14px}
+    .it i{font-style:normal;font-size:26px;line-height:1}
+    .it b{display:block;color:var(--navy)}
+    .it span{font-size:14.5px;color:var(--tinta2)}
+    @media(max-width:900px){.campo{grid-template-columns:1fr}.lista{grid-template-columns:1fr}}
+    /* telas */
+    .telas{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .telas figure{margin:0}
+    .telas img{width:100%;border-radius:14px;border:1px solid var(--linha);box-shadow:0 8px 24px rgba(17,70,101,.1);cursor:zoom-in;display:block}
+    .telas figcaption{font-weight:700;color:var(--navy);margin-top:10px;font-size:15px}
+    @media(max-width:900px){.telas{grid-template-columns:1fr}}
+    .zoom{position:fixed;inset:0;background:rgba(10,25,32,.85);display:grid;place-items:center;z-index:50;padding:16px;cursor:zoom-out}
+    .zoom img{max-width:100%;max-height:100%;border-radius:12px}
+    /* depoimentos e números */
+    .dep blockquote{font-size:17px;color:var(--tinta);margin-bottom:14px}
+    .dep cite{font-style:normal;font-weight:700;color:var(--navy)}
+    .dep cite small{display:block;font-weight:500;color:var(--cinza)}
+    .faixa{background:var(--navy);color:#fff;border-radius:24px;padding:36px;display:grid;grid-template-columns:1.4fr 1fr;gap:28px;align-items:center}
+    .faixa h2{color:#fff}
+    .faixa p{opacity:.9}
+    .faixa .acts{display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+    @media(max-width:860px){.faixa{grid-template-columns:1fr}.faixa .acts{justify-content:flex-start}}
+    footer{padding:30px 0;color:var(--cinza);font-size:14px;border-top:1px solid var(--linha)}
+    footer .w{display:flex;gap:14px;justify-content:space-between;flex-wrap:wrap;align-items:center}
+    footer img{height:34px}
+    .esc{display:none!important}
+  </style>
+</head>
+<body>
+<header><div class="w"><img src="logo.png" alt="Gesta'Up Company"><b>Farm Plan</b>
+  <nav><a href="#como">Como Funciona</a><a href="#campo">No Campo</a><a href="#gestor">Para o Gestor</a><a href="#implantacao">Implantação</a><a href="#telas">Telas</a></nav>
+  <a class="btn b" href="index.html">Entrar</a></div></header>
+
+<div class="hero"><div class="w">
+  <div>
+    <div class="eyebrow" style="color:#5EE08F">Gesta'Up · Gestão 360°</div>
+    <h1>O plano da fazenda <em>saindo do papel</em> e acontecendo no campo</h1>
+    <p>O Farm Plan junta o planejamento do ano, o aplicativo da equipe e os resultados do mês num só lugar. Você planeja no escritório, a equipe executa e registra no celular, mesmo sem internet, e você acompanha tudo no painel.</p>
+    <div class="acts"><a class="btn v" href="#contato">Quero Conhecer</a><a class="btn n" href="#como">Ver Como Funciona</a></div>
+    <ul><li>✓ Aplicativo simples, com letra grande e desenhos</li><li>✓ Funciona no campo, sem sinal de internet</li><li>✓ Relatório da semana no seu WhatsApp, toda segunda</li><li>✓ Implantado na sua fazenda em 1 semana</li></ul>
+  </div>
+  <div class="vit"><img class="pc" src="apresentacao/painel.jpg" alt="Painel do Dia do Farm Plan"><img class="cel" src="apresentacao/app-dia.jpg" alt="Aplicativo do Farm Plan no celular"></div>
+</div></div>
+
+<section><div class="w">
+  <div class="tit"><span class="eyebrow">O Problema</span><h2>Plano bom não adianta se não chega no campo</h2></div>
+  <div class="g3">
+    <div class="card"><i>📒</i><h3>O plano fica na gaveta</h3><p>A planilha do ano dá trabalho para atualizar e quase ninguém da equipe olha para ela no dia a dia.</p></div>
+    <div class="card"><i>🤷</i><h3>A equipe não sabe a prioridade</h3><p>Cada um faz o que lembra. O que era importante na semana acaba ficando para depois.</p></div>
+    <div class="card"><i>❓</i><h3>O gestor não enxerga o que aconteceu</h3><p>Sem registro, não dá para saber o que foi feito, o que travou e por quê, nem cobrar com justiça.</p></div>
+  </div>
+</div></section>
+
+<section class="cinza" id="como"><div class="w">
+  <div class="tit"><span class="eyebrow">Como Funciona</span><h2>Planejar, executar e medir</h2><p class="sub">Do ano para o mês, do mês para a semana, da semana para o dia. Cada um sabe o que fazer, e você sabe o que foi feito.</p></div>
+  <div class="g3">
+    <div class="card passo"><span class="n">1</span><small>No Escritório</small><h3>Planejar o Ano</h3><p>O Plano Anual com todas as atividades da fazenda, com o "como fazer" (5M), a meta e quem faz. Vira o plano do mês e as tarefas de cada semana sozinho.</p></div>
+    <div class="card passo"><span class="n">2</span><small>No Campo</small><h3>Executar no Celular</h3><p>Cada colaborador vê as tarefas do dia, marca ✓ Feito ou ✗ Não Deu com o motivo, manda foto e o relatório no grupo da fazenda.</p></div>
+    <div class="card passo"><span class="n">3</span><small>No Painel</small><h3>Medir e Melhorar</h3><p>O gestor acompanha o dia, a meta do mês, os imprevistos e as notas da equipe. O que se repete vira melhoria no plano.</p></div>
+  </div>
+</div></section>
+
+<section id="campo"><div class="w campo">
+  <div class="celus"><img src="apresentacao/app-dia.jpg" alt="Tarefas do dia no aplicativo"><img src="apresentacao/app-lista.jpg" alt="Lista de conferência no aplicativo"></div>
+  <div>
+    <span class="eyebrow">Feito para Quem Está no Campo</span><h2>Simples para quem lê pouco e enxerga mal</h2>
+    <p class="sub" style="margin-bottom:20px">O aplicativo foi pensado para o peão, o vaqueiro e o operador de máquina. Botão grande, desenho em cada tarefa e o celular que fala.</p>
+    <div class="lista">
+      <div class="it"><i>🔠</i><div><b>Letra Grande</b><span>Botão A+ aumenta a letra.</span></div></div>
+      <div class="it"><i>🔊</i><div><b>O Celular Fala</b><span>Lê a tarefa, o local e a meta.</span></div></div>
+      <div class="it"><i>📵</i><div><b>Funciona sem Internet</b><span>Guarda tudo e envia quando o sinal volta.</span></div></div>
+      <div class="it"><i>☑</i><div><b>Lista de Conferência</b><span>Vacinação, embarque e revisão item por item.</span></div></div>
+      <div class="it"><i>📷</i><div><b>Foto, Vídeo e Áudio</b><span>Prova do serviço e recado para o gestor.</span></div></div>
+      <div class="it"><i>🎤</i><div><b>Fala em Vez de Escrever</b><span>O celular escreve o que a pessoa falou.</span></div></div>
+      <div class="it"><i>⏱</i><div><b>Cronômetro e Meta</b><span>Tempo real de cada serviço, sem o almoço.</span></div></div>
+      <div class="it"><i>📲</i><div><b>Relatório no Grupo</b><span>Cada um manda o seu dia no WhatsApp da fazenda.</span></div></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="cinza" id="gestor"><div class="w">
+  <div class="tit"><span class="eyebrow">Para o Gestor e o Produtor</span><h2>Tudo o que aconteceu, sem precisar perguntar</h2></div>
+  <div class="g4">
+    <div class="card"><i>📊</i><h3>Painel do Dia</h3><p>O que foi feito, o que não deu e por quê, quem mandou o relatório.</p></div>
+    <div class="card"><i>🎯</i><h3>Meta do Mês</h3><p>Quanto do plano foi cumprido, por semana, por setor e por pessoa.</p></div>
+    <div class="card"><i>⭐</i><h3>Avaliação da Equipe</h3><p>Contrato de Resultados, nota semanal, bonificação e Equipe do Mês.</p></div>
+    <div class="card"><i>📲</i><h3>Relatório no WhatsApp</h3><p>Toda segunda às 7h, a semana em PDF no seu WhatsApp. Todo dia 1º, o mês no e-mail.</p></div>
+    <div class="card"><i>⚠️</i><h3>Imprevistos</h3><p>Máquina quebrada, animal doente: o que se repete vira ação preventiva.</p></div>
+    <div class="card"><i>⏱</i><h3>Tempo Real x Previsto</h3><p>Quanto cada atividade leva de verdade, para planejar melhor o próximo ano.</p></div>
+    <div class="card"><i>🔄</i><h3>Atualiza Sozinho</h3><p>Deu baixa no campo, o painel muda na hora. Todo relatório tem PDF e Excel.</p></div>
+    <div class="card"><i>🔔</i><h3>Avisos no Celular</h3><p>De manhã as tarefas do dia; às 17h o lembrete do relatório.</p></div>
+  </div>
+</div></section>
+
+<section id="implantacao"><div class="w">
+  <div class="tit"><span class="eyebrow">Implantação</span><h2>Sua fazenda rodando em 1 semana</h2><p class="sub">Quem implanta é a equipe de consultores da Gesta'Up. Você não precisa montar nada sozinho.</p></div>
+  <div class="g4">
+    <div class="card passo"><span class="n">1</span><small>Dias 1 e 2</small><h3>Equipe Cadastrada</h3><p>A lista do seu pessoal vira logins de uma vez só, com equipes, líderes e a folha de senha de cada um.</p></div>
+    <div class="card passo"><span class="n">2</span><small>Dias 3 e 4</small><h3>Plano com 5M Pronto</h3><p>Partimos de uma biblioteca com quase 90 atividades de pecuária de corte, com passo a passo, meta e lista de conferência.</p></div>
+    <div class="card passo"><span class="n">3</span><small>Dia 5</small><h3>Tudo Conferido</h3><p>Um painel mostra o que falta em cada fazenda: logins, líderes, avisos, plano e 5M. Só vai a campo quando está pronto.</p></div>
+    <div class="card passo"><span class="n">4</span><small>Segunda-Feira</small><h3>Equipe no App</h3><p>1h30 na sede: cada um instala, liga os avisos e dá a primeira baixa. Cartazes e manual ficam na fazenda.</p></div>
+  </div>
+  <p class="sub" style="text-align:center;margin:26px auto 0;max-width:680px">Depois, 2 semanas de acompanhamento com metas claras e uma reunião de fechamento com os resultados.</p>
+</div></section>
+
+<section id="telas"><div class="w">
+  <div class="tit"><span class="eyebrow">Telas do Sistema</span><h2>Veja como é</h2><p class="sub">Clique na imagem para ampliar.</p></div>
+  <div class="telas">
+    <figure><img src="apresentacao/plano.jpg" alt="Plano Anual" data-z><figcaption>Plano Anual · as 52 semanas do ano</figcaption></figure>
+    <figure><img src="apresentacao/painel.jpg" alt="Painel do Dia" data-z><figcaption>Painel do Dia · o que aconteceu hoje</figcaption></figure>
+    <figure><img src="apresentacao/relatorios.jpg" alt="Relatórios" data-z><figcaption>Relatórios · a semana e o mês</figcaption></figure>
+  </div>
+</div></section>
+
+<section class="cinza esc" id="depoimentos"><div class="w">
+  <div class="tit"><span class="eyebrow">Quem Usa</span><h2>O que dizem os produtores</h2></div>
+  <div class="g3" id="deps"></div>
+</div></section>
+
+<section id="contato"><div class="w">
+  <div class="faixa">
+    <div><span class="eyebrow" style="color:#5EE08F">Gesta'Up · Gestão 360°</span><h2>Vamos colocar o plano da sua fazenda para funcionar?</h2>
+      <p>O Farm Plan é implantado pela equipe de consultores da Gesta'Up: montamos o plano do ano com você, cadastramos a equipe e treinamos o pessoal do campo.</p></div>
+    <div class="acts" id="ctas"><a class="btn n" href="index.html">Já Sou Cliente · Entrar</a></div>
+  </div>
+</div></section>
+
+<footer><div class="w"><img src="logo.png" alt="Gesta'Up Company"><span>Farm Plan · Gesta'Up · Gestão 360° · Pecuária de Corte</span></div></footer>
+
+<script>
+  // ===== EDITE AQUI =====
+  // Depoimentos reais (com autorização de quem falou). Enquanto a lista estiver vazia, a seção não aparece.
+  // Exemplo: { texto: 'Agora eu sei o que a equipe fez sem sair do escritório.', nome: 'Nome do Produtor', fazenda: 'Fazenda Tal · MT' },
+  const DEPOIMENTOS = [];
+  // Contato: preencha o WhatsApp (só números, com DDD e 55) e/ou o e-mail. Vazio = o botão não aparece.
+  const CONTATO = { whatsapp: '', email: '' };
+  // ======================
+
+  const esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  if (DEPOIMENTOS.length) {
+    document.getElementById('deps').innerHTML = DEPOIMENTOS.map(d => `<div class="card dep"><blockquote>“${esc(d.texto)}”</blockquote><cite>${esc(d.nome)}<small>${esc(d.fazenda)}</small></cite></div>`).join('');
+    document.getElementById('depoimentos').classList.remove('esc');
+  }
+  const ctas = document.getElementById('ctas');
+  if (CONTATO.whatsapp) ctas.insertAdjacentHTML('afterbegin', `<a class="btn v" href="https://wa.me/${CONTATO.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent('Olá! Quero conhecer o Farm Plan da Gesta\'Up.')}" target="_blank" rel="noopener">💬 Falar no WhatsApp</a>`);
+  if (CONTATO.email) ctas.insertAdjacentHTML('afterbegin', `<a class="btn b" href="mailto:${esc(CONTATO.email)}?subject=${encodeURIComponent('Quero conhecer o Farm Plan')}">✉ Mandar E-mail</a>`);
+  if (!CONTATO.whatsapp && !CONTATO.email) document.querySelectorAll('a[href="#contato"]').forEach(a => { a.textContent = 'Saiba Mais'; });
+  // Ampliar as telas
+  document.addEventListener('click', (e) => {
+    const z = e.target.closest('[data-z]');
+    if (z) { const d = document.createElement('div'); d.className = 'zoom'; d.innerHTML = `<img src="${z.src}" alt="">`; d.onclick = () => d.remove(); document.body.appendChild(d); }
+  });
+</script>
+</body>
+</html>

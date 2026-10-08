@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Aplicativo: o gestor vê no computador o app exatamente como cada colaborador vê no celular -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aplicativo · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="aplicativo.html" selected>Aplicativo</option><option value="painel.html">Painel</option><option value="index.html">Tarefas da Semana</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, PAPEL, tc, esc, quemSouEu, buscarTudo, montarMenu } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  let eu, fz, pessoas = [], equipes = [], membros = [], acessos = {}, como = '';
+  try { como = localStorage.getItem('fp-app-como') || ''; } catch {}
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+
+  function desenhar() {
+    const comApp = pessoas.filter(p => p.ativo !== false);
+    if (!comApp.some(p => p.id === como)) como = (comApp.find(p => p.user_id) || comApp[0])?.id || '';
+    const p = pessoas.find(x => x.id === como);
+    const eqs = membros.filter(m => m.pessoa_id === como).map(m => equipes.find(e => e.id === m.equipe_id)).filter(Boolean);
+    const lider = eqs.filter(e => e.lider_id === como);
+    const site = location.origin + '/';
+    $('tela').innerHTML = `
+      <div class="phead"><div><div class="eyebrow">Mesmos Dados do Sistema · o Que For Marcado no Celular Aparece no Painel, na Semana e nos Relatórios</div><h1>Aplicativo da Equipe</h1></div>
+        <div class="acts"><label class="sel">Ver Como<select id="como">${comApp.map(x => `<option value="${x.id}" ${x.id === como ? 'selected' : ''}>${esc(tc(x.apelido))}${x.user_id ? '' : ' (sem Login)'}</option>`).join('')}</select></label>
+          <button class="btn" data-rec="1">↻ Atualizar</button></div></div>
+      <div class="appstage">
+        <div class="phone"><iframe id="cel" title="Aplicativo como ${esc(tc(p?.apelido || ''))}" src="index.html?app=1&como=${encodeURIComponent(como)}"></iframe></div>
+        <div class="appside">
+          <div class="card fs"><h4>${esc(tc(p?.apelido || '—'))} no Aplicativo</h4><div class="lines">
+            <div class="l"><span>Perfil</span><b>${esc(PAPEL[acessos[p?.user_id]] || (p?.user_id ? 'Colaborador' : 'Sem Login no App'))}</b></div>
+            <div class="l"><span>Usuário</span><b>${esc(p?.usuario || '—')}</b></div>
+            <div class="l"><span>Equipes</span><b>${eqs.map(e => esc(tc(e.nome)) + (e.lider_id === como ? ' (Líder)' : '')).join(', ') || '—'}</b></div></div>
+            ${!p?.user_id ? `<div class="sub" style="font-size:13px">Essa Pessoa Ainda Não Tem Login. Crie em <a href="cadastros.html?aba=colab">Cadastros → Colaboradores</a>.</div>` : ''}</div>
+          <div class="card fs"><h4>O Que Ele Vê</h4>
+            <div>• As tarefas em nome dele${eqs.length ? ' e das equipes ' + eqs.map(e => esc(tc(e.nome))).join(', ') : ''}.</div>
+            <div>• ${lider.length ? 'Como <b>líder</b>, ele dá baixa nas tarefas da equipe.' : 'Nas tarefas de equipe, quem dá baixa é o líder.'}</div>
+            <div>• Visual para o campo: letra grande (botão A+), desenhos em cada tarefa e 🔊 para ouvir a tarefa em voz alta.</div>
+            <div>• Botões grandes: ✓ Feito, ✗ Não Deu, ▶ Começar (Pausar e Terminar com a Meta), 📷 Foto. Barra de baixo: ⚠️ Problema, ➕ Fiz Outro, 💬 Recado e 📲 Relatório no Grupo.</div>
+            <div>• Funciona sem internet: guarda no celular e envia quando o sinal volta.</div>
+            <div class="sub" style="font-size:12.5px">Aqui é só visualização: os botões não gravam nada. Quem marca é o colaborador, no celular dele.</div></div>
+          <div class="card fs"><h4>Como o Colaborador Instala</h4>
+            <div>1. No celular, abrir <b>${esc(site.replace(/^https?:\/\//, ''))}</b> e entrar com o usuário e a senha.</div>
+            <div>2. <b>Android:</b> no Chrome, ⋮ → <b>Instalar App</b>. <b>iPhone:</b> no Safari, Compartilhar ⬆ → <b>Adicionar à Tela de Início</b>.</div>
+            <div>3. Abrir uma vez onde tem sinal: as tarefas da semana ficam guardadas para usar no campo.</div>
+            <div class="acts"><button class="btn sm" data-copiar="1">📋 Copiar Endereço do App</button><a class="btn sm" href="painel.html" style="text-decoration:none">Abrir o Painel</a></div></div>
+        </div>
+      </div>`;
+    montarMenu('aplicativo.html');
+  }
+  $('tela').addEventListener('change', (e) => { if (e.target.id === 'como') { como = e.target.value; try { localStorage.setItem('fp-app-como', como); } catch {} desenhar(); } });
+  $('tela').addEventListener('click', async (e) => {
+    if (e.target.closest('[data-rec]')) $('cel').contentWindow.location.reload();
+    if (e.target.closest('[data-copiar]')) { try { await navigator.clipboard.writeText(location.origin + '/'); e.target.textContent = '✓ Copiado'; } catch {} }
+  });
+
+  eu = await quemSouEu();
+  montarMenu('aplicativo.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.includes(eu.papel)) $('aviso').textContent = 'Esta Tela É Só para Gestor, Administrativo e Consultor.';
+  else {
+    fz = eu.fazenda.id;
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    [pessoas, equipes, membros] = await Promise.all([
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido, user_id, usuario, ativo').eq('fazenda_id', fz).order('apelido')),
+      buscarTudo(() => supabase.from('equipes').select('id, nome, lider_id').eq('fazenda_id', fz).order('nome')),
+      buscarTudo(() => supabase.from('equipe_membros').select('equipe_id, pessoa_id, equipes!inner(fazenda_id)').eq('equipes.fazenda_id', fz))
+    ]);
+    const { data: ac } = await supabase.from('acessos').select('user_id, papel').eq('fazenda_id', fz);
+    (ac || []).forEach(x => acessos[x.user_id] = x.papel);
+    const nome = tc(pessoas.find(x => x.user_id === eu.user.id)?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+</script>
+</body>
+</html>

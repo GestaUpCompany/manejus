@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Nova Fazenda do Zero (passo a passo) -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nova Fazenda · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    .passos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+    .passos button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:7px 14px;font-weight:700;font-size:13px;color:var(--ink2);cursor:pointer}
+    .passos button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+    .passos button.ok{border-color:var(--s2);color:var(--s2)}
+    .chk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+    .chk-grid label{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--surface);font-weight:600;font-size:13.5px;cursor:pointer}
+    .chk-grid label:has(input:checked){border-color:var(--s2);background:var(--s2-soft)}
+    .pes td{padding:4px 6px} .pes .in{padding:6px 8px}
+    .grp{border-top:1px solid var(--line2)} .grp h5{display:flex;gap:10px;align-items:center;padding:10px 18px;margin:0;font-size:14px;background:var(--surface2)}
+    .grp .itens{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px 14px;padding:8px 18px 12px}
+    .grp .itens label{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:3px 0;cursor:pointer}
+    .grp .itens small{color:var(--muted)}
+    .navp{display:flex;justify-content:space-between;gap:10px;margin-top:16px}
+    .log{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.7;padding:12px 18px}
+    .log .ok{color:var(--s2)} .log .er{color:var(--s4)}
+    .resumo td:first-child{font-weight:700;width:220px}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="nova-fazenda.html" selected>Nova Fazenda</option><option value="painel.html">Painel</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, PAPEL, DIAS_CURTO, tc, esc, semanaDe, quemSouEu, buscarTudo, montarMenu } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const SEMANA = semanaDe(new Date());
+  const chave = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const PADRAO_SETORES = ['Administrativo', 'Gado', 'Máquinas', 'Operacional', 'Geral'];
+  const PASSOS = ['1. Fazenda', '2. Setores', '3. Equipe', '4. Atividades', '5. Comportamentos', '6. Conferir e Criar'];
+  let eu, origem = null, biblio = [], critOrig = [], cargosOrig = [], funcOrig = [], setoresOrig = [];
+  let passo = 0, criada = false;
+  // Tudo o que vai ser criado fica aqui até o último passo
+  const D = { nome: '', municipio: '', uf: 'MT', meta: 80, setores: new Set(PADRAO_SETORES), setorNovo: '',
+    pessoas: Array.from({ length: 6 }, () => ({ apelido: '', nome: '', cargo: '', setor: '' })), equipes: 'Equipe Gado\nEquipe Máquinas',
+    ativ: new Set(), semanas: true, busca: '', copiaCrit: true, copiaCargos: true };
+
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+
+  async function carregar() {
+    const { data: fz } = await supabase.from('fazendas').select('id, nome, conta_id').eq('id', eu.fazenda.id).single();
+    origem = fz;
+    const [b, c, cg, fn, st] = await Promise.all([
+      buscarTudo(() => supabase.from('biblioteca').select('*').eq('conta_id', fz.conta_id).order('nome')).catch(() => []),
+      buscarTudo(() => supabase.from('criterios').select('nome, ativo').eq('fazenda_id', fz.id).order('nome')).catch(() => []),
+      buscarTudo(() => supabase.from('cargos').select('*').eq('fazenda_id', fz.id).order('nome')).catch(() => []),
+      buscarTudo(() => supabase.from('funcoes').select('nome, setor_id, ativo').eq('fazenda_id', fz.id).order('nome')).catch(() => []),
+      buscarTudo(() => supabase.from('setores').select('id, nome').eq('fazenda_id', fz.id)).catch(() => [])
+    ]);
+    biblio = b; critOrig = c.filter(x => x.ativo !== false); cargosOrig = cg; funcOrig = fn.filter(x => x.ativo !== false); setoresOrig = st;
+    [...new Set(biblio.map(x => tc(x.setor_nome || '')).filter(Boolean))].forEach(s => { if (!D.setores.has(s) && !PADRAO_SETORES.some(p => chave(p) === chave(s))) D.setoresExtra = (D.setoresExtra || []).concat(s); });
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+
+  const setoresLista = () => [...new Set([...PADRAO_SETORES, ...(D.setoresExtra || []), ...[...D.setores]])].sort((a, b) => a.localeCompare(b, 'pt'));
+  const pessoasOk = () => D.pessoas.filter(p => p.apelido.trim());
+  const equipesOk = () => D.equipes.split('\n').map(x => x.trim()).filter(Boolean);
+
+  function telaPasso() {
+    if (passo === 0) return `<div class="card fs"><h4>Dados da Fazenda</h4>
+        <div class="fr"><label class="fl">Nome da Fazenda *<input class="in" data-d="nome" value="${esc(D.nome)}" placeholder="Ex.: Fazenda Santa Rita"></label>
+          <label class="fl">Município<input class="in" data-d="municipio" value="${esc(D.municipio)}" placeholder="Ex.: Juína"></label>
+          <label class="fl">UF<input class="in" data-d="uf" maxlength="2" value="${esc(D.uf)}"></label>
+          <label class="fl">Meta do Mês (% com Baixa)<input class="in" type="number" min="0" max="100" data-d="meta" value="${D.meta}"></label></div>
+        <div class="sub">Você Vira Consultor da Fazenda Nova. O Gestor do Cliente Ganha Login Depois, em Cadastros › Colaboradores.</div></div>`;
+    if (passo === 1) return `<div class="card fs"><h4>Quais Setores a Fazenda Tem?</h4><div class="sub">Marque os Setores. Cada Atividade e Cada Pessoa Fica em um Setor.</div>
+        <div class="chk-grid">${setoresLista().map(s => `<label><input type="checkbox" data-setor="${esc(s)}" ${D.setores.has(s) ? 'checked' : ''}>${esc(s)}</label>`).join('')}</div>
+        <div style="display:flex;gap:8px;max-width:420px"><input class="in" id="setorNovo" placeholder="Outro Setor (Ex.: Confinamento)"><button class="btn" id="addSetor">+ Incluir</button></div></div>`;
+    if (passo === 2) { const st = [...D.setores].sort((a, b) => a.localeCompare(b, 'pt')), cargos = [...new Set(cargosOrig.map(c => tc(c.nome)))];
+      return `<div class="two"><div class="card"><div class="cardh"><h3>Pessoas</h3><small>${pessoasOk().length} Preenchidas · Pode Completar Depois em Cadastros</small></div>
+          <div class="scroll"><table class="tbl pes"><thead><tr><th>Apelido *</th><th>Nome Completo</th><th>Cargo</th><th>Setor</th><th></th></tr></thead><tbody>
+          ${D.pessoas.map((p, i) => `<tr><td><input class="in" data-p="${i}" data-c="apelido" value="${esc(p.apelido)}" placeholder="Ex.: Zé"></td><td><input class="in" data-p="${i}" data-c="nome" value="${esc(p.nome)}"></td>
+            <td><input class="in" data-p="${i}" data-c="cargo" list="lCargos" value="${esc(p.cargo)}"></td>
+            <td><select class="in" data-p="${i}" data-c="setor"><option value="">—</option>${st.map(s => `<option ${s === p.setor ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></td>
+            <td><button class="btn sm ghost" data-delp="${i}" title="Tirar">✕</button></td></tr>`).join('')}
+          </tbody></table></div><datalist id="lCargos">${cargos.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+          <div class="foot"><button class="btn sm" id="maisLinhas">+ 5 Linhas</button><button class="btn sm" id="colar">📋 Colar Lista</button></div></div>
+        <div class="card fs"><h4>Equipes</h4><div class="sub">Uma por Linha. Os Membros e o Líder Você Marca Depois em Cadastros › Equipes do App.</div>
+          <textarea class="in" id="equipes" rows="6">${esc(D.equipes)}</textarea>
+          <div class="sub" style="font-size:12px"><b>Colar Lista:</b> Copie do Excel ou do WhatsApp, Uma Pessoa por Linha: <i>Apelido; Nome Completo; Cargo; Setor</i> (Só o Apelido Já Basta).</div></div></div>`; }
+    if (passo === 3) {
+      const q = chave(D.busca), grupos = {};
+      biblio.filter(b => !q || chave(b.nome).includes(q)).forEach(b => { const s = tc(b.setor_nome || 'Sem Setor'); (grupos[s] = grupos[s] || []).push(b); });
+      const nomes = Object.keys(grupos).sort((a, b) => a.localeCompare(b, 'pt'));
+      return `<div class="card"><div class="cardh"><h3>Atividades da Biblioteca</h3><small><b>${D.ativ.size}</b> de ${biblio.length} Marcadas</small></div>
+        <div class="filters" style="padding:0 18px"><input class="search" id="bBusca" placeholder="Buscar Atividade" value="${esc(D.busca)}">
+          <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="semanas" ${D.semanas ? 'checked' : ''}> Já Planejar nas Semanas Sugeridas (da Semana ${SEMANA} em Diante)</label>
+          <button class="btn sm" id="marcarSetores">Marcar Todas dos Setores Escolhidos</button><button class="btn sm ghost" id="limpar">Desmarcar Todas</button></div>
+        ${biblio.length ? nomes.map(s => { const L = grupos[s], n = L.filter(b => D.ativ.has(b.id)).length;
+          return `<div class="grp"><h5><input type="checkbox" data-grp="${esc(s)}" ${n === L.length ? 'checked' : ''}> ${esc(s)} <span class="sub" style="font-weight:500">${n} de ${L.length}</span>${D.setores.has(s) ? '' : ' <span class="pill p1">Setor Não Marcado (Será Criado)</span>'}</h5>
+            <div class="itens">${L.map(b => `<label><input type="checkbox" data-at="${b.id}" ${D.ativ.has(b.id) ? 'checked' : ''}><span>${esc(tc(b.nome))}<br><small>${(b.dias || []).map((v, i) => v ? DIAS_CURTO[i] : '').filter(Boolean).join(' · ')}${(b.semanas || []).length ? ' · ' + b.semanas.length + ' Semanas' : ''}</small></span></label>`).join('')}</div></div>`; }).join('')
+          : '<div class="empty">A Biblioteca Está Vazia. Rode o SQL 015 ou Cadastre as Atividades Depois no Plano Anual.</div>'}
+        <div class="foot"><span class="sub">As Atividades Entram Sem "Quem Faz": Depois, no Plano Anual, É Só Escolher Quem Faz Cada Uma.</span></div></div>`;
+    }
+    if (passo === 4) return `<div class="card fs"><h4>Comportamentos, Cargos e Funções</h4>
+        <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="copiaCrit" ${D.copiaCrit ? 'checked' : ''}> Copiar os <b>${critOrig.length} Comportamentos</b> de ${esc(tc(origem.nome))} (Avaliação Semanal e Contrato de Resultados)</label>
+        <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="copiaCargos" ${D.copiaCargos ? 'checked' : ''}> Copiar os <b>${cargosOrig.length} Cargos</b> e as <b>${funcOrig.length} Funções</b> de ${esc(tc(origem.nome))}</label>
+        <div class="sub">Depois Você Pode Editar, Incluir ou Desativar em Cadastros. Copiar Economiza Horas de Digitação.</div></div>`;
+    // Conferir
+    const nPl = D.semanas ? biblio.filter(b => D.ativ.has(b.id)).reduce((n, b) => n + (b.semanas || []).filter(w => w >= SEMANA).length, 0) : 0;
+    return `<div class="card"><div class="cardh"><h3>Conferir e Criar</h3></div><table class="tbl resumo"><tbody>
+        <tr><td>Fazenda</td><td>${esc(tc(D.nome) || '— Falta o Nome (Passo 1)')}${D.municipio ? ' · ' + esc(tc(D.municipio)) : ''}${D.uf ? '/' + esc(D.uf.toUpperCase()) : ''} · Meta ${D.meta}%</td></tr>
+        <tr><td>Setores</td><td>${[...D.setores].map(esc).join(' · ') || '—'}</td></tr>
+        <tr><td>Pessoas</td><td>${pessoasOk().length ? pessoasOk().map(p => esc(tc(p.apelido))).join(' · ') : 'Nenhuma (Pode Cadastrar Depois)'}</td></tr>
+        <tr><td>Equipes</td><td>${equipesOk().map(esc).join(' · ') || '—'}</td></tr>
+        <tr><td>Atividades</td><td>${D.ativ.size} da Biblioteca${D.semanas ? ` · ${nPl} Semanas Planejadas` : ' · Sem Semanas'}</td></tr>
+        <tr><td>Comportamentos</td><td>${D.copiaCrit ? critOrig.length + ' Copiados' : 'Nenhum'}</td></tr>
+        <tr><td>Cargos e Funções</td><td>${D.copiaCargos ? cargosOrig.length + ' Cargos · ' + funcOrig.length + ' Funções' : 'Nenhum'}</td></tr></tbody></table>
+      <div class="foot"><button class="btn pri" id="criar" ${D.nome.trim() && !criada ? '' : 'disabled'}>✓ Criar a Fazenda</button></div><div class="log escondido" id="log"></div></div>`;
+  }
+
+  function desenhar() {
+    $('tela').innerHTML = `
+      <div class="phead"><div><div class="eyebrow">Consultor · Fazenda Que Ainda Não Tem Planilha</div><h1>Nova Fazenda do Zero</h1></div>
+        <div class="acts"><a class="btn" href="importar.html" style="text-decoration:none">Tem Planilha? Importar .xlsm</a></div></div>
+      <div class="passos">${PASSOS.map((p, i) => `<button data-ir="${i}" class="${i === passo ? 'on' : i < passo ? 'ok' : ''}">${i < passo ? '✓ ' : ''}${p}</button>`).join('')}</div>
+      ${telaPasso()}
+      <div class="navp">${passo ? '<button class="btn" data-ir="' + (passo - 1) + '">‹ Voltar</button>' : '<span></span>'}${passo < PASSOS.length - 1 ? '<button class="btn pri" data-ir="' + (passo + 1) + '">Próximo ›</button>' : ''}</div>`;
+  }
+
+  // ---------- Eventos ----------
+  $('tela').addEventListener('input', (e) => {
+    const t = e.target;
+    if (t.dataset.d) { D[t.dataset.d] = t.dataset.d === 'meta' ? +t.value : t.value; return; }
+    if (t.dataset.p) { D.pessoas[+t.dataset.p][t.dataset.c] = t.value; return; }
+    if (t.id === 'equipes') { D.equipes = t.value; return; }
+    if (t.id === 'bBusca') { D.busca = t.value; const pos = t.selectionStart; desenhar(); const i = $('bBusca'); i.focus(); i.setSelectionRange(pos, pos); }
+  });
+  $('tela').addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.dataset.setor) { t.checked ? D.setores.add(t.dataset.setor) : D.setores.delete(t.dataset.setor); return; }
+    if (t.dataset.p) { D.pessoas[+t.dataset.p][t.dataset.c] = t.value; return; }
+    if (t.dataset.at) { t.checked ? D.ativ.add(t.dataset.at) : D.ativ.delete(t.dataset.at); return desenhar(); }
+    if (t.dataset.grp) { biblio.filter(b => tc(b.setor_nome || 'Sem Setor') === t.dataset.grp && (!D.busca || chave(b.nome).includes(chave(D.busca)))).forEach(b => t.checked ? D.ativ.add(b.id) : D.ativ.delete(b.id)); return desenhar(); }
+    if (t.id === 'semanas') D.semanas = t.checked;
+    if (t.id === 'copiaCrit') D.copiaCrit = t.checked;
+    if (t.id === 'copiaCargos') D.copiaCargos = t.checked;
+  });
+  $('tela').addEventListener('click', (e) => {
+    const t = e.target, ir = t.closest('[data-ir]');
+    if (ir) { if (+ir.dataset.ir > 0 && !D.nome.trim()) { passo = 0; desenhar(); return alert('Informe o Nome da Fazenda.'); } passo = +ir.dataset.ir; window.scrollTo(0, 0); return desenhar(); }
+    if (t.id === 'addSetor') { const n = tc($('setorNovo').value.trim()); if (n) { D.setoresExtra = (D.setoresExtra || []).concat(n); D.setores.add(n); desenhar(); } return; }
+    if (t.id === 'maisLinhas') { for (let i = 0; i < 5; i++) D.pessoas.push({ apelido: '', nome: '', cargo: '', setor: '' }); return desenhar(); }
+    const dp = t.closest('[data-delp]'); if (dp) { D.pessoas.splice(+dp.dataset.delp, 1); return desenhar(); }
+    if (t.id === 'colar') {
+      const txt = prompt('Cole a Lista (Uma Pessoa por Linha):\nApelido; Nome Completo; Cargo; Setor'); if (!txt) return;
+      const novas = txt.split(/\r?\n/).map(l => l.split(/\t|;/).map(x => x.trim())).filter(c => c[0]).map(([apelido, nome = '', cargo = '', setor = '']) => ({ apelido, nome, cargo, setor: [...D.setores].find(s => chave(s) === chave(setor)) || '' }));
+      D.pessoas = [...pessoasOk(), ...novas]; return desenhar();
+    }
+    if (t.id === 'marcarSetores') { biblio.filter(b => D.setores.has(tc(b.setor_nome || ''))).forEach(b => D.ativ.add(b.id)); return desenhar(); }
+    if (t.id === 'limpar') { D.ativ.clear(); return desenhar(); }
+    if (t.id === 'criar') return criar();
+  });
+
+  // ---------- Criar tudo ----------
+  async function criar() {
+    $('criar').disabled = true; const log = $('log'); log.classList.remove('escondido'); log.innerHTML = '';
+    const passoLog = (m, cls = '') => log.insertAdjacentHTML('beforeend', `<div class="${cls}">${m}</div>`);
+    const falhou = (m) => { passoLog('✗ ' + esc(m), 'er'); $('criar').disabled = false; throw new Error(m); };
+    const ins = async (tab, linhas, cols) => { const out = []; for (let i = 0; i < linhas.length; i += 400) { const { data, error } = await supabase.from(tab).insert(linhas.slice(i, i + 400)).select(cols); if (error) falhou(tab + ': ' + error.message); out.push(...(data || [])); } return out; };
+    try {
+      const { data: fz, error } = await supabase.rpc('criar_fazenda', { p_nome: tc(D.nome), p_uf: D.uf, p_municipio: tc(D.municipio) });
+      if (error) falhou(error.message.includes('function') ? 'Falta Rodar o SQL 016 no Supabase' : error.message);
+      criada = true; passoLog('✓ Fazenda ' + esc(tc(D.nome)) + ' Criada', 'ok');
+      if (D.meta !== 80) await supabase.from('fazendas').update({ meta_mes: D.meta }).eq('id', fz);
+      // Setores (os marcados + os das atividades escolhidas)
+      const escolhidas = biblio.filter(b => D.ativ.has(b.id));
+      const nomesS = [...new Set([...D.setores, ...escolhidas.map(b => tc(b.setor_nome || '')).filter(Boolean), ...(D.copiaCargos ? funcOrig.map(f => tc(setoresOrig.find(s => s.id === f.setor_id)?.nome || '')).filter(Boolean) : [])])];
+      const S = await ins('setores', nomesS.map(n => ({ fazenda_id: fz, nome: n })), 'id, nome');
+      const setorId = (n) => n ? S.find(s => chave(s.nome) === chave(n))?.id || null : null;
+      passoLog(`✓ ${S.length} Setores`, 'ok');
+      // Pessoas e equipes
+      const vistos = new Set(), pes = pessoasOk().filter(p => { const k = chave(p.apelido); if (vistos.has(k)) return false; vistos.add(k); return true; });
+      if (pes.length) { const P = await ins('pessoas', pes.map(p => ({ fazenda_id: fz, apelido: tc(p.apelido), nome: tc(p.nome || p.apelido), cargo: p.cargo ? tc(p.cargo) : null, setor_id: setorId(p.setor) })), 'id'); passoLog(`✓ ${P.length} Pessoas`, 'ok'); }
+      if (equipesOk().length) { const E = await ins('equipes', [...new Set(equipesOk().map(tc))].map(n => ({ fazenda_id: fz, nome: n })), 'id'); passoLog(`✓ ${E.length} Equipes`, 'ok'); }
+      // Comportamentos, cargos e funções
+      if (D.copiaCrit && critOrig.length) { await ins('criterios', critOrig.map(c => ({ fazenda_id: fz, nome: c.nome })), 'id'); passoLog(`✓ ${critOrig.length} Comportamentos`, 'ok'); }
+      if (D.copiaCargos) {
+        if (cargosOrig.length) { await ins('cargos', cargosOrig.map(({ id, fazenda_id, criado_em, ...resto }) => ({ ...resto, fazenda_id: fz })), 'id'); passoLog(`✓ ${cargosOrig.length} Cargos`, 'ok'); }
+        if (funcOrig.length) { await ins('funcoes', funcOrig.map(f => ({ fazenda_id: fz, nome: f.nome, setor_id: setorId(setoresOrig.find(s => s.id === f.setor_id)?.nome) })), 'id'); passoLog(`✓ ${funcOrig.length} Funções`, 'ok'); }
+      }
+      // Atividades da biblioteca e semanas
+      if (escolhidas.length) {
+        const AT = await ins('atividades', escolhidas.map(b => ({ fazenda_id: fz, nome: tc(b.nome), setor_id: setorId(b.setor_nome), tipo: b.tipo, urgencia: b.urgencia || 2, dias: b.dias, local: b.local, como_fazer: b.como_fazer })), 'id, nome');
+        passoLog(`✓ ${AT.length} Atividades`, 'ok');
+        if (D.semanas) {
+          const PL = []; AT.forEach(a => { const b = escolhidas.find(x => chave(x.nome) === chave(a.nome)); (b?.semanas || []).filter(w => w >= SEMANA).forEach(w => PL.push({ fazenda_id: fz, atividade_id: a.id, ano: ANO, semana: w, status: 1 })); });
+          for (let i = 0; i < PL.length; i += 500) { const { error: e2 } = await supabase.from('planejamento').insert(PL.slice(i, i + 500)); if (e2) falhou('Semanas: ' + e2.message); }
+          passoLog(`✓ ${PL.length} Semanas Planejadas`, 'ok');
+        }
+      }
+      try { localStorage.setItem('fp-fazenda', fz); } catch {}
+      passoLog('🎉 Fazenda Pronta! Próximos Passos:', 'ok');
+      log.insertAdjacentHTML('beforeend', `<div style="font-family:var(--fb);display:grid;gap:8px;margin-top:10px">
+        <a class="btn" href="cadastros.html?aba=equipes" style="text-decoration:none">1. Marcar os Membros e o Líder de Cada Equipe</a>
+        <a class="btn" href="plano.html" style="text-decoration:none">2. Plano Anual: Definir Quem Faz Cada Atividade</a>
+        <a class="btn" href="cadastros.html?aba=colab" style="text-decoration:none">3. Criar o Login do Gestor e da Equipe</a>
+        <a class="btn pri" href="painel.html" style="text-decoration:none">Abrir o Painel da Fazenda Nova ›</a></div>`);
+    } catch (e) { console.warn(e); }
+  }
+
+  // Entrada
+  eu = await quemSouEu();
+  montarMenu('nova-fazenda.html');
+  if (!eu) location.href = 'index.html';
+  else if (eu.papel !== 'consultor') $('aviso').textContent = 'Criar Fazenda É Só para o Consultor.';
+  else {
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    await carregar();
+  }
+</script>
+</body>
+</html>

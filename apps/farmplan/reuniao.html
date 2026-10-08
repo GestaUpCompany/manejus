@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Reunião de 10 Minutos (visual do protótipo) -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reunião de 10 Min · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    .rk{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+    .rk .card{padding:12px 16px;display:flex;flex-direction:column;gap:2px}
+    .rk small{font-size:12px;color:var(--muted);font-weight:600}
+    .rk b.num{font-family:var(--fd);font-size:30px;line-height:1.05}
+    .rk span{font-size:12px;color:var(--ink2)}
+    .rk .mbar{height:8px;margin-top:6px}.rk .mbar em{top:-3px;bottom:-3px}
+    .rc3{border-top:4px solid var(--line)}.rc3.c1{border-top-color:var(--s2)}.rc3.c2{border-top-color:var(--navy)}.rc3.c3{border-top-color:var(--s4)}
+    .rc3 .cardh h3{display:flex;align-items:center;gap:8px}
+    .rc3 .cardh h3 i{font-style:normal;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;display:inline-grid;place-items:center;font-size:13px}
+    .rc3.agora{box-shadow:0 0 0 3px var(--s5)}
+    .pb{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--empty);margin:0 18px 10px}.pb i{display:block;height:100%}
+    .st{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding:6px 0 2px}
+    .mot.sb{background:var(--s5-soft);color:#9A6400}
+    .ri small{display:inline!important}.ri .mot{margin:0 0 0 6px;vertical-align:1px}
+    .okl{font-size:12px;color:var(--s2);line-height:1.6;padding:6px 0}
+    .pq{padding:8px 0;border-bottom:1px solid var(--line2)}
+    .pq .h{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+    .pq .h em{font-style:normal;background:var(--navy-soft);color:var(--navy);border-radius:99px;padding:0 8px;font-weight:800;font-size:12px}
+    .pq .ch{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+    .pq .ch span{background:var(--surface2);border:1px solid var(--line2);border-radius:6px;padding:1px 7px;font-size:12px;color:var(--ink2)}
+    .mb2{display:grid;gap:5px;padding:0 0 8px}
+    .mb2 div{display:grid;grid-template-columns:90px 1fr 22px;gap:8px;align-items:center;font-size:12px}
+    .mb2 i{display:block;height:8px;border-radius:99px;background:var(--s4)}
+    .tmr.on{background:var(--navy);color:#fff;border-color:var(--navy)}.tmr.al{background:var(--s5);border-color:var(--s5);color:#fff}.tmr.fim{background:var(--s4);border-color:var(--s4);color:#fff}
+    @media (max-width:860px){.rk{grid-template-columns:1fr 1fr}}
+    .rg3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;align-items:start}
+    .rl{padding:0 18px 14px;display:grid;gap:2px}
+    .ri{padding:7px 0;border-bottom:1px solid var(--line2);font-size:13px}
+    .ri b{display:block}
+    .ri small{display:block;color:var(--muted);font-size:12px}
+    .mot{display:inline-block;margin-top:3px;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700;background:var(--s4-soft);color:var(--s4)}
+    .mot.sm{background:var(--empty);color:var(--muted)}
+    .rq{display:grid;grid-template-columns:130px 1fr 30px;gap:8px;align-items:start;padding:7px 0;border-bottom:1px solid var(--line2);font-size:13px}
+    .rq span{font-size:12px;color:var(--ink2);line-height:1.5}
+    .rq em{font-style:normal;font-weight:700;text-align:right}
+    .cmp{display:grid;grid-template-columns:150px 1fr minmax(0,1fr);gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line2)}
+    .cmp .ant{font-size:12.5px;color:var(--ink2)}
+    .cmp .ant .seg button{padding:3px 10px;font-size:12px}
+    .sn{display:inline-flex;gap:4px;margin-left:6px}
+    .sn button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:2px 9px;font-size:12px;font-weight:700;cursor:pointer;color:var(--ink2)}
+    .sn button.sim{background:var(--s2);border-color:var(--s2);color:#fff}
+    .sn button.nao{background:var(--s4);border-color:var(--s4);color:#fff}
+    @media (max-width:860px){.cmp{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="reuniao.html" selected>Reunião de 10 Min</option><option value="painel.html">Painel</option><option value="index.html">Tarefas da Semana</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, SEMANAS_NO_ANO, PAPEL, DIAS_LONGO, MESES_LONGO, tc, esc, semanaDe, inicioDaSemana, quemSouEu, buscarTudo, montarMenu, aoMudar } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo', 'lider'];
+  let META = 80;
+  const HOJE = new Date(), W = semanaDe(HOJE), D = (HOJE.getDay() + 6) % 7;     // 0 = segunda
+  const [YW, YD] = D === 0 ? [W - 1, 6] : [W, D - 1];                            // ontem
+  let eu, fz, atividades = {}, pessoas = [], equipes = [], plano = {}, obs = {}, baixas = {}, comp = {}, comTabela = true;
+
+  // Cronômetro da reunião (10 min): 1. Ontem 3 min · 2. Hoje 3 min · 3. Travou 2 min · 4. Compromissos 2 min
+  let tmrIni = null, tmrId = null;
+  const ETAPAS = [180, 360, 480, 600];
+  function tickTmr() {
+    const b = document.getElementById('tmr'); if (!b) return;
+    if (!tmrIni) { b.className = 'btn tmr'; b.textContent = '⏱ Iniciar Reunião · 10:00'; document.querySelectorAll('.rc3,.cmpc').forEach(c => c.classList.remove('agora')); return; }
+    const pass = Math.floor((Date.now() - tmrIni) / 1000), rest = 600 - pass, a = Math.abs(rest), mm = Math.floor(a / 60), ss = String(a % 60).padStart(2, '0');
+    b.className = 'btn tmr ' + (rest <= 0 ? 'fim' : rest <= 120 ? 'al' : 'on');
+    b.textContent = rest > 0 ? `⏱ ${mm}:${ss} · Parar` : `⏱ Tempo Esgotado +${mm}:${ss} · Parar`;
+    const et = ETAPAS.findIndex(t => pass < t);
+    document.querySelectorAll('[data-et]').forEach(c => c.classList.toggle('agora', +c.dataset.et === et));
+  }
+  function aviso(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2400); }
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  const mesDa = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();
+  const semanasDoMes = (m) => { const r = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (mesDa(w) === m) r.push(w); return r; };
+  const nomeQuem = (a) => tc(pessoas.find(p => p.id === a.executor_pessoa_id)?.apelido || equipes.find(e => e.id === a.executor_equipe_id)?.nome || '—');
+  const naSemana = (w) => Object.keys(plano).filter(k => +k.split('|')[1] === w).map(k => atividades[k.split('|')[0]]).filter(Boolean);
+  const doDia = (w, d) => naSemana(w).filter(a => a.dias?.[d]);
+  const bx = (w, a, d) => baixas[w + '|' + a.id + '|' + d];
+  const feito = (w, a, d) => { const b = bx(w, a, d); return b ? b.feito : plano[a.id + '|' + w] === 2; };
+  const atrasada = (w, a) => (obs[a.id + '|' + w] || '').startsWith('Atrasada');
+  const motivoSemana = (w, a) => { for (let d = 6; d >= 0; d--) { const b = bx(w, a, d); if (b && !b.feito) return b.motivo; } return null; };
+  const tagAtr = (w, a) => { const m = (obs[a.id + '|' + w] || '').match(/(\d+)\s*$/); return atrasada(w, a) ? ` <span class="late">↻ ${m ? m[1] : ''}</span>` : ''; };
+
+  async function carregar() {
+    const ws = [...new Set([YW, W, ...semanasDoMes(mesDa(W)).filter(w => w <= W)])].filter(w => w >= 1);
+    const [at, p, e, pl, b] = await Promise.all([
+      buscarTudo(() => supabase.from('atividades').select('id, nome, dias, executor_pessoa_id, executor_equipe_id').eq('fazenda_id', fz)),
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido, cargo, ativo').eq('fazenda_id', fz).order('apelido')),
+      buscarTudo(() => supabase.from('equipes').select('id, nome, lider_id').eq('fazenda_id', fz).order('nome')),
+      buscarTudo(() => supabase.from('planejamento').select('atividade_id, semana, status, observacao').eq('fazenda_id', fz).eq('ano', ANO).in('semana', ws)),
+      buscarTudo(() => supabase.from('baixas').select('atividade_id, semana, dia, feito, motivo').eq('fazenda_id', fz).eq('ano', ANO).in('semana', ws))
+    ]);
+    atividades = {}; at.forEach(a => atividades[a.id] = a); pessoas = p; equipes = e;
+    plano = {}; obs = {}; pl.forEach(l => { plano[l.atividade_id + '|' + l.semana] = l.status; if (l.observacao) obs[l.atividade_id + '|' + l.semana] = l.observacao; });
+    baixas = {}; b.forEach(x => baixas[x.semana + '|' + x.atividade_id + '|' + x.dia] = x);
+    const { data: c, error } = await supabase.from('compromissos').select('pessoa_id, semana, texto, cumprido').eq('fazenda_id', fz).eq('ano', ANO).in('semana', [W - 1, W]);
+    comTabela = !error; comp = {}; (c || []).forEach(x => comp[x.pessoa_id + '|' + x.semana] = x);
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+
+  // Líderes: líder de alguma equipe ou cargo de líder / gerente / controller
+  function lideres() {
+    const ids = new Set(equipes.map(e => e.lider_id).filter(Boolean));
+    pessoas.filter(p => p.ativo !== false && /l[ií]der|gerente|controller|encarregad/i.test(p.cargo || '')).forEach(p => ids.add(p.id));
+    return pessoas.filter(p => ids.has(p.id));
+  }
+
+  function metaMes() {
+    let pl = 0, dn = 0; const ws = semanasDoMes(mesDa(W)).filter(w => w <= W);
+    ws.forEach(w => { const lim = w < W ? 7 : D + 1; naSemana(w).forEach(a => (a.dias || []).forEach((v, d) => { if (v && d < lim) { pl++; if (feito(w, a, d)) dn++; } })); });
+    return { p: pl ? Math.round(dn / pl * 100) : 0, dn, pl, ws };
+  }
+
+  function desenhar() {
+    const Y = YW >= 1 ? doDia(YW, YD) : [], Yd = Y.filter(a => feito(YW, a, YD)), Yn = Y.filter(a => !feito(YW, a, YD));
+    const pY = Y.length ? Math.round(Yd.length / Y.length * 100) : 0;
+    const T = doDia(W, D), porQuem = {}; T.forEach(a => (porQuem[nomeQuem(a)] = porQuem[nomeQuem(a)] || []).push(a));
+    const trav = naSemana(W).filter(a => plano[a.id + '|' + W] !== 2 && (plano[a.id + '|' + W] === 4 || atrasada(W, a) || motivoSemana(W, a)))
+      .sort((a, b) => atrasada(W, b) - atrasada(W, a) || !!motivoSemana(W, b) - !!motivoSemana(W, a) || a.nome.localeCompare(b.nome, 'pt'));
+    const mot = {}; trav.forEach(a => { const m = motivoSemana(W, a); if (m) mot[tc(m)] = (mot[tc(m)] || 0) + 1; });
+    const motL = Object.entries(mot).sort((a, b) => b[1] - a[1]), mxM = Math.max(1, ...motL.map(x => x[1]));
+    const L = lideres(), podeEditar = comTabela, mm = metaMes(), comC = L.filter(p => comp[p.id + '|' + W]).length;
+    const cor = (p, m) => p >= m ? 'var(--s2)' : p >= m - 20 ? 'var(--s5)' : 'var(--s4)';
+    $('tela').innerHTML = `
+      <div class="phead"><div><div class="eyebrow">Reunião de 10 Minutos · ${DIAS_LONGO[D]}, ${HOJE.getDate()} de ${MESES_LONGO[HOJE.getMonth()]} · Semana ${W}</div><h1>O Que Fizemos, o Que Vamos Fazer, o Que Travou</h1></div>
+        <div class="acts"><button class="btn tmr" id="tmr">⏱ Iniciar Reunião · 10:00</button><a class="btn dark" href="semana-pdf.html?semana=${W}" style="text-decoration:none">📄 PDF da Semana</a><a class="btn" href="semana-pdf.html?semana=${W}&excel=1" style="text-decoration:none">📊 Excel da Semana</a></div></div>
+      <div class="rk">
+        <div class="card"><small>✅ Feito Ontem · ${DIAS_LONGO[YD]}</small><b class="num" style="color:${Y.length ? cor(pY, META) : 'var(--ink)'}">${Y.length ? pY + '%' : '—'}</b><span>${Yd.length} de ${Y.length} Tarefas</span></div>
+        <div class="card"><small>📋 Tarefas Hoje</small><b class="num">${T.length}</b><span>${Object.keys(porQuem).length} Pessoas ou Equipes</span></div>
+        <div class="card"><small>⚠️ Travadas na Semana</small><b class="num" style="color:${trav.length ? 'var(--s4)' : 'var(--s2)'}">${trav.length}</b><span>${motL.length ? 'Mais Comum: ' + esc(motL[0][0]) : trav.length ? 'Sem Motivo Lançado' : 'Nada Travado 👏'}</span></div>
+        <div class="card" title="${mm.dn} de ${mm.pl} Tarefas-Dia com Baixa até Hoje · Sem. ${mm.ws[0]} a ${mm.ws[mm.ws.length - 1]}"><small>🎯 Meta do Mês · ${META}%</small><b class="num" style="color:${cor(mm.p, META)}">${mm.p}%</b>
+          <div class="mbar"><i style="width:${Math.min(100, mm.p)}%;background:${cor(mm.p, META)}"></i><em style="left:${META}%"></em></div></div>
+      </div>
+      <div class="rg3">
+        <div class="card rc3 c1" data-et="0"><div class="cardh"><h3><i>1</i>Ontem</h3><small>${DIAS_LONGO[YD]} · ${Yd.length} de ${Y.length} Feitas</small></div>
+          ${Y.length ? `<div class="pb"><i style="width:${pY}%;background:var(--s2)"></i><i style="width:${100 - pY}%;background:var(--s4)"></i></div>` : ''}
+          <div class="rl">${Yn.length ? `<div class="st">Não Foi Feito · ${Yn.length}</div>` + Yn.slice(0, 8).map(a => { const b = bx(YW, a, YD); return `<div class="ri"><b>${esc(tc(a.nome))}${tagAtr(YW, a)}</b><small>${esc(nomeQuem(a))}</small>${b && !b.feito ? `<span class="mot">${esc(tc(b.motivo || 'Sem Motivo'))}</span>` : '<span class="mot sb">Sem Baixa · Perguntar</span>'}</div>`; }).join('')
+            + (Yn.length > 8 ? `<div class="sub" style="padding:6px 0">e Mais ${Yn.length - 8}</div>` : '') : `<div class="empty">${Y.length ? 'Tudo o Que Estava Planejado Foi Feito. 👏' : 'Nada Planejado para Ontem.'}</div>`}
+            ${Yd.length ? `<div class="st">Feito · ${Yd.length}</div><div class="okl">${Yd.map(a => '✓ ' + esc(tc(a.nome))).join('<br>')}</div>` : ''}</div></div>
+        <div class="card rc3 c2" data-et="1"><div class="cardh"><h3><i>2</i>Hoje</h3><small>${T.length} Tarefas · ${Object.keys(porQuem).length} Pessoas ou Equipes</small></div>
+          <div class="rl">${Object.entries(porQuem).sort((a, b) => b[1].length - a[1].length).map(([k, l]) => `<div class="pq"><div class="h"><b>${esc(k)}</b><em>${l.length}</em></div><div class="ch">${l.map(a => `<span>${esc(tc(a.nome))}</span>`).join('')}</div></div>`).join('') || '<div class="empty">Nada Planejado para Hoje.</div>'}</div></div>
+        <div class="card rc3 c3" data-et="2"><div class="cardh"><h3><i>3</i>O Que Travou</h3><small>${trav.length} na Semana</small></div>
+          <div class="rl">${motL.length ? `<div class="st">Motivos</div><div class="mb2">${motL.map(([k, n]) => `<div><span>${esc(k)}</span><i style="width:${n / mxM * 100}%"></i><b>${n}</b></div>`).join('')}</div>` : ''}
+            ${trav.length ? `<div class="st">Atividades</div>` + trav.slice(0, 10).map(a => { const m = motivoSemana(W, a); return `<div class="ri"><b>${esc(tc(a.nome))}${tagAtr(W, a)}</b><small>${esc(nomeQuem(a))}</small>${m ? `<span class="mot">${esc(tc(m))}</span>` : ''}</div>`; }).join('')
+            + (trav.length > 10 ? `<div class="sub" style="padding:6px 0">e Mais ${trav.length - 10}</div>` : '') : '<div class="empty">Nada Travado Nesta Semana. 👏</div>'}</div></div>
+      </div>
+      <div class="card fs rc3 cmpc" data-et="3" style="margin-top:16px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><h4 style="display:flex;gap:8px;align-items:center;margin:0"><span style="width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;display:inline-grid;place-items:center;font-size:13px">4</span>Compromisso da Semana de Cada Líder</h4>
+          <span class="sub"><b style="color:${comC === L.length && L.length ? 'var(--s2)' : 'var(--ink)'}">${comC} de ${L.length}</b> Líderes com Compromisso</span></div>
+        <p style="margin:0;font-size:12.5px;color:var(--muted)">Na Reunião de Segunda, Cada Líder Diz a 1 Coisa Mais Importante Que Vai Fazer na Semana. Na Segunda Seguinte, Confira se Fez. Salva Sozinho ao Sair do Campo.</p>
+        ${!comTabela ? '<div class="regra" style="color:var(--s4)">Falta Rodar o SQL 012_compromissos.sql no Supabase para Salvar os Compromissos.</div>' : ''}
+        <div>${L.map(p => { const ag = comp[p.id + '|' + W], ant = comp[p.id + '|' + (W - 1)];
+          return `<div class="cmp"><b>${esc(tc(p.apelido))}<div class="sub" style="font-weight:500;font-size:12px">${esc(tc(p.cargo || ''))}</div></b>
+            <input class="in" data-cm="${p.id}" value="${esc(ag?.texto || '')}" placeholder="Qual a Coisa Mais Importante da Semana?" ${podeEditar ? '' : 'disabled'}>
+            <div class="ant">${ant ? `<b>Sem. ${W - 1}:</b> ${esc(ant.texto)} <span class="sn">Fez?<button data-fez="${p.id}" data-v="1" class="${ant.cumprido === true ? 'sim' : ''}">Sim</button><button data-fez="${p.id}" data-v="0" class="${ant.cumprido === false ? 'nao' : ''}">Não</button></span>` : `<span class="sub">Sem Compromisso na Semana ${W - 1}</span>`}</div></div>`; }).join('') || '<div class="empty">Nenhum Líder Encontrado. Defina os Líderes em Cadastros › Equipes do App.</div>'}</div>
+      </div>`;
+    tickTmr();
+  }
+
+  $('tela').addEventListener('change', async (e) => {
+    const id = e.target.dataset.cm; if (!id) return;
+    const texto = e.target.value.trim(), nome = tc(pessoas.find(p => p.id === id)?.apelido);
+    const r = texto ? await supabase.from('compromissos').upsert({ fazenda_id: fz, pessoa_id: id, ano: ANO, semana: W, texto, atualizado_em: new Date().toISOString() }, { onConflict: 'pessoa_id,ano,semana' })
+                    : await supabase.from('compromissos').delete().eq('pessoa_id', id).eq('ano', ANO).eq('semana', W);
+    if (r.error) return aviso('Não Foi Possível Salvar: ' + r.error.message);
+    if (texto) comp[id + '|' + W] = { ...(comp[id + '|' + W] || {}), pessoa_id: id, semana: W, texto }; else delete comp[id + '|' + W];
+    aviso('Compromisso de ' + nome + ' Salvo');
+  });
+  $('tela').addEventListener('click', (e) => {
+    if (!e.target.closest('#tmr')) return;
+    if (tmrIni) { tmrIni = null; clearInterval(tmrId); } else { tmrIni = Date.now(); tmrId = setInterval(tickTmr, 1000); }
+    tickTmr();
+  });
+  $('tela').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-fez]'); if (!b) return;
+    const id = b.dataset.fez, ant = comp[id + '|' + (W - 1)], v = b.dataset.v === '1', novo = ant.cumprido === v ? null : v;
+    const { error } = await supabase.from('compromissos').update({ cumprido: novo }).eq('pessoa_id', id).eq('ano', ANO).eq('semana', W - 1);
+    if (error) return aviso('Não Foi Possível Salvar: ' + error.message);
+    ant.cumprido = novo; desenhar();
+  });
+
+  // Entrada
+  eu = await quemSouEu();
+  montarMenu('reuniao.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.includes(eu.papel)) $('aviso').textContent = 'A Reunião de 10 Min é para Gestor, Administrativo, Consultor e Líderes.';
+  else {
+    fz = eu.fazenda.id;
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    const { data: fzd } = await supabase.from('fazendas').select('meta_mes').eq('id', fz).maybeSingle();
+    if (fzd?.meta_mes != null) META = fzd.meta_mes;   // Meta do Mês: Cadastros › Geral
+    await carregar();
+    aoMudar(fz, ['baixas', 'planejamento', 'fora_do_plano', 'compromissos'], carregar);
+  }
+</script>
+</body>
+</html>

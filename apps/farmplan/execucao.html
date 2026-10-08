@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Tempo e Meta: quanto tempo cada atividade levou (sem as pausas) e se a meta foi batida -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tempo e Meta · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    .mk{display:inline-block;border-radius:6px;padding:1px 7px;font-size:11.5px;font-weight:700;white-space:nowrap}
+    .mk.bateu{background:var(--s2-soft);color:var(--s2)} .mk.parcial{background:var(--s5-soft);color:var(--s5)} .mk.nao{background:var(--s4-soft);color:var(--s4)} .mk.sem{background:var(--empty);color:var(--muted)}
+    .dif.mais{color:var(--s4);font-weight:700} .dif.menos{color:var(--s2);font-weight:700}
+    .evs{font-size:11.5px;color:var(--muted);line-height:1.5}
+    .andando{display:grid;gap:8px;padding:0 18px 16px}
+    .andando>div{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--surface)}
+    .andando b{font-size:14px}.andando small{display:block;color:var(--muted);font-size:12px}
+    .rev{color:var(--s4);font-weight:700;font-size:11.5px}
+    @media print{.side,.mtop,.acts,.filters,.noprint{display:none!important}.shell{display:block}.main{padding:0!important}.card{break-inside:avoid}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="execucao.html" selected>Tempo e Meta</option><option value="painel.html">Painel</option><option value="index.html">Tarefas da Semana</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, PAPEL, DIAS_LONGO, tc, esc, quemSouEu, buscarTudo, montarMenu, ddmm, nf , aoMudar } from './comum.js';
+  import { agrupar, fmtDur, hhmm, metaDe, textoMeta, META } from './tempo.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  let eu, fz, pessoas = [], atividades = {}, eventos = [], periodo = 'semana', fQuem = '';
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  function aviso(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2400); }
+  const nomeP = (id) => tc(pessoas.find(p => p.id === id)?.apelido || '—');
+  const nomeA = (x) => tc(atividades[x.atividade_id]?.nome || x.ativ?.nome || 'Atividade');
+  const segunda = (d) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; };
+  function intervalo() {
+    const hoje = new Date(), s = segunda(hoje);
+    if (periodo === 'semana') return [s, new Date(s.getTime() + 7 * 864e5), 'Esta Semana'];
+    if (periodo === 'passada') return [new Date(s.getTime() - 7 * 864e5), s, 'Semana Passada'];
+    if (periodo === 'mes') return [new Date(hoje.getFullYear(), hoje.getMonth(), 1), new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1), 'Este Mês'];
+    return [new Date(s.getTime() - 21 * 864e5), new Date(s.getTime() + 7 * 864e5), 'Últimas 4 Semanas'];
+  }
+
+  async function carregar() {
+    const [de] = intervalo(), desde = new Date(Math.min(de.getTime(), Date.now() - 35 * 864e5) - 14 * 864e5).toISOString();
+    const { data, error } = await supabase.from('execucoes').select('*, atividades(nome, como_fazer)').eq('fazenda_id', fz).gte('em', desde).order('em');
+    if (error) { $('aviso').textContent = 'Falta Rodar o SQL 023 (Tempo e Meta) no Supabase.'; return; }
+    eventos = data || [];
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+
+  function desenhar() {
+    const [de, ate, rotulo] = intervalo();
+    const todas = agrupar(eventos).filter(x => !fQuem || x.pessoa_id === fQuem);
+    const andando = todas.filter(x => x.estado !== 'fim');
+    const T = todas.filter(x => x.estado === 'fim' && new Date(x.fim) >= de && new Date(x.fim) < ate);
+    const horas = T.reduce((s, x) => s + x.trabalhado, 0);
+    const comMeta = T.filter(x => x.meta_status), bateu = comMeta.filter(x => x.meta_status === 'bateu').length;
+    const pctMeta = comMeta.length ? Math.round(bateu / comMeta.length * 100) : null;
+    const revisar = T.filter(x => x.revisar);
+    // Por atividade
+    const porA = {}; T.forEach(x => { (porA[x.atividade_id] ||= []).push(x); });
+    const linhasA = Object.entries(porA).map(([id, L]) => {
+      const a = atividades[id] || { nome: L[0].ativ?.nome, como_fazer: L[0].ativ?.como_fazer }, m = metaDe(a);
+      const med = L.reduce((s, x) => s + x.trabalhado, 0) / L.length, prev = m.horas != null ? m.horas * 3600e3 : null;
+      const cm = L.filter(x => x.meta_status), c = (k) => cm.filter(x => x.meta_status === k).length;
+      const q = L.filter(x => x.meta_feito != null), qm = q.length ? q.reduce((s, x) => s + +x.meta_feito, 0) / q.length : null;
+      return { id, nome: tc(a.nome || ''), m, n: L.length, med, prev, b: c('bateu'), p: c('parcial'), nn: c('nao'), pct: cm.length ? Math.round(c('bateu') / cm.length * 100) : null, qm };
+    }).sort((x, y) => (x.pct ?? 101) - (y.pct ?? 101) || y.n - x.n);
+    // Por pessoa
+    const porP = {}; T.forEach(x => { (porP[x.pessoa_id || '—'] ||= []).push(x); });
+    const linhasP = Object.entries(porP).map(([id, L]) => { const cm = L.filter(x => x.meta_status);
+      return { nome: nomeP(id), n: L.length, h: L.reduce((s, x) => s + x.trabalhado, 0), pct: cm.length ? Math.round(cm.filter(x => x.meta_status === 'bateu').length / cm.length * 100) : null }; }).sort((a, b) => b.h - a.h);
+    // Pausas por motivo
+    const pz = {}; T.concat(andando).forEach(x => x.pausas.forEach(p => { pz[p.motivo] = (pz[p.motivo] || 0) + p.ms; }));
+    const pArr = Object.entries(pz).sort((a, b) => b[1] - a[1]), pMax = Math.max(1, ...pArr.map(x => x[1]));
+    const quem = [...new Set(agrupar(eventos).map(x => x.pessoa_id).filter(Boolean))].map(id => [id, nomeP(id)]).sort((a, b) => a[1].localeCompare(b[1], 'pt'));
+    const cor = (p) => p == null ? 'var(--muted)' : p >= 80 ? 'var(--s2)' : p >= 60 ? 'var(--s5)' : 'var(--s4)';
+    const dif = (med, prev) => { if (prev == null) return '<span class="sub">—</span>'; const d = med - prev, pc = Math.round(d / prev * 100); return `<span class="dif ${d > 0 ? 'mais' : 'menos'}">${d > 0 ? '+' : '−'}${fmtDur(Math.abs(d))} (${pc > 0 ? '+' : ''}${pc}%)</span>`; };
+    const mk = (x) => x.meta_status ? `<span class="mk ${x.meta_status}">${META[x.meta_status][0]} ${META[x.meta_status][1]}</span>` : '<span class="mk sem">Sem Meta</span>';
+    const quando = (iso) => `${DIAS_LONGO[(new Date(iso).getDay() + 6) % 7].slice(0, 3)} ${ddmm(new Date(iso))} ${hhmm(iso)}`;
+    $('tela').innerHTML = `
+      <div class="phead"><div><div class="eyebrow">Cronômetro do Aplicativo · ${rotulo}</div><h1>Tempo e Meta das Atividades</h1>
+        <div class="sub">Tempo Trabalhado sem Contar Almoço e Outras Pausas · Atividades de Mais de um Dia Somam Todos os Dias</div></div>
+        <div class="acts"><button class="btn" onclick="print()">📄 PDF</button><button class="btn" data-xls="1">📊 Excel</button></div></div>
+      <div class="filters" style="flex-wrap:wrap;gap:8px">
+        <div class="seg">${[['semana', 'Esta Semana'], ['passada', 'Semana Passada'], ['4sem', 'Últimas 4 Semanas'], ['mes', 'Este Mês']].map(([k, n]) => `<button data-per="${k}" class="${periodo === k ? 'on' : ''}">${n}</button>`).join('')}</div>
+        <label class="sel">Quem<select id="fQuem"><option value="">Todos</option>${quem.map(([id, n]) => `<option value="${id}" ${fQuem === id ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
+      </div>
+      <div class="kpis">
+        <div class="card kpi"><small>Atividades Terminadas</small><b class="num">${T.length}</b><span>${rotulo}</span></div>
+        <div class="card kpi"><small>Horas Trabalhadas</small><b class="num">${nf(horas / 3600e3, 1)}</b><span>Sem as Pausas</span></div>
+        <div class="card kpi"><small>Meta Batida</small><b class="num" style="color:${cor(pctMeta)}">${pctMeta == null ? '—' : pctMeta + '%'}</b><span>${bateu} de ${comMeta.length} com Meta Informada</span></div>
+        <div class="card kpi"><small>Em Andamento Agora</small><b class="num" style="color:var(--s3)">${andando.length}</b><span>${andando.filter(x => x.estado === 'pausado').length} Pausadas${revisar.length ? ` · <b style="color:var(--s4)">${revisar.length} para Revisar</b>` : ''}</span></div>
+      </div>
+      ${andando.length ? `<div class="card"><div class="cardh"><h3>⏱ Em Andamento Agora</h3><small>Atualize a Página para Ver o Tempo Mais Recente</small></div>
+        <div class="andando">${andando.sort((a, b) => b.trabalhado - a.trabalhado).map(x => `<div><span style="font-size:20px">${x.estado === 'rodando' ? '▶' : '⏸'}</span><div style="flex:1"><b>${esc(nomeA(x))}</b>
+          <small>${esc(nomeP(x.pessoa_id))} · Começou ${quando(x.inicio)}${x.dias > 1 ? ' · ' + x.dias + ' Dias' : ''}${x.estado === 'pausado' ? ' · Pausado: ' + esc(x.motivoPausa || '') : ' · Trabalhando'}${x.revisar ? ' · <span class="rev">⚠ Mais de 10 h sem Pausa: Esqueceram o Cronômetro Ligado?</span>' : ''}</small></div>
+          <b class="num">${fmtDur(x.trabalhado)}</b></div>`).join('')}</div></div>` : ''}
+      <div class="card"><div class="cardh"><h3>Por Atividade</h3><small>Quem Bateu Menos a Meta Aparece Primeiro</small></div>
+        <div class="scroll"><table class="tbl"><thead><tr><th>Atividade</th><th>Meta (5º M)</th><th style="text-align:right">Vezes</th><th style="text-align:right">Tempo Médio</th><th style="text-align:right">Previsto</th><th style="text-align:right">Diferença</th><th style="text-align:center">✅ · 🟡 · ❌</th><th style="text-align:right">Bateu</th></tr></thead><tbody>
+        ${linhasA.map(r => `<tr><td><b>${esc(r.nome)}</b></td><td class="sub" style="max-width:240px">${esc(textoMeta({ ...r.m, horas: null })) || '—'}${r.qm != null && r.m.qtd != null ? `<div>Média Feita: <b>${nf(r.qm, 1)}</b> de ${nf(r.m.qtd, 1)} ${esc(r.m.unid)}</div>` : ''}</td>
+          <td class="num" style="text-align:right">${r.n}</td><td class="num" style="text-align:right">${fmtDur(r.med)}</td><td class="num" style="text-align:right">${r.prev != null ? fmtDur(r.prev) : '—'}</td><td style="text-align:right">${dif(r.med, r.prev)}</td>
+          <td style="text-align:center" class="num">${r.b} · ${r.p} · ${r.nn}</td><td style="text-align:right"><b class="num" style="color:${cor(r.pct)}">${r.pct == null ? '—' : r.pct + '%'}</b></td></tr>`).join('') || '<tr><td colspan="8" class="empty">Nenhuma Atividade Terminada pelo Cronômetro Neste Período.</td></tr>'}
+        </tbody></table></div></div>
+      <div class="two"><div class="card"><div class="cardh"><h3>Por Pessoa</h3><small>Quem Marcou no Cronômetro</small></div>
+          <div class="scroll"><table class="tbl"><thead><tr><th>Pessoa</th><th style="text-align:right">Terminadas</th><th style="text-align:right">Horas</th><th style="text-align:right">Meta Batida</th></tr></thead><tbody>
+          ${linhasP.map(r => `<tr><td><b>${esc(r.nome)}</b></td><td class="num" style="text-align:right">${r.n}</td><td class="num" style="text-align:right">${nf(r.h / 3600e3, 1)}</td><td style="text-align:right"><b class="num" style="color:${cor(r.pct)}">${r.pct == null ? '—' : r.pct + '%'}</b></td></tr>`).join('') || '<tr><td colspan="4" class="empty">—</td></tr>'}
+          </tbody></table></div></div>
+        <div class="card bars"><div class="cardh"><h3>Tempo Parado por Motivo</h3><small>Pausas no Período</small></div>
+          ${pArr.map(([k, v]) => `<div class="row"><span>${esc(k)}</span><div class="track"><i style="width:${v / pMax * 100}%;background:${k === 'Almoço' || k === 'Continua Amanhã' ? 'var(--s1)' : 'var(--s5)'}"></i></div><b class="num" style="text-align:right">${fmtDur(v)}</b></div>`).join('') || '<div class="empty">Nenhuma Pausa.</div>'}<div style="height:12px"></div></div></div>
+      <div class="card"><div class="cardh"><h3>Cada Execução</h3><small>${T.length} Terminadas · Do Início ao Fim, com as Pausas</small></div>
+        <div class="scroll"><table class="tbl"><thead><tr><th>Atividade</th><th>Quem</th><th>Início → Fim</th><th style="text-align:right">Trabalhado</th><th>Pausas</th><th>Meta</th><th>Observação</th><th class="noprint"></th></tr></thead><tbody>
+        ${T.sort((a, b) => String(b.fim).localeCompare(String(a.fim))).map(x => `<tr><td><b>${esc(nomeA(x))}</b>${x.revisar ? '<div class="rev">⚠ Revisar: Ficou mais de 10 h sem Pausa</div>' : ''}</td><td>${esc(nomeP(x.pessoa_id))}</td>
+          <td class="sub" style="white-space:nowrap">${quando(x.inicio)}<br>→ ${quando(x.fim)}${x.dias > 1 ? ` · <b>${x.dias} Dias</b>` : ''}</td><td class="num" style="text-align:right"><b>${fmtDur(x.trabalhado)}</b></td>
+          <td class="evs">${x.pausas.map(p => `${esc(p.motivo)} ${fmtDur(p.ms)}`).join('<br>') || '—'}</td>
+          <td>${mk(x)}${x.meta_feito != null ? `<div class="sub" style="font-size:11.5px">Fez ${nf(x.meta_feito, 1)}${metaDe(atividades[x.atividade_id] || x.ativ).qtd != null ? ' de ' + nf(metaDe(atividades[x.atividade_id] || x.ativ).qtd, 1) : ''}</div>` : ''}</td>
+          <td class="sub" style="max-width:220px">${esc(x.obs || '')}</td><td class="noprint"><button class="btn sm ghost" data-apagar="${x.id}" title="Apagar Esta Execução (Marcação Errada)">🗑</button></td></tr>`).join('') || '<tr><td colspan="8" class="empty">—</td></tr>'}
+        </tbody></table></div></div>`;
+    montarMenu('execucao.html');
+  }
+  $('tela').addEventListener('click', async (e) => {
+    const p = e.target.closest('[data-per]'); if (p) { periodo = p.dataset.per; return carregar(); }
+    const ap = e.target.closest('[data-apagar]');
+    if (ap) {
+      if (!confirm('Apagar Esta Execução Inteira (Início, Pausas e Fim)?\nUse Só Quando a Marcação Foi Errada.')) return;
+      const { error } = await supabase.from('execucoes').delete().eq('execucao_id', ap.dataset.apagar);
+      if (error) return aviso('Erro: ' + error.message);
+      eventos = eventos.filter(x => x.execucao_id !== ap.dataset.apagar); desenhar(); aviso('Execução Apagada');
+    }
+  });
+  $('tela').addEventListener('change', (e) => { if (e.target.id === 'fQuem') { fQuem = e.target.value; desenhar(); } });
+
+  eu = await quemSouEu();
+  montarMenu('execucao.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.includes(eu.papel)) $('aviso').textContent = 'Este Relatório É Só para Gestor, Administrativo e Consultor.';
+  else {
+    fz = eu.fazenda.id;
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const [p, a] = await Promise.all([
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido, user_id').eq('fazenda_id', fz).order('apelido')),
+      buscarTudo(() => supabase.from('atividades').select('id, nome, como_fazer').eq('fazenda_id', fz))
+    ]);
+    pessoas = p; a.forEach(x => atividades[x.id] = x);
+    const nome = tc(pessoas.find(x => x.user_id === eu.user.id)?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    await carregar();
+    aoMudar(fz, ['execucoes'], carregar);   // o que a equipe faz no app aparece aqui sozinho
+  }
+
+  // 📊 Excel do relatório (o mesmo conteúdo do PDF, com números de verdade)
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-xls]'); if (!b) return; b.disabled = true; const txt = b.textContent; b.textContent = 'Montando…';
+    import('./excel.js').then(m => m.exportarExcel({ titulo: (document.querySelector('#tela h1, h1')?.textContent || document.title).trim() })).catch(er => alert(er.message)).finally(() => { b.disabled = false; b.textContent = txt; }); });
+</script>
+</body>
+</html>

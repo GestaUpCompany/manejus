@@ -18,7 +18,7 @@ Monorepo pnpm do painel de gestão/admin (React 18 + TanStack Query + Vite), onl
 
 - `apps/manejus` — painel principal de gestão (TanStack Query, mapas MapLibre/terra-draw, relatórios PDF/Excel)
 - `apps/vision` — módulo financeiro (ver `docs/VISION_ARQUITETURA_FUTURA.md`)
-- `apps/farmplan` — app adicional do workspace
+- `apps/farmplan` — Farm Plan: site estático (HTML/JS vanilla + PWA, sem build) com banco Supabase próprio `tcjrztbivvosrxjnjqom` (SQLs em `apps/farmplan/supabase/`, não em `supabase/migrations/`). Vercel: projeto `farmplan` (https://farmplan-fawn.vercel.app), Root Directory `apps/farmplan`
 - `packages/{supabase,shared,ui}` — cliente/tipos Supabase, código compartilhado e componentes UI (`@gestaup/*`)
 - `supabase/` — `migrations/` (schema oficial), `functions/`, `config.toml`
 - A raiz acumula artefatos de trabalho pontual (seeds `.sql`, backups, `tmp_*`, `smoke-*`, `__*.cjs`, planilhas `.xlsm`, relatórios `.pdf`). Não trate como código do produto; o código mora em `apps/` e `packages/`.

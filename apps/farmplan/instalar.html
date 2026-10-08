@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · instalar.html
+     Link do manual "Como Instalar": abre o Farm Plan e coloca o botão do app na tela do celular.
+     Android/Chrome: um toque em "Instalar". iPhone: mostra onde tocar (a Apple não deixa instalar sozinho). -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Instalar o Farm Plan</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#F5F7F6">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" href="symbol.png">
+  <style>
+    *{box-sizing:border-box;margin:0}
+    body{min-height:100vh;background:#F5F7F6;color:#16232A;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:19px;line-height:1.4;display:flex;flex-direction:column;align-items:center;padding:28px 18px calc(28px + env(safe-area-inset-bottom));text-align:center}
+    .ic{width:118px;height:118px;border-radius:28px;background:#fff;box-shadow:0 6px 24px rgba(17,70,101,.15);margin-top:10px}
+    h1{font-size:1.7em;margin:14px 0 2px;color:#114665}
+    .sub{color:#5A676D;font-size:.9em}
+    .caixa{width:min(440px,100%);margin-top:24px;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+    .passo>div{min-width:0;overflow-wrap:anywhere}
+    .bt{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:76px;border:0;border-radius:20px;font-size:1.15em;font-weight:800;text-decoration:none;cursor:pointer;font-family:inherit}
+    .bt.verde{background:#25C25A;color:#fff;box-shadow:0 5px 0 #168a3e}
+    .bt.verde:active{transform:translateY(3px);box-shadow:0 2px 0 #168a3e}
+    .bt.branco{background:#fff;color:#114665;min-height:60px;font-size:1em;border:1px solid #E3E8E6}
+    .bt.leve{background:#fff;color:#4A5860;border:1px solid #E3E8E6;min-height:54px;font-size:.92em;font-weight:700}
+    .bt i{font-style:normal;font-size:1.4em}
+    .pulsa{animation:p 1.6s ease-in-out infinite}
+    @keyframes p{50%{transform:scale(1.04)}}
+    .passo{display:flex;gap:14px;align-items:center;text-align:left;background:#fff;border:1px solid #E3E8E6;border-radius:18px;padding:14px 16px;box-shadow:0 1px 3px rgba(17,70,101,.05)}
+    .passo b.n{flex:none;width:44px;height:44px;border-radius:50%;background:#25C25A;color:#fff;display:grid;place-items:center;font-size:1.1em}
+    .passo span.s{display:inline-block;background:#E6EEF2;color:#114665;border-radius:8px;padding:0 8px;font-weight:800;line-height:1.6}
+    .ok{background:#E3F5E8;color:#14703A;border:1px solid #9ED9B0;border-radius:20px;padding:18px;font-weight:700}
+    .ok b{font-size:1.3em;display:block}
+    .seta{position:fixed;left:50%;bottom:calc(8px + env(safe-area-inset-bottom));transform:translateX(-50%);font-size:52px;animation:s 1s ease-in-out infinite;text-shadow:0 2px 8px rgba(0,0,0,.15)}
+    .seta.topo{bottom:auto;top:8px;left:auto;right:14px;transform:none;animation:s2 1s ease-in-out infinite}
+    @keyframes s{50%{transform:translate(-50%,10px)}}
+    @keyframes s2{50%{transform:translateY(-8px)}}
+    .qr{background:#fff;border:1px solid #E3E8E6;border-radius:20px;padding:14px;width:220px;margin:0 auto}
+    .qr img{width:100%;display:block}
+    .esc{display:none!important}
+  </style>
+</head>
+<body>
+  <img class="ic" src="icon-512.png" alt="Botão do Farm Plan">
+  <h1>Farm Plan</h1>
+  <div class="sub">Gesta'Up · Tarefas da Fazenda</div>
+  <div class="caixa" id="tela"><div class="sub">Preparando…</div></div>
+<script>
+  const $t = document.getElementById('tela');
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(ua);
+  const celular = ios || android;
+  const dentroDeOutroApp = /WhatsApp|FBAN|FBAV|FB_IAB|Instagram|Line\/|; wv\)/i.test(ua);
+  const safari = ios && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
+  const instalado = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const vibrar = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+  let pedido = null, esperou = false;
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  const ABRIR = `<a class="bt branco" href="index.html">Abrir o Farm Plan ›</a>`;
+  function sucesso() {
+    vibrar([60, 60, 120]);
+    $t.innerHTML = `<div class="ok"><b>✓ Pronto, Instalado!</b>O botão <b style="display:inline;font-size:1em">Farm Plan</b> já está na tela do celular, junto dos outros aplicativos.</div>
+      <div class="passo"><b class="n">👆</b><div>Daqui em diante, abra sempre pelo botão <b>Farm Plan</b> na tela do celular.</div></div>${ABRIR}`;
+  }
+  function desenhar() {
+    if (instalado()) { $t.innerHTML = `<div class="ok"><b>✓ O App Já Está Instalado</b>Use o botão Farm Plan na tela do celular.</div><a class="bt verde" href="index.html"><i>▶</i>Entrar no Farm Plan</a>`; return; }
+    if (!celular) {
+      $t.innerHTML = `<div class="passo"><b class="n">📱</b><div>Este link é para abrir <b>no celular</b>. Aponte a câmera do celular para o código abaixo.</div></div>
+        <div class="qr"><img src="qr-app.png" alt="Código para abrir no celular"></div><a class="bt leve" href="index.html">Entrar pelo Computador</a>`; return;
+    }
+    if (android && dentroDeOutroApp) {
+      const intent = 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;end';
+      $t.innerHTML = `<div class="passo"><b class="n">1</b><div>Para instalar, o app precisa abrir no <b>Chrome</b>.</div></div>
+        <a class="bt verde pulsa" href="${intent}"><i>🌐</i>Abrir no Chrome</a>
+        <div class="sub">Não abriu? Toque nos <b>⋮ três pontinhos</b> lá em cima e em <b>Abrir no Chrome</b>.</div>
+        <div class="seta topo">☝️</div>`; return;
+    }
+    if (ios) {
+      if (dentroDeOutroApp || !safari) {
+        $t.innerHTML = `<div class="passo"><b class="n">1</b><div>No iPhone, o app precisa abrir no <b>Safari</b>.</div></div>
+          <button class="bt verde pulsa" id="copiar"><i>📋</i>Copiar o Link</button>
+          <div class="passo"><b class="n">2</b><div>Abra o <b>Safari</b> 🧭, toque na barra de endereço e <b>cole</b>. Ou toque nos <b>•••</b> e em <b>Abrir no Safari</b>.</div></div>`;
+        document.getElementById('copiar').onclick = async (e) => { try { await navigator.clipboard.writeText(location.href); e.currentTarget.innerHTML = '<i>✓</i>Link Copiado'; } catch (er) {} };
+        return;
+      }
+      $t.innerHTML = `<div class="sub" style="font-weight:700">A Apple pede 3 toques para colocar o app na tela:</div>
+        <div class="passo"><b class="n">1</b><div>Toque no botão <span class="s">Compartilhar ⬆</span> lá embaixo, no meio da tela (a seta mostra).</div></div>
+        <div class="passo"><b class="n">2</b><div>Desça a lista e toque em <span class="s">Adicionar à Tela de Início ⊞</span></div></div>
+        <div class="passo"><b class="n">3</b><div>Toque em <span class="s">Adicionar</span> lá em cima, à direita.</div></div>
+        <a class="bt leve" href="index.html">Entrar sem Instalar</a>
+        <div class="seta">👇</div>`; return;
+    }
+    // Android no Chrome (ou parecido)
+    if (pedido) {
+      $t.innerHTML = `<button class="bt verde pulsa" id="instalar"><i>📲</i>Toque Aqui para Instalar</button>
+        <div class="sub">Depois toque em <b>Instalar</b> na janela que aparecer.</div>
+        <a class="bt leve" href="index.html">Entrar sem Instalar</a>`;
+      document.getElementById('instalar').onclick = async () => {
+        vibrar(40); pedido.prompt();
+        const r = await pedido.userChoice.catch(() => ({}));
+        pedido = null;
+        if (r && r.outcome === 'accepted') sucesso(); else desenhar();
+      };
+      return;
+    }
+    if (!esperou) { $t.innerHTML = `<div class="sub">Preparando a instalação…</div>`; return; }
+    $t.innerHTML = `<div class="sub" style="font-weight:700">Instale em 2 toques:</div>
+      <div class="passo"><b class="n">1</b><div>Toque nos <span class="s">⋮</span> três pontinhos lá em cima, à direita (a mão mostra).</div></div>
+      <div class="passo"><b class="n">2</b><div>Toque em <span class="s">Instalar App</span> ou <span class="s">Adicionar à Tela Inicial</span></div></div>
+      <a class="bt leve" href="index.html">Entrar sem Instalar</a>
+      <div class="seta topo">☝️</div>`;
+  }
+  addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pedido = e; desenhar(); });
+  addEventListener('appinstalled', () => { pedido = null; sucesso(); });
+  // Se o Chrome não oferecer a instalação em alguns segundos, mostra como fazer pelo menu
+  setTimeout(() => { esperou = true; if (!pedido) desenhar(); }, 3500);
+  desenhar();
+</script>
+</body>
+</html>

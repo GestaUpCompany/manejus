@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Painel do Gestor (visual do protótipo) -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    .so-print{display:none}
+    @media print{
+      @page{size:A4 portrait;margin:9mm}
+      html,body,.shell,.main,#tela{background:#fff!important}
+      .side,.mtop,.phead .acts,.toast,#aviso,[data-whats],.drok,[data-fprem],[data-fpnovo],.foot .btn,.mx-strip{display:none!important}
+      .shell{display:block}.main{padding:0!important}
+      .so-print{display:block;font-size:11px;color:#5B6B75;margin:-8px 0 10px}
+      .card{break-inside:avoid;box-shadow:none!important}
+      .two{grid-template-columns:1fr!important}
+      .drk{grid-template-columns:repeat(3,1fr)!important}
+      .kpis{grid-template-columns:repeat(4,1fr)!important}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="painel.html" selected>Painel</option><option value="index.html">Tarefas da Semana</option><option value="mes.html">Mês</option><option value="plano.html">Plano Anual</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, SEMANAS_NO_ANO, PAPEL, STATUS, DIAS_CURTO, DIAS_LONGO, MESES_LONGO, tc, esc, semanaDe, inicioDaSemana, quemSouEu, buscarTudo, montarMenu, ddmm, diaDaSemana, media, nf, corEscore, aoMudar } from './comum.js';
+  import { agrupar, fmtDur, hhmm, META as META_T } from './tempo.js';
+  import { buscarMidias, comEnderecos, miniatura, abrirVisor, selos, prepararVisual, abrirResumoWhatsApp } from './midia.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  let META = 80;                                   // meta do mês: % das tarefas-dia com baixa
+  const HOJE = new Date(), SEMANA_ATUAL = semanaDe(HOJE), DIA_HOJE = (HOJE.getDay() + 6) % 7;   // 0 = segunda
+  let eu, fz, semana = SEMANA_ATUAL, PESO_T = 0.7;
+  let atividades = {}, pessoas = [], equipes = [], setores = [], plano = {}, obs = {}, baixas = {}, semanasComBaixa = new Set();
+  let membros = [], itens = [], notas = {}, fora = null, midias = null;
+  let ultimo = null, PER_AV = 'semanal';
+  let relHoje = null, papeis = {}, eventosT = null;   // eventosT: cronômetro das atividades (SQL 023)     // quem mandou o Relatório do Dia no grupo hoje (SQL 022) e papel de cada login   // midias: fotos/vídeos/áudios/recados da semana atual
+
+  function aviso(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2400); }
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  const mesDa = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();
+  const semanasDoMes = (m) => { const r = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (mesDa(w) === m) r.push(w); return r; };
+  const nomeQuem = (a) => tc(pessoas.find(p => p.id === a.executor_pessoa_id)?.apelido || equipes.find(e => e.id === a.executor_equipe_id)?.nome || '—');
+  const nomeSetor = (id) => tc(setores.find(s => s.id === id)?.nome || '—');
+  const porExtenso = (w) => { const a = diaDaSemana(w, 0), b = diaDaSemana(w, 6); return a.getMonth() === b.getMonth() ? `${a.getDate()} a ${b.getDate()} de ${MESES_LONGO[b.getMonth()]}` : `${a.getDate()} de ${MESES_LONGO[a.getMonth()]} a ${b.getDate()} de ${MESES_LONGO[b.getMonth()]}`; };
+  const pill = (s) => `<span class="pill p${s || 1}">${s ? STATUS[s] : '—'}</span>`;
+
+  // ---------- Regras de baixa (iguais às da Tarefas da Semana) ----------
+  const naSemana = (w) => Object.keys(plano).filter(k => +k.split('|')[1] === w).map(k => atividades[k.split('|')[0]]).filter(Boolean);
+  const bx = (w, a, d) => baixas[w + '|' + a.id + '|' + d];
+  const feito = (w, a, d) => { const b = bx(w, a, d); return b ? b.feito : plano[a.id + '|' + w] === 2; };
+  const diasPlan = (a) => (a.dias || []).map((v, i) => v ? i : -1).filter(i => i >= 0);
+  const limite = (w) => w < SEMANA_ATUAL ? 7 : w === SEMANA_ATUAL ? DIA_HOJE : 0;           // dias que já passaram
+  const semBaixa = (w, a) => plano[a.id + '|' + w] === 2 ? [] : diasPlan(a).filter(d => d < limite(w) && !feito(w, a, d));
+  const atrasada = (w, a) => (obs[a.id + '|' + w] || '').startsWith('Atrasada');
+  const motivoDe = (w, a) => { for (let d = 0; d < 7; d++) { const b = bx(w, a, d); if (b && !b.feito) return b.motivo; } return null; };
+
+  async function carregar() {
+    const [at, p, e, s, pl, m, i, av] = await Promise.all([
+      buscarTudo(() => supabase.from('atividades').select('id, nome, dias, local, setor_id, executor_pessoa_id, executor_equipe_id').eq('fazenda_id', fz)),
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido, cargo, ativo, setor_id, user_id').eq('fazenda_id', fz).order('apelido')),
+      buscarTudo(() => supabase.from('equipes').select('id, nome, lider_id').eq('fazenda_id', fz).order('nome')),
+      buscarTudo(() => supabase.from('setores').select('id, nome').eq('fazenda_id', fz).order('nome')),
+      buscarTudo(() => supabase.from('planejamento').select('atividade_id, semana, status, observacao').eq('fazenda_id', fz).eq('ano', ANO)),
+      buscarTudo(() => supabase.from('equipe_membros').select('equipe_id, pessoa_id, equipes!inner(fazenda_id)').eq('equipes.fazenda_id', fz)),
+      buscarTudo(() => supabase.from('contrato_itens').select('id, pessoa_id, tipo').eq('fazenda_id', fz).eq('ativo', true)),
+      buscarTudo(() => supabase.from('avaliacoes').select('item_id, semana, nota, nsa').eq('fazenda_id', fz).eq('ano', ANO))
+    ]);
+    atividades = {}; at.forEach(a => atividades[a.id] = a);
+    pessoas = p; equipes = e; setores = s; membros = m; itens = i;
+    plano = {}; obs = {}; pl.forEach(l => { plano[l.atividade_id + '|' + l.semana] = l.status; if (l.observacao) obs[l.atividade_id + '|' + l.semana] = l.observacao; });
+    notas = {}; av.forEach(x => { if (!x.nsa && x.nota != null) notas[x.item_id + '|' + x.semana] = +x.nota; });
+    await carregarBaixas();
+    const { data: fp, error: fpe } = await supabase.from('fora_do_plano').select('*').eq('fazenda_id', fz).eq('ano', ANO).eq('semana', SEMANA_ATUAL).order('registrado_em');
+    fora = fpe ? null : (fp || []);
+    midias = await buscarMidias(fz, ANO, SEMANA_ATUAL);
+    const [{ data: rd, error: rde }, { data: ac }] = await Promise.all([
+      supabase.from('relatorios_dia').select('pessoa_id, user_id, enviado_em, feitas, total').eq('fazenda_id', fz).eq('ano', ANO).eq('semana', SEMANA_ATUAL).eq('dia', DIA_HOJE),
+      supabase.from('acessos').select('user_id, papel').eq('fazenda_id', fz)
+    ]);
+    relHoje = rde ? null : (rd || []);
+    const ex = await supabase.from('execucoes').select('*, atividades(nome, como_fazer)').eq('fazenda_id', fz).gte('em', new Date(Date.now() - 21 * 864e5).toISOString()).order('em');
+    eventosT = ex.error ? null : (ex.data || []);
+    papeis = {}; (ac || []).forEach(x => papeis[x.user_id] = x.papel);
+    if (midias) await comEnderecos(midias.filter(r => r.dia === DIA_HOJE));
+    prepararVisual();
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+  // Baixas: semana escolhida + semanas do mês atual (para a Meta do Mês)
+  async function carregarBaixas() {
+    const ws = [...new Set([semana, ...semanasDoMes(mesDa(SEMANA_ATUAL)).filter(w => w <= SEMANA_ATUAL)])].filter(w => !semanasComBaixa.has(w));
+    if (!ws.length) return;
+    const b = await buscarTudo(() => supabase.from('baixas').select('atividade_id, semana, dia, feito, motivo').eq('fazenda_id', fz).eq('ano', ANO).in('semana', ws));
+    b.forEach(x => baixas[x.semana + '|' + x.atividade_id + '|' + x.dia] = x);
+    ws.forEach(w => semanasComBaixa.add(w));
+  }
+
+  // ---------- Meta do mês: % das tarefas-dia já vencidas que tiveram baixa ----------
+  function metaMes() {
+    let pl = 0, dn = 0; const ws = semanasDoMes(mesDa(SEMANA_ATUAL)).filter(w => w <= SEMANA_ATUAL);
+    ws.forEach(w => { const lim = w < SEMANA_ATUAL ? 7 : DIA_HOJE + 1; naSemana(w).forEach(a => diasPlan(a).forEach(d => { if (d < lim) { pl++; if (feito(w, a, d)) dn++; } })); });
+    return { pl, dn, p: pl ? Math.round(dn / pl * 100) : 0, ws };
+  }
+  function barraMeta() {
+    const r = metaMes(), ok = r.p >= META, cor = ok ? 'var(--s2)' : r.p >= META - 20 ? 'var(--s5)' : 'var(--s4)';
+    return `<div class="meta"><div class="mt"><b>Meta do Mês</b><span>${META}% das Tarefas com Baixa · Sem. ${r.ws[0]} a ${r.ws[r.ws.length - 1]}</span></div>
+      <div class="mbar"><i style="width:${Math.min(100, r.p)}%;background:${cor}"></i><em style="left:${META}%"></em></div>
+      <div class="mv"><b class="num">${r.p}%</b><span>${r.dn} de ${r.pl} Tarefas-Dia até Hoje</span></div></div>`;
+  }
+
+  // ---------- Relatório do dia (só na semana atual) ----------
+  const tagAtr = (w, a) => { const m = (obs[a.id + '|' + w] || '').match(/(\d+)\s*$/); return atrasada(w, a) ? ` <span class="late">↻ ${m ? m[1] : ''}</span>` : ''; };
+  const IMPREVISTOS = ['Máquina Quebrou', 'Animal Doente', 'Animal Morto', 'Cerca Arrebentada', 'Falta de Água', 'Acidente', 'Gado Fugiu'];
+  const ehImp = (x) => x.tipo === 'imprevisto';
+  const quemFora = (x) => tc(pessoas.find(p => p.id === x.pessoa_id)?.apelido || equipes.find(e => e.id === x.equipe_id)?.nome || '');
+  function setorDe(q) {
+    if (!q) return null;
+    const id = q.slice(2), ehPessoa = q.startsWith('p:');
+    if (ehPessoa) { const p = pessoas.find(x => x.id === id); if (p?.setor_id) return p.setor_id; }
+    const cont = {}; Object.values(atividades).forEach(a => { if ((ehPessoa ? a.executor_pessoa_id : a.executor_equipe_id) === id && a.setor_id) cont[a.setor_id] = (cont[a.setor_id] || 0) + 1; });
+    return Object.entries(cont).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  }
+  function abrirFora(tipo = 'fora') {
+    const nomes = [...new Set(Object.values(atividades).map(a => tc(a.nome)))].sort((a, b) => a.localeCompare(b, 'pt'));
+    const m = document.createElement('div'); m.id = 'modal';
+    m.innerHTML = `<div class="scrim" data-x="1"></div><form class="fmodal" id="fFora"><div class="dh"><h2 id="fpTit">Lançar Fora do Plano</h2><button type="button" class="btn sm ghost" data-x="1">✕</button></div>
+      <div class="fb"><div class="seg" id="fpTipo"><button type="button" data-tp="fora">✓ Fora do Plano</button><button type="button" data-tp="imprevisto">⚠ Imprevisto</button></div>
+        <div class="motg" id="fpImp" style="display:none">${IMPREVISTOS.map(x => `<button type="button" data-impr="${x}">${x}</button>`).join('')}</div>
+        <label class="fl"><span id="fpPerg">O Que Foi Feito?</span><input class="in" name="nome" list="libFora" required autocomplete="off" placeholder="Buscar na Lista de Atividades ou Escrever"></label>
+        <datalist id="libFora">${nomes.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+        <div class="fr"><label class="fl">Dia<select class="in" name="dia">${DIAS_LONGO.map((n, i) => i <= DIA_HOJE ? `<option value="${i}" ${i === DIA_HOJE ? 'selected' : ''}>${n} ${ddmm(diaDaSemana(SEMANA_ATUAL, i))}</option>` : '').join('')}</select></label>
+          <label class="fl">Quem Fez?<select class="in" name="quem" required><option value="">Selecionar</option><optgroup label="Equipes">${equipes.map(e => `<option value="e:${e.id}">${esc(tc(e.nome))}</option>`).join('')}</optgroup><optgroup label="Pessoas">${pessoas.filter(p => p.ativo !== false).map(p => `<option value="p:${p.id}">${esc(tc(p.apelido))}</option>`).join('')}</optgroup></select></label>
+          <label class="fl">Setor<select class="in" name="setor"><option value="">—</option>${setores.map(s => `<option value="${s.id}">${esc(tc(s.nome))}</option>`).join('')}</select></label></div>
+        <label class="fl">Observação<input class="in" name="obs" placeholder="Local, Lote, o Que Aconteceu"></label></div>
+      <div class="df"><div class="r"><button type="button" class="btn" data-x="1">Cancelar</button><button class="btn pri">Salvar</button></div></div></form>`;
+    document.body.appendChild(m);
+    const f0 = m.querySelector('form');
+    const tipoSet = (t) => { f0.dataset.tipo = t; const imp = t === 'imprevisto';
+      m.querySelectorAll('#fpTipo button').forEach(b => b.classList.toggle('on', b.dataset.tp === t));
+      m.querySelector('#fpImp').style.display = imp ? '' : 'none';
+      m.querySelector('#fpTit').textContent = imp ? 'Registrar Imprevisto' : 'Lançar Fora do Plano';
+      m.querySelector('#fpPerg').textContent = imp ? 'O Que Aconteceu?' : 'O Que Foi Feito?';
+      f0.nome.placeholder = imp ? 'Ex.: Trator 7 Quebrou na Roçada' : 'Buscar na Lista de Atividades ou Escrever';
+      if (imp) f0.nome.removeAttribute('list'); else f0.nome.setAttribute('list', 'libFora');
+      f0.obs.placeholder = imp ? 'Onde Foi? O Que Precisa Fazer?' : 'Local, Lote, o Que Aconteceu'; };
+    tipoSet(tipo);
+    m.onclick = (e) => { if (e.target.closest('[data-x]')) return m.remove();
+      const tp = e.target.closest('[data-tp]'); if (tp) return tipoSet(tp.dataset.tp);
+      const im = e.target.closest('[data-impr]'); if (im) { f0.nome.value = im.dataset.impr; f0.obs.focus(); } };
+    m.querySelector('form').onsubmit = async (e) => {
+      e.preventDefault(); const f = e.target, q = f.quem.value;
+      const reg = { fazenda_id: fz, ano: ANO, semana: SEMANA_ATUAL, dia: +f.dia.value, nome: f.nome.value.trim(), obs: f.obs.value.trim() || null, setor_id: f.setor.value || null,
+        pessoa_id: q.startsWith('p:') ? q.slice(2) : null, equipe_id: q.startsWith('e:') ? q.slice(2) : null, registrado_por: eu.user.id, tipo: f.dataset.tipo };
+      const { data, error } = await supabase.from('fora_do_plano').insert(reg).select().single();
+      if (error) return aviso('Não Foi Possível Salvar: ' + error.message);
+      fora.push({ id: String(Date.now()), ...reg, ...(data || {}) }); m.remove(); desenhar(); aviso(reg.tipo === 'imprevisto' ? 'Imprevisto Registrado' : 'Lançado Fora do Plano');
+    };
+    // Ao escolher quem fez, já puxa o setor: o do cadastro da pessoa, ou o mais comum nas atividades dela/da equipe
+    m.querySelector('[name=quem]').onchange = (e) => { const s = setorDe(e.target.value); if (s) m.querySelector('[name=setor]').value = s; };
+    m.querySelector('[name=nome]').focus();
+  }
+  async function removerFora(id) {
+    const { error } = await supabase.from('fora_do_plano').delete().eq('id', id);
+    if (error) return aviso('Não Foi Possível Remover: ' + error.message);
+    fora = fora.filter(x => x.id !== id); desenhar(); aviso('Removido');
+  }
+  // ---------- Fotos, vídeos, áudios e recados do app ----------
+  const midHoje = () => (midias || []).filter(r => r.dia === DIA_HOJE);
+  function nomeDaMidia(r) {
+    const quem = tc(pessoas.find(p => p.id === r.pessoa_id)?.apelido || 'Gestor');
+    if (r.origem === 'baixa') return tc(atividades[r.atividade_id]?.nome || 'Tarefa') + ' · ' + quem;
+    if (r.origem === 'fora') return tc((fora || []).find(f => f.id === r.fora_id)?.nome || 'Fora do Plano') + ' · ' + quem;
+    return 'Recado de ' + quem;
+  }
+  // Quem já mandou o Relatório do Dia no grupo: colaboradores e líderes com login no app
+  function blocoRelatorios() {
+    if (relHoje === null) return `<div class="drh" style="margin-top:14px">📲 Relatório no Grupo Hoje</div><div class="sub" style="font-size:12px">Falta Rodar o SQL 022 no Supabase.</div>`;
+    const comApp = pessoas.filter(p => p.user_id && p.ativo !== false && (papeis[p.user_id] ? ['colaborador', 'lider'].includes(papeis[p.user_id]) : true) && p.user_id !== eu.user.id);
+    const env = (p) => relHoje.find(r => r.user_id === p.user_id || r.pessoa_id === p.id);
+    const sim = comApp.filter(env).sort((a, b) => env(a).enviado_em.localeCompare(env(b).enviado_em)), nao = comApp.filter(p => !env(p));
+    const hh = (iso) => new Date(iso).toTimeString().slice(0, 5);
+    return `<div class="drh" style="margin-top:14px">📲 Relatório no Grupo Hoje <span style="background:${nao.length ? 'var(--s5-soft);color:var(--s5)' : 'var(--s2-soft);color:var(--s2)'}">${sim.length} de ${comApp.length}</span></div>
+      ${comApp.length ? `<div class="drz">${sim.map(p => { const r = env(p); return `<span style="background:var(--s2-soft);color:var(--s2)">✓ ${esc(tc(p.apelido))} · ${hh(r.enviado_em)}${r.total ? ` · ${r.feitas}/${r.total}` : ''}</span>`; }).join('')}${nao.map(p => `<span style="background:var(--s4-soft);color:var(--s4)">✗ ${esc(tc(p.apelido))}</span>`).join('')}</div>`
+        : '<div class="sub" style="font-size:12px">Ninguém da Equipe Tem Login no App Ainda. Crie em Cadastros → Colaboradores.</div>'}`;
+  }
+  // Cronômetro: quem está trabalhando agora, pausado, e o que terminou hoje com a meta
+  function blocoTempo() {
+    if (eventosT === null) return `<div class="drh" style="margin-top:14px">⏱ Cronômetro</div><div class="sub" style="font-size:12px">Falta Rodar o SQL 023 no Supabase.</div>`;
+    const X = agrupar(eventosT), hoje = new Date().toDateString();
+    const and = X.filter(x => x.estado !== 'fim'), fim = X.filter(x => x.estado === 'fim' && new Date(x.fim).toDateString() === hoje);
+    const cm = fim.filter(x => x.meta_status), bt = cm.filter(x => x.meta_status === 'bateu').length;
+    const nm = (x) => tc(atividades[x.atividade_id]?.nome || x.ativ?.nome || 'Atividade'), pq = (x) => tc(pessoas.find(p => p.id === x.pessoa_id)?.apelido || '');
+    return `<div class="drh" style="margin-top:14px">⏱ Cronômetro Hoje <span style="background:var(--s3-soft);color:var(--s3)">${and.length} Andando · ${fim.length} Terminadas</span></div>
+      ${and.map(x => `<div style="padding:5px 0;border-top:1px solid var(--line2);font-size:13px;display:flex;gap:8px"><span>${x.estado === 'rodando' ? '▶' : '⏸'}</span><div style="flex:1"><b>${esc(nm(x))}</b><div class="sub" style="font-size:12px">${esc(pq(x))} · Desde ${hhmm(x.inicio)}${x.estado === 'pausado' ? ' · Pausado: ' + esc(x.motivoPausa || '') : ''}${x.revisar ? ' · <b style="color:var(--s4)">⚠ Revisar</b>' : ''}</div></div><b class="num">${fmtDur(x.trabalhado)}</b></div>`).join('')}
+      ${fim.map(x => `<div style="padding:5px 0;border-top:1px solid var(--line2);font-size:13px;display:flex;gap:8px"><span>${x.meta_status ? META_T[x.meta_status][0] : '■'}</span><div style="flex:1"><b>${esc(nm(x))}</b><div class="sub" style="font-size:12px">${esc(pq(x))} · ${hhmm(x.inicio)} → ${hhmm(x.fim)}${x.meta_status ? ' · ' + META_T[x.meta_status][1] : ''}</div></div><b class="num">${fmtDur(x.trabalhado)}</b></div>`).join('')}
+      ${and.length || fim.length ? `<div class="sub" style="font-size:12px;margin-top:4px">${cm.length ? `Meta Batida Hoje: <b>${Math.round(bt / cm.length * 100)}%</b> · ` : ''}<a class="sub" href="execucao.html">Ver Tempo e Meta ›</a></div>` : '<div class="sub" style="font-size:12px">Ninguém Ligou o Cronômetro Hoje.</div>'}`;
+  }
+  function blocoMidias() {
+    if (midias === null) return `<div class="drh" style="margin-top:14px">📷 Enviado pelo App Hoje</div><div class="sub" style="font-size:12px">Falta Rodar o SQL 021 no Supabase.</div>`;
+    const H = midHoje(), rec = H.filter(r => r.origem === 'recado' && r.texto);
+    return `<div class="drh" style="margin-top:14px">📷 Enviado pelo App Hoje <span style="background:var(--s3-soft);color:var(--s3)">${H.length}</span></div>
+      ${H.length ? `<div class="mx-strip">${H.map((r, i) => miniatura(r, i, false).replace('data-vi=', 'data-vh=')).join('')}</div>` : '<div class="sub" style="font-size:12px">Nenhuma Foto, Vídeo, Áudio ou Recado Hoje.</div>'}
+      ${rec.length ? `<div style="margin-top:6px;display:grid;gap:4px">${rec.map(r => `<div style="font-size:13px;background:var(--s3-soft);border-radius:8px;padding:6px 9px">💬 <b>${esc(tc(pessoas.find(p => p.id === r.pessoa_id)?.apelido || ''))}:</b> ${esc(r.texto)}</div>`).join('')}</div>` : ''}
+      <div style="margin-top:6px"><a class="sub" href="galeria.html">Ver Galeria da Semana ›</a></div>`;
+  }
+  function resumoWhatsApp() {
+    const w = SEMANA_ATUAL, d = DIA_HOJE, T = naSemana(w).filter(a => a.dias?.[d]);
+    abrirResumoWhatsApp({
+      fazenda: tc(eu.fazenda.nome), data: diaDaSemana(w, d), semana: w, meta: META, site: location.origin + '/galeria.html',
+      tarefas: T.map(a => { const b = bx(w, a, d); return { nome: tc(a.nome), quem: nomeQuem(a), feito: feito(w, a, d), motivo: b && !b.feito ? tc(b.motivo) : null }; }),
+      fora: (fora || []).filter(x => x.dia === d).map(x => ({ nome: tc(x.nome), quem: quemFora(x), imp: ehImp(x), obs: x.obs })),
+      midias: midHoje(), nomeDe: nomeDaMidia
+    });
+  }
+  function relatorioDoDia() {
+    const w = SEMANA_ATUAL, d = DIA_HOJE;
+    const T = naSemana(w).filter(a => a.dias?.[d]);
+    const fe = T.filter(a => feito(w, a, d)), pend = T.filter(a => !feito(w, a, d));
+    const naoDeu = pend.filter(a => bx(w, a, d) && !bx(w, a, d).feito), falta = pend.filter(a => !naoDeu.includes(a));
+    const porQuem = {}; T.forEach(a => { const k = nomeQuem(a); (porQuem[k] = porQuem[k] || { t: 0, d: 0, p: [] }).t++; if (feito(w, a, d)) porQuem[k].d++; else if (!naoDeu.includes(a)) porQuem[k].p.push(a); });
+    const zero = Object.entries(porQuem).filter(([, v]) => v.d === 0);
+    const voltaram = naSemana(w).filter(a => atrasada(w, a) && plano[a.id + '|' + w] !== 2 && !diasPlan(a).some(x => feito(w, a, x)));
+    const pc = T.length ? Math.round(fe.length / T.length * 100) : 0, cor = pc >= META ? 'var(--s2)' : pc >= 50 ? 'var(--s5)' : 'var(--s4)';
+    const X = (fora || []).filter(x => x.dia === d);
+    const grupos = Object.entries(porQuem).filter(([, v]) => v.p.length).sort((a, b) => b[1].p.length - a[1].p.length);
+    const selT = (a) => selos((midias || []).filter(r => r.origem === 'baixa' && r.atividade_id === a.id && r.dia === d));
+    return `<div class="card dr"><div class="cardh" style="flex-wrap:wrap;gap:8px"><h3>Relatório do Dia · ${DIAS_LONGO[d]}, ${ddmm(diaDaSemana(w, d))}</h3><small style="flex:1">Atualiza a Cada Baixa do Aplicativo (Recarregue a Página)</small><button class="btn sm pri" data-whats="1">📲 Resumo para o WhatsApp</button></div>
+      <div class="drk">
+        <div><small>Planejadas Hoje</small><b class="num">${T.length}</b></div>
+        <div><small>Feitas</small><b class="num" style="color:var(--s2)">${fe.length}</b></div>
+        <div><small>Ainda sem Baixa</small><b class="num" style="color:${falta.length ? 'var(--s4)' : 'var(--s2)'}">${falta.length}</b></div>
+        <div><small>Não Deu (com Motivo)</small><b class="num" style="color:var(--s5)">${naoDeu.length}</b></div>
+        <div><small>Sem Nenhuma Baixa Hoje</small><b class="num" style="color:${zero.length ? 'var(--s4)' : 'var(--s2)'}">${zero.length}</b><span>Pessoas ou Equipes</span></div>
+        <div><small>Fora do Plano · Imprevistos</small><b class="num"><span style="color:var(--s3);display:inline;font-size:inherit">${X.filter(x => !ehImp(x)).length}</span> · <span style="color:var(--s5);display:inline;font-size:inherit">${X.filter(ehImp).length}</span></b><span>${fora === null ? 'Falta Rodar o SQL 013' : 'Lançados Hoje'}</span></div></div>
+      <div style="padding:0 18px 12px"><div class="mbar"><i style="width:${pc}%;background:${cor}"></i><em style="left:${META}%"></em></div><div class="sub" style="font-size:12px;margin-top:6px">${pc}% do Dia Feito · Meta ${META}%</div></div>
+      ${T.length || X.length ? `<div class="drg"><div><div class="drh">O Que Ainda Não Aconteceu Hoje <span>${falta.length}</span></div>
+          ${grupos.map(([k, v]) => { const q = porQuem[k]; return `<div class="drq"><div class="drn"><b>${esc(k)}</b><small>${q.d} de ${q.t} Feitas</small></div><div class="drl">${v.p.map(a => `<span class="drt">${esc(tc(a.nome))}${tagAtr(w, a)}${selT(a)}<button class="drok" data-ok="${a.id}" title="Dar Baixa: Feito">✓</button></span>`).join('')}</div></div>`; }).join('') || '<div class="sub" style="padding:8px 0">Tudo o Que Estava Planejado para Hoje Já Teve Baixa. 👏</div>'}</div>
+        <div>
+          ${naoDeu.length ? `<div class="drh">Não Deu, com Motivo <span>${naoDeu.length}</span></div>
+            ${naoDeu.map(a => `<div style="padding:6px 0;border-top:1px solid var(--line2)"><b style="font-size:13px">${esc(tc(a.nome))}</b>${tagAtr(w, a)}${selT(a)}<div class="sub" style="font-size:12px">${esc(nomeQuem(a))} · <span class="tag nd" style="border-radius:5px;padding:0 6px;font-weight:700">${esc(tc(bx(w, a, d).motivo))}</span></div></div>`).join('')}<div style="height:12px"></div>` : ''}
+          <div class="drh">Sem Nenhuma Baixa Hoje <span>${zero.length}</span></div>
+          <div class="drz">${zero.map(([k, v]) => `<span>${esc(k)} · ${v.t}</span>`).join('') || '<em class="sub">Todos Já Deram Alguma Baixa Hoje.</em>'}</div>
+          ${fora !== null ? `<div class="drh" style="margin-top:14px">Fora do Plano e Imprevistos <span style="background:var(--s3-soft);color:var(--s3)">${X.length}</span></div>
+            ${X.map(x => `<div style="padding:5px 0;border-top:1px solid var(--line2);font-size:13px;display:flex;gap:8px;align-items:center"><div style="flex:1"><b>${esc(tc(x.nome))}</b> <span class="tag ${ehImp(x) ? 'im' : 'fp'}" style="border-radius:5px;padding:0 6px;font-size:11px;font-weight:700">${ehImp(x) ? 'Imprevisto' : 'Fora do Plano'}</span>${selos((midias || []).filter(r => r.fora_id === x.id))}<div class="sub" style="font-size:12px">${esc([quemFora(x), x.obs].filter(Boolean).join(' · '))}</div></div><button class="btn sm ghost" data-fprem="${x.id}">Remover</button></div>`).join('')}
+            <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><button class="btn sm" data-fpnovo="fora">+ Fora do Plano</button><button class="btn sm imp" data-fpnovo="imprevisto">⚠ Imprevisto</button></div>` : ''}
+          ${voltaram.length ? `<div class="drh" style="margin-top:14px">Atrasadas Que Voltaram e Seguem sem Baixa <span>${voltaram.length}</span></div>
+            <div class="sub" style="font-size:13px;line-height:1.6">${voltaram.slice(0, 8).map(a => esc(tc(a.nome))).join(' · ')}${voltaram.length > 8 ? ` <a href="reuniao.html" class="sub">e Mais ${voltaram.length - 8} ›</a>` : ''}</div>` : ''}
+          ${blocoRelatorios()}
+          ${blocoTempo()}
+          ${blocoMidias()}
+        </div></div>` : '<div class="empty" style="padding:6px 18px 16px">Nenhuma Tarefa Planejada para Hoje.</div>'}
+    </div>`;
+  }
+  // Gestor dá baixa direto no painel (igual à Tarefas da Semana)
+  async function darBaixa(id) {
+    const w = SEMANA_ATUAL, d = DIA_HOJE;
+    const { error } = await supabase.from('baixas').upsert({ fazenda_id: fz, atividade_id: id, ano: ANO, semana: w, dia: d, feito: true, motivo: null, registrado_por: eu.user.id, registrado_em: new Date().toISOString() }, { onConflict: 'atividade_id,ano,semana,dia' });
+    if (error) return aviso('Não Foi Possível Salvar: ' + error.message);
+    baixas[w + '|' + id + '|' + d] = { atividade_id: id, semana: w, dia: d, feito: true };
+    desenhar(); aviso(tc(atividades[id].nome) + ': Feito');
+  }
+
+  // ---------- Notas da equipe (último mês com nota) ----------
+  function notaPessoa(pid, ws) {
+    const bloco = (tipo) => media(itens.filter(i => i.pessoa_id === pid && i.tipo === tipo).map(i => media(ws.map(w => notas[i.id + '|' + w]).filter(v => v != null))).filter(v => v != null));
+    const t = bloco('tarefa'), c = bloco('comportamento');
+    return t == null ? c : c == null ? t : t * PESO_T + c * (1 - PESO_T);
+  }
+  function cartaoNotas() {
+    const semNotas = Object.keys(notas).map(k => +k.split('|')[1]);
+    if (!semNotas.length) return `<div class="card"><div class="cardh"><h3>Notas da Equipe</h3></div><div class="empty">Ainda Não Há Notas Lançadas. <a href="avaliacao.html">Abrir Avaliação de Desempenho</a></div></div>`;
+    const ult = Math.max(...semNotas), m = mesDa(ult), ws = semanasDoMes(m);
+    const comContrato = [...new Set(itens.map(i => i.pessoa_id))].map(id => pessoas.find(p => p.id === id)).filter(p => p && p.ativo !== false);
+    const lista = comContrato.map(p => ({ p, n: notaPessoa(p.id, ws) })).filter(x => x.n != null);
+    const baixa = lista.filter(x => x.n < 8.5).sort((a, b) => a.n - b.n);
+    const eqs = equipes.map(q => { const ns = membros.filter(x => x.equipe_id === q.id).map(x => lista.find(l => l.p.id === x.pessoa_id)).filter(Boolean); return { q, n: ns.length >= 2 ? media(ns.map(x => x.n)) : null }; }).filter(x => x.n != null).sort((a, b) => b.n - a.n);
+    const semAnt = SEMANA_ATUAL - 1, faltam = comContrato.filter(p => !itens.some(i => i.pessoa_id === p.id && notas[i.id + '|' + semAnt] != null));
+    return `<div class="card"><div class="cardh"><h3>Notas da Equipe · ${MESES_LONGO[m]}</h3><small>Média do Mês · Até a Semana ${ult}</small></div>
+      ${eqs[0] ? `<div style="margin:0 18px 10px;padding:10px 12px;border-radius:10px;background:var(--s2-soft)">🏆 <b>${esc(tc(eqs[0].q.nome))}</b> Está na Frente · <b class="num">${nf(eqs[0].n)}</b><div><a href="equipe.html" class="sub">Ver Equipe do Mês ›</a></div></div>` : ''}
+      <div class="bars">${lista.sort((a, b) => b.n - a.n).slice(0, 6).map(x => `<div class="row"><span>${esc(tc(x.p.apelido))}</span><div class="track"><i style="width:${x.n * 10}%;background:${x.n >= 9.3 ? 'var(--s2)' : x.n >= 8.5 ? 'var(--s5)' : 'var(--s4)'}"></i></div><b class="num ${corEscore(x.n)}" style="text-align:right">${nf(x.n)}</b></div>`).join('')}</div>
+      <div style="padding:8px 18px 14px;display:grid;gap:6px;font-size:13px">
+        ${baixa.length ? `<div><b style="color:var(--s4)">⚠ Abaixo de 8,5:</b> ${baixa.map(x => `${esc(tc(x.p.apelido))} (${nf(x.n)})`).join(' · ')}</div>` : '<div style="color:var(--s2)"><b>✓ Ninguém Abaixo de 8,5</b></div>'}
+        ${semAnt >= 1 && PER_AV === 'semanal' ? (faltam.length ? `<div><b style="color:var(--s5)">✎ Sem Nota na Semana ${semAnt}:</b> ${faltam.map(p => esc(tc(p.apelido))).join(' · ')} · <a href="avaliacao.html">Lançar</a></div>` : `<div style="color:var(--s2)"><b>✓ Todos Avaliados na Semana ${semAnt}</b></div>`) : ''}
+      </div></div>`;
+  }
+
+  // ---------- Tela ----------
+  function desenhar() {
+    const w = semana, L = naSemana(w), st = (a) => plano[a.id + '|' + w];
+    const c = (s) => L.filter(a => st(a) === s).length;
+    const sb = L.filter(a => st(a) !== 2 && st(a) !== 4 && semBaixa(w, a).length);
+    const pend = L.filter(a => st(a) !== 2 && (atrasada(w, a) || [3, 4, 5].includes(st(a)) || semBaixa(w, a).length || motivoDe(w, a)))
+      .sort((a, b) => atrasada(w, b) - atrasada(w, a) || (st(b) === 4) - (st(a) === 4) || semBaixa(w, b).length - semBaixa(w, a).length || a.nome.localeCompare(b.nome, 'pt'));
+    const porSetor = {}; L.forEach(a => { const k = nomeSetor(a.setor_id); porSetor[k] = (porSetor[k] || 0) + 1; });
+    const sArr = Object.entries(porSetor).sort((a, b) => b[1] - a[1]), sMax = Math.max(1, ...sArr.map(x => x[1]));
+    const porQuem = {}; L.forEach(a => { const k = nomeQuem(a); porQuem[k] = porQuem[k] || [0, 0]; porQuem[k][1]++; if (st(a) === 2 || (diasPlan(a).length && diasPlan(a).every(d => feito(w, a, d)))) porQuem[k][0]++; });
+    const qArr = Object.entries(porQuem).sort((a, b) => b[1][1] - a[1][1]);
+    const porDia = DIAS_CURTO.map((_, d) => L.filter(a => a.dias?.[d]));
+    const dMax = Math.max(1, ...porDia.map(x => x.length));
+    const feitas = c(2), pct = L.length ? Math.round(feitas / L.length * 100) : 0;
+    const noAno = new Set(Object.keys(plano).map(k => k.split('|')[0])).size;
+    ultimo = { w, L, pend, porDia, sArr, qArr, st };
+    const hojeTxt = `${DIAS_LONGO[DIA_HOJE]}, ${HOJE.getDate()} de ${MESES_LONGO[HOJE.getMonth()]} de ${HOJE.getFullYear()}`;
+    $('tela').innerHTML = `
+      <div class="phead"><div><div class="eyebrow">Painel · ${w === SEMANA_ATUAL ? hojeTxt : 'Semana ' + w}</div><h1>Semana ${w} · ${porExtenso(w)}</h1><div class="resumo">
+          <span class="rc" title="${noAno} Atividades com Semana Marcada no Ano">📋 <b>${L.length}</b> Atividades</span>
+          <span class="rc rm">✅ <b>${pct}%</b> Concluídas · ${feitas} de ${L.length}</span>
+          <span class="rc rand" title="${c(5)} Pausadas">🔄 <b>${c(3)}</b> Em Andamento</span>
+          <span class="rc ratr" title="${c(4)} Atrasadas · ${sb.length} com Dias Passados sem Marcar">⚠️ <b>${c(4) + sb.length}</b> Atrasadas ou sem Baixa</span>
+          <span class="rc ra">📅 ${porExtenso(w)}${w === SEMANA_ATUAL ? ' · <b>Semana Atual</b>' : ''}</span></div></div>
+        <div class="acts"><button class="btn" data-wk="-1">‹ Semana Anterior</button>${w !== SEMANA_ATUAL ? '<button class="btn" data-wk="0">Semana Atual</button>' : ''}<button class="btn" data-wk="1">Próxima ›</button>
+          <button class="btn dark" data-pdfp="1">📄 PDF do Painel</button><button class="btn" data-xlsp="1">📊 Excel do Painel</button>
+          <a class="btn pri" href="plano.html?nova=1" style="text-decoration:none">+ Nova Atividade</a></div></div>
+      <div class="so-print">${esc(tc(eu.fazenda.nome))} · Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toTimeString().slice(0, 5)} · Farm Plan · Gesta'Up</div>
+      ${w === SEMANA_ATUAL ? relatorioDoDia() : ''}
+      <div class="card" style="padding:14px 18px;margin-bottom:14px">${barraMeta()}</div>
+      <div class="two"><div class="grid">
+        <div class="card"><div class="cardh"><h3>Pendências da Semana</h3><small>${pend.length} Itens · Clique no Status para Mudar</small></div>
+          <div class="scroll"><table class="tbl"><thead><tr><th>Atividade</th><th>Quem Faz</th><th>Dias sem Baixa</th><th style="text-align:right">Status</th></tr></thead><tbody>
+          ${pend.slice(0, 10).map(a => { const m = motivoDe(w, a); return `<tr><td><b>${esc(tc(a.nome))}</b>${atrasada(w, a) ? ' <span class="late">' + esc(obs[a.id + '|' + w].replace('Atrasada da semana', 'Atrasada da Sem.')) + '</span>' : ''}${m ? ` <span class="tag nd" style="border-radius:5px;padding:0 6px;font-size:11px;font-weight:700">Não Deu: ${esc(tc(m))}</span>` : ''}
+            <div class="sub">${esc(tc(a.local || ''))}${a.local ? ' · ' : ''}${esc(nomeSetor(a.setor_id))}</div></td><td>${esc(nomeQuem(a))}</td><td class="sub">${semBaixa(w, a).map(d => DIAS_CURTO[d]).join(' · ') || '—'}</td>
+            <td style="text-align:right"><button data-ps="${a.id}" title="Mudar Status" style="cursor:pointer;border:0;background:none;padding:0">${pill(st(a))}</button></td></tr>`; }).join('') || '<tr><td colspan="4" class="empty">Nenhuma Pendência Nesta Semana.</td></tr>'}
+          </tbody></table></div>${pend.length > 10 ? `<div class="foot"><span>Mostrando 10 de ${pend.length}</span><a class="btn sm" href="index.html?semana=${w}" style="text-decoration:none">Ver Semana Completa</a></div>` : ''}</div>
+        <div class="card"><div class="cardh"><h3>Tarefas por Dia</h3><small>Verde = Já Marcado como Feito</small></div>
+          <div class="dias7">${porDia.map((T, d) => { const n = T.length, ok = T.filter(a => feito(w, a, d)).length, hj = w === SEMANA_ATUAL && d === DIA_HOJE;
+            return `<a href="index.html?semana=${w}"><b class="num" style="${hj ? 'color:var(--s3)' : ''}">${n}</b><span style="height:${Math.max(4, n / dMax * 100)}px;background:${hj ? 'var(--navy)' : 'var(--s1-soft)'}"><i style="height:${n ? ok / n * 100 : 0}%"></i></span><small style="${hj ? 'font-weight:700' : ''}">${DIAS_CURTO[d]} ${diaDaSemana(w, d).getDate()}</small></a>`; }).join('')}</div></div>
+      </div><div class="grid">
+        ${cartaoNotas()}
+        <div class="card bars"><div class="cardh"><h3>Por Setor</h3><small>Atividades na Semana</small></div>
+          ${sArr.map(([k, n]) => `<div class="row"><span>${esc(k)}</span><div class="track"><i style="width:${n / sMax * 100}%;background:var(--navy)"></i></div><b class="num" style="text-align:right">${n}</b></div>`).join('')}<div style="height:12px"></div></div>
+        <div class="card bars"><div class="cardh"><h3>Quem Faz</h3><small>Concluídas / Total</small></div>
+          ${qArr.map(([k, [d, n]]) => `<div class="row" style="grid-template-columns:130px 1fr 48px"><span>${esc(k)}</span><div class="track"><i style="width:${d / n * 100}%;background:${d === n ? 'var(--s2)' : 'var(--s5)'}"></i></div><b class="num" style="text-align:right">${d}/${n}</b></div>`).join('')}<div style="height:12px"></div></div>
+      </div></div>`;
+  }
+
+
+  // ---------- PDF e Excel do Painel ----------
+  function excelPainel() {
+    const { w, L, pend, porDia, sArr, qArr, st } = ultimo, ext = [];
+    if (w === SEMANA_ATUAL) {
+      const d = DIA_HOJE, T = naSemana(w).filter(a => a.dias?.[d]);
+      ext.push({ nome: 'Relatório do Dia ' + ddmm(diaDaSemana(w, d)).slice(0, 5).replace('/', '-'), linhas: [['Atividade', 'Quem Faz', 'Setor', 'Situação Hoje', 'Motivo'],
+        ...T.map(a => { const b = bx(w, a, d); return [tc(a.nome), nomeQuem(a), nomeSetor(a.setor_id), feito(w, a, d) ? 'Feito' : b && !b.feito ? 'Não Deu' : 'Sem Baixa', b && !b.feito ? tc(b.motivo || '') : '']; })] });
+      const X = (fora || []).filter(x => x.dia === d);
+      if (X.length) ext.push({ nome: 'Fora do Plano Hoje', linhas: [['O Que', 'Tipo', 'Quem', 'Observação'], ...X.map(x => [tc(x.nome), ehImp(x) ? 'Imprevisto' : 'Fora do Plano', quemFora(x), x.obs || ''])] });
+    }
+    ext.push({ nome: 'Pendências da Semana', linhas: [['Atividade', 'Quem Faz', 'Setor', 'Local', 'Status', 'Dias sem Baixa', 'Não Deu (Motivo)', 'Atrasada'],
+      ...pend.map(a => [tc(a.nome), nomeQuem(a), nomeSetor(a.setor_id), tc(a.local || ''), STATUS[st(a)] || '', semBaixa(w, a).map(x => DIAS_CURTO[x]).join(' · '), tc(motivoDe(w, a) || ''), atrasada(w, a) ? 'Sim' : ''])] });
+    ext.push({ nome: 'Tarefas por Dia', linhas: [['Dia', 'Data', 'Planejadas', 'Feitas'], ...porDia.map((T, d) => [DIAS_LONGO[d], ddmm(diaDaSemana(w, d)), T.length, T.filter(a => feito(w, a, d)).length])] });
+    ext.push({ nome: 'Por Setor', linhas: [['Setor', 'Atividades na Semana'], ...sArr] });
+    ext.push({ nome: 'Quem Faz', linhas: [['Quem Faz', 'Concluídas', 'Total'], ...qArr.map(([k, [dn, n]]) => [k, dn, n])] });
+    ext.push({ nome: 'Atividades da Semana', linhas: [['Atividade', 'Quem Faz', 'Setor', 'Status', ...DIAS_CURTO], ...L.map(a => [tc(a.nome), nomeQuem(a), nomeSetor(a.setor_id), STATUS[st(a)] || '', ...DIAS_CURTO.map((_, d) => !a.dias?.[d] ? '' : feito(w, a, d) ? 'Feito' : bx(w, a, d) ? 'Não Deu' : 'Planejado')])] });
+    return ext;
+  }
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-pdfp]')) { const t = document.title; document.title = `Painel Semana ${semana} - ${tc(eu.fazenda.nome)}`; setTimeout(() => { print(); document.title = t; }, 100); return; }
+    const b = e.target.closest('[data-xlsp]'); if (!b || !ultimo) return;
+    b.disabled = true; const txt = b.textContent; b.textContent = 'Montando…';
+    import('./excel.js').then(m => m.exportarExcel({ titulo: `Painel Semana ${semana} - ${tc(eu.fazenda.nome)}`, semTabelas: true, extras: excelPainel() }))
+      .catch(er => alert(er.message)).finally(() => { b.disabled = false; b.textContent = txt; });
+  });
+
+  // ---------- Status pelo painel ----------
+  function fecharMenu() { document.querySelector('.pop')?.remove(); }
+  function abrirMenu(el) {
+    fecharMenu();
+    const a = atividades[el.dataset.ps], w = semana, atual = plano[a.id + '|' + w] || 0;
+    const pop = document.createElement('div'); pop.className = 'pop';
+    pop.innerHTML = `<div class="t"><b>${esc(tc(a.nome))}</b>Semana ${w}</div>` + [1, 3, 2, 4, 5].map(s => `<button data-st="${s}" class="${atual === s ? 'on' : ''}"><i style="background:var(--s${s})"></i>${STATUS[s]}${atual === s ? ' ✓' : ''}</button>`).join('');
+    document.body.appendChild(pop);
+    const r = el.getBoundingClientRect(), ph = pop.offsetHeight;
+    pop.style.left = Math.max(8, Math.min(innerWidth - pop.offsetWidth - 8, r.right - pop.offsetWidth)) + 'px';
+    pop.style.top = (r.bottom + ph + 8 > innerHeight ? Math.max(8, r.top - ph - 4) : r.bottom + 4) + 'px';
+    pop.onclick = async (e) => {
+      const b = e.target.closest('[data-st]'); if (!b) return; fecharMenu();
+      const novo = +b.dataset.st;
+      const { error } = await supabase.from('planejamento').upsert({ fazenda_id: fz, atividade_id: a.id, ano: ANO, semana: w, status: novo }, { onConflict: 'atividade_id,ano,semana' });
+      if (error) return aviso('Erro: ' + error.message);
+      plano[a.id + '|' + w] = novo; desenhar(); aviso(tc(a.nome) + ': ' + STATUS[novo]);
+    };
+    setTimeout(() => document.addEventListener('pointerdown', function fora(ev) { if (!pop.contains(ev.target)) { fecharMenu(); document.removeEventListener('pointerdown', fora, true); } }, true), 0);
+  }
+  $('tela').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-wk]');
+    if (b) { const v = +b.dataset.wk; semana = v ? Math.min(SEMANAS_NO_ANO, Math.max(1, semana + v)) : SEMANA_ATUAL; await carregarBaixas(); return desenhar(); }
+    const ps = e.target.closest('[data-ps]'); if (ps) return abrirMenu(ps);
+    const fn = e.target.closest('[data-fpnovo]'); if (fn) return abrirFora(fn.dataset.fpnovo);
+    const fr = e.target.closest('[data-fprem]'); if (fr) return removerFora(fr.dataset.fprem);
+    const ok = e.target.closest('[data-ok]'); if (ok) { ok.disabled = true; return darBaixa(ok.dataset.ok); }
+    const vh = e.target.closest('[data-vh]'); if (vh) return abrirVisor(midHoje(), +vh.dataset.vh, nomeDaMidia);
+    if (e.target.closest('[data-whats]')) return resumoWhatsApp();
+  });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') fecharMenu(); });
+
+  // ---------- Entrada ----------
+  eu = await quemSouEu();
+  montarMenu('painel.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.includes(eu.papel)) location.href = 'index.html';
+  else {
+    fz = eu.fazenda.id;
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    const { data: fzd } = await supabase.from('fazendas').select('peso_tarefas, meta_mes').eq('id', fz).maybeSingle();
+    { const { data: fp } = await supabase.from('fazendas').select('periodo_avaliacao').eq('id', fz).maybeSingle(); if (fp?.periodo_avaliacao) PER_AV = fp.periodo_avaliacao; }
+    if (fzd?.peso_tarefas != null) PESO_T = fzd.peso_tarefas / 100;
+    if (fzd?.meta_mes != null) META = fzd.meta_mes;   // Meta do Mês: Cadastros › Geral
+    await carregar();
+    // O que a equipe faz no app aparece aqui sozinho
+    aoMudar(fz, ['baixas', 'planejamento', 'execucoes', 'fora_do_plano', 'midias', 'relatorios_dia'], () => { baixas = {}; semanasComBaixa = new Set(); return carregar(); });
+  }
+</script>
+</body>
+</html>

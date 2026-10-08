@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Plano Anual (tela do gestor) — visual do protótipo -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plano Anual · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="shell">
+  <!-- Menu azul da esquerda -->
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+
+  <div class="main">
+    <!-- Barra de cima no celular -->
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="plano.html" selected>Plano Anual</option><option value="index.html">Tarefas da Semana</option><option value="cadastros.html">Cadastros</option></select></div>
+
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido">
+      <div class="phead">
+        <div><h1 id="tituloAno">Plano Anual</h1><div class="resumo" id="resumo"></div></div>
+        <div class="acts">
+          <button class="btn danger" id="limpar" title="Apagar as Marcações de uma Semana, de um Mês ou do Ano">🧹 Limpar Marcações</button>
+          <button class="btn" id="desfazer" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Desfazer</button>
+          <button class="btn pri" id="nova"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nova Atividade</button>
+        </div>
+      </div>
+      <div id="montarAno"></div>
+      <div id="grafAno"></div>
+
+      <div class="filters">
+        <input class="search" id="busca" placeholder="Buscar Atividade, Pessoa ou Local">
+        <label class="sel">Setor<select id="fSetor"></select></label>
+        <label class="sel">Coordena<select id="fCoord"></select></label>
+        <label class="sel">Quem Faz<select id="fQuem"></select></label>
+        <label class="sel">Tipo<select id="fTipo"></select></label>
+        <label class="sel">Urgência<select id="fUrg"><option value="">1 a 3</option><option value="1">1 · Alta</option><option value="2">2 · Média</option><option value="3">3 · Baixa</option></select></label>
+        <label class="sel">Mostrar<select id="fMostrar"><option value="">Todas</option><option value="sem">Com Atividade Nesta Semana</option><option value="atr">Com Algum Atraso</option><option value="vaz">Sem Semana Marcada</option></select></label>
+        <button class="btn limpaf escondido" id="limparF" type="button" title="Voltar a Mostrar Todas as Atividades">✕ Limpar Filtros</button>
+      </div>
+
+      <div class="card">
+        <div class="tools">
+          <div class="brush" id="pinceis"></div>
+          <div class="legend"><span id="dica"></span></div>
+        </div>
+        <div class="ag-wrap" id="agw"><div class="ag" id="ag"></div><div id="vazio" class="empty escondido">Nenhuma Atividade com Esses Filtros.</div></div>
+        <div class="foot"><span id="mostrando"></span><span class="legend" id="legenda"></span></div>
+      </div>
+    </section>
+  </div>
+</div>
+<div id="modal"></div>
+<div id="limpa"></div>
+
+<script type="module">
+  import { agrupar, fmtDur } from './tempo.js';
+  import { enviarPop, abrirPop } from './pop.js';
+  import { supabase, ANO, ANO_HOJE, SEMANAS_NO_ANO, STATUS, PAPEL, MESES, TIPOS, DIAS_CURTO, tc, esc, semanaDe, inicioDaSemana, quemSouEu, buscarTudo, montarMenu, ic , aoMudar, graficoStatus, congelar } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const SEMANA_ATUAL = Math.max(1, Math.min(SEMANAS_NO_ANO, semanaDe(new Date())));   // em outro ano: 1ª ou última semana
+  const PODE_EDITAR = ['consultor', 'gestor', 'administrativo'];
+  const MESES_LONGO = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  // Pincéis: 0 = Selecionar (abre menu), 1..5 = pinta o status, 9 = apaga
+  const PINCEIS = [[0,'Selecionar'],[1,'Planejado'],[3,'Em Andamento'],[2,'Concluído'],[4,'Atrasado'],[5,'Pausado'],[9,'Apagar']];
+
+  montarMenu('plano.html');
+
+  // Tudo o que a tela precisa fica guardado aqui
+  let eu, atividades = [], setores = [], pessoas = [], equipes = [], plano = {};   // plano["idAtividade|semana"] = status
+  let pincel = 0, pintando = null, desfazer = [];
+
+  function aviso(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2400); }
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+
+  // Semanas: mês da semana = mês da quinta-feira
+  const mesDa = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();
+  const primeiraDoMes = (w) => w === 1 || mesDa(w - 1) !== mesDa(w);
+  function periodo(w) {
+    const a = inicioDaSemana(w), b = new Date(a.getTime() + 6 * 864e5);
+    return a.getMonth() === b.getMonth() ? `${a.getDate()} a ${b.getDate()} de ${MESES_LONGO[b.getMonth()]}`
+      : `${a.getDate()} de ${MESES_LONGO[a.getMonth()]} a ${b.getDate()} de ${MESES_LONGO[b.getMonth()]}`;
+  }
+
+  // Nomes para mostrar
+  const nomePessoa = (id) => tc(pessoas.find(p => p.id === id)?.apelido) || '';
+  const nomeSetor = (id) => tc(setores.find(s => s.id === id)?.nome) || '';
+  const nomeQuem = (a) => tc(pessoas.find(p => p.id === a.executor_pessoa_id)?.apelido || equipes.find(e => e.id === a.executor_equipe_id)?.nome) || '';
+  const semanasDe = (a) => { let n = 0; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (plano[a.id + '|' + w]) n++; return n; };
+
+  // 2. Busca no banco tudo da fazenda
+  async function carregar() {
+    const fz = eu.fazenda.id;
+    [atividades, setores, pessoas, equipes] = await Promise.all([
+      buscarTudo(() => supabase.from('atividades').select('*').eq('fazenda_id', fz).order('nome')),
+      buscarTudo(() => supabase.from('setores').select('id, nome').eq('fazenda_id', fz).order('nome')),
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido').eq('fazenda_id', fz).eq('ativo', true).order('apelido')),
+      buscarTudo(() => supabase.from('equipes').select('id, nome').eq('fazenda_id', fz).order('nome'))
+    ]);
+    const linhas = await buscarTudo(() => supabase.from('planejamento').select('atividade_id, semana, status').eq('fazenda_id', fz).eq('ano', ANO));
+    plano = {};
+    linhas.forEach(l => plano[l.atividade_id + '|' + l.semana] = l.status);
+
+    const antes = lerFiltros();   // guarda os filtros escolhidos: a tela se atualiza sozinha e não pode perder o filtro no meio da edição
+    const opc = (lista, todos) => `<option value="">${todos}</option>` + lista.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('');
+    $('fSetor').innerHTML = opc(setores.map(s => [s.id, tc(s.nome)]), 'Todos');
+    const coords = pessoas.filter(p => atividades.some(a => a.coordenador_id === p.id));
+    $('fCoord').innerHTML = opc(coords.map(p => [p.id, tc(p.apelido)]), 'Todos');
+    $('fQuem').innerHTML = '<option value="">Todos</option>'
+      + '<optgroup label="Equipes">' + equipes.map(e => `<option value="e:${e.id}">${esc(tc(e.nome))}</option>`).join('') + '</optgroup>'
+      + '<optgroup label="Pessoas">' + pessoas.map(p => `<option value="p:${p.id}">${esc(tc(p.apelido))}</option>`).join('') + '</optgroup>';
+    $('fTipo').innerHTML = opc(TIPOS.map(t => [t, t]), 'Todos');
+    $('fMostrar').options[1].textContent = 'Com Atividade na Semana ' + SEMANA_ATUAL;
+    aplicarFiltros(antes);
+    $('legenda').innerHTML = [1,3,2,4,5].map(s => `<span><i style="background:var(--s${s})"></i>${STATUS[s]}</span>`).join('') + '<span>Barras no Topo = Carga da Semana</span>';
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenharPinceis(); desenhar();
+    // Rola a grade até perto da semana atual (só na primeira vez; depois mantém onde a pessoa estava)
+    if (!window._rolouGrade) { window._rolouGrade = true; $('agw').scrollLeft = Math.max(0, (SEMANA_ATUAL - 8) * 28); }
+  }
+
+  // 3. Filtros
+  function filtrada() {
+    const q = $('busca').value.trim().toLowerCase(), fs = $('fSetor').value, fc = $('fCoord').value, fq = $('fQuem').value,
+          ft = $('fTipo').value, fu = $('fUrg').value, fm = $('fMostrar').value;
+    return atividades.filter(a => {
+      const texto = (a.nome + ' ' + nomeQuem(a) + ' ' + nomePessoa(a.coordenador_id) + ' ' + (a.local || '')).toLowerCase();
+      const sts = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) sts.push(plano[a.id + '|' + w]);
+      return (!q || texto.includes(q)) && (!fs || a.setor_id === fs) && (!fc || a.coordenador_id === fc)
+        && (!fq || (fq.startsWith('e:') ? a.executor_equipe_id === fq.slice(2) : a.executor_pessoa_id === fq.slice(2)))
+        && (!ft || a.tipo === ft) && (!fu || String(a.urgencia) === fu)
+        && (fm !== 'sem' || plano[a.id + '|' + SEMANA_ATUAL]) && (fm !== 'atr' || sts.includes(4)) && (fm !== 'vaz' || !sts.some(Boolean));
+    });
+  }
+  // Filtros ficam guardados até a pessoa clicar em "Limpar Filtros" (valem também ao sair e voltar para a tela)
+  const FILTROS = ['busca','fSetor','fCoord','fQuem','fTipo','fUrg','fMostrar'];
+  const CHAVE_F = 'fp-filtros-plano';
+  function lerFiltros() {
+    const atual = Object.fromEntries(FILTROS.map(id => [id, $(id).value]));
+    if (window._filtrosIniciados) return atual;
+    window._filtrosIniciados = true;
+    try { return JSON.parse(sessionStorage.getItem(CHAVE_F)) || atual; } catch { return atual; }
+  }
+  function aplicarFiltros(v) {
+    FILTROS.forEach(id => { const el = $(id), x = v?.[id] || ''; if (el.tagName === 'SELECT' && x && ![...el.options].some(o => o.value === x)) return; el.value = x; });
+    marcarFiltros();
+  }
+  function marcarFiltros() {
+    const v = Object.fromEntries(FILTROS.map(id => [id, $(id).value])), ativo = Object.values(v).some(Boolean);
+    $('limparF').classList.toggle('escondido', !ativo);
+    FILTROS.forEach(id => $(id).closest('.sel, .search')?.classList.toggle('f-on', !!v[id]));
+    try { sessionStorage.setItem(CHAVE_F, JSON.stringify(v)); } catch {}
+  }
+  FILTROS.forEach(id => $(id).addEventListener('input', () => { marcarFiltros(); desenhar(); }));
+  $('limparF').addEventListener('click', () => { FILTROS.forEach(id => $(id).value = ''); marcarFiltros(); desenhar(); });
+
+  // 4. Desenha a grade igual ao protótipo
+  function desenhar() {
+    const L = filtrada();
+    // Contagem conforme os filtros: "32 de 174 Atividades" quando há filtro ligado
+    const marcadas = L.reduce((n, x) => { for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (plano[x.id + '|' + w]) n++; return n; }, 0);
+    const nestaSem = ANO === ANO_HOJE ? L.filter(x => plano[x.id + '|' + SEMANA_ATUAL]).length : 0;
+    const filtro = L.length < atividades.length;
+    $('resumo').innerHTML = `<span class="rc ${filtro ? 'rf' : ''}">📋 <b>${filtro ? L.length + ' de ' + atividades.length : atividades.length}</b> Atividades${filtro ? ' (Filtradas)' : ''}</span>`
+      + `<span class="rc rm">✅ <b>${marcadas}</b> Semanas Marcadas</span>`
+      + (ANO === ANO_HOJE ? `<span class="rc ra">📅 Semana <b>${SEMANA_ATUAL}</b> · ${nestaSem} ${nestaSem === 1 ? 'Atividade' : 'Atividades'}</span>` : '');
+    $('tituloAno').textContent = 'Plano Anual ' + ANO;
+    // Gráfico por mês com as situações (segue os filtros da tela)
+    const pm = MESES.map(() => ({ t: 0, c: {} }));
+    L.forEach(x => { for (let w = 1; w <= SEMANAS_NO_ANO; w++) { const st = plano[x.id + '|' + w]; if (st) { const m = pm[mesDa(w)]; m.t++; m.c[st] = (m.c[st] || 0) + 1; } } });
+    $('grafAno').innerHTML = graficoStatus(pm.map((m, i) => ({ rot: MESES[i], t: m.t, c: m.c, on: ANO === ANO_HOJE && i === mesDa(SEMANA_ATUAL), attr: `data-gm="${i}"` })),
+      { titulo: 'Atividades por Mês', sub: `${pm.reduce((n, m) => n + m.t, 0)} Ocorrências no Ano${L.length < atividades.length ? ' · Com os Filtros' : ''}`, dica: 'Clique no Mês para Abrir o Plano Mensal' });
+    congelar($('agw'));
+    // Ano novo vazio: oferece copiar o plano do ano anterior
+    const vazio = !Object.keys(plano).length && atividades.length && ['consultor', 'gestor', 'administrativo'].includes(eu.papel);
+    $('montarAno').innerHTML = vazio ? `<div class="card fs" style="margin-bottom:14px;border-color:var(--s2);background:var(--s2-soft)">
+        <h4>📅 O Plano de ${ANO} Ainda Está Vazio</h4>
+        <div class="sub" style="font-size:13px">Copie as Semanas Marcadas em ${ANO - 1}: Cada Atividade Volta nas Mesmas Semanas, Tudo como <b>Planejado</b>. As Repetições "Atrasada da Semana X" Não São Copiadas. Depois É Só Ajustar o Que Mudou.</div>
+        <div><button class="btn pri" id="copiarAno">📋 Copiar o Plano de ${ANO - 1} para ${ANO}</button></div></div>` : '';
+    if (vazio) $('copiarAno').onclick = async () => {
+      $('copiarAno').disabled = true;
+      const { data, error } = await supabase.rpc('copiar_plano_ano', { p_fazenda: eu.fazenda.id, p_de: ANO - 1, p_para: ANO });
+      if (error) { $('copiarAno').disabled = false; return aviso(error.message.includes('function') ? 'Falta Rodar o SQL 017 no Supabase' : error.message); }
+      aviso(data ? data + ' Semanas Copiadas de ' + (ANO - 1) : 'Não Havia Semanas em ' + (ANO - 1) + ' para Copiar');
+      await carregar();
+    };
+    $('mostrando').textContent = `Mostrando ${L.length} de ${atividades.length} Atividades`;
+    $('vazio').classList.toggle('escondido', L.length > 0);
+    const ag = $('ag');
+    ag.className = 'ag' + (pincel ? ' painting' : '');
+    ag.style.gridTemplateColumns = `${innerWidth < 700 ? 180 : 250}px 34px repeat(${SEMANAS_NO_ANO},28px) 48px`;
+
+    // Cabeçalho com barrinhas de carga por semana
+    const carga = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) carga[w] = L.filter(a => plano[a.id + '|' + w]).length;
+    const mx = Math.max(1, ...carga.slice(1));
+    let h = `<div class="h hd stick nm" style="cursor:default;justify-content:flex-end">O Que Fazer no Ano?<span style="text-transform:none;letter-spacing:0;font-weight:500">Coordena → Quem Faz · Setor</span></div><div class="h hd tx">Urg.</div>`;
+    for (let w = 1; w <= SEMANAS_NO_ANO; w++) {
+      const pri = primeiraDoMes(w);
+      h += `<div class="h hd hw ${pri ? 'mo' : ''} ${w === SEMANA_ATUAL ? 'cur' : ''}" title="Semana ${w} · ${periodo(w)} · ${carga[w]} Atividades">${pri ? `<span class="mlab">${MESES[mesDa(w)]}</span>` : ''}<div class="ld"><i style="height:${carga[w] / mx * 100}%"></i></div><span>${w}</span></div>`;
+    }
+    h += `<div class="h hd tx" style="justify-content:flex-end">Sem.</div>`;
+
+    // Linhas
+    for (const a of L) {
+      h += `<div class="c stick nm" data-editar="${a.id}" title="${esc(tc(a.nome))} · Clique para Editar"><span class="nm1">${esc(tc(a.nome))}</span><span class="nm2">${esc(nomePessoa(a.coordenador_id) || '—')} → ${esc(nomeQuem(a) || '—')} · ${esc(nomeSetor(a.setor_id) || '—')}</span></div>`;
+      h += `<div class="c tx"><span class="urg u${a.urgencia || 3}">${a.urgencia || 3}</span></div>`;
+      for (let w = 1; w <= SEMANAS_NO_ANO; w++) {
+        const s = plano[a.id + '|' + w] || 0;
+        h += `<div class="c wk ${primeiraDoMes(w) ? 'mo' : ''} ${w === SEMANA_ATUAL ? 'cur' : ''}" data-a="${a.id}" data-w="${w}" data-s="${s}" title="Semana ${w}${s ? ' · ' + STATUS[s] : ''}"><b></b></div>`;
+      }
+      h += `<div class="c tx" style="justify-content:flex-end">${semanasDe(a)}</div>`;
+    }
+    ag.innerHTML = h;
+  }
+
+  // 5. Pincéis (Selecionar, Planejado, Concluído…)
+  function desenharPinceis() {
+    $('pinceis').innerHTML = PINCEIS.map(([v, l]) => `<button data-br="${v}" class="${pincel === v ? 'on' : ''}">${
+      v === 9 ? '<i style="background:var(--empty);border:1px solid var(--muted)"></i>' : v ? `<i style="background:var(--s${v})"></i>` : ''}${l}</button>`).join('');
+    $('dica').innerHTML = pincel ? '<b>Pincel Ativo:</b> Clique ou Arraste sobre as Semanas' : 'Clique numa Semana para Mudar o Status · Clique no Nome para Editar';
+    $('ag').classList.toggle('painting', !!pincel);
+  }
+  $('pinceis').onclick = (e) => { const b = e.target.closest('[data-br]'); if (!b) return; pincel = +b.dataset.br; desenharPinceis(); };
+
+  // 6. Grava mudanças no banco (várias de uma vez) — com Desfazer
+  function pintarCelula(cel, novo) {
+    const chave = cel.dataset.a + '|' + cel.dataset.w, antes = plano[chave] || 0;
+    if (antes === novo) return null;
+    if (novo) plano[chave] = novo; else delete plano[chave];
+    cel.dataset.s = novo; cel.title = `Semana ${cel.dataset.w}${novo ? ' · ' + STATUS[novo] : ''}`;
+    return { a: cel.dataset.a, w: +cel.dataset.w, antes, novo };
+  }
+  async function gravar(mudancas, guardarDesfazer = true) {
+    if (!mudancas.length) return;
+    const fz = eu.fazenda.id;
+    const salvar = mudancas.filter(m => m.novo).map(m => ({ fazenda_id: fz, atividade_id: m.a, ano: ANO, semana: m.w, status: m.novo }));
+    const erros = [];
+    if (salvar.length) { const r = await supabase.from('planejamento').upsert(salvar, { onConflict: 'atividade_id,ano,semana' }); if (r.error) erros.push(r.error); }
+    // Apaga em lotes (por semana, até 100 atividades por vez): limpar o ano inteiro fica rápido
+    const porSemana = {}; mudancas.filter(m => !m.novo).forEach(m => (porSemana[m.w] ||= []).push(m.a));
+    for (const [w, ids] of Object.entries(porSemana)) for (let i = 0; i < ids.length; i += 100) {
+      const r = await supabase.from('planejamento').delete().eq('ano', ANO).eq('semana', +w).in('atividade_id', ids.slice(i, i + 100)); if (r.error) erros.push(r.error);
+    }
+    if (erros.length) {   // deu erro: volta como estava
+      mudancas.forEach(m => { const k = m.a + '|' + m.w; if (m.antes) plano[k] = m.antes; else delete plano[k]; });
+      desenhar(); return aviso('Não Foi Possível Salvar: ' + erros[0].message);
+    }
+    if (guardarDesfazer) { desfazer.push(mudancas); if (desfazer.length > 30) desfazer.shift(); }
+    $('desfazer').disabled = !desfazer.length;
+    desenhar();
+  }
+  $('desfazer').onclick = async () => {
+    const ult = desfazer.pop(); if (!ult) return;
+    const volta = ult.map(m => ({ a: m.a, w: m.w, antes: m.novo, novo: m.antes }));
+    volta.forEach(m => { const k = m.a + '|' + m.w; if (m.novo) plano[k] = m.novo; else delete plano[k]; });
+    await gravar(volta, false); aviso('Desfeito');
+  };
+
+  // 6b. Limpar marcações de uma semana, de um mês ou do ano (respeita os filtros; dá para Desfazer)
+  const L_ = { per: 'semana', w: SEMANA_ATUAL, m: mesDa(Math.min(SEMANAS_NO_ANO, Math.max(1, SEMANA_ATUAL))), quais: 'filtro', sts: 'todas' };
+  function semanasDoPeriodo() {
+    if (L_.per === 'semana') return [L_.w];
+    const ws = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (L_.per === 'ano' || mesDa(w) === L_.m) ws.push(w);
+    return ws;
+  }
+  function alvosLimpeza() {
+    const ats = L_.quais === 'filtro' ? filtrada() : atividades, ws = semanasDoPeriodo(), out = [];
+    const manter = L_.sts === 'planejadas' ? [2, 3, 5] : [];
+    for (const a of ats) for (const w of ws) { const s = plano[a.id + '|' + w]; if (s && !manter.includes(s)) out.push({ a: a.id, w, antes: s, novo: 0 }); }
+    return out;
+  }
+  function desenharLimpeza() {
+    const filtrou = filtrada().length < atividades.length, alvos = alvosLimpeza(), nAt = new Set(alvos.map(x => x.a)).size;
+    const opt = (v, n, sel) => `<option value="${v}" ${sel ? 'selected' : ''}>${n}</option>`;
+    const radio = (nome, v, rot, sub) => `<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;white-space:nowrap;flex:none;border:1px solid var(--line);border-radius:10px;cursor:pointer;${L_[nome] === v ? 'border-color:var(--navy);background:var(--navy-soft)' : ''}"><input type="radio" name="${nome}" value="${v}" ${L_[nome] === v ? 'checked' : ''} style="margin-top:3px"><span><b>${rot}</b>${sub ? `<br><small class="sub" style="white-space:normal">${sub}</small>` : ''}</span></label>`;
+    $('limpa').innerHTML = `<div class="scrim" data-lx="1"></div>
+    <div class="card" role="dialog" style="position:fixed;z-index:1000;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,94vw);max-height:92vh;overflow:auto;padding:22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">🧹 Limpar Marcações</h2><button class="btn ghost" data-lx="1">✕</button></div>
+      <div class="sub" style="margin-bottom:14px">Apaga as semanas marcadas no Plano Anual ${ANO}. As atividades continuam cadastradas.</div>
+      <b style="display:block;margin-bottom:6px">1. Período</b>
+      <div style="display:grid;gap:8px;margin-bottom:14px">
+        <div style="display:flex;gap:8px;align-items:center">${radio('per', 'semana', 'Uma Semana')}<select class="in" id="lSem" style="flex:1;min-width:0">${Array.from({ length: SEMANAS_NO_ANO }, (_, i) => opt(i + 1, 'Semana ' + (i + 1) + ' · ' + periodo(i + 1), L_.w === i + 1)).join('')}</select></div>
+        <div style="display:flex;gap:8px;align-items:center">${radio('per', 'mes', 'Um Mês')}<select class="in" id="lMes" style="flex:1;min-width:0">${MESES_LONGO.map((n, i) => opt(i, n, L_.m === i)).join('')}</select></div>
+        ${radio('per', 'ano', 'O Ano Todo', 'Todas as ' + SEMANAS_NO_ANO + ' semanas de ' + ANO)}
+      </div>
+      <b style="display:block;margin-bottom:6px">2. Quais Atividades</b>
+      <div style="display:grid;gap:8px;margin-bottom:14px">
+        ${radio('quais', 'filtro', filtrou ? `Só as ${filtrada().length} do Filtro Atual` : 'Todas as Atividades', filtrou ? 'Respeita a busca e os filtros que estão ligados na tela' : 'Não há filtro ligado')}
+        ${filtrou ? radio('quais', 'todas', 'Todas as ' + atividades.length + ' Atividades', 'Ignora os filtros') : ''}
+      </div>
+      <b style="display:block;margin-bottom:6px">3. Quais Marcações</b>
+      <div style="display:grid;gap:8px;margin-bottom:16px">
+        ${radio('sts', 'todas', 'Todas', 'Planejado, Em Andamento, Concluído, Atrasado e Pausado')}
+        ${radio('sts', 'planejadas', 'Só Planejado e Atrasado', 'Mantém o histórico do que foi feito (Concluído, Em Andamento e Pausado)')}
+      </div>
+      <div class="warn" style="display:block;margin-bottom:14px">${alvos.length ? `Serão apagadas <b>${alvos.length} ${alvos.length === 1 ? 'marcação' : 'marcações'}</b> de <b>${nAt} ${nAt === 1 ? 'atividade' : 'atividades'}</b>. Se errar, use o botão <b>Desfazer</b> logo depois.` : 'Nenhuma marcação para apagar com essa escolha.'}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-lx="1">Cancelar</button><button class="btn danger" data-lok="1" ${alvos.length ? '' : 'disabled'} style="${alvos.length ? 'background:var(--s4);color:#fff;border-color:var(--s4)' : ''}">🧹 Limpar ${alvos.length || ''}</button></div>
+    </div>`;
+  }
+  $('limpar').onclick = () => { L_.quais = 'filtro'; desenharLimpeza(); };
+  $('limpa').addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.name === 'per' || t.name === 'quais' || t.name === 'sts') L_[t.name] = t.value;
+    if (t.id === 'lSem') { L_.w = +t.value; L_.per = 'semana'; }
+    if (t.id === 'lMes') { L_.m = +t.value; L_.per = 'mes'; }
+    desenharLimpeza();
+  });
+  $('limpa').addEventListener('click', async (e) => {
+    if (e.target.closest('[data-lx]')) { $('limpa').innerHTML = ''; return; }
+    const ok = e.target.closest('[data-lok]'); if (!ok) return;
+    const alvos = alvosLimpeza(); if (!alvos.length) return;
+    const quando = L_.per === 'semana' ? 'da Semana ' + L_.w : L_.per === 'mes' ? 'de ' + MESES_LONGO[L_.m] : 'do Ano Todo';
+    if (!confirm(`Apagar ${alvos.length} Marcações ${quando}?`)) return;
+    ok.disabled = true; ok.textContent = 'Limpando…';
+    alvos.forEach(m => delete plano[m.a + '|' + m.w]);
+    $('limpa').innerHTML = '';
+    await gravar(alvos);
+    aviso(`${alvos.length} Marcações Apagadas · Use Desfazer se Precisar`);
+  });
+
+  // 7. Cliques e arrastar na grade
+  const ag = $('ag');
+  ag.addEventListener('pointerdown', (e) => {
+    const nome = e.target.closest('[data-editar]');
+    if (nome) return abrirCadastro(atividades.find(a => a.id === nome.dataset.editar));
+    const cel = e.target.closest('.wk[data-a]'); if (!cel) return;
+    if (!pincel) return abrirMenu(cel);
+    e.preventDefault();
+    cel.releasePointerCapture?.(e.pointerId);
+    pintando = [];
+    const m = pintarCelula(cel, pincel === 9 ? 0 : pincel); if (m) pintando.push(m);
+  });
+  ag.addEventListener('pointerover', (e) => {
+    if (!pintando) return;
+    const cel = e.target.closest('.wk[data-a]'); if (!cel) return;
+    const m = pintarCelula(cel, pincel === 9 ? 0 : pincel); if (m) pintando.push(m);
+  });
+  window.addEventListener('pointerup', () => { if (!pintando) return; const lote = pintando; pintando = null; gravar(lote); });
+
+  // 8. Menu do quadradinho (modo Selecionar)
+  function fecharMenu() { document.querySelector('.pop')?.remove(); }
+  function abrirMenu(cel) {
+    fecharMenu();
+    const a = atividades.find(x => x.id === cel.dataset.a), w = +cel.dataset.w, atual = +cel.dataset.s;
+    const pop = document.createElement('div'); pop.className = 'pop';
+    pop.innerHTML = `<div class="t"><b>${esc(tc(a.nome))}</b>Semana ${w} · ${periodo(w)}</div>`
+      + [1,3,2,4,5].map(s => `<button data-st="${s}" class="${atual === s ? 'on' : ''}"><i style="background:var(--s${s})"></i>${STATUS[s]}${atual === s ? ' ✓' : ''}</button>`).join('')
+      + `<button data-st="0"><i style="background:var(--empty);border:1px solid var(--line)"></i>Tirar desta Semana</button>`
+      + `<div style="border-top:1px solid var(--line2);margin:4px 0"></div><button data-ed="1">${ic('gear')}Editar Atividade</button>`;
+    document.body.appendChild(pop);
+    pop.querySelectorAll('svg').forEach(s => { s.style.width = '14px'; s.style.height = '14px'; });
+    const r = cel.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    pop.style.left = Math.max(8, Math.min(innerWidth - pw - 8, r.left)) + 'px';
+    pop.style.top = (r.bottom + ph + 8 > innerHeight ? Math.max(8, r.top - ph - 4) : r.bottom + 4) + 'px';
+    pop.onclick = (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      fecharMenu();
+      if (b.dataset.ed) return abrirCadastro(a);
+      const m = pintarCelula(cel, +b.dataset.st); if (m) gravar([m]);
+    };
+    setTimeout(() => document.addEventListener('pointerdown', function fora(ev) {
+      if (!pop.contains(ev.target)) { fecharMenu(); document.removeEventListener('pointerdown', fora, true); }
+    }, true), 0);
+  }
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') { fecharMenu(); fechar(); } });
+  $('grafAno').addEventListener('click', (e) => { const b = e.target.closest('[data-gm]'); if (b) location.href = 'mes.html?mes=' + b.dataset.gm; });
+  // Atividade aberta e sem salvar: o navegador pergunta antes de sair da página
+  addEventListener('beforeunload', (e) => { if (G) { e.preventDefault(); e.returnValue = ''; } });
+  $('agw').addEventListener('scroll', fecharMenu);
+
+  // 9. Cadastro e edição de atividade (gaveta à direita, igual ao protótipo)
+  $('nova').onclick = () => abrirCadastro(null);
+  let G = null;   // o que está aberto na gaveta
+  const ORDEM_CLIQUE = [0, 1, 3, 2, 4, 5];
+  const quemDe = (a) => a.executor_equipe_id ? 'e:' + a.executor_equipe_id : a.executor_pessoa_id ? 'p:' + a.executor_pessoa_id : '';
+  const nomeDoQuem = (q) => q.startsWith('e:') ? tc(equipes.find(e => e.id === q.slice(2))?.nome) : q.startsWith('p:') ? tc(pessoas.find(p => p.id === q.slice(2))?.apelido) : '';
+  const opcoes = (lista, sel, vazio) => (vazio ? `<option value="">${vazio}</option>` : '') + lista.map(([v, l]) => `<option value="${v}" ${v == sel ? 'selected' : ''}>${esc(l)}</option>`).join('');
+
+  function abrirCadastro(a, pre) {
+    fecharMenu();
+    const sem = {};
+    if (a) for (let w = 1; w <= SEMANAS_NO_ANO; w++) { const s = plano[a.id + '|' + w]; if (s) sem[w] = s; }
+    const cf = a?.como_fazer || {};
+    G = { id: a?.id || null, conf: false, rf: SEMANA_ATUAL + 1, rt: SEMANAS_NO_ANO, rn: 1, sem,
+      d: { nome: tc(a?.nome || ''), local: a?.local || '', coord: a ? (a.coordenador_id || '') : (eu.pessoaId || ''), quem: a ? quemDe(a) : '',
+           setor: a?.setor_id || '', tipo: a?.tipo || '2 - Estratégica', urg: a?.urgencia || 2,
+           dias: (a?.dias || [true,false,false,false,false,false,false]).slice(), m2: cf.m2 || '', m3: cf.m3 || '', m4: cf.m4 || '', m5: cf.m5 || '',
+           mq: cf.meta_qtd ?? '', mu: cf.meta_unid || '', th: cf.tempo_h ?? '', chk: (cf.checklist || []).join('\n'), pop: cf.pop || null } };
+    if (pre) Object.keys(pre).forEach(k => { if (pre[k]) G.d[k] = pre[k]; });   // veio do relatório de imprevistos
+    G.real = null; G.popFile = null;
+    desenharGaveta();
+    if (a) carregarReal(a.id);
+    setTimeout(() => $('gNome')?.focus({ preventScroll: true }), 30);
+  }
+
+  // 📊 Previsto x Real: o cronômetro do app mostra quanto tempo a atividade leva de verdade
+  // e quanto é feito; serve para ajustar o tempo previsto e a meta (para este ano ou o próximo)
+  async function carregarReal(aid) {
+    const { data, error } = await supabase.from('execucoes').select('*').eq('atividade_id', aid).order('em');
+    if (error || !G || G.id !== aid) return;
+    const X = agrupar(data || []).filter(x => x.estado === 'fim' && !x.revisar);
+    if (!X.length) { G.real = { n: 0 }; return desenharGaveta(); }
+    const horas = X.reduce((s, x) => s + x.trabalhado, 0) / X.length / 3600000;
+    const comQ = X.filter(x => x.meta_feito != null), feito = comQ.length ? comQ.reduce((s, x) => s + +x.meta_feito, 0) / comQ.length : null;
+    const comS = X.filter(x => x.meta_status), bateu = comS.length ? Math.round(100 * comS.filter(x => x.meta_status === 'bateu').length / comS.length) : null;
+    G.real = { n: X.length, horas, feito, bateu, ms: X.reduce((s, x) => s + x.trabalhado, 0) / X.length };
+    desenharGaveta();
+  }
+  const nbr = (v, c = 1) => String(Math.round(v * 10 ** c) / 10 ** c).replace('.', ',');
+  function blocoReal() {
+    const r = G?.real; if (!G?.id || !r) return '';
+    if (!r.n) return `<div class="sub" style="font-size:12px">📊 Previsto x Real: Ainda Não Há Execuções Terminadas no Cronômetro do App para Esta Atividade.</div>`;
+    const prevH = parseFloat(String(G.d.th).replace(',', '.')), prevQ = parseFloat(String(G.d.mq).replace(',', '.'));
+    const dif = (real, prev) => isNaN(prev) || !prev ? '' : ` <b style="color:${Math.abs(real / prev - 1) <= .15 ? 'var(--s2)' : 'var(--s4)'}">(${real >= prev ? '+' : ''}${Math.round((real / prev - 1) * 100)}%)</b>`;
+    const hSug = Math.round(r.horas * 2) / 2 || 0.5, qSug = r.feito == null ? null : Math.round(r.feito * 10) / 10;
+    return `<div class="warn" style="display:block;background:var(--s3-soft)"><b>📊 Previsto x Real (Cronômetro do App · ${r.n} ${r.n === 1 ? 'Execução' : 'Execuções'})</b>
+      <div style="margin-top:4px">⏱ Tempo Real Médio: <b>${fmtDur(r.ms)}</b>${isNaN(prevH) ? '' : ' · Previsto: ' + nbr(prevH) + ' h' + dif(r.horas, prevH)}</div>
+      ${r.feito != null ? `<div>🎯 Feito Médio: <b>${nbr(r.feito)}${G.d.mu ? ' ' + esc(G.d.mu) : ''}</b>${isNaN(prevQ) ? '' : ' · Meta: ' + nbr(prevQ) + dif(r.feito, prevQ)}</div>` : ''}
+      ${r.bateu != null ? `<div>✅ Meta Batida em <b>${r.bateu}%</b> das Vezes</div>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn sm" data-usar="th" data-v="${hSug}">Usar ${nbr(hSug)} h como Tempo Previsto</button>
+        ${qSug != null ? `<button type="button" class="btn sm" data-usar="mq" data-v="${qSug}">Usar ${nbr(qSug)} como Meta</button>` : ''}</div>
+      <div class="sub" style="font-size:11.5px;margin-top:4px">Execuções com ⚠ Revisar (Mais de 10 h sem Pausa) Ficam Fora da Conta. Ajuste e Clique em Salvar.</div></div>`;
+  }
+  document.addEventListener('click', (e) => {
+    const u = e.target.closest('[data-usar]'); if (!u || !G) return;
+    lerGaveta(); G.d[u.dataset.usar] = String(u.dataset.v).replace('.', ','); desenharGaveta();
+  });
+
+  // Listas de conferência sugeridas para as tarefas críticas (o consultor revisa e ajusta)
+  const LISTAS = [
+    [/vacin|vermif|medica|sanit/, ['Conferir a vacina (nome, lote e validade)', 'Vacina na caixa térmica, entre 2 e 8 °C', 'Pistola limpa e regulada na dose certa', 'Agulhas limpas e trocadas a cada lote de animais', 'Contar os animais antes de começar', 'Aplicar no local certo (tábua do pescoço)', 'Anotar lote, dose e quantidade de animais', 'Contar os animais no final']],
+    [/embarq|carregament|transport|venda/, ['GTA e nota fiscal conferidas', 'Número de animais conferido com a ordem', 'Embarcadouro limpo, sem pregos e sem buracos', 'Caminhão limpo e com piso firme', 'Manejo calmo, sem choque e sem pancada', 'Contar os animais na saída', 'Documentos entregues ao motorista']],
+    [/revis|manuten|trator|maquin|implement|oficina/, ['Nível do óleo do motor', 'Filtros de ar, óleo e diesel', 'Graxa nos pontos de lubrificação', 'Água do radiador', 'Pneus e calibragem', 'Correias e mangueiras sem desgaste', 'Anotar o horímetro']],
+    [/pesag|balança|balanca/, ['Balança zerada e aferida', 'Curral e brete limpos e conferidos', 'Planilha ou app de anotação pronto', 'Lote e brinco de cada animal anotados', 'Conferir o total de animais pesados']],
+    [/bebedour|agua|água/, ['Esvaziar e esfregar o bebedouro', 'Retirar o lodo e a sujeira do fundo', 'Conferir a boia e o registro', 'Encher de novo e ver se não vaza']]
+  ];
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-sugchk]') || !G) return;
+    lerGaveta();
+    const nome = String(G.d.nome || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const l = LISTAS.find(([r]) => r.test(nome));
+    if (!l) return alert('Não Tenho Sugestão para Esta Atividade. Escreva os Itens, Um por Linha.');
+    if (G.d.chk && !confirm('Trocar a Lista Atual pela Sugestão?')) return;
+    G.d.chk = l[1].join('\n'); desenharGaveta();
+  });
+  // Transforma o passo a passo da Metodologia (um passo por linha) na Lista de Conferência
+  const passosDe = (t) => String(t || '').split('\n').map(x => x.replace(/^\s*(\d+\s*[.)\-:º°]?|[-•*✓☐☑])\s*/, '').trim()).filter(Boolean).slice(0, 15);
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-passos]') || !G) return;
+    lerGaveta();
+    const L = passosDe(G.d.m2);
+    if (!L.length) return alert('Escreva Primeiro a Metodologia, Um Passo por Linha.');
+    if (G.d.chk && !confirm('Trocar a Lista Atual pelos Passos da Metodologia?')) return;
+    G.d.chk = L.join('\n'); desenharGaveta();
+  });
+  function lerGaveta() {
+    if (!$('gNome')) return;
+    const v = (id) => $(id).value;
+    Object.assign(G.d, { nome: v('gNome'), local: v('gLocal'), coord: v('gCoord'), quem: v('gQuem'), setor: v('gSetor'), tipo: v('gTipo'),
+                         m2: v('gM2'), m3: v('gM3'), m4: v('gM4'), m5: v('gM5'), mq: v('gMq'), mu: v('gMu'), th: v('gTh'), chk: v('gChk') });
+    G.rf = +v('rDe') || SEMANA_ATUAL; G.rt = +v('rAte') || SEMANAS_NO_ANO; G.rn = +v('rCada') || 1;
+  }
+
+  function desenharGaveta() {
+    const d = G.d, marcadas = Object.keys(G.sem).length, nDias = d.dias.filter(Boolean).length;
+    const futuras = Object.keys(G.sem).filter(w => +w >= SEMANA_ATUAL).length;
+    // Quem mais o executor tem nesta semana, e se bate nos mesmos dias
+    const outras = d.quem ? atividades.filter(x => x.id !== G.id && quemDe(x) === d.quem && plano[x.id + '|' + SEMANA_ATUAL]) : [];
+    const choque = outras.filter(x => (x.dias || []).some((v, i) => v && d.dias[i]));
+    const carga = outras.length + (G.sem[SEMANA_ATUAL] ? 1 : 0);
+    const nomeQ = nomeDoQuem(d.quem), nomeC = nomePessoa(d.coord);
+    const biblioteca = [...new Set(atividades.map(x => tc(x.nome)))].sort((x, y) => x.localeCompare(y, 'pt'));
+    const quemOpc = '<option value="">—</option><optgroup label="Equipes">' + equipes.map(e => `<option value="e:${e.id}" ${'e:' + e.id === d.quem ? 'selected' : ''}>${esc(tc(e.nome))}</option>`).join('')
+      + '</optgroup><optgroup label="Pessoas">' + pessoas.map(p => `<option value="p:${p.id}" ${'p:' + p.id === d.quem ? 'selected' : ''}>${esc(tc(p.apelido))}</option>`).join('') + '</optgroup>';
+    let rotulos = '', mapa = '';
+    for (let w = 1; w <= SEMANAS_NO_ANO; w++) {
+      rotulos += `<span>${primeiraDoMes(w) ? MESES[mesDa(w)] : ''}</span>`;
+      mapa += `<button type="button" data-wm="${w}" data-s="${G.sem[w] || 0}" class="${w === SEMANA_ATUAL ? 'cur' : ''}" title="Semana ${w} · ${periodo(w)}${G.sem[w] ? ' · ' + STATUS[G.sem[w]] : ''}"></button>`;
+    }
+    $('modal').innerHTML = `<div class="scrim" data-x="1"></div><aside class="drawer" id="gaveta">
+     <div class="dh"><div><div class="eyebrow">Plano Anual ${ANO} · Cadastra Uma Vez, Aparece no Mês, na Semana, no Dia e no App</div><h2>${G.id ? 'Editar Atividade' : 'Nova Atividade'}</h2></div><button class="btn ghost" data-x="1">✕</button></div>
+     <div class="db">
+      <section class="card fs"><h4><em>1</em>O Que e Quem</h4>
+       <label class="fl">O Que Fazer? (Biblioteca de Atividades)<input class="in" id="gNome" autocomplete="off" value="${esc(d.nome)}" placeholder="Ex.: Pasto - Calagem"></label>
+       ${G.id ? '' : '<div id="gParecidas" class="parec" aria-live="polite"></div>'}<datalist id="gLib">${biblioteca.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+       <div class="fr"><label class="fl">Local / Detalhe<input class="in" id="gLocal" value="${esc(d.local)}" placeholder="Ex.: Pasto D.128"></label>
+        <label class="fl">Quem Coordena?<select class="in" id="gCoord">${opcoes(pessoas.map(p => [p.id, tc(p.apelido)]), d.coord, '—')}</select></label>
+        <label class="fl">Quem Faz?<select class="in" id="gQuem">${quemOpc}</select></label></div>
+       <div class="fr"><label class="fl">Setor<select class="in" id="gSetor">${opcoes(setores.map(s => [s.id, tc(s.nome)]), d.setor, '—')}</select></label>
+        <label class="fl">Tipo de Atividade<select class="in" id="gTipo">${opcoes(TIPOS.map(t => [t, t]), d.tipo)}</select></label>
+        <div class="fl">Urgência<div class="dows">${[[1,'1 · Alta'],[2,'2 · Média'],[3,'3 · Baixa']].map(([v, l]) => `<button type="button" data-ur="${v}" class="${d.urg === v ? 'on' : ''}">${l}</button>`).join('')}</div></div></div>
+      </section>
+      <section class="card fs"><h4><em>2</em>Quando</h4>
+       <div class="fl">Dias da Semana em que é Feita<div class="dows">${DIAS_CURTO.map((n, i) => `<button type="button" data-dw="${i}" class="${d.dias[i] ? 'on' : ''}">${n}</button>`).join('')}</div></div>
+       <div class="fl">Semanas do Ano · ${marcadas} Marcadas <span style="font-weight:400;color:var(--muted)">(Clique para Alternar: Planejado → Em Andamento → Concluído → Atrasado → Pausado → Vazio)</span>
+        <div class="scroll"><div style="min-width:560px"><div class="wlab">${rotulos}</div><div class="wmap">${mapa}</div></div></div></div>
+       <div class="rec">Repetir da Semana <input class="in" type="number" min="1" max="${SEMANAS_NO_ANO}" id="rDe" value="${G.rf}"> até <input class="in" type="number" min="1" max="${SEMANAS_NO_ANO}" id="rAte" value="${G.rt}"> a Cada
+        <select class="in" id="rCada" style="width:auto">${opcoes([[1,'1 Semana'],[2,'2 Semanas'],[3,'3 Semanas'],[4,'4 Semanas'],[8,'8 Semanas']], G.rn)}</select>
+        <button type="button" class="btn sm dark" data-rec="1">Aplicar</button><button type="button" class="btn sm" data-clr="1">Limpar Planejadas a Partir da Sem. ${SEMANA_ATUAL}</button></div>
+      </section>
+      <section class="card fs"><h4><em>3</em>Como Fazer (5M)</h4>
+       <div class="fr"><label class="fl">Metodologia · 2º M<textarea class="in" id="gM2" placeholder="Passo a Passo">${esc(d.m2)}</textarea></label><label class="fl">Máquinas e Ferramentas · 3º M<textarea class="in" id="gM3" placeholder="Ex.: Pá Carregadeira">${esc(d.m3)}</textarea></label></div>
+       <div class="fr"><label class="fl">Materiais · 4º M<textarea class="in" id="gM4" placeholder="Ex.: Calcário, Quantidade por Hectare">${esc(d.m4)}</textarea></label><label class="fl">Meta · 5º M<textarea class="in" id="gM5" placeholder="Ex.: Hectares por Dia">${esc(d.m5)}</textarea></label></div>
+       <div style="display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:10px">
+        <label class="fl">Meta em Número<input class="in" id="gMq" inputmode="decimal" placeholder="Ex.: 10" value="${esc(d.mq)}"></label>
+        <label class="fl">Unidade da Meta<input class="in" id="gMu" placeholder="Ex.: Bebedouros, Hectares" value="${esc(d.mu)}"></label>
+        <label class="fl">Tempo Previsto (Horas)<input class="in" id="gTh" inputmode="decimal" placeholder="Ex.: 4" value="${esc(d.th)}"></label></div>
+       <div class="sub" style="font-size:12px">No Aplicativo, ao Terminar a Atividade, o Colaborador Informa Quanto Fez e o Sistema Compara com a Meta e com o Tempo Previsto.</div>
+       ${blocoReal()}
+       <label class="fl">☑ Lista de Conferência (Um Item por Linha · Opcional)<textarea class="in" id="gChk" rows="4" placeholder="Para Tarefas Críticas (Vacinação, Embarque, Revisão de Máquina). O Colaborador Marca Item por Item Antes de Dar ✓ Feito.">${esc(d.chk || '')}</textarea></label>
+       <div class="fl">📄 POP · Procedimento Operacional Padrão (PDF · Opcional · o Colaborador Abre no Aplicativo)
+        <div class="popx">${G.popFile ? `<span class="pn">📄 ${esc(G.popFile.name)} <small>· Será Enviado ao Salvar</small></span><button type="button" class="btn" data-poptroca="1">Trocar</button><button type="button" class="btn" data-poprem="1">Remover</button>`
+          : d.pop ? `<button type="button" class="btn pv" data-popver="1" title="Abrir o PDF">📄 ${esc(d.pop.nome || 'POP')}</button><button type="button" class="btn" data-poptroca="1">Trocar</button><button type="button" class="btn" data-poprem="1">Remover</button>`
+          : `<button type="button" class="btn" data-poptroca="1">+ Anexar POP (PDF)</button><small class="sub">Ex.: POP - Leitura de Cocho</small>`}
+        <input type="file" id="gPop" accept="application/pdf,.pdf" hidden></div></div>
+       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" class="btn sm" data-passos="1">☑ Usar os Passos da Metodologia</button><button type="button" class="btn sm" data-sugchk="1">💡 Sugerir Lista</button><span class="sub" style="font-size:12px">Sugestão pelo Nome da Atividade (Vacinação, Embarque, Revisão de Máquina, Pesagem, Bebedouro). Revise Antes de Salvar.</span></div>
+      </section>
+      <section class="card fs"><h4>Como ${esc(nomeQ || 'o Colaborador')} Vai Ver no Aplicativo</h4>
+       <div class="preview"><span class="circle"></span><div><b style="font-size:15px">${esc(tc(d.nome) || 'Nome da Atividade')}</b><div style="color:var(--muted);font-size:12.5px">📍 ${esc(d.local || 'Local')} · Coordena: ${esc(nomeC || '—')}</div></div></div>
+       <div class="lines"><div class="l"><span>Ocorrências no Ano</span><b>${marcadas} Semanas · ${marcadas * nDias} Dias</b></div>
+        <div class="l"><span>Semanas a Partir de Agora (Sem. ${SEMANA_ATUAL}+)</span><b>${futuras}</b></div>
+        <div class="l"><span>Carga de ${esc(nomeQ || '—')} na Semana ${SEMANA_ATUAL}</span><b>${carga} Atividades</b></div></div>
+       ${choque.length ? `<div class="warn"><span style="color:var(--s5);font-size:18px">⚠</span><div>${esc(nomeQ)} Já Tem <b>${choque.slice(0, 3).map(x => esc(tc(x.nome))).join(', ')}</b>${choque.length > 3 ? ' e Mais ' + (choque.length - 3) : ''} nos Mesmos Dias Desta Semana. Confira se Cabe na Agenda.</div></div>` : ''}
+      </section>
+     </div>
+     <div class="df"><div class="acts">${G.id ? (G.conf ? '<span style="font-size:13px">Excluir de Vez?</span><button class="btn danger" data-del2="1">Sim, Excluir</button><button class="btn" data-del0="1">Não</button>'
+        : '<button class="btn danger" data-del="1">Excluir</button><button class="btn" data-dup="1">Duplicar</button>') : ''}</div>
+      <div class="acts"><button class="btn" data-x="1">Cancelar</button><button class="btn dark" data-save="1">✓ Salvar Atividade</button></div></div>
+    </aside>`;
+    mostrarParecidas();
+  }
+
+  // Cliques e mudanças dentro da gaveta
+  // Botão clicado logo depois de digitar: segura o foco no campo para a gaveta não redesenhar
+  // no meio do clique (o 'change' do campo redesenhava e o clique se perdia)
+  $('modal').addEventListener('mousedown', (e) => {
+    const a = document.activeElement;
+    if (G && e.target.closest('#gaveta button') && a && a.closest('#gaveta') && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) e.preventDefault();
+  });
+  // Ao digitar o nome de uma NOVA atividade: mostra as que já existem com nome igual ou parecido
+  const normN = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const VAZIAS = new Set(['de','da','do','das','dos','e','a','o','as','os','em','na','no','para','com','por']);
+  const palavras = (t) => normN(t).split(' ').filter(w => w.length >= 2 && !VAZIAS.has(w));
+  function parecidas(nome) {
+    const n = normN(nome); if (n.length < 3) return [];
+    const pt = palavras(nome); const vistos = new Set(); const r = [];
+    for (const a of atividades) {
+      const m = normN(a.nome); if (!m) continue;
+      let nota = 0;
+      if (m === n) nota = 100;
+      else if (m.includes(n) || (n.length >= 5 && n.includes(m))) nota = 80;
+      else if (pt.length) {
+        const pa = palavras(a.nome);
+        const casa = pt.filter(w => pa.some(x => x === w || (w.length >= 3 && x.startsWith(w)) || (x.length >= 4 && w.startsWith(x)))).length;
+        const prop = casa / pt.length;
+        if (casa && prop >= .5) nota = Math.round(40 + 35 * prop);
+      }
+      if (nota && !vistos.has(a.id)) { vistos.add(a.id); r.push({ a, nota }); }
+    }
+    return r.sort((x, y) => y.nota - x.nota || tc(x.a.nome).localeCompare(tc(y.a.nome), 'pt')).slice(0, 6);
+  }
+  function mostrarParecidas() {
+    const box = $('gParecidas'); if (!box || !G || G.id) return;
+    const lista = parecidas($('gNome')?.value);
+    if (!lista.length) { box.innerHTML = ''; box.classList.remove('on'); return; }
+    const igual = lista[0].nota === 100;
+    box.classList.add('on'); box.classList.toggle('igual', igual);
+    box.innerHTML = `<div class="ph">${igual ? '⚠️ Esta Atividade Já Existe no Cadastro' : 'Atividades Parecidas Já Cadastradas'} <small>· Clique para Abrir e Editar em Vez de Criar Outra</small></div>` +
+      lista.map(({ a, nota }) => { let n = 0; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (plano[a.id + '|' + w]) n++;
+        return `<button type="button" class="pi${nota === 100 ? ' ig' : ''}" data-parec="${a.id}"><b>${esc(tc(a.nome))}</b>${nota === 100 ? '<em>Já Existe</em>' : ''}<span>${esc(nomePessoa(a.coordenador_id) || '—')} → ${esc(nomeQuem(a) || '—')} · ${esc(nomeSetor(a.setor_id) || '—')} · ${n} Semana${n === 1 ? '' : 's'}</span></button>`; }).join('');
+  }
+  $('modal').addEventListener('change', (e) => {
+    if (e.target.id !== 'gPop' || !G) return;
+    const f = e.target.files?.[0]; if (!f) return;
+    if (!/pdf$/i.test(f.type) && !/\.pdf$/i.test(f.name)) return aviso('Escolha um Arquivo PDF');
+    if (f.size > 20 * 1024 * 1024) return aviso('PDF Maior que 20 MB');
+    lerGaveta(); G.popFile = f; desenharGaveta();
+  });
+  let tParec = null;
+  $('modal').addEventListener('input', (e) => { if (e.target.id === 'gNome' && G && !G.id) { clearTimeout(tParec); tParec = setTimeout(mostrarParecidas, 150); } });
+  $('modal').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-parec]'); if (!b) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    const a = atividades.find(x => String(x.id) === b.dataset.parec); if (!a) return;
+    const f = document.activeElement; if (f && f.id === 'gNome') { G = null; f.blur(); }   // evita que o 'change' do nome digitado sobrescreva a atividade aberta
+    abrirCadastro(a);
+  }, true);
+  $('modal').addEventListener('change', (e) => {
+    if (!G || !['gNome','gQuem','gLocal','gCoord'].includes(e.target.id)) return;
+    lerGaveta();
+    if (e.target.id === 'gNome' && !G.id) {   // escolheu da biblioteca: copia os dados da atividade parecida
+      const t = atividades.find(x => tc(x.nome) === tc(G.d.nome));
+      if (t) { const cf = t.como_fazer || {}; Object.assign(G.d, { coord: t.coordenador_id || G.d.coord, quem: G.d.quem || quemDe(t), setor: t.setor_id || '', tipo: t.tipo || G.d.tipo,
+        urg: t.urgencia || 2, local: G.d.local || t.local || '', dias: (t.dias || G.d.dias).slice(), m2: cf.m2 || '', m3: cf.m3 || '', m4: cf.m4 || '', m5: cf.m5 || '',
+        mq: cf.meta_qtd ?? '', mu: cf.meta_unid || '', th: cf.tempo_h ?? '', chk: (cf.checklist || []).join('\n') }); }
+    }
+    desenharGaveta();
+    // Quem clicou noutro campo logo depois de digitar: devolve o cursor para esse campo (a gaveta foi redesenhada)
+    const alvo = proximoCampo && $(proximoCampo); proximoCampo = null;
+    if (alvo) { alvo.focus(); if (alvo.setSelectionRange && /INPUT|TEXTAREA/.test(alvo.tagName) && alvo.type !== 'number') try { alvo.setSelectionRange(alvo.value.length, alvo.value.length); } catch {} }
+  });
+  let proximoCampo = null;
+  $('modal').addEventListener('mousedown', (e) => { const c = e.target.closest('#gaveta input[id],#gaveta textarea[id],#gaveta select[id]'); proximoCampo = c ? c.id : null; }, true);
+  $('modal').addEventListener('click', async (e) => {
+    if (!G) return;
+    const b = e.target.closest('button,[data-x]'); if (!b) return;
+    if (b.dataset.x) return fechar();
+    lerGaveta();
+    const d = G.d;
+    if (b.dataset.ur) { d.urg = +b.dataset.ur; desenharGaveta(); }
+    else if (b.dataset.dw) { const i = +b.dataset.dw; d.dias[i] = !d.dias[i]; if (!d.dias.some(Boolean)) d.dias[i] = true; desenharGaveta(); }
+    else if (b.dataset.wm) {
+      const w = +b.dataset.wm, s = G.sem[w] || 0, n = ORDEM_CLIQUE[(ORDEM_CLIQUE.indexOf(s) + 1) % ORDEM_CLIQUE.length];
+      if (n) G.sem[w] = n; else delete G.sem[w];
+      desenharGaveta();
+    }
+    else if (b.dataset.rec) {
+      const de = Math.max(1, Math.min(G.rf, G.rt)), ate = Math.min(SEMANAS_NO_ANO, Math.max(G.rf, G.rt)); let n = 0;
+      for (let w = de; w <= ate; w += G.rn) if (!G.sem[w]) { G.sem[w] = 1; n++; }
+      desenharGaveta(); aviso(n + ' Semanas Planejadas');
+    }
+    else if (b.dataset.clr) {
+      let n = 0; for (const w in G.sem) if (+w >= SEMANA_ATUAL && G.sem[w] === 1) { delete G.sem[w]; n++; }
+      desenharGaveta(); aviso(n + ' Semanas Planejadas Removidas');
+    }
+    else if (b.dataset.del) { G.conf = true; desenharGaveta(); }
+    else if (b.dataset.del0) { G.conf = false; desenharGaveta(); }
+    else if (b.dataset.del2) {
+      const { error } = await supabase.from('atividades').delete().eq('id', G.id);
+      if (error) return aviso('Erro: ' + error.message);
+      atividades = atividades.filter(x => x.id !== G.id);
+      Object.keys(plano).forEach(k => { if (k.startsWith(G.id + '|')) delete plano[k]; });
+      fechar(); desenhar(); aviso('Atividade Excluída');
+    }
+    else if (b.dataset.dup) { G.id = null; G.conf = false; d.nome = tc(d.nome) + ' (Cópia)'; G.sem = {}; desenharGaveta(); aviso('Cópia Criada · Marque as Semanas e Salve'); }
+    else if (b.dataset.poptroca) $('gPop').click();
+    else if (b.dataset.poprem) { lerGaveta(); G.popFile = null; d.pop = null; desenharGaveta(); }
+    else if (b.dataset.popver) abrirPop(d.pop, aviso);
+    else if (b.dataset.save) salvarGaveta(b);
+  });
+
+  const num = (v) => { v = String(v ?? '').trim(); if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.'); if (!v) return null; const n = parseFloat(v); return isNaN(n) ? null : n; };
+  async function salvarGaveta(botao) {
+    const d = G.d;
+    if (!d.nome.trim()) { $('gNome').focus(); return aviso('Dê um Nome para a Atividade'); }
+    botao.disabled = true;
+    if (G.popFile) {
+      try { botao.textContent = 'Enviando o POP…'; d.pop = await enviarPop(eu.fazenda.id, G.popFile); G.popFile = null; botao.textContent = '✓ Salvar Atividade'; }
+      catch (e) { botao.disabled = false; botao.textContent = '✓ Salvar Atividade'; return aviso('POP Não Enviado: ' + e.message); }
+    }
+    const dados = {
+      fazenda_id: eu.fazenda.id, nome: tc(d.nome.trim()), setor_id: d.setor || null,
+      executor_pessoa_id: d.quem.startsWith('p:') ? d.quem.slice(2) : null,
+      executor_equipe_id: d.quem.startsWith('e:') ? d.quem.slice(2) : null,
+      coordenador_id: d.coord || null, tipo: d.tipo, urgencia: d.urg, local: d.local.trim() || null, dias: d.dias,
+      como_fazer: { m2: d.m2.trim(), m3: d.m3.trim(), m4: d.m4.trim(), m5: d.m5.trim(),
+        meta_qtd: num(d.mq), meta_unid: String(d.mu || '').trim() || null, tempo_h: num(d.th),
+        checklist: String(d.chk || '').split('\n').map(x => x.trim()).filter(Boolean).slice(0, 15), pop: d.pop || null }
+    };
+    const novo = !G.id;
+    const r = novo ? await supabase.from('atividades').insert(dados).select().single()
+                   : await supabase.from('atividades').update(dados).eq('id', G.id).select().single();
+    if (r.error) { botao.disabled = false; return aviso('Erro: ' + r.error.message); }
+    const id = r.data.id;
+    // Semanas: grava só o que mudou
+    const salvar = [], apagar = [];
+    for (let w = 1; w <= SEMANAS_NO_ANO; w++) {
+      const antes = plano[id + '|' + w] || 0, depois = G.sem[w] || 0;
+      if (antes === depois) continue;
+      if (depois) salvar.push({ fazenda_id: eu.fazenda.id, atividade_id: id, ano: ANO, semana: w, status: depois }); else apagar.push(w);
+    }
+    const r1 = salvar.length ? await supabase.from('planejamento').upsert(salvar, { onConflict: 'atividade_id,ano,semana' }) : {};
+    const r2 = apagar.length ? await supabase.from('planejamento').delete().eq('atividade_id', id).eq('ano', ANO).in('semana', apagar) : {};
+    if (r1.error || r2.error) aviso('Atividade Salva, mas as Semanas Não: ' + (r1.error || r2.error).message);
+    else { salvar.forEach(s => plano[id + '|' + s.semana] = s.status); apagar.forEach(w => delete plano[id + '|' + w]); }
+    if (novo) atividades.push(r.data); else Object.assign(atividades.find(x => x.id === id), r.data);
+    atividades.sort((x, y) => x.nome.localeCompare(y.nome, 'pt'));
+    fechar(); desenhar(); if (!r1.error && !r2.error) aviso(novo ? 'Atividade Cadastrada' : 'Atividade Salva');
+  }
+  function fechar() { $('modal').innerHTML = ''; G = null; }
+
+  // 1. Entrada: precisa estar logado e ser gestor, administrativo ou consultor (fica no fim de propósito)
+  eu = await quemSouEu();
+  montarMenu('plano.html');   // de novo, agora sabendo o papel e as fazendas
+  if (!eu) { location.href = 'index.html'; }
+  else if (!eu.fazenda || !PODE_EDITAR.includes(eu.papel)) { $('aviso').textContent = 'O Plano Anual é Só para Gestor, Administrativo e Consultor.'; }
+  else {
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('id, apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    eu.pessoaId = eup?.id || null; $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+    await carregar();
+    aoMudar(eu.fazenda.id, ['atividades', 'planejamento', 'baixas'], carregar);   // o que a equipe faz no app aparece aqui sozinho
+    const qs = new URLSearchParams(location.search);
+    if (qs.has('nova')) abrirCadastro(null, { nome: tc(qs.get('nome') || ''), setor: qs.get('setor') || '', quem: qs.get('quem') || '', local: qs.get('local') || '' });   // veio do botão + Nova Atividade ou do relatório de imprevistos
+  }
+</script>
+</body>
+</html>

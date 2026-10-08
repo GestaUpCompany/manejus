@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Relatórios (visual do protótipo): Semana, Equipe, Setores e Atividades -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relatórios · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    .kpis.k6{grid-template-columns:repeat(6,1fr)}
+    .kb{text-align:left;border:1px solid var(--line);cursor:pointer;font:inherit;color:inherit;background:var(--surface)}
+    .kb[data-rf]:hover{border-color:var(--muted)} .kb.on{box-shadow:inset 0 0 0 2px var(--navy);border-color:var(--navy)}
+    .kb b{font-size:30px}
+    .rg{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
+    .cb{padding:4px 18px 16px}
+    .dcols{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;align-items:end;height:200px}
+    .dcol{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;padding:4px 0;border-radius:8px;cursor:pointer;font:inherit;color:inherit}
+    .dcol:hover{background:var(--surface2)} .dcol.on{background:var(--navy-soft)} .dcol.today em{font-weight:800;color:var(--navy)}
+    .dcol small{font-size:11px;color:var(--ink2)} .dcol em{font-style:normal;font-size:11.5px;color:var(--muted)}
+    .cbar{width:70%;display:flex;flex-direction:column;gap:2px;border-radius:4px 4px 0 0;overflow:hidden} .cbar i{display:block;min-height:0}
+    .sbs{display:grid;gap:2px}
+    .sb{display:grid;grid-template-columns:minmax(90px,140px) 1fr 44px;gap:10px;align-items:center;width:100%;border:0;background:none;padding:5px 6px;border-radius:7px;font:inherit;color:inherit;text-align:left;cursor:pointer;font-size:13px}
+    .sb b{text-align:right} .sb.on{background:var(--navy-soft)} .sb:hover{background:var(--surface2)}
+    .sbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sbt{display:flex;gap:2px;height:14px} .sbt i{display:block;min-width:2px} .sbt i:first-child{border-radius:4px 0 0 4px} .sbt i:last-child{border-radius:0 4px 4px 0}
+    .ins{margin-bottom:16px}
+    .insg{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px;padding:0 18px 16px}
+    .ih{display:flex;gap:9px;align-items:flex-start;padding:5px 0;font-size:13.5px;line-height:1.45}
+    .ih i{width:9px;height:9px;border-radius:50%;flex:none;margin-top:6px}
+    .ia{background:var(--navy);color:#fff;border-radius:10px;padding:12px 14px;font-size:13px} .ia b{display:block;margin-bottom:6px}
+    .ia ol{margin:0;padding-left:18px;display:grid;gap:5px} .ia p{margin:0;opacity:.85}
+    .wt th.c,.wt td.c{text-align:center;padding:6px 4px;width:46px} .wt th.c div{font-weight:500;text-transform:none;letter-spacing:0} .wt th.today{color:var(--navy)}
+    .dc{width:30px;height:30px;border-radius:8px;border:0;font-weight:800;font-size:14px;cursor:pointer}
+    .dc-f{background:var(--s2);color:#fff} .dc-n{background:var(--s4);color:#fff} .dc-u{background:var(--surface2);color:var(--muted);border:1px dashed var(--s1)}
+    .fchip{border:0;background:var(--navy);color:#fff;border-radius:99px;padding:5px 11px;font-weight:600;font-size:12.5px;cursor:pointer}
+    .hm{border-collapse:separate;border-spacing:2px;font-size:11.5px;width:auto}
+    .hm th{font-weight:600;color:var(--muted);padding:2px 6px;text-align:left;white-space:nowrap;font-size:11px} .hm thead th{text-align:center}
+    .hm td{min-width:34px;height:26px;text-align:center;border-radius:4px;background:var(--surface2);font-variant-numeric:tabular-nums}
+    .sr{display:grid;grid-template-columns:120px 1fr 86px 50px;gap:10px;align-items:center;font-size:13px;padding:5px 0}
+    .sr:first-child{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:0}
+    .sr>span:nth-child(2){display:block} .sr b{text-align:right} .sr>span:last-child{text-align:right}
+    .stk{display:flex;gap:2px;height:14px;width:100%} .stk i{display:block;min-width:2px} .stk i:first-child{border-radius:4px 0 0 4px} .stk i:last-child{border-radius:0 4px 4px 0}
+    .smc{border:1px solid var(--line2);border-radius:9px;padding:10px 12px} .smh{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px} .smh span{font-weight:700}
+    .smb{display:flex;gap:2px;height:60px;align-items:flex-end;border-bottom:1px solid var(--line);background:linear-gradient(var(--line2) 1px,transparent 1px) 0 0/100% 50%}
+    .smb span{flex:1;height:100%;display:flex;align-items:flex-end} .smb i{display:block;width:100%;border-radius:3px 3px 0 0}
+    .smx{display:flex;gap:2px;font-size:9.5px;color:var(--muted)} .smx span{flex:1;text-align:center}
+    .sm{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+    .cols{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;align-items:end;height:190px}
+    .col{display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:100%}
+    .col small{font-size:11px;color:var(--ink2)} .col em{font-style:normal;font-size:11.5px;color:var(--muted)}
+    .hb{display:grid;gap:7px}
+    .hbr{display:grid;grid-template-columns:minmax(90px,170px) 1fr 44px;gap:10px;align-items:center;font-size:13px}
+    .hbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hbt{height:10px;background:var(--empty);border-radius:99px;overflow:hidden} .hbt i{display:block;height:100%;border-radius:0 4px 4px 0} .hbr b{text-align:right}
+    .dp{display:grid;gap:2px;font-size:13px}
+    .dpa,.dpr{display:grid;grid-template-columns:110px 1fr 44px;gap:10px;align-items:center} .dpr{height:26px}
+    .dpl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .dpv{text-align:right;font-weight:700}
+    .dps{position:relative;height:100%} .dpa .dps{height:16px}
+    .dpa em{position:absolute;transform:translateX(-50%);font-style:normal;font-size:10.5px;color:var(--muted)}
+    .dps .g{position:absolute;top:0;bottom:0;border-left:1px solid var(--line2)} .dps .ref{position:absolute;top:-2px;bottom:-2px;border-left:2px dashed var(--s1)}
+    .dpn{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-top:6px} .dpn i{width:14px;border-top:2px dashed var(--s1)}
+    .dot{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;transform:translate(-50%,-50%);background:var(--navy);box-shadow:0 0 0 2px var(--surface)}
+    .dot.sc-g{background:var(--s2)} .dot.sc-a{background:var(--s5)} .dot.sc-b{background:var(--s4)}
+    .lc{width:100%;height:auto;display:block}
+    .cat{display:inline-grid;place-items:center;border-radius:9px;flex:none} .cat svg{width:62%;height:62%}
+    .ctip{position:fixed;z-index:95;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;line-height:1.4;padding:7px 10px;border-radius:7px;max-width:260px;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+    .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink2)} .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+    .tabs a{text-decoration:none}
+    @media (max-width:1100px){.kpis.k6{grid-template-columns:repeat(3,1fr)}.insg{grid-template-columns:1fr}}
+    @media (max-width:700px){.kpis.k6{grid-template-columns:repeat(2,1fr)}.kb b{font-size:24px}.sr{grid-template-columns:90px 1fr 48px}.sr>span:last-child{display:none}}
+    @media print{@page{size:A4 landscape;margin:8mm}.side,.mtop,.acts,.tabs,.noprint,.faixa-ano,.ctip{display:none!important}.shell{display:block}.main{padding:0!important}
+      .card{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}.kb,.dc,.cbar,.sbt,.ia,.hm td{-webkit-print-color-adjust:exact;print-color-adjust:exact}.scroll{overflow:visible}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="relatorios.html" selected>Relatórios</option><option value="painel.html">Painel</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, ANO_HOJE, SEMANAS_NO_ANO, PAPEL, MESES, MESES_LONGO, DIAS_CURTO, DIAS_LONGO, tc, esc, semanaDe, inicioDaSemana, quemSouEu, buscarTudo, montarMenu, nf, media, ddmm, diaDaSemana , aoMudar } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  const HOJE_W = semanaDe(new Date()), HOJE_D = (new Date().getDay() + 6) % 7;
+  const CUR = ANO === ANO_HOJE ? Math.max(1, Math.min(SEMANAS_NO_ANO, HOJE_W)) : ANO < ANO_HOJE ? SEMANAS_NO_ANO : 1;   // última semana que já começou
+  const TODAY_D = ANO === ANO_HOJE ? HOJE_D : ANO < ANO_HOJE ? 7 : -1;
+  const mOf = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();
+  const MWEEKS = MESES.map((_, m) => { const ws = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (mOf(w) === m) ws.push(w); return [ws[0], ws[ws.length - 1]]; });
+  const fd = (dt) => ddmm(dt);
+  const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+  const scCls = (v) => v == null ? '' : v >= 9.3 ? 'sc-g' : v >= 8.5 ? 'sc-a' : 'sc-b';
+  let eu, fz, podeEditar = false, META = 80, PESO_T = 0.7;
+  let A = [], PL = {}, OBS = {}, BX = {}, X = [], itens = [], notas = {}, pessoas = [];
+  const U = { rel: new URLSearchParams(location.search).get('aba') || 'semana', relP: 'ano', rw: { w: CUR, day: null, st: '', qf: '', mot: '', state: '' } };
+
+  function aviso(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2400); }
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+
+  // Ícones por tipo de atividade (iguais ao protótipo)
+  const CAT = [
+    ['Gado', /^(gado|confinamento|tropa|carneiro|leitura de cocho|cocho|vacina)/i, '#8A5A2B', '<path d="M4 7c0 2 1 3 3 3M20 7c0 2-1 3-3 3"/><path d="M7 8h10v6a5 5 0 0 1-10 0z"/><circle cx="10" cy="12" r=".9"/><circle cx="14" cy="12" r=".9"/><path d="M10.5 16h3"/>'],
+    ['Cerca', /^cerca/i, '#6B7A2E', '<path d="M5 4v16M12 4v16M19 4v16M3 9h18M3 15h18"/>'],
+    ['Água', /^(bebedouro|rede hidr|reservat|peixe|represa|po[cç]o)/i, '#2B79AE', '<path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/>'],
+    ['Máquinas', /^(m[aá]quina|implemento|ve[ií]culo|oficina|servi[cç]o|vag[aã]o|silo|trator)/i, '#5B6B75', '<circle cx="7" cy="17" r="3"/><circle cx="18" cy="17" r="2"/><path d="M4 14V8h7l2 4h6v3M11 8V5h3"/>'],
+    ['Pasto', /^(pasto|eros[aã]o|estrada|aceiro|adubo|calagem)/i, '#1E9A47', '<path d="M4 20c2-6 4-9 4-9M10 20c0-7 2-11 2-11M16 20c-1-5 2-9 2-9M2 20h20"/>'],
+    ['Ração', /^(f[aá]brica|produzir ra|ra[cç][aã]o|dep[oó]sito|almoxarifado)/i, '#C98A16', '<path d="M7 4h10l2 4v12H5V8z"/><path d="M5 8h14M10 12h4"/>'],
+    ['Sede', /^(sede|alojamento|barrac[aã]o|galinheiro|horta|lixo|casa)/i, '#9A4C8A', '<path d="M3 11l9-7 9 7v9H3z"/><path d="M10 20v-5h4v5"/>']];
+  const CAT_OUT = ['Gestão', null, '#114665', '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/>'];
+  const catIc = (a, s = 30) => { const c = CAT.find(c => c[1].test((a.n || '').trim())) || CAT_OUT; return `<span class="cat" title="${c[0]}" style="width:${s}px;height:${s}px;background:${c[2]}22;color:${c[2]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${c[3]}</svg></span>`; };
+
+  async function carregar() {
+    const q = (t, cols, extra = (x) => x) => buscarTudo(() => extra(supabase.from(t).select(cols).eq('fazenda_id', fz))).catch(() => []);
+    const [at, st, ps, eq, pl, bx, fp, it, av] = await Promise.all([
+      q('atividades', 'id, nome, dias, local, tipo, setor_id, executor_pessoa_id, executor_equipe_id'), q('setores', 'id, nome'), q('pessoas', 'id, apelido, ativo'), q('equipes', 'id, nome'),
+      q('planejamento', 'atividade_id, semana, status, observacao', x => x.eq('ano', ANO)),
+      q('baixas', 'atividade_id, semana, dia, feito, motivo', x => x.eq('ano', ANO)),
+      q('fora_do_plano', 'semana, dia, nome, tipo, obs, pessoa_id, equipe_id, setor_id', x => x.eq('ano', ANO)),
+      q('contrato_itens', 'id, pessoa_id, tipo', x => x.eq('ativo', true)), q('avaliacoes', 'item_id, semana, nota, nsa', x => x.eq('ano', ANO))]);
+    const nomeQ = (pid, eid) => tc(ps.find(p => p.id === pid)?.apelido || eq.find(e => e.id === eid)?.nome || '') || '—';
+    A = at.map(a => ({ id: a.id, n: tc(a.nome), days: a.dias || [], loc: a.local ? tc(a.local) : '', tp: a.tipo || 'Sem Tipo', qf: nomeQ(a.executor_pessoa_id, a.executor_equipe_id), st: tc(st.find(s => s.id === a.setor_id)?.nome || '') || '—' }));
+    PL = {}; OBS = {}; pl.forEach(p => { PL[p.atividade_id + '|' + p.semana] = p.status; if (p.observacao) OBS[p.atividade_id + '|' + p.semana] = p.observacao; });
+    BX = {}; bx.forEach(b => BX[b.semana + '|' + b.atividade_id + '|' + b.dia] = b);
+    X = fp.map(x => ({ ...x, n: tc(x.nome), qf: nomeQ(x.pessoa_id, x.equipe_id), st: tc(st.find(s => s.id === x.setor_id)?.nome || '') || '—' }));
+    itens = it; pessoas = ps; notas = {}; av.forEach(x => { if (!x.nsa && x.nota != null) notas[x.item_id + '|' + x.semana] = +x.nota; });
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    render();
+  }
+
+  // ---------- Regras (iguais às das outras telas) ----------
+  const wk = (a, w) => PL[a.id + '|' + w];
+  const inWeek = (w) => A.filter(a => wk(a, w));
+  const dayDone = (w, a, d) => { const b = BX[w + '|' + a.id + '|' + d]; return b ? b.feito : wk(a, w) === 2; };
+  const carryOf = (a, w) => { const o = OBS[a.id + '|' + w] || ''; return o.startsWith('Atrasada') ? (o.match(/(\d+)\s*$/) || [])[1] || '?' : null; };
+  const carryTag = (a, w) => carryOf(a, w) && wk(a, w) !== 2 ? `<span class="late">Atrasada da Sem. ${carryOf(a, w)}</span>` : '';
+  const whyOf = (a, w) => { for (let d = 0; d < 7; d++) { const b = BX[w + '|' + a.id + '|' + d]; if (b && !b.feito && b.motivo) return b.motivo; } return null; };
+  const motLabel = (k) => k === 'sem' ? 'Sem Motivo Informado' : tc(k);
+  const motColor = (k) => k === 'sem' ? 'var(--s1)' : { chuva: '#2B79AE', 'maquina quebrada': '#5B6B75', 'faltou gente': '#C23D2B', 'faltou insumo': '#C98A16' }[String(k).toLowerCase()] || '#6E787C';
+  const RS = { feito: ['Feito', 'var(--s2)'], nao: ['Não Feito', 'var(--s4)'], fut: ['A Fazer', 'var(--s1)'] };
+  function wkRows(w) { const R = [], lim = w < CUR ? 7 : w === CUR ? TODAY_D : -1;
+    inWeek(w).forEach(a => a.days.forEach((on, d) => { if (!on) return; const ok = dayDone(w, a, d), state = ok ? 'feito' : d < lim ? 'nao' : 'fut';
+      R.push({ a, d, state, qf: a.qf, st: a.st, mot: state === 'nao' ? (BX[w + '|' + a.id + '|' + d]?.motivo || 'sem') : '' }); })); return R; }
+  function rwFilter(R, except) { const f = U.rw; return R.filter(r => (except === 'day' || f.day == null || r.d === f.day) && (except === 'st' || !f.st || r.st === f.st) && (except === 'qf' || !f.qf || r.qf === f.qf) && (except === 'mot' || !f.mot || r.mot === f.mot) && (except === 'state' || !f.state || r.state === f.state)); }
+  const cnt = (L, s) => L.filter(r => r.state === s).length;
+  const wkStats = (R) => { const f = cnt(R, 'feito'), n = cnt(R, 'nao'); return { f, n, u: cnt(R, 'fut'), p: f + n ? Math.round(f / (f + n) * 100) : null }; };
+  // notas
+  function pScore(pid, b0, a0) { const ws = []; for (let w = a0; w <= b0; w++) ws.push(w);
+    const bloco = (tipo) => media(itens.filter(i => i.pessoa_id === pid && i.tipo === tipo).map(i => media(ws.map(w => notas[i.id + '|' + w]).filter(v => v != null))).filter(v => v != null));
+    const t = bloco('tarefa'), c = bloco('comportamento'); return { v: t == null ? c : c == null ? t : t * PESO_T + c * (1 - PESO_T), t, c }; }
+  function occStats(filter, a0, b0) { const r = { t: 0, d: 0, p: 0, l: 0, pl: 0, z: 0 }; A.forEach(a => { if (!filter(a)) return; for (let w = a0; w <= b0; w++) { const s = wk(a, w); if (!s) continue; r.t++; if (s === 2) r.d++; else if (s === 3) r.p++; else if (s === 4) r.l++; else if (s === 5) r.z++; else r.pl++; } }); return r; }
+  const relRange = () => { const p = U.relP; if (p === '4') return [Math.max(1, CUR - 3), CUR]; if (p === '12') return [Math.max(1, CUR - 11), CUR]; if (p && p[0] === 'm') { const m = +p.slice(1); return [MWEEKS[m][0], Math.min(MWEEKS[m][1], CUR)]; } return [1, CUR]; };
+  const relLabel = () => { const [a, b] = relRange(); return `Semanas ${a} a ${b} · ${fd(diaDaSemana(a, 0))} a ${fd(diaDaSemana(b, 6))}`; };
+
+  // ---------- Gráficos ----------
+  const hbars = (rows, { max = 100, fmt = (v) => v + '%', color = 'var(--navy)' } = {}) => `<div class="hb">${rows.map(r => `<div class="hbr" data-tip="${esc(r.tip || r.label + ': ' + fmt(r.v))}"><span class="hbl" title="${esc(r.label)}">${esc(r.label)}</span><span class="hbt"><i style="width:${Math.max(0, Math.min(100, r.v / max * 100))}%;background:${r.color || color}"></i></span><b class="num">${fmt(r.v)}</b></div>`).join('')}</div>`;
+  function dotplot(rows, { lo = 7, hi = 10, ref = null, refLab = '' } = {}) {
+    const x = (v) => (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * 100, ticks = []; for (let t = lo; t <= hi + 1e-9; t += .5) ticks.push(t);
+    return `<div class="dp"><div class="dpa"><span></span><div class="dps">${ticks.map(t => `<em style="left:${x(t)}%">${nf(t, 1)}</em>`).join('')}</div></div>
+      ${rows.map(r => `<div class="dpr" data-tip="<b>${esc(r.label)}</b><br>Escore ${nf(r.v)}${r.t != null ? ' · Funções ' + nf(r.t) + ' · Comport. ' + nf(r.c) : ''}"><span class="dpl">${esc(r.label)}</span><div class="dps">${ticks.map(t => `<i class="g" style="left:${x(t)}%"></i>`).join('')}${ref != null ? `<i class="ref" style="left:${x(ref)}%"></i>` : ''}<b class="dot ${scCls(r.v)}" style="left:${x(r.v)}%"></b></div><span class="num dpv ${scCls(r.v)}">${nf(r.v)}</span></div>`).join('')}
+      ${ref != null ? `<div class="dpn"><i></i>${refLab} ${nf(ref)}</div>` : ''}</div>`; }
+  function lineChart(pts, { lo = 7, hi = 10, fmt = (v) => nf(v), yl = [] } = {}) {
+    const W = 640, H = 200, L = 34, R = 12, T = 12, B = 24, n = pts.length, X0 = (i) => L + (n < 2 ? 0 : i * (W - L - R) / (n - 1)), Y = (v) => T + (1 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)) * (H - T - B);
+    const ok = pts.filter(p => p.y != null); if (!ok.length) return '<div class="empty">Sem Notas Lançadas Neste Período.</div>';
+    const path = pts.map((p, i) => p.y == null ? null : [X0(i), Y(p.y)]).filter(Boolean), d = path.map((q, i) => (i ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' ');
+    const area = d + ` L${path[path.length - 1][0].toFixed(1)} ${H - B} L${path[0][0].toFixed(1)} ${H - B} Z`, last = path[path.length - 1], lp = ok[ok.length - 1];
+    return `<svg class="lc" viewBox="0 0 ${W} ${H}">${yl.map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${Y(v) + 3.5}" text-anchor="end" font-size="10" fill="var(--muted)">${fmt(v)}</text>`).join('')}
+      <path d="${area}" fill="var(--navy)" opacity=".08"/><path d="${d}" fill="none" stroke="var(--navy)" stroke-width="2" stroke-linejoin="round"/>
+      ${pts.map((p, i) => p.y == null ? '' : `<circle cx="${X0(i)}" cy="${Y(p.y)}" r="${p === lp ? 4.5 : 2.5}" fill="${p === lp ? 'var(--navy)' : 'var(--surface)'}" stroke="var(--navy)" stroke-width="2"/>`).join('')}
+      <text x="${last[0] - 6}" y="${last[1] - 9}" text-anchor="end" font-size="11" font-weight="700" fill="var(--ink)">${fmt(lp.y)}</text>
+      ${pts.map((p, i) => `<text x="${X0(i)}" y="${H - 7}" text-anchor="middle" font-size="10" fill="var(--muted)">${p.x}</text><rect x="${X0(i) - (W - L - R) / Math.max(1, n - 1) / 2}" y="${T}" width="${(W - L - R) / Math.max(1, n - 1)}" height="${H - T - B}" fill="transparent" data-tip="${esc(p.tip || '')}"/>`).join('')}</svg>`; }
+  const stack = (r) => `<span class="stk">${[[r.d, 2, 'Concluídas'], [r.p, 3, 'Em Andamento'], [r.l, 4, 'Atrasadas'], [r.z, 5, 'Pausadas'], [r.pl, 1, 'Planejadas']].filter(s => s[0]).map(([n, s, l]) => `<i style="flex:${n};background:var(--s${s})" data-tip="${l}: ${n} (${pct(n, r.t)}%)"></i>`).join('')}</span>`;
+  const STLEG = `<div class="legend">${[[2, 'Concluída'], [3, 'Em Andamento'], [4, 'Atrasada'], [5, 'Pausada'], [1, 'Planejada']].map(([s, l]) => `<span><i style="background:var(--s${s})"></i>${l}</span>`).join('')}</div>`;
+  const opt = (arr, v) => arr.map(([k, l]) => `<option value="${k}" ${String(k) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('');
+  const RTABS = () => [['semana', 'Semana'], ['equipe', 'Equipe'], ['setores', 'Setores'], ['atividades', 'Atividades']].map(([k, l]) => `<button data-rel="${k}" class="${U.rel === k ? 'on' : ''}">${l}</button>`).join('') + '<a class="btn" href="relatorio.html" style="margin-left:auto">📄 Relatório Mensal para o Produtor ›</a>';
+
+  // ---------- Semana ----------
+  function weekInsights(w) {
+    const R = rwFilter(wkRows(w)), s = wkStats(R), prev = wkStats(rwFilter(wkRows(w - 1))), H = [], Ac = [];
+    if (s.p == null) { H.push({ t: 'n', x: 'Ainda Não Há Dias Vencidos Nesta Semana para Medir a Execução.' }); return { H, A: Ac }; }
+    const dl = prev.p == null ? null : s.p - prev.p;
+    H.push({ t: s.p >= META ? 'g' : 'b', x: `Execução de ${s.p}%${dl == null ? '' : ` (${dl >= 0 ? '+' : ''}${dl} Pontos em Relação à Semana Anterior)`}: Meta de ${META}% ${s.p >= META ? 'Atingida' : 'Não Atingida'}.` });
+    const byD = DIAS_CURTO.map((_, d) => [d, wkStats(R.filter(r => r.d === d))]).filter(x => x[1].p != null && (x[1].f + x[1].n) >= 3);
+    if (byD.length > 1) { const mx = byD.reduce((a, b) => b[1].p > a[1].p ? b : a), mn = byD.reduce((a, b) => b[1].p < a[1].p ? b : a); if (mn[1].p < mx[1].p) H.push({ t: mn[1].p < 60 ? 'b' : 'n', x: `Melhor Dia: ${DIAS_LONGO[mx[0]]} (${mx[1].p}%). Dia Mais Fraco: ${DIAS_LONGO[mn[0]]} (${mn[1].p}%).` }); }
+    const q = {}; R.filter(r => r.state === 'nao').forEach(r => q[r.qf] = (q[r.qf] || 0) + 1); const qe = Object.entries(q).sort((a, b) => b[1] - a[1]);
+    if (qe.length) { const top = qe.slice(0, 2), share = Math.round(top.reduce((x, y) => x + y[1], 0) / s.n * 100); H.push({ t: 'b', x: `${s.n} Tarefas-Dia Não Foram Feitas; ${share}% Delas com ${top.map(([k, v]) => `${k} (${v})`).join(' e ')}.` }); }
+    else H.push({ t: 'g', x: 'Nenhuma Tarefa Planejada Deixou de Ser Feita nos Dias Que Já Passaram.' });
+    const g = {}; R.forEach(r => (g[r.qf] = g[r.qf] || []).push(r)); const full = Object.entries(g).filter(([, L]) => { const t = wkStats(L); return t.f >= 3 && t.n === 0; }).map(([k]) => k);
+    if (full.length) H.push({ t: 'g', x: `100% do Planejado: ${full.slice(0, 6).join(', ')}${full.length > 6 ? ' e Mais ' + (full.length - 6) : ''}.` });
+    const mot = {}; R.filter(r => r.state === 'nao').forEach(r => mot[r.mot] = (mot[r.mot] || 0) + 1);
+    if (s.n) { const sem = mot.sem || 0, me = Object.entries(mot).filter(([k]) => k !== 'sem').sort((a, b) => b[1] - a[1]);
+      if (me.length) H.push({ t: 'n', x: `Principal Motivo Informado: ${motLabel(me[0][0])} (${me[0][1]} Tarefas-Dia).` });
+      if (sem / s.n >= .5) { H.push({ t: 'b', x: `${Math.round(sem / s.n * 100)}% do Que Não Foi Feito Está sem Motivo Informado.` }); Ac.push('Reforçar com a Equipe o Uso do Botão "Não Deu" no Aplicativo, para Saber a Causa de Cada Falha.'); } }
+    const acts = {}; R.filter(r => r.state === 'nao').forEach(r => (acts[r.a.id] = acts[r.a.id] || { a: r.a, n: 0 }).n++);
+    Object.values(acts).sort((a, b) => b.n - a.n).slice(0, 3).forEach(({ a, n }) => Ac.push(`Rever com ${a.qf || 'o Responsável'} a Atividade "${a.n}": ${n} Dia${n > 1 ? 's' : ''} sem Baixa.`));
+    const car = [...new Set(R.filter(r => carryOf(r.a, w)).map(r => r.a.id))].length;
+    if (car) H.push({ t: 'b', x: `${car} Atividade${car > 1 ? 's' : ''} Vieram Atrasadas da Semana Anterior.` });
+    if (byD.length > 1) { const mn = byD.reduce((a, b) => b[1].p < a[1].p ? b : a); if (mn[1].p < 60) Ac.push(`Rever a Programação de ${DIAS_LONGO[mn[0]]}: ${mn[1].n} Tarefas-Dia Ficaram sem Baixa.`); }
+    return { H, A: Ac };
+  }
+  function stackRow(label, L, key, val, on) { const f = cnt(L, 'feito'), n = cnt(L, 'nao'), u = cnt(L, 'fut'), ex = f + n;
+    return `<button class="sb ${on ? 'on' : ''}" data-rf="${key}" data-rv="${esc(val)}" data-tip="<b>${esc(label)}</b><br>${f} Feitas · ${n} Não Feitas · ${u} a Fazer${ex ? '<br>Execução: ' + Math.round(f / ex * 100) + '%' : ''}">
+      <span class="sbl">${esc(label)}</span><span class="sbt">${f ? `<i style="flex:${f};background:var(--s2)"></i>` : ''}${n ? `<i style="flex:${n};background:var(--s4)"></i>` : ''}${u ? `<i style="flex:${u};background:var(--s1)"></i>` : ''}</span><b class="num">${ex ? Math.round(f / ex * 100) + '%' : '—'}</b></button>`; }
+  function weekDash() {
+    const f = U.rw, w = f.w, R = wkRows(w), L = rwFilter(R), f1 = cnt(L, 'feito'), n1 = cnt(L, 'nao'), u1 = cnt(L, 'fut'), ex = f1 + n1, pc = ex ? Math.round(f1 / ex * 100) : null;
+    const XX = X.filter(x => x.semana === w && (f.day == null || x.dia === f.day) && (!f.qf || x.qf === f.qf) && (!f.st || x.st === f.st));
+    const carried = [...new Set(L.filter(r => carryOf(r.a, w)).map(r => r.a.id))].length, prevPc = wkStats(wkRows(w - 1)).p;
+    const byDay = DIAS_CURTO.map((_, d) => rwFilter(R, 'day').filter(r => r.d === d)), dMax = Math.max(1, ...byDay.map(x => x.length));
+    const grp = (k) => { const g = {}; rwFilter(R, k).forEach(r => (g[r[k]] = g[r[k]] || []).push(r)); return Object.entries(g).sort((a, b) => (cnt(b[1], 'nao') - cnt(a[1], 'nao')) || b[1].length - a[1].length); };
+    const mots = {}; rwFilter(R, 'mot').filter(r => r.state === 'nao').forEach(r => mots[r.mot] = (mots[r.mot] || 0) + 1); const mT = Object.values(mots).reduce((x, y) => x + y, 0);
+    const trend = []; for (let k = Math.max(1, w - 7); k <= w; k++) { const P = wkRows(k), a = cnt(P, 'feito'), b = cnt(P, 'nao'); trend.push([k, a + b ? Math.round(a / (a + b) * 100) : null, a, b]); }
+    const acts = {}; L.forEach(r => (acts[r.a.id] = acts[r.a.id] || { a: r.a, c: {} }).c[r.d] = r.state);
+    const rows = Object.values(acts).sort((x, y) => { const nx = Object.values(x.c).filter(s => s === 'nao').length, ny = Object.values(y.c).filter(s => s === 'nao').length; return ny - nx || x.a.qf.localeCompare(y.a.qf, 'pt') || x.a.n.localeCompare(y.a.n, 'pt'); });
+    const chips = [['day', f.day != null ? DIAS_LONGO[f.day] : ''], ['state', f.state ? RS[f.state][0] : ''], ['st', f.st], ['qf', f.qf], ['mot', f.mot ? motLabel(f.mot) : '']].filter(c => c[1]);
+    const wkOpts = []; for (let k = 1; k <= Math.min(SEMANAS_NO_ANO, CUR + 1); k++) wkOpts.push([k, `Semana ${k} · ${fd(diaDaSemana(k, 0))} a ${fd(diaDaSemana(k, 6))}`]);
+    const kpi = (lab, val, sub, key, v, color) => `<button class="card kpi kb ${key && f[key] === v ? 'on' : ''}" ${key ? `data-rf="${key}" data-rv="${v}"` : ''}><small>${lab}</small><b class="num" style="color:${color || 'var(--ink)'}">${val}</b><span>${sub}</span></button>`;
+    const I = weekInsights(w), col = { g: 'var(--s2)', b: 'var(--s4)', n: 'var(--navy)' };
+    return `<div class="phead"><div><div class="eyebrow">Relatórios · Semana ${w} · ${fd(diaDaSemana(w, 0))} a ${fd(diaDaSemana(w, 6))}${w === CUR && ANO === ANO_HOJE ? ' · Semana Atual, até ' + DIAS_LONGO[HOJE_D] : ''}</div><h1>O Que Aconteceu na Semana</h1></div>
+      <div class="acts"><button class="btn" data-rw="-1">‹</button><label class="sel">Semana<select id="rwsel" style="max-width:none">${opt(wkOpts, w)}</select></label><button class="btn" data-rw="1">›</button><button class="btn dark" id="pdf">📄 PDF do Relatório</button><button class="btn" data-xls="1">📊 Excel</button></div></div>
+     <div class="tabs">${RTABS()}</div>
+     ${chips.length ? `<div class="filters"><span class="sub" style="font-size:12.5px">Filtrando por:</span>${chips.map(([k, l]) => `<button class="fchip" data-rx="${k}">${esc(l)} ✕</button>`).join('')}<button class="btn sm ghost" data-rx="all">Limpar Tudo</button></div>` : `<p class="eyebrow noprint" style="margin:-4px 0 12px">Clique em Qualquer Barra, Número ou Motivo para Filtrar o Painel Inteiro. Clique de Novo para Tirar o Filtro.</p>`}
+     <div class="kpis k6">
+      ${kpi('Execução da Semana', pc == null ? '—' : pc + '%', prevPc != null ? `Semana Anterior: ${prevPc}%` : 'Dias Que Já Passaram', null, null, pc == null ? null : pc >= META ? 'var(--s2)' : pc >= 60 ? 'var(--s5)' : 'var(--s4)')}
+      ${kpi('Feitas', f1, 'Tarefas-Dia com Baixa', 'state', 'feito', 'var(--s2)')}
+      ${kpi('Não Feitas', n1, 'Dias Que Passaram sem Baixa', 'state', 'nao', 'var(--s4)')}
+      ${kpi('A Fazer', u1, 'Hoje e Dias Que Ainda Vêm', 'state', 'fut', 'var(--s1)')}
+      ${kpi('Vieram Atrasadas', carried, 'Atividades da Semana Anterior')}
+      ${kpi('Fora do Plano', XX.length, 'Fora do Plano e Imprevistos')}</div>
+     <div class="card ins"><div class="cardh"><h3>Destaques da Semana</h3><small>Gerados a Partir das Baixas</small></div><div class="insg">
+      <div>${I.H.map(h => `<div class="ih"><i style="background:${col[h.t]}"></i><span>${esc(h.x)}</span></div>`).join('')}</div>
+      <div class="ia"><b>Ações Sugeridas</b>${I.A.length ? `<ol>${I.A.map(a => `<li>${esc(a)}</li>`).join('')}</ol>` : '<p>Nenhuma Ação Urgente. Manter o Ritmo.</p>'}</div></div></div>
+     <div class="rg">
+      <div class="card"><div class="cardh"><h3>Dia a Dia</h3><small>Verde Feito · Vermelho Não Feito · Cinza a Fazer</small></div>
+       <div class="cb"><div class="dcols">${byDay.map((L2, d) => { const a = cnt(L2, 'feito'), b = cnt(L2, 'nao'), c = cnt(L2, 'fut'), h = L2.length / dMax * 150;
+         return `<button class="dcol ${f.day === d ? 'on' : ''} ${w === CUR && d === TODAY_D ? 'today' : ''}" data-rf="day" data-rv="${d}" data-tip="<b>${DIAS_LONGO[d]} ${fd(diaDaSemana(w, d))}</b><br>${a} Feitas · ${b} Não Feitas · ${c} a Fazer"><small class="num">${L2.length || ''}</small><span class="cbar" style="height:${h}px">${c ? `<i style="flex:${c};background:var(--s1)"></i>` : ''}${b ? `<i style="flex:${b};background:var(--s4)"></i>` : ''}${a ? `<i style="flex:${a};background:var(--s2)"></i>` : ''}</span><em>${DIAS_CURTO[d]} ${diaDaSemana(w, d).getDate()}</em></button>`; }).join('')}</div></div></div>
+      <div class="card"><div class="cardh"><h3>Execução nas Últimas Semanas</h3><small>% das Tarefas-Dia Vencidas com Baixa · Clique para Abrir a Semana</small></div>
+       <div class="cb"><div class="dcols">${trend.map(([k, p, a, b]) => `<button class="dcol ${k === w ? 'on' : ''}" data-rwk="${k}" data-tip="<b>Semana ${k}</b> (${fd(diaDaSemana(k, 0))})<br>${p == null ? 'Sem Tarefas Vencidas' : p + '% · ' + a + ' Feitas, ' + b + ' Não Feitas'}"><small class="num">${p == null ? '' : p + '%'}</small><span class="cbar" style="height:${(p || 0) * 1.5}px"><i style="flex:1;background:${p == null ? 'transparent' : p >= META ? 'var(--s2)' : p >= 60 ? 'var(--s5)' : 'var(--s4)'}"></i></span><em>${k}</em></button>`).join('')}</div>
+       <div class="sub" style="font-size:11.5px;margin-top:6px">Linha da Meta: ${META}%</div></div></div>
+      <div class="card"><div class="cardh"><h3>Por Setor</h3><small>Quem Mais Deixou de Fazer Aparece Primeiro</small></div><div class="cb sbs">${grp('st').map(([k, L2]) => stackRow(k, L2, 'st', k, f.st === k)).join('') || '<div class="empty">Nada Nesta Semana.</div>'}</div></div>
+      <div class="card"><div class="cardh"><h3>Por Pessoa ou Equipe</h3><small>Quem Mais Deixou de Fazer Aparece Primeiro</small></div><div class="cb sbs">${grp('qf').map(([k, L2]) => stackRow(k, L2, 'qf', k, f.qf === k)).join('') || '<div class="empty">Nada Nesta Semana.</div>'}</div></div>
+      <div class="card"><div class="cardh"><h3>Por Que Não Aconteceu</h3><small>${mT} Tarefas-Dia Não Feitas</small></div>
+       <div class="cb">${mT ? Object.entries(mots).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<button class="sb ${f.mot === k ? 'on' : ''}" data-rf="mot" data-rv="${esc(k)}" data-tip="${esc(motLabel(k))}: ${n} (${Math.round(n / mT * 100)}%)"><span class="sbl">${esc(motLabel(k))}</span><span class="sbt"><i style="flex:${n};background:${motColor(k)}"></i><i style="flex:${Math.max(0, Math.max(...Object.values(mots)) - n)};background:transparent"></i></span><b class="num">${n}</b></button>`).join('') : '<div class="empty">Nada Deixou de Ser Feito com Esses Filtros.</div>'}
+       ${mots.sem ? '<div class="sub" style="font-size:12px;margin-top:8px">"Sem Motivo Informado" Some Quando a Equipe Usa o Botão "Não Deu" do Aplicativo.</div>' : ''}</div></div>
+     </div>
+     <div class="card" style="margin-top:16px"><div class="cardh"><h3>Tudo o Que Estava Planejado, Dia a Dia</h3><small>${rows.length} Atividades${podeEditar ? ' · Clique Numa Célula para Dar ou Tirar a Baixa' : ''}</small></div>
+      <div class="scroll"><table class="tbl wt"><thead><tr><th>Atividade</th><th>Quem Faz</th>${DIAS_CURTO.map((x, d) => `<th class="c ${w === CUR && d === TODAY_D ? 'today' : ''}">${x}<div>${diaDaSemana(w, d).getDate()}</div></th>`).join('')}<th>Situação</th></tr></thead><tbody>
+      ${rows.map(({ a, c }) => { const n = Object.values(c).filter(s => s === 'nao').length, m = whyOf(a, w);
+        return `<tr><td><div style="display:flex;gap:8px;align-items:center">${catIc(a, 24)}<div><b>${esc(a.n)}</b> ${carryTag(a, w)}<div class="sub">${esc(a.loc)}</div></div></div></td><td class="sub">${esc(a.qf)}</td>
+        ${DIAS_CURTO.map((_, d) => { const s = c[d]; if (!s) return '<td class="c"></td>'; const t = { feito: ['✓', 'dc-f'], nao: ['✕', 'dc-n'], fut: ['○', 'dc-u'] }[s];
+          return `<td class="c"><button class="dc ${t[1]}" data-tg="${a.id}" data-d="${d}" data-tip="${esc(a.n)} · ${DIAS_LONGO[d]}<br>${RS[s][0]}">${t[0]}</button></td>`; }).join('')}
+        <td>${n ? `<span class="pill p4">${n} Dia${n > 1 ? 's' : ''} sem Baixa</span>${m ? ` <span class="pill p5">${esc(tc(m))}</span>` : ''}` : Object.values(c).every(s => s === 'feito') ? '<span class="pill p2">Tudo Feito</span>' : '<span class="pill p1">Em Dia</span>'}</td></tr>`; }).join('') || '<tr><td colspan="10" class="empty">Nada com Esses Filtros.</td></tr>'}
+      </tbody></table></div></div>
+     ${XX.length ? `<div class="card" style="margin-top:16px"><div class="cardh"><h3>Feito Fora do Plano e Imprevistos</h3><small>${XX.length} Lançamentos</small></div><div class="scroll"><table class="tbl"><thead><tr><th>Dia</th><th>O Que</th><th>Tipo</th><th>Quem</th><th>Observação</th></tr></thead><tbody>${XX.map(x => `<tr><td class="sub">${DIAS_CURTO[x.dia]} ${fd(diaDaSemana(w, x.dia))}</td><td><b>${esc(x.n)}</b></td><td><span class="pill ${x.tipo === 'imprevisto' ? 'p5' : 'p3'}">${x.tipo === 'imprevisto' ? 'Imprevisto' : 'Fora do Plano'}</span></td><td>${esc(x.qf)}</td><td class="sub">${esc(x.obs || '—')}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
+  }
+
+  // ---------- Equipe, Setores e Atividades ----------
+  function outros() {
+    const [a0, b0] = relRange();
+    const per = [['ano', 'Ano até Agora'], ['12', 'Últimas 12 Semanas'], ['4', 'Últimas 4 Semanas']].concat(MESES.map((m, i) => MWEEKS[i][0] <= CUR ? ['m' + i, MESES_LONGO[i]] : null).filter(Boolean));
+    let body = '';
+    if (U.rel === 'equipe') {
+      const comC = [...new Set(itens.map(i => i.pessoa_id))].map(id => pessoas.find(p => p.id === id)).filter(Boolean);
+      const ev = comC.map(p => ({ p, ...pScore(p.id, b0, a0) })).filter(x => x.v != null).sort((x, y) => y.v - x.v), avg = media(ev.map(x => x.v));
+      const sem = new Set(Object.keys(notas).map(k => +k.split('|')[1])), w1 = Math.min(...sem, b0);
+      const hw = []; for (let w = Math.max(a0, w1); w <= b0; w++) hw.push(w);
+      const wkv = hw.map(w => { const v = media(comC.map(p => pScore(p.id, w, w).v).filter(x => x != null)); return { x: w, y: v, tip: `Semana ${w}: Média ${v == null ? 'sem Notas' : nf(v)}` }; });
+      const dos = {}; A.forEach(a => { for (let w = a0; w <= b0; w++) { const s = wk(a, w); if (!s) continue; const k = a.qf; dos[k] = dos[k] || { t: 0, d: 0, l: 0 }; dos[k].t++; if (s === 2) dos[k].d++; if (s === 4) dos[k].l++; } });
+      const drows = Object.entries(dos).filter(([k, v]) => v.t >= 2 && k !== '—').map(([k, v]) => ({ label: k, v: pct(v.d, v.t), color: pct(v.d, v.t) >= 85 ? 'var(--s2)' : pct(v.d, v.t) >= 60 ? 'var(--s5)' : 'var(--s4)', tip: `<b>${esc(k)}</b><br>${v.d} de ${v.t} Concluídas (${pct(v.d, v.t)}%)${v.l ? '<br>' + v.l + ' Semanas Atrasadas' : ''}` })).sort((x, y) => y.v - x.v);
+      const tot = occStats(() => true, a0, b0);
+      const shade = (v) => v == null ? '' : `background:color-mix(in srgb,var(--navy) ${Math.round(Math.max(0, Math.min(1, (v - 7.5) / 2.5)) * 85 + 8)}%,var(--surface));color:${v >= 8.9 ? '#fff' : 'var(--ink)'}`;
+      body = `<div class="kpis"><div class="card kpi"><small>Escore Médio da Equipe</small><b class="num">${nf(avg)}</b><span>${ev.length} Colaboradores com Nota no Período</span></div>
+        <div class="card kpi"><small>Melhor Escore</small><b class="num" style="color:var(--s2)">${ev[0] ? nf(ev[0].v) : '—'}</b><span>${ev[0] ? esc(tc(ev[0].p.apelido)) : ''}</span></div>
+        <div class="card kpi"><small>Tarefas do Plano Concluídas</small><b class="num">${pct(tot.d, tot.t)}%</b><span>${tot.d} de ${tot.t} Semanas-Atividade</span></div>
+        <div class="card kpi"><small>Semanas Atrasadas</small><b class="num" style="color:var(--s4)">${tot.l}</b><span>no Período</span></div></div>
+       <div class="rg"><div class="card"><div class="cardh"><h3>Escore Individual</h3><small>Funções e Comportamentos · Escala 7 a 10</small></div><div class="cb">${ev.length ? dotplot(ev.map(x => ({ label: tc(x.p.apelido), v: x.v, t: x.t, c: x.c })), { ref: avg, refLab: 'Média da Equipe' }) : '<div class="empty">Sem Avaliações Neste Período.</div>'}</div></div>
+        <div class="card"><div class="cardh"><h3>Evolução do Escore da Equipe</h3><small>Média Semanal das Notas</small></div><div class="cb">${hw.length ? lineChart(wkv, { yl: [7, 8, 9, 10], fmt: (v) => nf(v, v % 1 ? 2 : 1) }) : '<div class="empty">Sem Notas Lançadas.</div>'}</div></div>
+        <div class="card"><div class="cardh"><h3>Rendimento no Plano por Pessoa ou Equipe</h3><small>% das Semanas-Atividade Concluídas</small></div><div class="cb">${hbars(drows)}</div><div class="foot"><span class="legend"><span><i style="background:var(--s2)"></i>85% ou Mais</span><span><i style="background:var(--s5)"></i>60 a 84%</span><span><i style="background:var(--s4)"></i>Abaixo de 60%</span></span></div></div>
+        <div class="card"><div class="cardh"><h3>Mapa das Notas Semanais</h3><small>Quanto Mais Escuro, Maior a Nota</small></div><div class="cb scroll">${hw.length && ev.length ? `<table class="hm"><thead><tr><th></th>${hw.map(w => `<th>${w}</th>`).join('')}</tr></thead><tbody>${ev.map(x => `<tr><th>${esc(tc(x.p.apelido))}</th>${hw.map(w => { const v = pScore(x.p.id, w, w).v; return `<td style="${shade(v)}" data-tip="<b>${esc(tc(x.p.apelido))}</b> · Semana ${w}<br>${v == null ? 'sem Nota' : 'Nota ' + nf(v)}">${v == null ? '' : nf(v, 1)}</td>`; }).join('')}</tr>`).join('')}</tbody></table>` : '<div class="empty">Sem Avaliações Neste Período.</div>'}</div></div></div>`;
+    }
+    if (U.rel === 'setores') {
+      const secs = [...new Set(A.map(a => a.st))], rows = secs.map(s => ({ s, r: occStats(a => a.st === s, a0, b0) })).filter(x => x.r.t).sort((x, y) => pct(y.r.d, y.r.t) - pct(x.r.d, x.r.t));
+      const months = MESES.map((_, i) => i).filter(i => MWEEKS[i][0] <= CUR), mx = Math.max(1, ...rows.map(x => x.r.t));
+      body = `<div class="rg"><div class="card" style="grid-column:1/-1"><div class="cardh"><h3>Rendimento por Setor</h3><small>Semanas-Atividade no Período, por Status</small></div>
+         <div class="cb"><div class="sr"><span></span><span></span><b>Concluído</b><b>Total</b></div>${rows.map(({ s, r }) => `<div class="sr" data-tip="<b>${esc(s)}</b><br>${r.d} Concluídas · ${r.p} em Andamento · ${r.l} Atrasadas · ${r.pl} Planejadas"><span class="hbl">${esc(s)}</span><span style="width:${Math.max(18, r.t / mx * 100)}%">${stack(r)}</span><b class="num ${pct(r.d, r.t) >= 85 ? 'sc-g' : pct(r.d, r.t) >= 60 ? 'sc-a' : 'sc-b'}">${pct(r.d, r.t)}%</b><span class="num sub">${r.t}</span></div>`).join('')}</div>
+         <div class="foot">${STLEG}<span>O Comprimento da Barra Mostra a Carga do Setor</span></div></div>
+        <div class="card" style="grid-column:1/-1"><div class="cardh"><h3>% Concluído por Mês em Cada Setor</h3><small>Passe o Mouse para Ver os Números</small></div>
+         <div class="cb sm">${rows.map(({ s }) => { const vals = months.map(i => [i, occStats(x => x.st === s, MWEEKS[i][0], Math.min(MWEEKS[i][1], CUR))]);
+           return `<div class="smc"><div class="smh"><b>${esc(s)}</b><span class="num">${pct(vals.reduce((n, v) => n + v[1].d, 0), vals.reduce((n, v) => n + v[1].t, 0))}%</span></div><div class="smb">${vals.map(([i, r]) => `<span data-tip="<b>${esc(s)}</b> · ${MESES[i]}<br>${r.t ? pct(r.d, r.t) + '% · ' + r.d + ' de ' + r.t : 'Nada Planejado'}"><i style="height:${r.t ? Math.max(3, pct(r.d, r.t)) : 0}%;background:${!r.t ? 'transparent' : pct(r.d, r.t) >= 85 ? 'var(--s2)' : pct(r.d, r.t) >= 60 ? 'var(--s5)' : 'var(--s4)'}"></i></span>`).join('')}</div><div class="smx">${vals.map(([i]) => `<span>${MESES[i][0]}</span>`).join('')}</div></div>`; }).join('')}</div></div>
+        <div class="card" style="grid-column:1/-1"><div class="cardh"><h3>Carga de Trabalho por Setor e Mês</h3><small>Número de Semanas-Atividade Planejadas</small></div><div class="cb scroll">
+         <table class="hm"><thead><tr><th></th>${MESES.map(m => `<th>${m}</th>`).join('')}<th>Ano</th></tr></thead><tbody>${rows.map(({ s }) => { const c = MWEEKS.map(([a, b]) => occStats(x => x.st === s, a, b).t), m2 = Math.max(1, ...c);
+           return `<tr><th>${esc(s)}</th>${c.map((n, i) => `<td style="${n ? `background:color-mix(in srgb,var(--s3) ${Math.round(n / m2 * 70 + 10)}%,var(--surface));color:${n / m2 > .6 ? '#fff' : 'var(--ink)'}` : ''}" data-tip="<b>${esc(s)}</b> · ${MESES[i]}: ${n}">${n || ''}</td>`).join('')}<td class="num"><b>${c.reduce((x, y) => x + y, 0)}</b></td></tr>`; }).join('')}</tbody></table></div></div></div>`;
+    }
+    if (U.rel === 'atividades') {
+      const mv = MESES.map((_, i) => [i, occStats(() => true, MWEEKS[i][0], MWEEKS[i][1])]), mm = Math.max(1, ...mv.map(v => v[1].t));
+      const tipos = {}; A.forEach(a => { let n = 0; for (let w = a0; w <= b0; w++) if (wk(a, w)) n++; if (n) tipos[a.tp] = (tipos[a.tp] || 0) + n; }); const tt = Object.values(tipos).reduce((x, y) => x + y, 0);
+      const late = A.map(a => { let n = 0; for (let w = a0; w <= b0; w++) if (wk(a, w) === 4) n++; return [a, n]; }).filter(x => x[1]).sort((x, y) => y[1] - x[1]).slice(0, 10);
+      const c = {}; let sm = 0; Object.values(BX).filter(b => b.semana >= a0 && b.semana <= b0 && !b.feito).forEach(b => { if (b.motivo) c[tc(b.motivo)] = (c[tc(b.motivo)] || 0) + 1; else sm++; });
+      const totM = Object.values(c).reduce((x, y) => x + y, 0) + sm;
+      body = `<div class="rg"><div class="card" style="grid-column:1/-1"><div class="cardh"><h3>Atividades por Mês</h3><small>Semanas-Atividade no Ano, por Status · Passe o Mouse para Ver os Números</small></div>
+         <div class="cb"><div class="cols">${mv.map(([i, r]) => `<div class="col" data-tip="<b>${MESES_LONGO[i]}</b><br>${r.t} no Total · ${r.d} Concluídas (${pct(r.d, r.t)}%)<br>${r.p} Em Andamento · ${r.l} Atrasadas${r.z ? ' · ' + r.z + ' Pausadas' : ''} · ${r.pl} Planejadas"><small class="num">${r.t || ''}</small><span class="cbar" style="height:${r.t / mm * 140}px">${[[r.pl, 1], [r.z, 5], [r.l, 4], [r.p, 3], [r.d, 2]].filter(x => x[0]).map(([n, c]) => `<i style="flex:${n};background:var(--s${c})"></i>`).join('')}</span><em>${MESES[i]}</em></div>`).join('')}</div></div>
+         <div class="foot">${STLEG}</div></div>
+        <div class="card"><div class="cardh"><h3>Por Tipo de Atividade</h3><small>${relLabel()}</small></div><div class="cb">${hbars(Object.entries(tipos).sort().map(([k, n]) => ({ label: k.replace(' - ', ' · '), v: pct(n, tt) })))}</div></div>
+        <div class="card"><div class="cardh"><h3>Por Que Não Deu</h3><small>Motivos Informados no App · ${relLabel()}</small></div><div class="cb">${totM ? hbars(Object.entries(c).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ label: k, v: n, color: motColor(k) })).concat(sm ? [{ label: 'Sem Motivo Informado', v: sm, color: 'var(--s1)' }] : []), { max: Math.max(1, sm, ...Object.values(c)), fmt: (v) => v }) : '<div class="empty">Nenhum "Não Deu" Registrado no Período.</div>'}</div></div>
+        <div class="card"><div class="cardh"><h3>Atividades Que Mais Atrasaram</h3><small>Semanas Marcadas como Atrasadas</small></div><div class="cb">${late.length ? hbars(late.map(([a, n]) => ({ label: a.n, v: n, color: 'var(--s4)', tip: `<b>${esc(a.n)}</b><br>${n} Semana(s) Atrasada(s) · ${esc(a.qf)}` })), { max: Math.max(...late.map(x => x[1])), fmt: (v) => v }) : '<div class="empty">Nenhum Atraso no Período.</div>'}</div></div></div>`;
+    }
+    return `<div class="phead"><div><div class="eyebrow">Relatórios · ${relLabel()}</div><h1>Rendimento da Fazenda</h1></div>
+      <div class="acts"><label class="sel">Período<select id="relp">${opt(per, U.relP)}</select></label><button class="btn dark" id="pdf">📄 PDF do Relatório</button><button class="btn" data-xls="1">📊 Excel</button></div></div>
+     <div class="tabs">${RTABS()}</div>${body}`;
+  }
+
+  function render() {
+    $('tela').innerHTML = U.rel === 'semana' ? weekDash() : outros();
+    if ($('pdf')) $('pdf').onclick = () => { const t = document.title; document.title = `Relatório ${U.rel === 'semana' ? 'Semana ' + U.rw.w : tc(U.rel)} ${ANO} - ${tc(eu.fazenda.nome)}`; setTimeout(() => { print(); document.title = t; }, 100); };
+  }
+  $('tela').addEventListener('change', (e) => {
+    if (e.target.id === 'relp') { U.relP = e.target.value; render(); }
+    if (e.target.id === 'rwsel') { U.rw.w = +e.target.value; U.rw.day = null; render(); }
+  });
+  $('tela').addEventListener('click', async (e) => {
+    const t = (s) => e.target.closest(s); let b;
+    if ((b = t('[data-rel]'))) { U.rel = b.dataset.rel; return render(); }
+    if ((b = t('[data-rf]'))) { const k = b.dataset.rf; let v = b.dataset.rv; if (k === 'day') v = +v; U.rw[k] = U.rw[k] === v ? (k === 'day' ? null : '') : v; return render(); }
+    if ((b = t('[data-rx]'))) { const k = b.dataset.rx; if (k === 'all') Object.assign(U.rw, { day: null, st: '', qf: '', mot: '', state: '' }); else U.rw[k] = k === 'day' ? null : ''; return render(); }
+    if ((b = t('[data-rw]'))) { U.rw.w = Math.max(1, Math.min(SEMANAS_NO_ANO, U.rw.w + +b.dataset.rw)); U.rw.day = null; return render(); }
+    if ((b = t('[data-rwk]'))) { U.rw.w = +b.dataset.rwk; U.rw.day = null; return render(); }
+    if ((b = t('[data-tg]'))) {
+      if (!podeEditar) return aviso('Só Gestor, Administrativo ou Consultor Dá Baixa Aqui');
+      const a = A.find(x => x.id === b.dataset.tg), d = +b.dataset.d, w = U.rw.w, v = !dayDone(w, a, d);
+      const { error } = await supabase.from('baixas').upsert({ fazenda_id: fz, atividade_id: a.id, ano: ANO, semana: w, dia: d, feito: v, motivo: null, registrado_por: eu.user.id, registrado_em: new Date().toISOString() }, { onConflict: 'atividade_id,ano,semana,dia' });
+      if (error) return aviso('Não Foi Possível Salvar: ' + error.message);
+      BX[w + '|' + a.id + '|' + d] = { atividade_id: a.id, semana: w, dia: d, feito: v, motivo: null };
+      render(); aviso(`${a.n} · ${DIAS_CURTO[d]}: ${v ? 'Feito' : 'Não Feito'}`);
+    }
+  });
+  // Dica ao passar o mouse
+  (function () { let tip; document.addEventListener('pointermove', (e) => { const t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t || !t.dataset.tip) { if (tip) tip.hidden = true; return; }
+    if (!tip) { tip = document.createElement('div'); tip.className = 'ctip'; document.body.appendChild(tip); }
+    tip.innerHTML = t.dataset.tip; tip.hidden = false; const r = tip.getBoundingClientRect();
+    tip.style.left = Math.max(8, Math.min(e.clientX + 14, innerWidth - r.width - 8)) + 'px'; tip.style.top = Math.max(8, e.clientY - r.height - 12) + 'px'; }); })();
+
+  // Entrada
+  eu = await quemSouEu();
+  montarMenu('relatorios.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.concat('lider').includes(eu.papel)) $('aviso').textContent = 'Os Relatórios São para Gestor, Administrativo, Consultor e Líderes.';
+  else {
+    fz = eu.fazenda.id; podeEditar = PODE.includes(eu.papel);
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    const { data: f } = await supabase.from('fazendas').select('meta_mes, peso_tarefas').eq('id', fz).maybeSingle();
+    if (f?.meta_mes != null) META = f.meta_mes; if (f?.peso_tarefas != null) PESO_T = f.peso_tarefas / 100;
+    await carregar();
+    aoMudar(fz, ['baixas', 'planejamento', 'fora_do_plano', 'avaliacoes', 'execucoes', 'atividades'], carregar);   // o que a equipe faz no app aparece aqui sozinho
+  }
+
+  // 📊 Excel do relatório (o mesmo conteúdo do PDF, com números de verdade)
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-xls]'); if (!b) return; b.disabled = true; const txt = b.textContent; b.textContent = 'Montando…';
+    import('./excel.js').then(m => m.exportarExcel({ titulo: (document.querySelector('#tela h1, h1')?.textContent || 'Relatório').trim() + ' ' + ANO })).catch(er => alert(er.message)).finally(() => { b.disabled = false; b.textContent = txt; }); });
+</script>
+</body>
+</html>

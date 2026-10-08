@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Importar a Planilha Farm Plan (.xlsm) de Outra Fazenda -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Importar Fazenda · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <script src="vendor/xlsx.full.min.js"></script>
+  <style>
+    .drop{display:block;width:100%;box-sizing:border-box;border:2px dashed var(--line);border-radius:14px;padding:34px 20px;text-align:center;background:var(--surface);cursor:pointer}
+    .drop:hover,.drop.on{border-color:var(--green);background:var(--s2-soft)}
+    .drop b{display:block;font-size:17px;margin-bottom:6px}
+    .drop .sub{display:block}
+    .drop input{display:none}
+    .log{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.7;padding:12px 18px;max-height:300px;overflow:auto}
+    .log .ok{color:var(--s2)} .log .er{color:var(--s4)}
+    .warn{background:var(--s5-soft);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:13px}
+    .tag{display:inline-block;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700;white-space:nowrap}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="importar.html" selected>Importar</option><option value="painel.html">Painel</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, PAPEL, STATUS, tc, esc, quemSouEu, montarMenu, buscarTudo } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  let eu, P = null, nomeArquivo = '', destino = 'nova';   // P = o que foi lido da planilha
+
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  const chave = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const chaveFz = (s) => chave(s).replace(/^(fazenda|faz|fz)/, '');
+  const txt = (v) => v == null ? '' : String(v).replace(/\s+/g, ' ').trim();
+
+  // ---------- 1. LER A PLANILHA ----------
+  function linhas(wb, nome) { const ws = wb.Sheets[nome]; return ws ? XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) : null; }
+  const acha = (L, de, ate, teste) => { for (let r = de; r < Math.min(ate, L.length); r++) { const c = (L[r] || []).findIndex(v => typeof v === 'string' && teste(chave(v))); if (c >= 0) return [r, c]; } return [-1, -1]; };
+
+  function lerPlanilha(wb) {
+    const cad = linhas(wb, 'Cadastros'), eq = linhas(wb, 'Equipe'), an = linhas(wb, 'Plano_Anual'), se = linhas(wb, 'Plano_Semanal');
+    if (!an) throw new Error('Não Achei a Aba "Plano_Anual". Confira se É a Planilha Farm Plan da Gesta\'Up.');
+    const R = { fazenda: '', produtor: '', setores: [], criterios: [], pessoas: [], atividades: [], avisos: [] };
+    // Cadastros: nome da fazenda, setores (com dono) e comportamentos
+    if (cad) {
+      const [rf, cf] = acha(cad, 0, 30, k => k === 'nomefazenda');
+      if (rf >= 0) { for (let r = rf + 1; r < rf + 4; r++) if (txt(cad[r]?.[cf])) { R.fazenda = txt(cad[r][cf]); R.produtor = txt(cad[r][cf + 2]); break; } }
+      const [rs, cs] = acha(cad, 0, 40, k => k.startsWith('setoresdafazenda'));
+      if (rs >= 0) { const [, cd] = acha([cad[rs]], 0, 1, k => k.startsWith('donodosetor'));
+        for (let r = rs + 1; r < rs + 60; r++) { const n = txt(cad[r]?.[cs]); if (!n) { if (R.setores.length) break; continue; } if (chave(n).startsWith('criterios')) break; R.setores.push({ nome: n, dono: cd >= 0 ? txt(cad[r][cd]) : '' }); } }
+      const [rc, cc] = acha(cad, 0, 80, k => k.startsWith('criteriosdeavaliacao'));
+      if (rc >= 0) for (let r = rc + 1; r < cad.length; r++) { const n = cad[r]?.[cc], t = txt(cad[r]?.[cc + 1]); if (typeof n === 'number' && t) R.criterios.push(t); else if (R.criterios.length && !t) break; }
+    } else R.avisos.push('Aba "Cadastros" Não Encontrada: Setores e Comportamentos Virão Só das Atividades.');
+    // Equipe: pessoas (e as "Equipe ..." viram equipes)
+    if (eq) {
+      const [rh] = acha(eq, 0, 20, k => k === 'apelido');
+      const col = (nome) => (eq[rh] || []).findIndex(v => typeof v === 'string' && chave(v).startsWith(nome));
+      const cN = col('nomecompleto'), cA = col('apelido'), cC = col('cargo'), cS = col('setor'), cV = col('contrato'), cSal = col('salariobase'), cD = col('datadesligamento');
+      if (rh >= 0 && cA >= 0) for (let r = rh + 1; r < eq.length; r++) {
+        const ap = txt(eq[r]?.[cA]); if (!ap) continue;
+        const cargo = txt(eq[r][cC]);
+        R.pessoas.push({ apelido: ap, nome: txt(eq[r][cN]) || ap, cargo, setor: txt(eq[r][cS]), vinculo: txt(eq[r][cV]), salario: typeof eq[r][cSal] === 'number' ? eq[r][cSal] : null,
+          ativo: !eq[r][cD], tipo: /^equipe\b/i.test(ap) || (!cargo && !txt(eq[r][cS])) ? 'equipe' : 'pessoa' });   // sem cargo e sem setor = grupo (equipe)
+      }
+    } else R.avisos.push('Aba "Equipe" Não Encontrada: as Pessoas Serão Criadas a Partir do "Quem Faz" das Atividades.');
+    // Plano_Semanal: dias da semana e local de cada atividade
+    const dias = {}, locSem = {};
+    if (se) {
+      const [rh, cn] = acha(se, 0, 20, k => k.startsWith('oquefazernasemana'));
+      if (rh >= 0) { const cd = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'].map(d => (se[rh] || []).findIndex(v => typeof v === 'string' && chave(v) === d));
+        const cObs = (se[rh] || []).findIndex(v => typeof v === 'string' && chave(v).startsWith('observacaodeexecucao'));
+        for (let r = rh + 1; r < se.length; r++) { const n = chave(se[r]?.[cn]); if (!n) continue; const d = cd.map(c => c >= 0 && !!se[r][c]); if (d.some(Boolean)) dias[n] = d; if (cObs >= 0 && txt(se[r][cObs])) locSem[n] = txt(se[r][cObs]); } }
+    }
+    // Plano_Anual: atividades e semanas
+    const [rh, cNome] = acha(an, 0, 20, k => k.startsWith('oquefazernoano'));
+    if (rh < 0) throw new Error('Não Achei a Coluna "O Que Fazer no Ano?" na Aba Plano_Anual.');
+    const H = an[rh] || [], h = (t) => H.findIndex(v => typeof v === 'string' && chave(v).startsWith(t));
+    const cCo = h('quemcoordena'), cQf = h('quemfaz'), cSt = h('qualsetor'), cUr = h('qualurgencia'), cTp = h('qualtipo');
+    const cW1 = H.findIndex((v, i) => v === 1 && H[i + 1] === 2);
+    if (cW1 < 0) throw new Error('Não Achei as Colunas das Semanas (1 a 53) na Aba Plano_Anual.');
+    const H2 = [...(an[rh - 1] || []), ...[]], h2 = (t) => { for (const L of [an[rh - 1] || [], H]) { const i = L.findIndex(v => typeof v === 'string' && chave(v).startsWith(t)); if (i >= 0) return i; } return -1; };
+    const cOnde = h2('ondesera'), cM2 = h2('comofazer'), cM3 = h2('maquinaseferramentas'), cM4 = h2('materiaisnecessarios'), cM5 = h2('qualameta');
+    for (let r = rh + 1; r < an.length; r++) {
+      const L = an[r] || [], nome = txt(L[cNome]); if (!nome) continue;
+      const sem = {}; for (let w = 1; w <= 53; w++) { const v = L[cW1 + w - 1]; if (typeof v === 'number' && v >= 1 && v <= 5) sem[w] = Math.round(v); }
+      const m = {}; [['m2', cM2], ['m3', cM3], ['m4', cM4], ['m5', cM5]].forEach(([k, c]) => { if (c >= 0 && txt(L[c])) m[k] = txt(L[c]); });
+      const k = chave(nome), ur = parseInt(L[cUr]);
+      R.atividades.push({ linha: r + 1, nome, coord: txt(L[cCo]), quem: txt(L[cQf]), setor: txt(L[cSt]), urg: ur >= 1 && ur <= 3 ? ur : 2, urgPl: ur >= 1 && ur <= 3, tipo: txt(L[cTp]) || null,
+        local: (cOnde >= 0 && txt(L[cOnde])) || locSem[k] || null, dias: dias[k] || [true, false, false, false, false, false, false], diasDaPlanilha: !!dias[k], como_fazer: Object.keys(m).length ? m : null, sem });
+    }
+    // Quem aparece nas atividades mas não está na aba Equipe: cria como pessoa
+    const conhecidos = new Set(R.pessoas.map(p => chave(p.apelido)));
+    const faltam = new Set(); R.atividades.forEach(a => [a.quem, a.coord].forEach(n => { if (n && !conhecidos.has(chave(n))) faltam.add(n); }));
+    faltam.forEach(n => { R.pessoas.push({ apelido: n, nome: n, cargo: '', setor: '', tipo: /^equipe\b/i.test(n) ? 'equipe' : 'pessoa', ativo: true, criadoPeloPlano: true }); conhecidos.add(chave(n)); });
+    // Setores que aparecem nas atividades/pessoas e não estão no cadastro
+    const st = new Set(R.setores.map(s => chave(s.nome)));
+    [...R.atividades.map(a => a.setor), ...R.pessoas.map(p => p.setor)].forEach(n => { if (n && !st.has(chave(n))) { R.setores.push({ nome: n, dono: '' }); st.add(chave(n)); } });
+    // Apelidos repetidos
+    const vist = new Set(); R.pessoas = R.pessoas.filter(p => { const k = chave(p.apelido); if (vist.has(k)) return false; vist.add(k); return true; });
+    if (!R.atividades.length) R.avisos.push('Nenhuma Atividade Encontrada na Aba Plano_Anual.');
+    return R;
+  }
+
+  // ---------- 2. TELA ----------
+  function desenhar() {
+    if (!P) {
+      $('tela').innerHTML = `
+        <div class="phead"><div><div class="eyebrow">Consultor · Nova Fazenda</div><h1>Importar a Planilha Farm Plan</h1></div></div>
+        <label class="drop" id="drop"><input type="file" id="arq" accept=".xlsm,.xlsx" hidden><b>📂 Clique Aqui ou Arraste a Planilha (.xlsm)</b>
+          <span class="sub">A Planilha "Farm Plan - Gesta'Up" do Cliente. Nada É Gravado Antes de Você Conferir e Confirmar.</span></label>
+        <div class="card fs" style="margin-top:16px"><h4>O Que É Importado</h4>
+          <div class="sub" style="font-size:13px;line-height:1.7">• <b>Cadastros:</b> Nome da Fazenda, Setores (com Dono) e Comportamentos<br>• <b>Equipe:</b> Pessoas (Apelido, Nome, Cargo, Setor e Salário) e Equipes<br>• <b>Plano_Anual:</b> Atividades (Quem Coordena, Quem Faz, Setor, Urgência, Tipo, 5M) e as Semanas de ${ANO} com o Status<br>• <b>Plano_Semanal:</b> Dias da Semana e Local de Cada Atividade</div>
+          <div class="sub" style="font-size:12.5px">Depois da Importação: Monte os Membros das Equipes (Cadastros › Equipes do App), Crie os Logins e Lance os Contratos de Resultados.</div></div>`;
+      const d = $('drop'), ler = (f) => f && abrirArquivo(f);
+      $('arq').onchange = (e) => ler(e.target.files[0]);
+      d.ondragover = (e) => { e.preventDefault(); d.classList.add('on'); }; d.ondragleave = () => d.classList.remove('on');
+      d.ondrop = (e) => { e.preventDefault(); d.classList.remove('on'); ler(e.dataTransfer.files[0]); };
+      return;
+    }
+    const equipes = P.pessoas.filter(p => p.tipo === 'equipe'), pes = P.pessoas.filter(p => p.tipo === 'pessoa');
+    const nSem = P.atividades.reduce((n, a) => n + Object.keys(a.sem).length, 0), comDias = P.atividades.filter(a => a.diasDaPlanilha).length, com5M = P.atividades.filter(a => a.como_fazer).length;
+    $('tela').innerHTML = `
+      <div class="phead"><div><div class="eyebrow">Importar · ${esc(nomeArquivo)}</div><h1>Confira Antes de Importar</h1></div>
+        <div class="acts"><button class="btn" id="outra">Escolher Outra Planilha</button></div></div>
+      ${P.avisos.map(a => `<div class="warn" style="margin-bottom:10px">⚠ ${esc(a)}</div>`).join('')}
+      <div class="card fs" style="margin-bottom:16px"><h4>Fazenda de Destino</h4>
+        <label class="fl">Para Onde Vão os Dados?<select class="in" id="iDest">
+          ${(eu.fazendas || []).map(f => `<option value="${f.id}" ${destino === f.id ? 'selected' : ''}>Atualizar a ${esc(tc(f.nome))} (Já Existe)</option>`).join('')}
+          <option value="nova" ${destino === 'nova' ? 'selected' : ''}>Criar uma Fazenda Nova</option></select></label>
+        ${destino !== 'nova' ? `<div class="warn" style="background:var(--s2-soft);border-color:var(--s2);color:var(--ink)"><span>✓ <b>Essa Fazenda Já Existe no Sistema.</b> Nada Será Duplicado: o Que Já Existe É Atualizado com a Planilha e Só o Que Falta É Criado. O Que Está no Sistema e Não Está na Planilha Fica Como Está.</span></div>
+          <label class="sel" style="padding:8px 12px;gap:8px;align-self:flex-start"><input type="checkbox" id="iStatus"> Também Trocar o Status das Semanas Que Já Estão no Sistema pelo da Planilha <span class="sub">(Deixe Desmarcado para Não Perder as Baixas da Equipe)</span></label>` : ''}
+        <div class="fr"><label class="fl">Nome da Fazenda<input class="in" id="iNome" value="${esc(tc(destino === 'nova' ? P.fazenda : (eu.fazendas.find(f => f.id === destino)?.nome || P.fazenda)))}" ${destino !== 'nova' ? 'disabled' : ''}></label>
+          <label class="fl">Município<input class="in" id="iMun" placeholder="${destino === 'nova' ? 'Ex.: Juína' : 'Deixe em Branco para Não Mudar'}"></label>
+          <label class="fl">UF<input class="in" id="iUf" maxlength="2" placeholder="${destino === 'nova' ? 'MT' : (eu.fazendas.find(f => f.id === destino)?.uf || '')}"></label></div>
+        ${P.produtor ? `<div class="sub">Produtor / Gestor na Planilha: <b>${esc(tc(P.produtor))}</b></div>` : ''}</div>
+      <div class="kpis">
+        <div class="card kpi"><small>Atividades</small><b class="num">${P.atividades.length}</b><span>${nSem} Semanas Marcadas em ${ANO}</span></div>
+        <div class="card kpi"><small>Pessoas · Equipes</small><b class="num">${pes.length} · ${equipes.length}</b><span>${P.pessoas.filter(p => p.criadoPeloPlano).length} Vieram Só do "Quem Faz"</span></div>
+        <div class="card kpi"><small>Setores · Comportamentos</small><b class="num">${P.setores.length} · ${P.criterios.length}</b><span>Do Cadastro da Planilha</span></div>
+        <div class="card kpi"><small>Dias da Semana · 5M</small><b class="num">${comDias} · ${com5M}</b><span>Atividades Com Dias / Com 5M (as Outras: Segunda)</span></div>
+      </div>
+      <div class="two"><div class="card"><div class="cardh"><h3>Atividades</h3><small>Primeiras 15 de ${P.atividades.length}</small></div>
+          <div class="scroll"><table class="tbl"><thead><tr><th>Atividade</th><th>Quem Faz</th><th>Setor</th><th>Tipo</th><th style="text-align:center">Semanas</th></tr></thead><tbody>
+          ${P.atividades.slice(0, 15).map(a => `<tr><td><b>${esc(tc(a.nome))}</b>${a.local ? `<div class="sub">${esc(tc(a.local))}</div>` : ''}</td><td>${esc(tc(a.quem || '—'))}</td><td class="sub">${esc(tc(a.setor || '—'))}</td><td class="sub">${esc(a.tipo || '—')}</td><td style="text-align:center">${Object.keys(a.sem).length}</td></tr>`).join('')}
+          </tbody></table></div></div>
+        <div class="card"><div class="cardh"><h3>Pessoas e Equipes</h3><small>Ajuste o Que For Equipe</small></div>
+          <div class="scroll" style="max-height:520px"><table class="tbl"><thead><tr><th>Apelido</th><th>Cargo · Setor</th><th>É</th></tr></thead><tbody>
+          ${P.pessoas.map((p, i) => `<tr><td><b>${esc(tc(p.apelido))}</b>${p.criadoPeloPlano ? ' <span class="tag" style="background:var(--s5-soft);color:var(--s5)">Só no Plano</span>' : ''}${p.ativo ? '' : ' <span class="pill p1">Desligado</span>'}</td>
+            <td class="sub">${esc([tc(p.cargo), tc(p.setor)].filter(Boolean).join(' · ') || '—')}</td>
+            <td><select class="in" data-tipo="${i}" style="padding:4px 6px;width:auto"><option value="pessoa" ${p.tipo === 'pessoa' ? 'selected' : ''}>Pessoa</option><option value="equipe" ${p.tipo === 'equipe' ? 'selected' : ''}>Equipe</option><option value="fora" ${p.tipo === 'fora' ? 'selected' : ''}>Não Importar</option></select></td></tr>`).join('')}
+          </tbody></table></div></div></div>
+      <div class="card fs" style="margin-top:16px"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <button class="btn pri" id="importar">${destino === 'nova' ? `⬆ Importar ${P.atividades.length} Atividades para a Nova Fazenda` : `⟳ Atualizar a ${esc(tc(eu.fazendas.find(f => f.id === destino)?.nome || ''))} com a Planilha`}</button>
+        <span class="sub">${destino === 'nova' ? 'Leva Alguns Segundos. Você Vira Consultor da Nova Fazenda e Pode Trocar de Fazenda no Menu.' : 'Leva Alguns Segundos. Ao Final Aparece o Resumo do Que Foi Criado e Atualizado.'}</span></div>
+        <div class="log escondido" id="log"></div></div>`;
+    $('outra').onclick = () => { P = null; desenhar(); };
+    document.querySelectorAll('[data-tipo]').forEach(s => s.onchange = () => { P.pessoas[+s.dataset.tipo].tipo = s.value; });
+    $('importar').onclick = importar;
+    $('iDest').onchange = (e) => { destino = e.target.value; desenhar(); };
+  }
+
+  async function abrirArquivo(f) {
+    nomeArquivo = f.name; $('tela').innerHTML = '<div class="card empty" style="padding:40px">Lendo a Planilha… (Pode Levar Alguns Segundos)</div>';
+    try {
+      const buf = await f.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array', sheets: ['Cadastros', 'Equipe', 'Plano_Anual', 'Plano_Semanal'] });
+      P = lerPlanilha(wb);
+      const igual = (eu.fazendas || []).find(f => chaveFz(f.nome) === chaveFz(P.fazenda)); destino = igual ? igual.id : 'nova';
+      desenhar();
+    } catch (e) { P = null; desenhar(); $('tela').insertAdjacentHTML('afterbegin', `<div class="warn" style="margin-bottom:12px;background:var(--s4-soft)">Não Consegui Ler a Planilha: ${esc(e.message)}</div>`); }
+  }
+
+  // ---------- 3. IMPORTAR ----------
+  async function importar() {
+    const nome = $('iNome').value.trim(); if (destino === 'nova' && !nome) return alert('Informe o Nome da Fazenda.');
+    $('importar').disabled = true; const log = $('log'); log.classList.remove('escondido'); log.innerHTML = '';
+    const passo = (m, cls = '') => { log.insertAdjacentHTML('beforeend', `<div class="${cls}">${m}</div>`); log.scrollTop = log.scrollHeight; };
+    const falhou = (m) => { passo('✗ ' + esc(m), 'er'); $('importar').disabled = false; throw new Error(m); };
+    const lote = async (tab, linhasIns, cols) => { const out = []; for (let i = 0; i < linhasIns.length; i += 400) { const { data, error } = await supabase.from(tab).insert(linhasIns.slice(i, i + 400)).select(cols); if (error) falhou(tab + ': ' + error.message); out.push(...(data || [])); } return out; };
+    if (destino !== 'nova') { try { await atualizar(destino, passo, falhou, lote); } catch (e) { console.warn(e); } return; }
+    try {
+      passo('Criando a fazenda…');
+      const { data: fz, error } = await supabase.rpc('criar_fazenda', { p_nome: tc(nome), p_uf: $('iUf').value, p_municipio: tc($('iMun').value) });
+      if (error) falhou(error.message);
+      passo('✓ Fazenda ' + esc(tc(nome)) + ' Criada', 'ok');
+      // Setores
+      const S = await lote('setores', P.setores.map(s => ({ fazenda_id: fz, nome: tc(s.nome) })), 'id, nome');
+      const setorId = (n) => n ? S.find(s => chave(s.nome) === chave(n))?.id || null : null;
+      passo(`✓ ${S.length} Setores`, 'ok');
+      // Pessoas
+      const pes = P.pessoas.filter(p => p.tipo === 'pessoa'), eqs = P.pessoas.filter(p => p.tipo === 'equipe');
+      const PS = await lote('pessoas', pes.map(p => ({ fazenda_id: fz, apelido: tc(p.apelido), nome: tc(p.nome), cargo: p.cargo ? tc(p.cargo) : null, setor_id: setorId(p.setor), ativo: p.ativo })), 'id, apelido');
+      const pessoaId = (n) => n ? PS.find(p => chave(p.apelido) === chave(n))?.id || null : null;
+      passo(`✓ ${PS.length} Pessoas`, 'ok');
+      const rem = pes.filter(p => p.salario || p.vinculo).map(p => ({ fazenda_id: fz, pessoa_id: pessoaId(p.apelido), salario_base: p.salario, vinculo: p.vinculo || null })).filter(r => r.pessoa_id);
+      if (rem.length) { const { error: e } = await supabase.from('remuneracao').insert(rem); passo(e ? '• Salários Não Importados (' + esc(e.message) + ')' : `✓ ${rem.length} Salários`, e ? '' : 'ok'); }
+      // Donos dos setores
+      for (const s of P.setores.filter(s => s.dono && pessoaId(s.dono))) await supabase.from('setores').update({ dono_id: pessoaId(s.dono) }).eq('id', setorId(s.nome));
+      // Equipes
+      const EQ = eqs.length ? await lote('equipes', eqs.map(e => ({ fazenda_id: fz, nome: tc(e.apelido) })), 'id, nome') : [];
+      const equipeId = (n) => n ? EQ.find(e => chave(e.nome) === chave(n))?.id || null : null;
+      passo(`✓ ${EQ.length} Equipes (Monte os Membros em Cadastros › Equipes do App)`, 'ok');
+      // Comportamentos
+      if (P.criterios.length) { const { error: e } = await supabase.from('criterios').insert([...new Set(P.criterios.map(tc))].map(n => ({ fazenda_id: fz, nome: n }))); passo(e ? '• Comportamentos Não Importados (' + esc(e.message) + ')' : `✓ ${P.criterios.length} Comportamentos`, e ? '' : 'ok'); }
+      // Atividades
+      const AT = await lote('atividades', P.atividades.map(a => ({ fazenda_id: fz, codigo_planilha: a.linha, nome: tc(a.nome), setor_id: setorId(a.setor), tipo: a.tipo, urgencia: a.urg,
+        coordenador_id: pessoaId(a.coord), executor_pessoa_id: pessoaId(a.quem), executor_equipe_id: pessoaId(a.quem) ? null : equipeId(a.quem), local: a.local ? tc(a.local) : null, dias: a.dias, como_fazer: a.como_fazer })), 'id, codigo_planilha');
+      passo(`✓ ${AT.length} Atividades`, 'ok');
+      // Semanas do plano
+      const idDa = {}; AT.forEach(a => idDa[a.codigo_planilha] = a.id);
+      const PL = []; P.atividades.forEach(a => Object.entries(a.sem).forEach(([w, st]) => idDa[a.linha] && PL.push({ fazenda_id: fz, atividade_id: idDa[a.linha], ano: ANO, semana: +w, status: st })));
+      for (let i = 0; i < PL.length; i += 500) { const { error: e } = await supabase.from('planejamento').insert(PL.slice(i, i + 500)); if (e) falhou('Semanas: ' + e.message); }
+      passo(`✓ ${PL.length} Semanas Planejadas`, 'ok');
+      try { localStorage.setItem('fp-fazenda', fz); } catch {}
+      passo('🎉 Importação Concluída!', 'ok');
+      $('importar').outerHTML = `<a class="btn pri" href="painel.html" style="text-decoration:none">Abrir ${esc(tc(nome))} ›</a> <a class="btn" href="cadastros.html?aba=equipes" style="text-decoration:none">Montar as Equipes</a>`;
+    } catch (e) { console.warn(e); }
+  }
+
+
+  // ---------- 3b. ATUALIZAR UMA FAZENDA QUE JÁ EXISTE (sem duplicar nada) ----------
+  async function atualizar(fz, passo, falhou, lote) {
+    const nomeFz = tc(eu.fazendas.find(f => f.id === fz)?.nome || '');
+    const ler = (tab, cols) => buscarTudo(() => supabase.from(tab).select(cols).eq('fazenda_id', fz));
+    const emGrupos = async (lista, fn) => { for (let i = 0; i < lista.length; i += 8) await Promise.all(lista.slice(i, i + 8).map(fn)); };
+    const igual = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    passo('Lendo o Que Já Existe na ' + esc(nomeFz) + '…');
+    const [S0, P0, E0, C0, A0] = await Promise.all([ler('setores', 'id, nome, dono_id'), ler('pessoas', 'id, apelido, nome, cargo, setor_id, ativo'), ler('equipes', 'id, nome'), ler('criterios', 'id, nome'),
+      ler('atividades', 'id, nome, codigo_planilha, setor_id, tipo, urgencia, coordenador_id, executor_pessoa_id, executor_equipe_id, local, dias, como_fazer')]);
+    // Município / UF (só se preencheu)
+    const fd = {}; if ($('iMun').value.trim()) fd.municipio = tc($('iMun').value.trim()); if ($('iUf').value.trim()) fd.uf = $('iUf').value.trim().toUpperCase();
+    if (Object.keys(fd).length) { const { error } = await supabase.from('fazendas').update(fd).eq('id', fz); passo(error ? '• Município/UF Não Atualizados' : '✓ Município/UF Atualizados', error ? '' : 'ok'); }
+    // Setores
+    const novosS = P.setores.filter(s => !S0.some(x => chave(x.nome) === chave(s.nome)));
+    const S = [...S0, ...(novosS.length ? await lote('setores', novosS.map(s => ({ fazenda_id: fz, nome: tc(s.nome) })), 'id, nome') : [])];
+    const setorId = (n) => n ? S.find(s => chave(s.nome) === chave(n))?.id || null : null;
+    passo(`✓ Setores: ${novosS.length} Novos · ${S0.length} Já Existiam`, 'ok');
+    // Pessoas: cria as que faltam e atualiza nome, cargo, setor e situação das que já existem
+    const pes = P.pessoas.filter(p => p.tipo === 'pessoa'), eqs = P.pessoas.filter(p => p.tipo === 'equipe');
+    const achaP = (n) => P0.find(x => chave(x.apelido) === chave(n));
+    const novasP = pes.filter(p => !achaP(p.apelido));
+    const PS = [...P0, ...(novasP.length ? await lote('pessoas', novasP.map(p => ({ fazenda_id: fz, apelido: tc(p.apelido), nome: tc(p.nome), cargo: p.cargo ? tc(p.cargo) : null, setor_id: setorId(p.setor), ativo: p.ativo })), 'id, apelido') : [])];
+    const pessoaId = (n) => n ? PS.find(p => chave(p.apelido) === chave(n))?.id || null : null;
+    let nPAt = 0;
+    await emGrupos(pes.filter(p => achaP(p.apelido) && !p.criadoPeloPlano), async (p) => {
+      const x = achaP(p.apelido), d = {};
+      if (p.nome && tc(p.nome) !== x.nome) d.nome = tc(p.nome);
+      if (p.cargo && tc(p.cargo) !== x.cargo) d.cargo = tc(p.cargo);
+      if (setorId(p.setor) && setorId(p.setor) !== x.setor_id) d.setor_id = setorId(p.setor);
+      if (p.ativo !== x.ativo) d.ativo = p.ativo;
+      if (Object.keys(d).length) { const { error } = await supabase.from('pessoas').update(d).eq('id', x.id); if (!error) nPAt++; }
+    });
+    passo(`✓ Pessoas: ${novasP.length} Novas · ${nPAt} Atualizadas · ${P0.length - nPAt} Sem Mudança`, 'ok');
+    const rem = pes.filter(p => p.salario || p.vinculo).map(p => ({ fazenda_id: fz, pessoa_id: pessoaId(p.apelido), salario_base: p.salario, vinculo: p.vinculo || null })).filter(r => r.pessoa_id);
+    if (rem.length) { const { error: e } = await supabase.from('remuneracao').upsert(rem, { onConflict: 'pessoa_id' }); passo(e ? '• Salários Não Atualizados (' + esc(e.message) + ')' : `✓ ${rem.length} Salários Atualizados`, e ? '' : 'ok'); }
+    for (const s of P.setores.filter(s => s.dono && pessoaId(s.dono))) { const x = S.find(y => chave(y.nome) === chave(s.nome)); if (x && x.dono_id !== pessoaId(s.dono)) await supabase.from('setores').update({ dono_id: pessoaId(s.dono) }).eq('id', x.id); }
+    // Equipes e Comportamentos: só cria o que falta
+    const novasE = eqs.filter(e => !E0.some(x => chave(x.nome) === chave(e.apelido)));
+    const EQ = [...E0, ...(novasE.length ? await lote('equipes', novasE.map(e => ({ fazenda_id: fz, nome: tc(e.apelido) })), 'id, nome') : [])];
+    const equipeId = (n) => n ? EQ.find(e => chave(e.nome) === chave(n))?.id || null : null;
+    passo(`✓ Equipes: ${novasE.length} Novas · ${E0.length} Já Existiam`, 'ok');
+    const novosC = [...new Set(P.criterios.map(tc))].filter(n => !C0.some(x => chave(x.nome) === chave(n)));
+    if (novosC.length) { const { error: e } = await supabase.from('criterios').insert(novosC.map(n => ({ fazenda_id: fz, nome: n }))); passo(e ? '• Comportamentos Não Importados (' + esc(e.message) + ')' : `✓ ${novosC.length} Comportamentos Novos`, e ? '' : 'ok'); }
+    // Atividades: acha pelo nome (ou pela linha da planilha); atualiza as que mudaram e cria as que faltam
+    const usadas = new Set();
+    const achaA = (a) => { const x = A0.find(y => !usadas.has(y.id) && chave(y.nome) === chave(a.nome)) || A0.find(y => !usadas.has(y.id) && y.codigo_planilha === a.linha && chave(y.nome).slice(0, 12) === chave(a.nome).slice(0, 12)); if (x) usadas.add(x.id); return x; };
+    const par = P.atividades.map(a => [a, achaA(a)]);
+    const dadosDe = (a) => ({ codigo_planilha: a.linha, nome: tc(a.nome), setor_id: setorId(a.setor), tipo: a.tipo, urgencia: a.urg, coordenador_id: pessoaId(a.coord),
+      executor_pessoa_id: pessoaId(a.quem), executor_equipe_id: pessoaId(a.quem) ? null : equipeId(a.quem) });
+    const novasA = par.filter(([, x]) => !x).map(([a]) => a);
+    const AN = novasA.length ? await lote('atividades', novasA.map(a => ({ fazenda_id: fz, ...dadosDe(a), local: a.local ? tc(a.local) : null, dias: a.dias, como_fazer: a.como_fazer })), 'id, codigo_planilha') : [];
+    let nAAt = 0;
+    await emGrupos(par.filter(([, x]) => x), async ([a, x]) => {
+      const n = dadosDe(a), d = {};
+      for (const k of ['nome', 'setor_id', 'tipo', 'urgencia', 'coordenador_id', 'executor_pessoa_id', 'executor_equipe_id', 'codigo_planilha']) if ((n[k] != null || k.startsWith('executor')) && !igual(n[k], x[k])) d[k] = n[k];
+      if (!a.urgPl) delete d.urgencia;
+      if (!n.executor_pessoa_id && !n.executor_equipe_id) { delete d.executor_pessoa_id; delete d.executor_equipe_id; }   // planilha sem "Quem Faz": mantém o do sistema
+      if (a.local && tc(a.local) !== x.local) d.local = tc(a.local);
+      if (a.diasDaPlanilha && !igual(a.dias, x.dias)) d.dias = a.dias;
+      if (a.como_fazer) { const m = { ...(x.como_fazer || {}), ...a.como_fazer }; if (!igual(m, x.como_fazer)) d.como_fazer = m; }   // 5M: junta, não apaga o que foi escrito no sistema
+      if (Object.keys(d).length) { const { error } = await supabase.from('atividades').update(d).eq('id', x.id); if (!error) nAAt++; }
+    });
+    const soNoSistema = A0.filter(y => !usadas.has(y.id)).length;
+    passo(`✓ Atividades: ${novasA.length} Novas · ${nAAt} Atualizadas · ${par.length - novasA.length - nAAt} Sem Mudança${soNoSistema ? ` · ${soNoSistema} Só no Sistema (Mantidas)` : ''}`, 'ok');
+    // Semanas do plano
+    const idDe = new Map(); par.forEach(([a, x]) => { if (x) idDe.set(a, x.id); }); AN.forEach(r => { const a = novasA.find(z => z.linha === r.codigo_planilha); if (a) idDe.set(a, r.id); });
+    const PL0 = await buscarTudo(() => supabase.from('planejamento').select('atividade_id, semana, status').eq('fazenda_id', fz).eq('ano', ANO));
+    const tem = new Map(PL0.map(r => [r.atividade_id + '|' + r.semana, r.status]));
+    const trocarStatus = $('iStatus')?.checked;
+    const novasW = [], mudarW = [];
+    P.atividades.forEach(a => { const id = idDe.get(a); if (!id) return; Object.entries(a.sem).forEach(([w, st]) => { const k = id + '|' + w;
+      if (!tem.has(k)) novasW.push({ fazenda_id: fz, atividade_id: id, ano: ANO, semana: +w, status: st }); else if (trocarStatus && tem.get(k) !== st) mudarW.push({ fazenda_id: fz, atividade_id: id, ano: ANO, semana: +w, status: st }); }); });
+    for (let i = 0; i < novasW.length; i += 500) { const { error: e } = await supabase.from('planejamento').upsert(novasW.slice(i, i + 500), { onConflict: 'atividade_id,ano,semana', ignoreDuplicates: true }); if (e) falhou('Semanas: ' + e.message); }
+    for (let i = 0; i < mudarW.length; i += 500) { const { error: e } = await supabase.from('planejamento').upsert(mudarW.slice(i, i + 500), { onConflict: 'atividade_id,ano,semana' }); if (e) falhou('Status das Semanas: ' + e.message); }
+    passo(`✓ Semanas: ${novasW.length} Novas${trocarStatus ? ` · ${mudarW.length} com Status Trocado` : ' · Status Já Lançados no Sistema Mantidos'}`, 'ok');
+    try { localStorage.setItem('fp-fazenda', fz); } catch {}
+    passo('🎉 ' + esc(nomeFz) + ' Atualizada com a Planilha!', 'ok');
+    $('importar').outerHTML = `<a class="btn pri" href="plano.html" style="text-decoration:none">Abrir o Plano Anual ›</a>`;
+  }
+
+  // Entrada
+  eu = await quemSouEu();
+  montarMenu('importar.html');
+  if (!eu) location.href = 'index.html';
+  else if (eu.papel !== 'consultor') $('aviso').textContent = 'Importar Fazenda É Só para o Consultor.';
+  else {
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+</script>
+</body>
+</html>

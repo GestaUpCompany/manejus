@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Avaliação de Desempenho (semanal, mensal, trimestral, semestral ou anual — a fazenda escolhe) -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Avaliação de Desempenho · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="avaliacao.html" selected>Avaliação de Desempenho</option><option value="index.html">Tarefas da Semana</option><option value="plano.html">Plano Anual</option><option value="cadastros.html">Cadastros</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase, ANO, SEMANAS_NO_ANO, PAPEL, MESES_LONGO, PERIODOS_AVAL, tc, esc, semanaDe, periodoDaSemana, inicioDaSemana, quemSouEu, buscarTudo, montarMenu, nf, corEscore, media } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  const SEMANA_ATUAL = Math.max(1, Math.min(SEMANAS_NO_ANO, semanaDe(new Date())));
+  const PRIMEIRA = ANO === 2026 ? 28 : 1;   // em 2026 a planilha começou a avaliar na semana 28
+  let nomesFuncao = {};
+  let eu, fz, pessoas = [], criterios = {}, itens = [], notas = {}, escolhida = null;
+  // ---------- Período de avaliação: a nota do período é gravada em todas as semanas dele (assim Contrato, Equipe do Mês e Relatórios continuam iguais) ----------
+  let PER = 'semanal', temColunaPer = true, LISTA = [], pk = 0;
+  const mesDa = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();
+  const NOME_UN = { semanal: 'Semana', mensal: 'Mês', trimestral: 'Trimestre', semestral: 'Semestre', anual: 'Ano' };
+  const NESTE = { semanal: 'Nesta Semana', mensal: 'Neste Mês', trimestral: 'Neste Trimestre', semestral: 'Neste Semestre', anual: 'Neste Ano' };
+  function montarPeriodos() {
+    const ws = []; for (let w = PRIMEIRA; w <= SEMANAS_NO_ANO; w++) ws.push(w);
+    const chave = { semanal: w => w, mensal: w => mesDa(w), trimestral: w => Math.floor(mesDa(w) / 3), semestral: w => Math.floor(mesDa(w) / 6), anual: () => 0 }[PER];
+    const m = new Map(); ws.forEach(w => { const k = chave(w); if (!m.has(k)) m.set(k, []); m.get(k).push(w); });
+    const TRI = ['Jan a Mar', 'Abr a Jun', 'Jul a Set', 'Out a Dez'];
+    LISTA = [...m.entries()].map(([k, l]) => {
+      const curto = PER === 'semanal' ? 'Semana ' + k : PER === 'mensal' ? MESES_LONGO[k] : PER === 'trimestral' ? (k + 1) + 'º Trimestre' : PER === 'semestral' ? (k + 1) + 'º Semestre' : 'Ano ' + ANO;
+      const det = PER === 'semanal' ? periodoDaSemana(k) : PER === 'trimestral' ? TRI[k] : PER === 'semestral' ? (k ? 'Jul a Dez' : 'Jan a Jun') : 'Semanas ' + l[0] + ' a ' + l[l.length - 1];
+      return { curto, det, ws: l };
+    }).filter(P => P.ws[0] <= SEMANA_ATUAL + (PER === 'semanal' ? 1 : 0));
+    const i = LISTA.findIndex(P => P.ws.includes(SEMANA_ATUAL)); pk = i >= 0 ? i : LISTA.length - 1;
+  }
+  const notaDe = (itemId, P) => { for (let j = P.ws.length - 1; j >= 0; j--) { const n = notas[itemId + '|' + P.ws[j]]; if (n) return n; } return null; };   // notas["item|semana"] = { nota, nsa }
+
+  function aviso(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2400); }
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+
+  async function carregar() {
+    const [p, c, i, a] = await Promise.all([
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido, nome, cargo, ativo').eq('fazenda_id', fz).order('apelido')),
+      buscarTudo(() => supabase.from('criterios').select('id, nome').eq('fazenda_id', fz)),
+      buscarTudo(() => supabase.from('contrato_itens').select('*').eq('fazenda_id', fz).eq('ativo', true).order('ordem')),
+      buscarTudo(() => supabase.from('avaliacoes').select('item_id, semana, nota, nsa').eq('fazenda_id', fz).eq('ano', ANO))
+    ]);
+    nomesFuncao = {}; (await buscarTudo(() => supabase.from('funcoes').select('id, nome').eq('fazenda_id', fz)).catch(() => [])).forEach(f => nomesFuncao[f.id] = f.nome);
+    criterios = {}; c.forEach(x => criterios[x.id] = x.nome);
+    itens = i; notas = {}; a.forEach(x => notas[x.item_id + '|' + x.semana] = { nota: x.nota == null ? null : +x.nota, nsa: x.nsa });
+    pessoas = p.filter(x => x.ativo && itens.some(it => it.pessoa_id === x.id));
+    if (!escolhida || !pessoas.some(x => x.id === escolhida)) escolhida = pessoas[0]?.id;
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+
+  // Cálculos (iguais ao protótipo): escore = média entre a média das tarefas e a média dos comportamentos
+  const itensDe = (pid, tipo) => itens.filter(i => i.pessoa_id === pid && (!tipo || i.tipo === tipo));
+  const textoItem = (i) => i.tipo === 'tarefa' ? tc(nomesFuncao[i.funcao_id] || i.texto) : (criterios[i.criterio_id] || '—');
+  function mediaItem(i, de, ate) { const v = []; for (let w = de; w <= ate; w++) { const n = notas[i.id + '|' + w]; if (n && !n.nsa && n.nota != null) v.push(n.nota); } return media(v); }
+  function mediaBloco(pid, tipo, de, ate) { return media(itensDe(pid, tipo).map(i => mediaItem(i, de, ate)).filter(v => v != null)); }
+  let PESO_TAREFAS = 0.7;   // vem da fazenda (Cadastros › Geral)
+  function escore(pid, de, ate) {
+    const t = mediaBloco(pid, 'tarefa', de, ate), c = mediaBloco(pid, 'comportamento', de, ate);
+    if (t == null) return c; if (c == null) return t;
+    return t * PESO_TAREFAS + c * (1 - PESO_TAREFAS);
+  }
+  const avaliado = (pid, P) => itensDe(pid).some(i => notaDe(i.id, P));
+
+  function desenhar() {
+    const p = pessoas.find(x => x.id === escolhida);
+    const P = LISTA[pk], Q = LISTA[pk - 1];
+    const feitos = pessoas.filter(x => avaliado(x.id, P)).length;
+    const opSem = LISTA.map((L, i) => `<option value="${i}" ${i === pk ? 'selected' : ''}>${esc(L.curto)}</option>`);
+    const linha = (i) => {
+      const n = notaDe(i.id, P), m = mediaItem(i, 1, P.ws[0] - 1);
+      const val = n ? (n.nsa ? 'NSA' : nf(n.nota, n.nota % 1 ? 1 : 0)) : '';
+      return `<div class="erow"><span>${esc(textoItem(i))}</span><span class="avg">${m == null ? '—' : nf(m, 1)}</span>
+        <input class="in ${n?.nsa ? 'nsa' : ''}" data-it="${i.id}" value="${val}" inputmode="decimal" placeholder="${m == null ? 'NSA' : '—'}"></div>`;
+    };
+    const bloco = (titulo, sub, tipo) => `<div class="card fs"><div style="display:flex;justify-content:space-between"><div><h3 style="font-size:16px">${titulo}</h3><small class="sub">${sub}</small></div><small class="sub" style="font-weight:600;align-self:end">MÉDIA · NOTA</small></div>
+      <div>${itensDe(p.id, tipo).map(linha).join('') || '<div class="sub">Nada no Contrato. Edite em Cadastros › Colaboradores.</div>'}</div></div>`;
+    const ws = escore(p?.id, P.ws[0], P.ws[P.ws.length - 1]);
+    $('tela').innerHTML = !p ? '<div class="card empty">Ninguém com Contrato de Resultados. Cadastre em Cadastros › Colaboradores.</div>' : `
+      <div class="phead"><div><div class="eyebrow">${esc(P.curto)} · ${esc(P.det)}</div><h1>Avaliação ${PERIODOS_AVAL[PER]} de Desempenho</h1></div>
+        <div class="acts"><a class="btn" href="cadastros.html?aba=colab" style="text-decoration:none;color:inherit">Editar Contrato</a>
+          <label class="sel" title="A Fazenda Escolhe de Quanto em Quanto Tempo Avalia (Também em Cadastros › Geral)">Avaliar<select id="per">${Object.entries(PERIODOS_AVAL).map(([k, n]) => `<option value="${k}" ${k === PER ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+          <label class="sel">${NOME_UN[PER]}<select id="sem">${opSem.join('')}</select></label>
+          ${Q ? `<button class="btn" id="repetir">Repetir Notas de ${esc(Q.curto)}</button>` : ''}
+          <button class="btn dark" id="proximo">Salvar e Ir para o Próximo</button></div></div>
+      <div class="evgrid">
+        <div class="card plist"><div class="cardh" style="flex-direction:column;gap:2px"><h3>Colaboradores</h3><small>${feitos} de ${pessoas.length} Avaliados ${NESTE[PER]}</small></div>
+          ${pessoas.map(x => `<button data-p="${x.id}" class="${x.id === p.id ? 'on' : ''}"><span><b>${esc(tc(x.apelido))}</b><small>${esc(tc(x.cargo || '—'))}</small></span>
+            ${x.id === p.id ? '<small style="color:var(--s3);font-weight:700">Agora</small>' : `<span class="okc ${avaliado(x.id, P) ? 'y' : ''}">${avaliado(x.id, P) ? '✓' : ''}</span>`}</button>`).join('')}</div>
+        <div class="grid">
+          <div class="card" style="padding:16px 18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+            <div><h3 style="font-size:19px">${esc(tc(p.nome || p.apelido))}</h3><div class="sub">${esc(tc(p.cargo || '—'))}</div></div>
+            <div style="display:flex;gap:22px;font-size:13px;color:var(--ink2)"><span>Escore no Ano <b class="score">${nf(escore(p.id, 1, P.ws[0] - 1))}</b></span>
+              <span>${NESTE[PER].replace('Neste', 'Este').replace('Nesta', 'Esta')} <b class="score ${corEscore(ws)}" id="wsc">${nf(ws)}</b></span></div>
+            <div style="flex-basis:100%;font-size:12.5px;color:var(--s2);font-weight:600" id="salvoInfo">💾 Cada Nota Grava Sozinha ao Sair do Campo (Enter, Tab ou Clique Fora). Não Precisa de Botão Salvar.${PER !== 'semanal' ? ` A Nota Vale para Todo o ${NOME_UN[PER]} (Semanas ${P.ws[0]} a ${P.ws[P.ws.length - 1]}).` : ''}</div></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+            ${bloco('Atribuições e Tarefas', 'Nota de 0 a 10 · NSA Quando Não se Aplica', 'tarefa')}
+            ${bloco('Comportamentos e Atitudes', 'Escolhidos no Contrato de Resultados', 'comportamento')}
+          </div></div></div>`;
+  }
+
+  // Grava uma nota (0 a 10, NSA ou vazio = apaga) em todas as semanas do período
+  async function gravar(itemId, P, valor) {
+    if (valor === null) {
+      const { error } = await supabase.from('avaliacoes').delete().eq('item_id', itemId).eq('ano', ANO).in('semana', P.ws);
+      if (error) return aviso('Erro: ' + error.message), false;
+      P.ws.forEach(w => delete notas[itemId + '|' + w]); return true;
+    }
+    const agora = new Date().toISOString();
+    const linhas = P.ws.map(w => ({ item_id: itemId, fazenda_id: fz, ano: ANO, semana: w, nota: valor === 'NSA' ? null : valor, nsa: valor === 'NSA', avaliado_por: eu.user.id, avaliado_em: agora }));
+    const { error } = await supabase.from('avaliacoes').upsert(linhas, { onConflict: 'item_id,ano,semana' });
+    if (error) return aviso('Erro: ' + error.message), false;
+    P.ws.forEach(w => notas[itemId + '|' + w] = { nota: linhas[0].nota, nsa: linhas[0].nsa }); return true;
+  }
+
+  $('tela').addEventListener('change', async (e) => {
+    if (e.target.id === 'sem') { pk = +e.target.value; return desenhar(); }
+    if (e.target.id === 'per') {
+      const novo = e.target.value;
+      if (!temColunaPer) { e.target.value = PER; return aviso('Falta Rodar o SQL 034_periodo_avaliacao.sql no Supabase'); }
+      const { error } = await supabase.from('fazendas').update({ periodo_avaliacao: novo }).eq('id', fz);
+      if (error) { e.target.value = PER; return aviso('Não Foi Possível Salvar: ' + error.message); }
+      PER = novo; montarPeriodos(); desenhar(); return aviso('Avaliação ' + PERIODOS_AVAL[PER] + ' · Vale para Toda a Fazenda');
+    }
+    const inp = e.target.closest('[data-it]'); if (!inp) return;
+    let v = inp.value.trim().replace(',', '.'), valor;
+    if (!v) valor = null;
+    else if (/^nsa$/i.test(v)) valor = 'NSA';
+    else { valor = parseFloat(v); if (isNaN(valor)) { inp.value = ''; return aviso('Use uma Nota de 0 a 10 ou NSA'); } valor = Math.max(0, Math.min(10, Math.round(valor * 10) / 10)); }
+    inp.style.borderColor = 'var(--s5)';
+    if (await gravar(inp.dataset.it, LISTA[pk], valor)) {
+      inp.style.borderColor = 'var(--s2)'; inp.style.boxShadow = '0 0 0 2px var(--s2-soft)';
+      const h = new Date(); $('salvoInfo').textContent = `✓ Nota Salva às ${String(h.getHours()).padStart(2, '0')}:${String(h.getMinutes()).padStart(2, '0')}:${String(h.getSeconds()).padStart(2, '0')}`;
+      inp.value = valor === null ? '' : valor === 'NSA' ? 'NSA' : nf(valor, valor % 1 ? 1 : 0);
+      inp.classList.toggle('nsa', valor === 'NSA');
+      const P = LISTA[pk], ws = escore(escolhida, P.ws[0], P.ws[P.ws.length - 1]), el = $('wsc'); el.textContent = nf(ws); el.className = 'score ' + corEscore(ws);
+    }
+  });
+  $('tela').addEventListener('keydown', (e) => {   // Enter pula para a próxima nota
+    if (e.key !== 'Enter' || !e.target.matches('[data-it]')) return;
+    e.preventDefault(); const todos = [...document.querySelectorAll('[data-it]')]; e.target.blur(); todos[todos.indexOf(e.target) + 1]?.focus();
+  });
+  $('tela').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-p]'); if (b) { escolhida = b.dataset.p; return desenhar(); }
+    if (e.target.closest('#repetir')) {
+      let n = 0;
+      const P = LISTA[pk], Q = LISTA[pk - 1]; if (!Q) return;
+      for (const i of itensDe(escolhida)) { const ant = notaDe(i.id, Q); if (ant && !notaDe(i.id, P)) { if (await gravar(i.id, P, ant.nsa ? 'NSA' : ant.nota)) n++; } }
+      desenhar(); return aviso(n ? n + ' Notas Copiadas de ' + Q.curto : 'Nada para Copiar');
+    }
+    if (e.target.closest('#proximo')) {
+      const atual = pessoas.find(x => x.id === escolhida), i = pessoas.indexOf(atual);
+      const prox = pessoas.slice(i + 1).concat(pessoas).find(x => x !== atual && !avaliado(x.id, LISTA[pk]));
+      aviso('Avaliação de ' + tc(atual.apelido) + ' Salva');
+      if (prox) { escolhida = prox.id; desenhar(); window.scrollTo(0, 0); } else aviso('Todos Avaliados ' + NESTE[PER]);
+    }
+  });
+
+  // Entrada (fica no fim de propósito)
+  eu = await quemSouEu();
+  montarMenu('avaliacao.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.includes(eu.papel)) $('aviso').textContent = 'A Avaliação de Desempenho é Só para Gestor, Administrativo e Consultor.';
+  else {
+    fz = eu.fazenda.id;
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    let { data: fzd, error: eF } = await supabase.from('fazendas').select('peso_tarefas, periodo_avaliacao').eq('id', fz).maybeSingle();
+    if (eF) { temColunaPer = false; ({ data: fzd } = await supabase.from('fazendas').select('peso_tarefas').eq('id', fz).maybeSingle()); }
+    if (fzd?.peso_tarefas != null) PESO_TAREFAS = fzd.peso_tarefas / 100;
+    if (fzd?.periodo_avaliacao && PERIODOS_AVAL[fzd.periodo_avaliacao]) PER = fzd.periodo_avaliacao;
+    montarPeriodos();
+    await carregar();
+  }
+</script>
+</body>
+</html>

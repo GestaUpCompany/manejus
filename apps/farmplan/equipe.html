@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Equipe do Mês (média das equipes pela média dos colaboradores) -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Equipe do Mês · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    .podio{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:16px}
+    .eq{padding:16px 18px;display:grid;gap:10px;position:relative}
+    .eq.campea{border:2px solid var(--s2);box-shadow:0 6px 24px rgba(32,164,75,.18)}
+    .eq .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+    .eq h3{font-size:18px}
+    .eq .pos{font-family:var(--fd);font-weight:800;font-size:13px;color:var(--muted)}
+    .eq .nota{font-family:var(--fd);font-weight:800;font-size:38px;line-height:1}
+    .eq .selo{position:absolute;top:-12px;right:14px;background:var(--s2);color:#fff;border-radius:99px;padding:3px 12px;font-weight:800;font-size:12px}
+    .eq .bar{height:8px;background:var(--empty);border-radius:99px;overflow:hidden}
+    .eq .bar i{display:block;height:100%;border-radius:99px}
+    .mb{display:grid;grid-template-columns:1fr 56px 56px;gap:8px;font-size:13px;padding:5px 0;border-top:1px solid var(--line2);align-items:center}
+    .mb span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+    .mb.h{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;border-top:0}
+    .regra{font-size:12.5px;color:var(--ink2)}
+    @media print{
+      @page{size:A4 portrait;margin:10mm}
+      .side,.mtop,.acts,.toast{display:none!important}
+      .shell{display:block}.main{padding:0!important}
+      .card{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="equipe.html" selected>Equipe do Mês</option><option value="avaliacao.html">Avaliação de Desempenho</option><option value="contrato.html">Contrato de Resultados</option><option value="index.html">Tarefas da Semana</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+  </div>
+</div>
+<script type="module">
+  import { supabase, ANO, SEMANAS_NO_ANO, PAPEL, tc, esc, quemSouEu, buscarTudo, montarMenu, inicioDaSemana, media, nf, corEscore } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  let ultimo = null;   // última tela desenhada (para o Excel)
+  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  let PESO_TAREFAS = 0.7, PESO_COMPORT = 0.3;  // vem da fazenda (Cadastros › Geral)   // igual ao Contrato de Resultados
+  let eu, fz, pessoas = [], equipes = [], membros = [], itens = [], notas = {}, mes = null, minimo = 2;
+
+  function aviso(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  const mesDaSemana = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();
+  const semanasDoMes = (m) => { const ws = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (mesDaSemana(w) === m) ws.push(w); return ws; };
+
+  async function carregar() {
+    const [p, e, m, i, a] = await Promise.all([
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido, cargo, ativo').eq('fazenda_id', fz)),
+      buscarTudo(() => supabase.from('equipes').select('id, nome, lider_id').eq('fazenda_id', fz).order('nome')),
+      buscarTudo(() => supabase.from('equipe_membros').select('equipe_id, pessoa_id, equipes!inner(fazenda_id)').eq('equipes.fazenda_id', fz)),
+      buscarTudo(() => supabase.from('contrato_itens').select('id, pessoa_id, tipo').eq('fazenda_id', fz).eq('ativo', true)),
+      buscarTudo(() => supabase.from('avaliacoes').select('item_id, semana, nota, nsa').eq('fazenda_id', fz).eq('ano', ANO))
+    ]);
+    pessoas = p; equipes = e; membros = m; itens = i;
+    notas = {}; a.forEach(x => { if (!x.nsa && x.nota != null) notas[x.item_id + '|' + x.semana] = +x.nota; });
+    // Mês padrão: o último mês que já tem nota
+    if (mes == null) { const ws = a.map(x => x.semana); mes = ws.length ? mesDaSemana(Math.max(...ws)) : new Date().getMonth(); }
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+
+  // Nota do colaborador no mês: 70% média das tarefas + 30% média dos comportamentos
+  function notaPessoa(pid, ws) {
+    const bloco = (tipo) => media(itens.filter(i => i.pessoa_id === pid && i.tipo === tipo)
+      .map(i => media(ws.map(w => notas[i.id + '|' + w]).filter(v => v != null))).filter(v => v != null));
+    const t = bloco('tarefa'), c = bloco('comportamento');
+    if (t == null) return c; if (c == null) return t;
+    return t * PESO_TAREFAS + c * PESO_COMPORT;
+  }
+
+  function calcular(m) {
+    const ws = semanasDoMes(m), ant = m > 0 ? semanasDoMes(m - 1) : [];
+    return equipes.map(q => {
+      const ms = membros.filter(x => x.equipe_id === q.id).map(x => pessoas.find(p => p.id === x.pessoa_id)).filter(p => p && p.ativo);
+      const lista = ms.map(p => ({ p, nota: notaPessoa(p.id, ws), antes: ant.length ? notaPessoa(p.id, ant) : null })).sort((a, b) => (b.nota ?? -1) - (a.nota ?? -1));
+      const avaliados = lista.filter(x => x.nota != null);
+      const nota = media(avaliados.map(x => x.nota)), antes = media(lista.filter(x => x.antes != null).map(x => x.antes));
+      return { q, lista, avaliados: avaliados.length, nota, antes, valida: avaliados.length >= minimo };
+    }).filter(r => r.lista.length).sort((a, b) => (b.valida - a.valida) || ((b.nota ?? -1) - (a.nota ?? -1)));
+  }
+
+  function desenhar() {
+    const R = calcular(mes), campea = R.find(r => r.valida && r.nota != null); ultimo = { R, campea };
+    const temNota = (m) => semanasDoMes(m).some(w => itens.some(i => notas[i.id + '|' + w] != null));
+    const opc = MESES.map((n, i) => `<option value="${i}" ${i === mes ? 'selected' : ''}>${n}${temNota(i) ? '' : ' (Sem Notas)'}</option>`).join('');
+    const seta = (r) => r.nota == null || r.antes == null ? '' : r.nota > r.antes + 0.005 ? `<span style="color:var(--s2)">▲ ${nf(r.nota - r.antes)}</span>` : r.nota < r.antes - 0.005 ? `<span style="color:var(--s4)">▼ ${nf(r.antes - r.nota)}</span>` : '<span class="sub">= Igual</span>';
+    $('tela').innerHTML = `
+      <div class="phead"><div><div class="eyebrow">Média da Equipe = Média das Notas dos Colaboradores Que Fazem Parte Dela</div><h1>Equipe do Mês · ${MESES[mes]} ${ANO}</h1></div>
+        <div class="acts"><label class="sel">Mês<select id="mes">${opc}</select></label>
+          <label class="sel">Mínimo de Avaliados<select id="min">${[1,2,3].map(n => `<option ${n === minimo ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+          <button class="btn dark" id="pdf">📄 Gerar PDF</button><button class="btn" data-xls="1">📊 Excel</button></div></div>
+      ${campea ? `<div class="card" style="padding:16px 18px;margin-bottom:16px;display:flex;gap:16px;align-items:center;background:var(--s2-soft);border-color:var(--s2)">
+          <div style="font-size:40px">🏆</div><div><div class="eyebrow">Equipe do Mês de ${MESES[mes]}</div><h2 style="font-size:26px">${esc(tc(campea.q.nome))} · ${nf(campea.nota)}</h2>
+          <div class="regra">${campea.avaliados} Colaboradores Avaliados · Líder: ${esc(tc(pessoas.find(p => p.id === campea.q.lider_id)?.apelido || '—'))}</div></div></div>`
+        : `<div class="card empty" style="margin-bottom:16px">Nenhuma Equipe com Notas Suficientes em ${MESES[mes]}. Lance as Notas na Avaliação de Desempenho.</div>`}
+      <div class="podio">${R.map((r, i) => `<div class="card eq ${r === campea ? 'campea' : ''}">${r === campea ? '<span class="selo">🏆 Equipe do Mês</span>' : ''}
+        <div class="top"><div><div class="pos">${r.valida && r.nota != null ? (i + 1) + 'º Lugar' : 'Fora da Disputa'}</div><h3>${esc(tc(r.q.nome))}</h3></div>
+          <div style="text-align:right"><div class="nota ${corEscore(r.nota)}">${nf(r.nota)}</div><div style="font-size:12px">${seta(r)} <span class="sub">vs Mês Anterior</span></div></div></div>
+        <div class="bar"><i style="width:${(r.nota || 0) * 10}%;background:${r.nota >= 9.3 ? 'var(--s2)' : r.nota >= 8.5 ? 'var(--s5)' : 'var(--s4)'}"></i></div>
+        <div><div class="mb h"><span>Colaborador</span><span>Nota</span><span>Ant.</span></div>
+          ${r.lista.map(x => `<div class="mb"><span><b>${esc(tc(x.p.apelido))}</b>${x.p.id === r.q.lider_id ? ' ★' : ''} <span class="sub">${esc(tc(x.p.cargo || ''))}</span></span>
+            <span class="b ${corEscore(x.nota)}">${x.nota == null ? '<span class="sub">—</span>' : nf(x.nota)}</span><span class="sub">${nf(x.antes)}</span></div>`).join('')}</div>
+        <div class="sub">${r.avaliados} de ${r.lista.length} Avaliados${r.valida ? '' : ` · Precisa de Pelo Menos ${minimo} Avaliados para Concorrer`}</div></div>`).join('')}</div>
+      <div class="card fs"><h4>Como é Calculado</h4>
+        <div class="regra">1. <b>Nota do Colaborador no Mês</b> = ${Math.round(PESO_TAREFAS * 100)}% da Média das Funções + ${Math.round(PESO_COMPORT * 100)}% da Média dos Comportamentos (Definido em Cadastros › Geral), Usando as Semanas do Mês.</div>
+        <div class="regra">2. <b>Nota da Equipe</b> = Média Simples das Notas dos Colaboradores da Equipe Que Foram Avaliados no Mês. Quem Não Teve Nota Não Entra na Conta.</div>
+        <div class="regra">3. <b>Equipe do Mês</b> = Maior Nota entre as Equipes com o Mínimo de Avaliados. Membros São os da Aba Cadastros › Equipes do App.</div></div>`;
+    $('mes').onchange = (e) => { mes = +e.target.value; desenhar(); };
+    $('min').onchange = (e) => { minimo = +e.target.value; desenhar(); };
+    $('pdf').onclick = () => { const t = document.title; document.title = 'Equipe do Mês - ' + MESES[mes] + ' ' + ANO; setTimeout(() => { print(); document.title = t; }, 100); };
+  }
+
+  // Entrada
+  eu = await quemSouEu();
+  montarMenu('equipe.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.includes(eu.papel)) $('aviso').textContent = 'A Equipe do Mês é Só para Gestor, Administrativo e Consultor.';
+  else {
+    fz = eu.fazenda.id;
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    const { data: fzd } = await supabase.from('fazendas').select('peso_tarefas').eq('id', fz).maybeSingle();
+    if (fzd?.peso_tarefas != null) { PESO_TAREFAS = fzd.peso_tarefas / 100; PESO_COMPORT = 1 - PESO_TAREFAS; }
+    await carregar();
+  }
+
+  // 📊 Excel da Equipe do Mês: ranking das equipes e a nota de cada colaborador
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-xls]'); if (!b || !ultimo) return; b.disabled = true;
+    const { R, campea } = ultimo, n = (v) => v == null ? '' : { v: +(+v).toFixed(2), z: '0.00' };
+    const ranking = [['Posição', 'Equipe', 'Nota do Mês', 'Mês Anterior', 'Avaliados', 'Membros', 'Situação'].map(v => ({ v })),
+      ...R.map((r, i) => [r.valida && r.nota != null ? (i + 1) + 'º' : 'Fora da Disputa', tc(r.q.nome), n(r.nota), n(r.antes), { v: r.avaliados }, { v: r.lista.length }, r === campea ? '🏆 Equipe do Mês' : r.valida ? '' : 'Poucos Avaliados'])];
+    const pessoasL = [['Equipe', 'Colaborador', 'Cargo', 'Líder', 'Nota do Mês', 'Mês Anterior'].map(v => ({ v })),
+      ...R.flatMap(r => r.lista.map(x => [tc(r.q.nome), tc(x.p.apelido), tc(x.p.cargo || ''), x.p.id === r.q.lider_id ? 'Sim' : '', n(x.nota), n(x.antes)]))];
+    import('./excel.js').then(m => m.exportarExcel({ titulo: 'Equipe do Mês - ' + MESES[mes] + ' ' + ANO, semTabelas: true,
+      extras: [{ nome: 'Ranking das Equipes', linhas: ranking }, { nome: 'Notas dos Colaboradores', linhas: pessoasL }] })).catch(er => alert(er.message)).finally(() => { b.disabled = false; }); });
+</script>
+</body>
+</html>

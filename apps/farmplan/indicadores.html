@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<!-- FARM PLAN · Gesta'Up · Indicadores do Mês -->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Indicadores · Farm Plan</title>
+  <link rel="icon" href="symbol.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    .grp-t{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);margin:6px 0 8px}
+    .inds{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-bottom:16px}
+    .ind{padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-height:178px}
+    .ind h4{margin:0;font-size:14px;font-weight:700}
+    .ind .u{font-size:12px;color:var(--muted);margin-top:-4px}
+    .ind .v{font-family:var(--fd);font-size:28px;font-weight:700;line-height:1.1}
+    .ind .val{font-family:var(--fd);font-weight:700;font-size:24px;padding:6px 10px;width:100%}
+    .ind .val:placeholder-shown{font-size:14px;font-weight:500}
+    .ind .bt{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--ink2)}
+    .ind .auto{font-size:11.5px;color:var(--s3);font-weight:700}
+    .ano td,.ano th{text-align:center;white-space:nowrap} .ano td:first-child,.ano th:first-child{text-align:left}
+    .cel{display:inline-block;min-width:46px;border-radius:6px;padding:2px 6px;font-weight:700;font-size:12.5px}
+    .f1{background:var(--s2-soft);color:var(--s2)} .f2{background:var(--s5-soft);color:var(--s5)} .f3{background:var(--s4-soft);color:var(--s4)} .f0{color:var(--muted)}
+    .ed td{padding:4px 6px} .ed .in{padding:6px 8px}
+    @media print{@page{size:A4 landscape;margin:8mm}.side,.mtop,.acts,.filters,.noprint,.faixa-ano{display:none!important}.shell{display:block}.main{padding:0!important}.card{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}.scroll{overflow:visible}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="lg"><img src="logo.png" alt="Gesta'Up Company"></div><div><b>Farm Plan</b><span>Gesta'Up · Gestão 360°</span></div></div>
+    <div class="farm">Fazenda<b id="nomeFazenda">—</b></div>
+    <nav class="nav" id="menu"></nav>
+    <div class="me"><div class="av" id="iniciais">—</div><div><b id="meuNome">—</b><span id="meuPapel"></span></div><button id="sair">Sair</button></div>
+  </aside>
+  <div class="main">
+    <div class="mtop"><b><img src="icon-192.png" alt="">Farm Plan</b><select id="mnav"><option value="indicadores.html" selected>Indicadores</option><option value="painel.html">Painel</option></select></div>
+    <div id="aviso" class="empty">Carregando…</div>
+    <section id="tela" class="escondido"></section>
+    <div id="modal"></div>
+  </div>
+</div>
+<script type="module">
+  import { supabase, INDICADORES_CATALOGO, ANO, ANO_HOJE, SEMANAS_NO_ANO, PAPEL, MESES, MESES_LONGO, tc, esc, semanaDe, inicioDaSemana, quemSouEu, buscarTudo, montarMenu, nf, media } from './comum.js';
+  const $ = (id) => document.getElementById(id);
+  const PODE = ['consultor', 'gestor', 'administrativo'];
+  const W_HOJE = semanaDe(new Date());
+  const mesDa = (w) => new Date(inicioDaSemana(w).getTime() + 3 * 864e5).getMonth();
+  const semanasDoMes = (m) => { const r = []; for (let w = 1; w <= SEMANAS_NO_ANO; w++) if (mesDa(w) === m && (ANO < ANO_HOJE || w <= W_HOJE)) r.push(w); return r; };
+  let pessoas = [], eu, fz, podeEditar = false, PESO_T = 0.7, IND = [], VAL = {}, plano = [], itens = [], notas = {};
+  let mes = ANO === ANO_HOJE ? mesDa(Math.max(1, Math.min(SEMANAS_NO_ANO, W_HOJE))) : ANO < ANO_HOJE ? 11 : 0;
+
+  function aviso(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+  $('sair').onclick = async () => { await supabase.auth.signOut(); location.href = 'index.html'; };
+  const numIn = (s) => { s = String(s ?? '').trim(); if (!s) return null; if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); const n = parseFloat(s); return isNaN(n) ? NaN : n; };
+  const numOut = (v) => v == null ? '' : String(v).replace('.', ',');
+
+  async function carregar() {
+    let [ind, val, pl, it, av, ps] = await Promise.all([
+      buscarTudo(() => supabase.from('indicadores').select('*').eq('fazenda_id', fz).order('ordem')).catch(() => null),
+      buscarTudo(() => supabase.from('indicador_valores').select('indicador_id, mes, valor').eq('fazenda_id', fz).eq('ano', ANO)).catch(() => []),
+      buscarTudo(() => supabase.from('planejamento').select('semana, status').eq('fazenda_id', fz).eq('ano', ANO)),
+      buscarTudo(() => supabase.from('contrato_itens').select('id, pessoa_id, tipo').eq('fazenda_id', fz).eq('ativo', true)).catch(() => []),
+      buscarTudo(() => supabase.from('avaliacoes').select('item_id, semana, nota, nsa').eq('fazenda_id', fz).eq('ano', ANO)).catch(() => []),
+      buscarTudo(() => supabase.from('pessoas').select('id, apelido').eq('fazenda_id', fz)).catch(() => [])
+    ]);
+    if (ind === null) { $('aviso').textContent = 'Falta Rodar o SQL 018_indicadores.sql no Supabase.'; return; }
+    // Primeira vez: cria os 12 indicadores da planilha
+    if (!ind.length && podeEditar) {
+      const { data, error } = await supabase.from('indicadores').insert(INDICADORES_CATALOGO.filter(p => p.padrao).map((p, i) => ({ fazenda_id: fz, ordem: i, nome: p.nome, unidade: p.unidade, grupo: p.grupo, descricao: p.descricao, direcao: p.direcao, verde: p.verde, vermelho: p.vermelho, casas: p.casas, auto: p.auto, ativo: true }))).select();
+      if (error) return aviso('Erro ao Criar os Indicadores: ' + error.message);
+      ind = (data || []).sort((a, b) => a.ordem - b.ordem);
+    }
+    IND = ind; plano = pl; itens = it; pessoas = ps || [];
+    VAL = {}; val.forEach(v => VAL[v.indicador_id + '|' + v.mes] = +v.valor);
+    notas = {}; av.forEach(x => { if (!x.nsa && x.nota != null) notas[x.item_id + '|' + x.semana] = +x.nota; });
+    $('aviso').classList.add('escondido'); $('tela').classList.remove('escondido');
+    desenhar();
+  }
+
+  // ---------- Valores ----------
+  function escoreDoMes(m) {   // média das notas dos colaboradores no mês (mesmo cálculo da Equipe do Mês)
+    const ws = semanasDoMes(m); if (!ws.length) return null;
+    const pessoas = [...new Set(itens.map(i => i.pessoa_id))];
+    return media(pessoas.map(pid => {
+      const bloco = (tipo) => media(itens.filter(i => i.pessoa_id === pid && i.tipo === tipo).map(i => media(ws.map(w => notas[i.id + '|' + w]).filter(v => v != null))).filter(v => v != null));
+      const t = bloco('tarefa'), c = bloco('comportamento');
+      return t == null ? c : c == null ? t : t * PESO_T + c * (1 - PESO_T);
+    }).filter(v => v != null));
+  }
+  function atividadesDoMes(m) {   // % das semanas planejadas no mês que ficaram Concluídas
+    const ws = new Set(semanasDoMes(m)); if (!ws.size) return null;
+    const L = plano.filter(p => ws.has(p.semana)); return L.length ? L.filter(p => p.status === 2).length / L.length * 100 : null;
+  }
+  const valor = (d, m) => d.auto === 'escore' ? escoreDoMes(m) : d.auto === 'atividades' ? atividadesDoMes(m) : (VAL[d.id + '|' + (m + 1)] ?? null);
+  const farol = (d, v) => { if (v == null || d.verde == null || d.vermelho == null) return 0; const g = +d.verde, r = +d.vermelho;
+    return d.direcao === 'up' ? (v >= g ? 1 : v < r ? 3 : 2) : (v <= g ? 1 : v >= r ? 3 : 2); };
+  const metaTxt = (d) => d.verde == null ? 'Sem Meta' : (d.direcao === 'up' ? 'A Partir de ' : 'Até ') + nf(+d.verde, d.casas);
+  const FAROL = ['<span class="pill p1">Sem Lançamento</span>', '<span class="pill p2">Dentro da Meta</span>', '<span class="pill p5">Zona de Atenção</span>', '<span class="pill p4">Fora da Meta</span>'];
+  const COR = ['var(--ink)', 'var(--s2)', 'var(--s5)', 'var(--s4)'];
+  const fmt = (d, v) => v == null ? '—' : nf(v, d.casas) + (d.auto === 'atividades' ? '%' : '');
+
+  // Gráfico dos faróis mês a mês (mesmo padrão do Plano Mensal)
+  function graficoFarol(A) {
+    if (!A.length) return '';
+    const C = [[0, 'Sem Lançamento', 'var(--empty)'], [3, 'Fora da Meta', 'var(--s4)'], [2, 'em Atenção', 'var(--s5)'], [1, 'Dentro da Meta', 'var(--s2)']];
+    const ms = MESES.map((_, m) => { const n = { 0: 0, 1: 0, 2: 0, 3: 0 }; A.forEach(d => n[farol(d, valor(d, m))]++); return n; });
+    return `<div class="card gs"><div class="gs-h"><h3>Faróis por Mês</h3><small>${A.length} Indicadores · Número = Dentro da Meta</small>
+      <span class="legend">${[...C].reverse().map(([, l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join('')}</span><small class="gs-d">Clique no Mês para Abrir</small></div>
+      <div class="months" style="grid-template-columns:repeat(12,minmax(0,1fr))">${ms.map((n, m) => `<button data-im="${m}" class="${m === mes ? 'on' : ''}" title="${MESES_LONGO[m]}: ${n[1]} Dentro da Meta · ${n[2]} em Atenção · ${n[3]} Fora da Meta · ${n[0]} Sem Lançamento">
+        <span class="mb">${C.filter(([k]) => k && n[k]).map(([k, , c]) => `<i style="height:${n[k] / A.length * 100}%;background:${c}"></i>`).join('')}</span><span class="gs-r"><b>${MESES[m]}</b> ${n[1]}</span></button>`).join('')}</div></div>`;
+  }
+
+  function desenhar() {
+    const A = IND.filter(d => d.ativo), fs = A.map(d => farol(d, valor(d, mes))), c = (k) => fs.filter(x => x === k).length;
+    $('tela').innerHTML = `
+      <div class="phead"><div><h1>Indicadores do Mês · ${MESES_LONGO[mes]} ${ANO}</h1><div class="resumo">
+          <span class="rc">📊 <b>${A.length}</b> Indicadores</span>
+          <span class="rc rm">✅ <b>${c(1)}</b> Dentro da Meta</span>
+          <span class="rc rf">⚠️ <b>${c(2)}</b> em Atenção</span>
+          <span class="rc ratr">🔴 <b>${c(3)}</b> Fora da Meta</span>
+          <span class="rc">📝 <b>${c(0)}</b> Sem Lançamento</span>
+          <span class="rc ra">📅 ${ANO === ANO_HOJE && mes === new Date().getMonth() ? `<b>${MESES_LONGO[mes]}</b> · Mês Atual` : `<b>${MESES_LONGO[mes]}</b> ${ANO}`}</span></div></div>
+        <div class="acts"><button class="btn" data-im="${mes - 1}" ${mes === 0 ? 'disabled' : ''}>‹ Mês Anterior</button><button class="btn" data-im="${mes + 1}" ${mes === 11 ? 'disabled' : ''}>Próximo ›</button>
+          <button class="btn dark" id="pdf">📄 Gerar PDF do Mês</button><button class="btn" data-xls="1">📊 Excel</button>
+          ${podeEditar ? '<a class="btn" href="cadastros.html?aba=indicadores" style="text-decoration:none">⚙ Cadastro de Indicadores</a>' : ''}</div></div>
+      ${graficoFarol(A)}
+      <div class="sub" style="font-size:12px;margin:-4px 0 10px">Mini-Gráfico de Cada Indicador = Últimos 6 Meses${podeEditar ? ' · Digite o Resultado e Tecle Enter' : ''}</div>
+      ${[...new Set(A.map(d => d.grupo || 'Outros'))].map(g => `<h3 class="grp-t">${esc(tc(g))}</h3><div class="inds">${A.map((d, i) => (d.grupo || 'Outros') !== g ? '' : (() => { const v = valor(d, mes), f = fs[i];
+        const hist = []; for (let k = Math.max(0, mes - 5); k <= mes; k++) hist.push(valor(d, k)); const hv = hist.filter(x => x != null), mx = Math.max(...hv, 0.0001);
+        const resp = pessoas.find(p => p.id === d.responsavel_id);
+        return `<div class="card ind" title="${esc(d.descricao || '')}"><h4>${esc(tc(d.nome))}</h4><div class="u">${esc(d.unidade || '')}${resp ? ' · 👤 ' + esc(tc(resp.apelido)) : ''}</div>
+          ${d.auto ? `<b class="v num" style="color:${COR[f]}">${fmt(d, v)}</b><span class="auto">⚡ Calculado pelo Sistema</span>`
+            : podeEditar ? `<input class="in val num" data-val="${d.id}" inputmode="decimal" value="${numOut(v)}" placeholder="Lançar Resultado" style="color:${COR[f]}">`
+            : `<b class="v num" style="color:${COR[f]}">${fmt(d, v)}</b>`}
+          ${hv.length > 1 ? `<svg viewBox="0 0 120 26" style="width:120px;height:26px">${hist.map((x, k) => x == null ? '' : `<rect x="${k * 20 + 2}" y="${24 - x / mx * 22}" width="14" height="${Math.max(1, x / mx * 22)}" rx="2" fill="${k === hist.length - 1 ? 'var(--navy)' : 'var(--s1)'}"/>`).join('')}</svg>` : ''}
+          <div class="bt"><span>Meta: ${metaTxt(d)}</span>${FAROL[f]}</div></div>`; })()).join('')}</div>`).join('') || '<div class="card empty">Nenhum Indicador Marcado. Escolha Quais Aparecem em Cadastros › Indicadores.</div>'}
+      <div class="card"><div class="cardh"><h3>Ano ${ANO} Completo</h3><small>Verde = Dentro da Meta · Amarelo = Atenção · Vermelho = Fora</small></div>
+        <div class="scroll"><table class="tbl ano"><thead><tr><th>Indicador</th>${MESES.map((n, i) => `<th style="${i === mes ? 'color:var(--navy)' : ''}">${n}</th>`).join('')}</tr></thead><tbody>
+        ${A.map(d => `<tr><td><b>${esc(tc(d.nome))}</b><div class="sub" style="font-size:11.5px">${esc(d.unidade || '')} · Meta ${metaTxt(d)}</div></td>
+          ${MESES.map((_, m) => { const v = valor(d, m); return `<td style="${m === mes ? 'background:var(--navy-soft)' : ''}"><span class="cel f${farol(d, v)}">${fmt(d, v)}</span></td>`; }).join('')}</tr>`).join('')}
+        </tbody></table></div></div>`;
+    $('pdf').onclick = () => { const t = document.title; document.title = 'Indicadores do Mês - ' + MESES_LONGO[mes] + ' ' + ANO; setTimeout(() => { print(); document.title = t; }, 100); };
+  }
+
+  $('tela').addEventListener('click', (e) => { const b = e.target.closest('[data-im]'); if (!b || b.disabled) return; mes = Math.max(0, Math.min(11, +b.dataset.im)); desenhar(); });
+
+  // Lançar o resultado do mês (Enter ou sair do campo)
+  $('tela').addEventListener('change', async (e) => {
+    const id = e.target.dataset.val; if (!id) return;
+    const v = numIn(e.target.value); if (Number.isNaN(v)) return aviso('Digite um Número');
+    const k = id + '|' + (mes + 1);
+    const r = v == null ? await supabase.from('indicador_valores').delete().eq('indicador_id', id).eq('ano', ANO).eq('mes', mes + 1)
+      : await supabase.from('indicador_valores').upsert({ indicador_id: id, fazenda_id: fz, ano: ANO, mes: mes + 1, valor: v }, { onConflict: 'indicador_id,ano,mes' });
+    if (r.error) return aviso('Não Foi Possível Salvar: ' + r.error.message);
+    if (v == null) delete VAL[k]; else VAL[k] = v;
+    desenhar(); aviso(v == null ? 'Resultado Apagado' : 'Resultado Lançado');
+  });
+  $('tela').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.dataset.val) e.target.blur(); });
+
+  // Entrada
+  eu = await quemSouEu();
+  montarMenu('indicadores.html');
+  if (!eu) location.href = 'index.html';
+  else if (!eu.fazenda || !PODE.concat('lider').includes(eu.papel)) $('aviso').textContent = 'Os Indicadores São para Gestor, Administrativo, Consultor e Líderes.';
+  else {
+    fz = eu.fazenda.id; podeEditar = PODE.includes(eu.papel);
+    $('nomeFazenda').textContent = tc(eu.fazenda.nome).replace(/^Fazenda /, '');
+    const { data: eup } = await supabase.from('pessoas').select('apelido').eq('user_id', eu.user.id).maybeSingle();
+    const nome = tc(eup?.apelido || eu.user.email.split('@')[0].split('+').pop());
+    $('meuNome').textContent = nome; $('meuPapel').textContent = PAPEL[eu.papel] || '';
+    $('iniciais').textContent = nome.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    const { data: fzd } = await supabase.from('fazendas').select('peso_tarefas').eq('id', fz).maybeSingle();
+    if (fzd?.peso_tarefas != null) PESO_T = fzd.peso_tarefas / 100;
+    await carregar();
+  }
+
+  // 📊 Excel do relatório (o mesmo conteúdo do PDF, com números de verdade)
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-xls]'); if (!b) return; b.disabled = true; const txt = b.textContent; b.textContent = 'Montando…';
+    import('./excel.js').then(m => m.exportarExcel({ titulo: (document.querySelector('#tela h1, h1')?.textContent || document.title).trim() })).catch(er => alert(er.message)).finally(() => { b.disabled = false; b.textContent = txt; }); });
+</script>
+</body>
+</html>
