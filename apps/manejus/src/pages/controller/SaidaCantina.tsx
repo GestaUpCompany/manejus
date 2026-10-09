@@ -39,7 +39,7 @@ interface RegistroAlimentacao {
   deleted_at?: string
 }
 
-export function RegistrosAlimentacao() {
+export function SaidaCantina() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [registros, setRegistros] = useState<RegistroAlimentacao[]>([])
@@ -117,7 +117,7 @@ export function RegistrosAlimentacao() {
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Alimentação</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Saída da Cantina</h2>
       </div>
 
       <FilterToolbar

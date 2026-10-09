@@ -72,7 +72,7 @@ export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
   morte: 'Morte',
   clima: 'Clima',
   abastecimento: 'Abastecimento',
-  cantina: 'Alimentação',
+  cantina: 'Saída Cantina',
   limpeza: 'Limpeza',
   'operacoes-maquinas': 'Operações de Máquinas',
   almoxarifado: 'Almoxarifado',

@@ -92,8 +92,8 @@ const RegistrosClima = laz(() => import('./pages/controller/RegistrosClima'), 'R
 const RegistrosClimaDetalhes = laz(() => import('./pages/controller/RegistrosClimaDetalhes'), 'RegistrosClimaDetalhes')
 const RegistrosAbastecimento = laz(() => import('./pages/controller/RegistrosAbastecimento'), 'RegistrosAbastecimento')
 const RegistrosAbastecimentoDetalhes = laz(() => import('./pages/controller/RegistrosAbastecimentoDetalhes'), 'RegistrosAbastecimentoDetalhes')
-const RegistrosAlimentacao = laz(() => import('./pages/controller/RegistrosAlimentacao'), 'RegistrosAlimentacao')
-const RegistrosAlimentacaoDetalhes = laz(() => import('./pages/controller/RegistrosAlimentacaoDetalhes'), 'RegistrosAlimentacaoDetalhes')
+const SaidaCantina = laz(() => import('./pages/controller/SaidaCantina'), 'SaidaCantina')
+const RegistrosSaidaCantinaDetalhes = laz(() => import('./pages/controller/RegistrosSaidaCantinaDetalhes'), 'RegistrosSaidaCantinaDetalhes')
 const RegistrosLimpeza = laz(() => import('./pages/controller/RegistrosLimpeza'), 'RegistrosLimpeza')
 const RegistrosLimpezaDetalhes = laz(() => import('./pages/controller/RegistrosLimpezaDetalhes'), 'RegistrosLimpezaDetalhes')
 const RegistrosOperacoesMaquinas = laz(() => import('./pages/controller/RegistrosOperacoesMaquinas'), 'RegistrosOperacoesMaquinas')
@@ -898,7 +898,7 @@ function App() {
             element={
               <ControllerRoute>
                 <ControllerLayout>
-                  <RegistrosAlimentacao />
+                  <SaidaCantina />
                 </ControllerLayout>
               </ControllerRoute>
             }
@@ -908,7 +908,7 @@ function App() {
             element={
               <ControllerRoute>
                 <ControllerLayout>
-                  <RegistrosAlimentacaoDetalhes />
+                  <RegistrosSaidaCantinaDetalhes />
                 </ControllerLayout>
               </ControllerRoute>
             }
