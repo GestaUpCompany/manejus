@@ -1,5 +1,21 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Chibata: itens de Produção Fábrica que não chegaram ao banco, restaurados (2026-10-09)
+
+Fazenda Chibata (`d3965505-74d5-4af7-9858-f773d2e8aab3`, produção). Formulações com saldo negativo (E/A Engorda TIP 1,8%, Ração 0,5% Seca REP., SAL UREADO) porque cabeçalhos de `registros_saida_insumos` chegaram ao banco sem todos os itens (`saida_insumos_itens`), e o crédito de `producao` nasce do item (`trg_saida_insumos_itens_mov`).
+
+**Causa**: no fluxo antigo do PWA, os itens eram gravados no IndexedDB um a um depois do cabeçalho, com `idSaida` igual ao id LOCAL. Quando o cabeçalho sincronizava, só os itens já gravados recebiam o UUID do servidor; os demais eram enviados com id local, falhavam e saíam da fila sem retry (a lista do PWA, que lê o IndexedDB, continuava mostrando tudo). Somaram-se os timeouts 57014 (ver "Itens de Produção Fábrica perdidos", repo do PWA, 07/10). Uma hipótese inicial de "insumos deixados em branco pelo peão" foi descartada: os valores do aparelho (capturas de tela) somam o `total_produzido` de cada registro.
+
+**Ações (via MCP, sem arquivo de migration)**:
+- 08/10: 8 registros (4 parciais, 4 sem itens) excluídos com backup em `backup.chibata_saida_20261008_{cab,itens,movs,saldos}` (itens apagados por DELETE para o trigger reverter as movimentações; cabeçalhos com `deleted_at`).
+- 09/10: restaurados 5 cabeçalhos (`deleted_at = NULL`) e inseridos 30 itens (9 do backup com os mesmos `id`/`local_id` + 21 novos) com as quantidades do aparelho do Jefferson: 25/09 Ração `47f80feb`, 28/09 Ração `f3fbbb51`, 29/09 PROTEINADO `9133f533`, 02/10 TIP `5764c4a6`, 03/10 TIP `c29dba87`. Snapshot de saldos antes: `backup.chibata_saida_20261009_saldos_pre`. Verificado: 6 itens e 12 movimentações ativas por registro, `data` das movimentações igual à `data_producao`, variação dos saldos igual à soma dos itens (TIP +7.854, Ração +6.958, PROTEINADO +2.018 kg) e `estoque_atual` das formulações igual à soma das movimentações.
+- Pendentes: SAL UREADO 02/10 (`5d2978ad`, 300 kg) e PROTEINADO 28/09 (`88010c16`) e 06/10 (`754242b9`), 3.660 kg cada, do aparelho do Carlos: excluídos em 08/10, aguardam as quantidades do aparelho dele. Confirmar com o Carlos se os dois PROTEINADO foram duas produções reais.
+- FARELO DE ALGODÃO ficou com saldo negativo (-3.920,6 kg) após os débitos restaurados; investigar entrada/ajuste faltante.
+
+**Reverter**: itens e cabeçalhos originais estão nas tabelas de backup acima.
+
+**Disparador**: quando mencionar itens de Produção Fábrica faltando, `saida_insumos_itens` parcial, saldo negativo de formulação na Chibata, ou os backups `backup.chibata_saida_*`, ler esta seção.
+
 ## Editar e excluir saída de cantina, com estoque corrigido pelo trigger (2026-10-09)
 
 Telas renomeadas: `RegistrosAlimentacao` virou `SaidaCantina` (lista, título "Caderneta de Saída da Cantina", card "Saída Cantina") e `RegistrosAlimentacaoDetalhes` virou `RegistrosSaidaCantinaDetalhes`. A rota continua `/controller/cadernetas/alimentacao`. A lista ainda mostra também os registros `modo='entrada'` (que têm tela própria em Entrada Cantina).
