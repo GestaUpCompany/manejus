@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Enfermaria: ID manejo gravado e exibido (2026-10-09)
+
+`registros_enfermaria` ganhou a coluna `id_manejo` (migration `20261009150000_enfermaria_id_manejo.sql`, aplicada com `db push`): antes só brinco e chip eram gravados e o animal identificado só por manejo ficava sem ID. O PWA passa a enviar o campo (e também `individuo_id`). No Painel: ID Manejo na lista (cartão e busca), no detalhe e na exportação. Registros antigos têm `id_manejo` nulo.
+
 ## Bebedouros: foto principal do PWA no checklist não distorce o relatório (2026-10-09)
 
 O PWA passou a gravar a foto principal do bebedouro em `registros_bebedouros.checklist.foto_bebedouro` (`{ valor: true, observacao: '', foto_url }`), inclusive em fazenda sem checklist ativo, onde o checklist antes era `null` (`registros_bebedouros` não tem coluna `foto_url`).
