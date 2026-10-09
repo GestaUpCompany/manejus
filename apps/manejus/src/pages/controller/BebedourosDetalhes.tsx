@@ -32,6 +32,8 @@ interface RegistroBebedouros {
     espacamento_bebedouro_ideal?: ChecklistItem
     boia_protecao_boas_condicoes?: ChecklistItem
     limpou_hoje?: ChecklistItem
+    // Foto principal do registro (evidência do bebedouro), gravada pelo PWA dentro do checklist
+    foto_bebedouro?: ChecklistItem
   }
   sync_status?: string
   created_at: string
@@ -227,9 +229,30 @@ export function BebedourosDetalhes() {
                 {registro!.checklist?.aterro_acesso_bebedouro_ideal?.observacao && <DetailField label="Obs. Aterro" value={registro!.checklist.aterro_acesso_bebedouro_ideal.observacao} />}
                 {registro!.checklist?.espacamento_bebedouro_ideal?.observacao && <DetailField label="Obs. Espaçamento" value={registro!.checklist.espacamento_bebedouro_ideal.observacao} />}
                 {registro!.checklist?.boia_protecao_boas_condicoes?.observacao && <DetailField label="Obs. Boia" value={registro!.checklist.boia_protecao_boas_condicoes.observacao} />}
+                {registro!.checklist?.foto_bebedouro?.foto_url && (
+                  <div>
+                    <p className="text-xs font-medium text-content-muted uppercase tracking-wider mb-2">
+                      Foto do bebedouro
+                    </p>
+                    <a
+                      href={registro!.checklist.foto_bebedouro.foto_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-32"
+                    >
+                      <img
+                        src={registro!.checklist.foto_bebedouro.foto_url}
+                        alt="Foto do bebedouro"
+                        className="w-full h-24 object-cover rounded-lg border border-border-base"
+                        loading="lazy"
+                      />
+                    </a>
+                  </div>
+                )}
                 {(() => {
+                  // Só fotos de problemas do checklist; a foto principal tem bloco próprio acima
                   const itensComFoto = Object.entries(registro!.checklist ?? {}).filter(
-                    ([, item]) => item?.foto_url,
+                    ([campo, item]) => campo !== 'foto_bebedouro' && item?.foto_url,
                   )
                   if (itensComFoto.length === 0) return null
                   return (

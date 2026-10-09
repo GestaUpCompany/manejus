@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Bebedouros: foto principal do PWA no checklist não distorce o relatório (2026-10-09)
+
+O PWA passou a gravar a foto principal do bebedouro em `registros_bebedouros.checklist.foto_bebedouro` (`{ valor: true, observacao: '', foto_url }`), inclusive em fazenda sem checklist ativo, onde o checklist antes era `null` (`registros_bebedouros` não tem coluna `foto_url`).
+
+**Relatório** (`features/relatorioBebedouros/calculos.ts`, `calcularChecklist`): "com checklist" agora exige ao menos uma chave de `CHECKLIST_ITEMS`. Antes qualquer chave contava, e um registro só com a foto inflava "Registros com checklist" e diluía os percentuais do ranking e do KPI de negativos (mesmo cálculo no relatório geral e no relatório público). Teste novo em `calculos.test.ts`.
+
+**Detalhes do registro** (`BebedourosDetalhes.tsx`): a foto principal tem bloco próprio "Foto do bebedouro". Ela saiu de "Fotos dos problemas", onde aparecia com a legenda crua `foto_bebedouro`.
+
 ## Editar e excluir saída de cantina, com estoque corrigido pelo trigger (2026-10-09)
 
 Telas renomeadas: `RegistrosAlimentacao` virou `SaidaCantina` (lista, título "Caderneta de Saída da Cantina", card "Saída Cantina") e `RegistrosAlimentacaoDetalhes` virou `RegistrosSaidaCantinaDetalhes`. A rota continua `/controller/cadernetas/alimentacao`. A lista ainda mostra também os registros `modo='entrada'` (que têm tela própria em Entrada Cantina).
