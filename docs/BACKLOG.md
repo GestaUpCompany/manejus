@@ -2,6 +2,16 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
+## Sanidade dos indivíduos (desenho pronto, adiada em 2026-10-08)
+
+**Decisão**: o responsável pulou a sanidade da Fase 4 de Indivíduos; a Reprodução vem primeiro. **Desenho completo e preservado** em `docs/PLANO_INDIVIDUOS_FASE4_SANIDADE_REPRODUCAO.md` (modelo `aplicacoes_sanitarias` por animal ou lote, colunas de carência e intervalo em `medicamentos`, view do histórico unificado, aba Sanidade na ficha, manejo em lote, alerta `CARENCIA_ATIVA` na OS de abate, sub-fases S1 e S2).
+
+**Fatos de 08/10/2026 que valem para quando retomar**: catálogo `medicamentos` com 143 itens e sem carência/validade; só 15 registros em `registros_enfermaria` no banco todo (4 com `individuo_id`), com `medicamentos` e `diagnosticos` em JSON; só 9 medicamentos do tipo Vacina, em 1 fazenda; 5 fazendas sem nenhum indivíduo cadastrado (por isso o alvo da aplicação precisa aceitar lote com `numero_cabecas`).
+
+**Dependência**: a ficha sanitária só fica completa quando o PWA enviar `individuo_id` na Enfermaria (1 linha em `syncService.ts` do PWA) e a Morte passar a usar `AnimalIdentifier`. Ambos também adiados.
+
+**Disparadores**: "sanidade", "vacina", "carência", "aplicação sanitária", `aplicacoes_sanitarias`, `CARENCIA_ATIVA`.
+
 ## Almoxarifado: débitos da auditoria de 2026-10-07
 
 - **Pendência por nome digitado**: `quem_pegou` é texto livre; troca de nome ou grafia gera pendência órfã. Ideal: guardar `funcionario_id` no registro e agrupar por ele.
