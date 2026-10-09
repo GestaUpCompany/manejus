@@ -25,7 +25,8 @@ export const REPORT_REGISTRY = {
   },
   morte: {
     title: 'Relatório de Mortalidade',
-    render: (dados) => renderMorteHtml(dados, { incluirMapa: true }),
+    // Mapa desligado no infográfico: WebGL por software (swiftshader) estourava os 2 GB da função (Hobby).
+    render: (dados) => renderMorteHtml(dados, { incluirMapa: false }),
     hasData: (dados) => (dados.linhas?.length ?? 0) > 0,
   },
   rodeio: {
