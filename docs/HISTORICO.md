@@ -12,6 +12,22 @@ O PWA passou a gravar a foto principal do bebedouro em `registros_bebedouros.che
 
 **Detalhes do registro** (`BebedourosDetalhes.tsx`): a foto principal tem bloco próprio "Foto do bebedouro". Ela saiu de "Fotos dos problemas", onde aparecia com a legenda crua `foto_bebedouro`.
 
+## Chibata: itens de Produção Fábrica que não chegaram ao banco, restaurados (2026-10-09)
+
+Fazenda Chibata (`d3965505-74d5-4af7-9858-f773d2e8aab3`, produção). Formulações com saldo negativo (E/A Engorda TIP 1,8%, Ração 0,5% Seca REP., SAL UREADO) porque cabeçalhos de `registros_saida_insumos` chegaram ao banco sem todos os itens (`saida_insumos_itens`), e o crédito de `producao` nasce do item (`trg_saida_insumos_itens_mov`).
+
+**Causa**: no fluxo antigo do PWA, os itens eram gravados no IndexedDB um a um depois do cabeçalho, com `idSaida` igual ao id LOCAL. Quando o cabeçalho sincronizava, só os itens já gravados recebiam o UUID do servidor; os demais eram enviados com id local, falhavam e saíam da fila sem retry (a lista do PWA, que lê o IndexedDB, continuava mostrando tudo). Somaram-se os timeouts 57014 (ver "Itens de Produção Fábrica perdidos", repo do PWA, 07/10). Uma hipótese inicial de "insumos deixados em branco pelo peão" foi descartada: os valores do aparelho (capturas de tela) somam o `total_produzido` de cada registro.
+
+**Ações (via MCP, sem arquivo de migration)**:
+- 08/10: 8 registros (4 parciais, 4 sem itens) excluídos com backup em `backup.chibata_saida_20261008_{cab,itens,movs,saldos}` (itens apagados por DELETE para o trigger reverter as movimentações; cabeçalhos com `deleted_at`).
+- 09/10: restaurados 5 cabeçalhos (`deleted_at = NULL`) e inseridos 30 itens (9 do backup com os mesmos `id`/`local_id` + 21 novos) com as quantidades do aparelho do Jefferson: 25/09 Ração `47f80feb`, 28/09 Ração `f3fbbb51`, 29/09 PROTEINADO `9133f533`, 02/10 TIP `5764c4a6`, 03/10 TIP `c29dba87`. Snapshot de saldos antes: `backup.chibata_saida_20261009_saldos_pre`. Verificado: 6 itens e 12 movimentações ativas por registro, `data` das movimentações igual à `data_producao`, variação dos saldos igual à soma dos itens (TIP +7.854, Ração +6.958, PROTEINADO +2.018 kg) e `estoque_atual` das formulações igual à soma das movimentações.
+- Pendentes: SAL UREADO 02/10 (`5d2978ad`, 300 kg) e PROTEINADO 28/09 (`88010c16`) e 06/10 (`754242b9`), 3.660 kg cada, do aparelho do Carlos: excluídos em 08/10, aguardam as quantidades do aparelho dele. Confirmar com o Carlos se os dois PROTEINADO foram duas produções reais.
+- FARELO DE ALGODÃO ficou com saldo negativo (-3.920,6 kg) após os débitos restaurados; investigar entrada/ajuste faltante.
+
+**Reverter**: itens e cabeçalhos originais estão nas tabelas de backup acima.
+
+**Disparador**: quando mencionar itens de Produção Fábrica faltando, `saida_insumos_itens` parcial, saldo negativo de formulação na Chibata, ou os backups `backup.chibata_saida_*`, ler esta seção.
+
 ## Editar e excluir saída de cantina, com estoque corrigido pelo trigger (2026-10-09)
 
 Telas renomeadas: `RegistrosAlimentacao` virou `SaidaCantina` (lista, título "Caderneta de Saída da Cantina", card "Saída Cantina") e `RegistrosAlimentacaoDetalhes` virou `RegistrosSaidaCantinaDetalhes`. A rota continua `/controller/cadernetas/alimentacao`. A lista ainda mostra também os registros `modo='entrada'` (que têm tela própria em Entrada Cantina).
@@ -2068,3 +2084,15 @@ Migration `20261002190000_dashboard_stats_novas_cadernetas.sql` (aplicada via `d
 Atenção: `movimentacoes_combustivel` não tem `deleted_at` nem `nome_usuario` — não filtrar por essas colunas. Arquivos `LeituraCocho.tsx`/`RegistrosCantina*.tsx` pré-existentes continuam não roteados (a caderneta nova usa `RegistrosLeituraCocho`).
 
 Disparador: quando mencionar "telas do PWA no painel", "cadernetas novas", "comunicado de transferência", "carregamento vagão", "entrada de insumos", ler esta seção.
+
+### Lançamento de Tratos: cabeças na data da folha — adicionado em 2026-10-09
+
+Problema: em data retroativa a folha mostrava "sem cabeças ativas" para lotes que ocupavam o curral na data mas foram esvaziados depois (ex.: fazenda d8900758, lotes DM saíram em 06/10 às 16h; `quant_atual` = 0 hoje). `quantidadeCabecas` usava o saldo atual.
+
+Correção (só front, sem migration): `apps/manejus/src/services/saldoCabecasNaData.ts` reconstitui o saldo desfazendo, a partir do `quant_atual`, as movimentações (`registros_movimentacao`) e mortes (`registros_morte`) do início do dia em diante, com a mesma classificação de `calculate_quant_atual`. Valor usado = maior entre o saldo no início e no fim do dia, por categoria (quem saiu à tarde foi tratado de manhã). Limites: não cobre `registros_maternidade` (bezerro ao pé) e considera só categorias hoje ativas (`ativo=true`, `data_fim` nulo); se a regra do SQL mudar, ajustar o espelho. Validado: testes unitários (8) e conferência de leitura na fazenda de testes (Lote A: saldo ao fim de 25/09 = 125 pelo banco e pela reconstituição).
+
+Complemento (2026-10-09): a dieta da folha também passou a ser o plano nutricional vigente na data (`planoVigenteNaData`: `data_inicio` até a data e `data_fim` nula com `ativo`, ou `data_fim` >= data), em vez do plano ativo de hoje. Lotes sem nenhum plano (ex.: DM 2/6 08/07 e DM 1/4- 03/06 na fazenda d8900758) continuam com o aviso "sem dieta ativa", que é dado real.
+
+Ajuste (2026-10-09): o saldo na data passou a considerar as categorias vigentes em cada instante (`created_at`/`data_fim`), não só as ativas hoje; lotes recategorizados no próprio dia (ex.: Canastra 1 e 2, TIP 16/18, fazenda d8900758, "boi magro" encerrada em 06/10 às 16h01) voltam a mostrar as cabeças que tinham. O total é por instante (início e fim do dia), então a recategorização não conta o gado duas vezes. Substitui a limitação "só categorias hoje ativas" da entrada acima.
+
+Avisos da folha (2026-10-09): pendências de cadastro (sem plano/sem cabeças) de lotes cuja ocupação já terminou (`lote_curral_historico.data_final` preenchida) saem do alerta amarelo e vão para um bloco recolhido, sem destaque; o alerta amarelo fica só com o que ainda é corrigível (ocupação aberta ou sem lote vinculado). Os textos informam que valem para a data selecionada e não bloqueiam o lançamento.

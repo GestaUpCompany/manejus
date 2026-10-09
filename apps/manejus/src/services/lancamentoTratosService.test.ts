@@ -1,5 +1,26 @@
 import { describe, expect, it } from 'vitest'
-import { calcularTratosDoDia, limparReaisLancamento, validarLancamentosTratos, type LancamentoTratoLinha } from './lancamentoTratosService'
+import { calcularTratosDoDia, limparReaisLancamento, planoVigenteNaData, validarLancamentosTratos, type LancamentoTratoLinha } from './lancamentoTratosService'
+
+describe('planoVigenteNaData', () => {
+  const base = { lote_id: 'l', ativo: true, data_inicio: '2026-07-08', data_fim: null }
+
+  it('vale a partir da data de início e enquanto estiver ativo', () => {
+    expect(planoVigenteNaData(base, '2026-10-06')).toBe(true)
+    expect(planoVigenteNaData(base, '2026-07-08')).toBe(true)
+    expect(planoVigenteNaData(base, '2026-07-07')).toBe(false)
+  })
+
+  it('plano encerrado depois da data ainda vale nela', () => {
+    const encerrado = { ...base, ativo: false, data_fim: '2026-10-08' }
+    expect(planoVigenteNaData(encerrado, '2026-10-06')).toBe(true)
+    expect(planoVigenteNaData(encerrado, '2026-10-08')).toBe(true)
+    expect(planoVigenteNaData(encerrado, '2026-10-09')).toBe(false)
+  })
+
+  it('plano inativo sem data_fim não vale', () => {
+    expect(planoVigenteNaData({ ...base, ativo: false }, '2026-10-06')).toBe(false)
+  })
+})
 
 const percentuais = [
   { ordem_trato: 1, percentual: 30, horario_sugerido: '07:00' },
