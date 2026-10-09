@@ -12,6 +12,7 @@ interface RegistroEnfermaria {
   dispositivo_id?: string
   nome_usuario?: string
   data: string
+  id_manejo?: string
   brinco?: string
   chip?: string
   lote?: string
@@ -106,6 +107,7 @@ export function EnfermariaDetalhes() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <DetailField label="Data" value={formatDate(registro!.data)} />
                 <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
+                <DetailField label="ID Manejo" value={formatValue(registro!.id_manejo)} />
                 <DetailField label="Brinco" value={formatValue(registro!.brinco)} />
                 <DetailField label="Chip" value={formatValue(registro!.chip)} />
               </div>
