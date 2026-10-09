@@ -2072,3 +2072,15 @@ Migration `20261002190000_dashboard_stats_novas_cadernetas.sql` (aplicada via `d
 Atenção: `movimentacoes_combustivel` não tem `deleted_at` nem `nome_usuario` — não filtrar por essas colunas. Arquivos `LeituraCocho.tsx`/`RegistrosCantina*.tsx` pré-existentes continuam não roteados (a caderneta nova usa `RegistrosLeituraCocho`).
 
 Disparador: quando mencionar "telas do PWA no painel", "cadernetas novas", "comunicado de transferência", "carregamento vagão", "entrada de insumos", ler esta seção.
+
+### Lançamento de Tratos: cabeças na data da folha — adicionado em 2026-10-09
+
+Problema: em data retroativa a folha mostrava "sem cabeças ativas" para lotes que ocupavam o curral na data mas foram esvaziados depois (ex.: fazenda d8900758, lotes DM saíram em 06/10 às 16h; `quant_atual` = 0 hoje). `quantidadeCabecas` usava o saldo atual.
+
+Correção (só front, sem migration): `apps/manejus/src/services/saldoCabecasNaData.ts` reconstitui o saldo desfazendo, a partir do `quant_atual`, as movimentações (`registros_movimentacao`) e mortes (`registros_morte`) do início do dia em diante, com a mesma classificação de `calculate_quant_atual`. Valor usado = maior entre o saldo no início e no fim do dia, por categoria (quem saiu à tarde foi tratado de manhã). Limites: não cobre `registros_maternidade` (bezerro ao pé) e considera só categorias hoje ativas (`ativo=true`, `data_fim` nulo); se a regra do SQL mudar, ajustar o espelho. Validado: testes unitários (8) e conferência de leitura na fazenda de testes (Lote A: saldo ao fim de 25/09 = 125 pelo banco e pela reconstituição).
+
+Complemento (2026-10-09): a dieta da folha também passou a ser o plano nutricional vigente na data (`planoVigenteNaData`: `data_inicio` até a data e `data_fim` nula com `ativo`, ou `data_fim` >= data), em vez do plano ativo de hoje. Lotes sem nenhum plano (ex.: DM 2/6 08/07 e DM 1/4- 03/06 na fazenda d8900758) continuam com o aviso "sem dieta ativa", que é dado real.
+
+Ajuste (2026-10-09): o saldo na data passou a considerar as categorias vigentes em cada instante (`created_at`/`data_fim`), não só as ativas hoje; lotes recategorizados no próprio dia (ex.: Canastra 1 e 2, TIP 16/18, fazenda d8900758, "boi magro" encerrada em 06/10 às 16h01) voltam a mostrar as cabeças que tinham. O total é por instante (início e fim do dia), então a recategorização não conta o gado duas vezes. Substitui a limitação "só categorias hoje ativas" da entrada acima.
+
+Avisos da folha (2026-10-09): pendências de cadastro (sem plano/sem cabeças) de lotes cuja ocupação já terminou (`lote_curral_historico.data_final` preenchida) saem do alerta amarelo e vão para um bloco recolhido, sem destaque; o alerta amarelo fica só com o que ainda é corrigível (ocupação aberta ou sem lote vinculado). Os textos informam que valem para a data selecionada e não bloqueiam o lançamento.

@@ -1,6 +1,7 @@
 import { supabase } from '@gestaup/supabase'
 import { SISTEMA_POR_TIPO, type TipoProgramacao } from './programacaoTratosService'
 import { getDayBoundsInTimezone, toFarmDateOnly } from '@gestaup/shared'
+import { cabecasNoDia, type MovimentacaoSaldo, type MorteSaldo } from './saldoCabecasNaData'
 
 export interface LancamentoTratoLinha {
   curralId: string
@@ -9,6 +10,8 @@ export interface LancamentoTratoLinha {
   linhaNome: string | null
   loteId: string | null
   loteNome: string
+  // Ocupação do curral já terminada (lote saiu): pendências de cadastro não são mais corrigíveis aqui.
+  ocupacaoEncerrada?: boolean
   dietaNome: string | null
   quantidadeCabecas: number | null
   pesoVivoKg: number | null
@@ -54,6 +57,22 @@ interface LeituraCocho {
   data: string
   leitura_cocho: number | null
   nota_config_id: string | null
+}
+
+export interface PlanoNutricional {
+  lote_id: string | null
+  ativo: boolean | null
+  data_inicio: string | null
+  data_fim: string | null
+  formulacoes?: { nome: string | null } | null
+}
+
+// Plano em vigor na data da folha (YYYY-MM-DD): começou até a data e ainda não
+// tinha terminado. Sem data_fim, vale enquanto estiver ativo.
+export function planoVigenteNaData(plano: PlanoNutricional, data: string): boolean {
+  if (plano.data_inicio && plano.data_inicio.slice(0, 10) > data) return false
+  if (plano.data_fim) return plano.data_fim.slice(0, 10) >= data
+  return plano.ativo === true
 }
 
 function numero(value: unknown): number | null {
@@ -170,7 +189,7 @@ export async function carregarLancamentoTratos(
       .order('ordem_trato'),
     supabase
       .from('lote_curral_historico')
-      .select('id, curral_id, lote_id, data_inicial, kg_mn_dia_dia1, lotes(id, nome, sistema_producao)')
+      .select('id, curral_id, lote_id, data_inicial, data_final, kg_mn_dia_dia1, lotes(id, nome, sistema_producao)')
       .eq('fazenda_id', fazendaId)
       .lte('data_inicial', data)
       .or(`data_final.is.null,data_final.gte.${data}`),
@@ -205,20 +224,28 @@ export async function carregarLancamentoTratos(
 
   const loteIds = ocupacoes.map((o) => o.lote_id).filter(Boolean)
   const boundsDia = getDayBoundsInTimezone(data)
-  const [categoriasResult, planosResult, leiturasResult, registrosDiaResult, registrosAnterioresResult] = await Promise.all([
+  const listaLotes = loteIds.join(',')
+  const [categoriasResult, planosResult, leiturasResult, registrosDiaResult, registrosAnterioresResult, movimentacoesResult, mortesResult] = await Promise.all([
     loteIds.length > 0
-      ? supabase.from('lote_categorias').select('lote_id, categoria, quant_atual, peso_vivo_atual_kg_cab').in('lote_id', loteIds).eq('ativo', true).is('data_fim', null)
+      ? supabase.from('lote_categorias').select('lote_id, categoria, quant_atual, peso_vivo_atual_kg_cab, ativo, created_at, data_fim').in('lote_id', loteIds).or(`data_fim.is.null,data_fim.gte.${boundsDia.start}`)
       : Promise.resolve({ data: [], error: null } as any),
     loteIds.length > 0
-      ? supabase.from('planos_nutricionais').select('lote_id, formulacao_id, formulacoes(nome)').in('lote_id', loteIds).eq('ativo', true).is('data_fim', null)
+      ? supabase.from('planos_nutricionais').select('lote_id, formulacao_id, ativo, data_inicio, data_fim, formulacoes(nome)').in('lote_id', loteIds).order('data_inicio', { ascending: false })
       : Promise.resolve({ data: [], error: null } as any),
     loteIds.length > 0
       ? supabase.from('registros_leitura_cocho').select('lote_id, data, leitura_cocho, nota_config_id').eq('fazenda_id', fazendaId).in('lote_id', loteIds).is('deleted_at', null).order('data', { ascending: false })
       : Promise.resolve({ data: [], error: null } as any),
     supabase.from('registros_oferta_trato').select('id, curral_id, lote_id, data, ordem_trato, kg_planejado, kg_ofertado_real').eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', boundsDia.start).lt('data', boundsDia.end).order('ordem_trato'),
     supabase.from('registros_oferta_trato').select('id, curral_id, lote_id, data, ordem_trato, kg_planejado, kg_ofertado_real').eq('fazenda_id', fazendaId).is('deleted_at', null).lt('data', boundsDia.start).order('data', { ascending: false }),
+    // Eventos do início do dia em diante: permitem reconstituir o saldo de cabeças na data.
+    loteIds.length > 0
+      ? supabase.from('registros_movimentacao').select('data, lote_origem_id, lote_destino_id, categoria, numero_cabecas, motivo_movimentacao, tipo_saida, tipo_entrada, subtipo').or(`lote_origem_id.in.(${listaLotes}),lote_destino_id.in.(${listaLotes})`).gte('data', boundsDia.start).is('deleted_at', null)
+      : Promise.resolve({ data: [], error: null } as any),
+    loteIds.length > 0
+      ? supabase.from('registros_morte').select('data, lote_id, categoria').in('lote_id', loteIds).gte('data', boundsDia.start).is('deleted_at', null)
+      : Promise.resolve({ data: [], error: null } as any),
   ])
-  for (const result of [categoriasResult, planosResult, leiturasResult, registrosDiaResult, registrosAnterioresResult]) {
+  for (const result of [categoriasResult, planosResult, leiturasResult, registrosDiaResult, registrosAnterioresResult, movimentacoesResult, mortesResult]) {
     if (result.error) throw result.error
   }
 
@@ -229,9 +256,11 @@ export async function carregarLancamentoTratos(
     lista.push(categoria)
     categoriasPorLote.set(categoria.lote_id, lista)
   }
-  const planosPorLote = new Map<string, string>()
-  for (const plano of (planosResult.data || []) as any[]) {
-    if (plano.lote_id && !planosPorLote.has(plano.lote_id)) planosPorLote.set(plano.lote_id, plano.formulacoes?.nome || null)
+  const planosPorLote = new Map<string, string | null>()
+  for (const plano of (planosResult.data || []) as PlanoNutricional[]) {
+    if (plano.lote_id && !planosPorLote.has(plano.lote_id) && planoVigenteNaData(plano, data)) {
+      planosPorLote.set(plano.lote_id, plano.formulacoes?.nome || null)
+    }
   }
   const leituras = ultimaLeituraPorLote((leiturasResult.data || []) as LeituraCocho[], data)
   const ajustesResult = await supabase.from('notas_leitura_cocho_config').select('nota, percentual_ajuste').eq('fazenda_id', fazendaId)
@@ -253,8 +282,15 @@ export async function carregarLancamentoTratos(
     const loteId = ocupacao.lote_id
     const lote = ocupacao.lotes
     const categorias = categoriasPorLote.get(loteId || '') || []
-    const quantidadeCabecas = categorias.reduce((sum, item) => sum + (Number(item.quant_atual) || 0), 0)
-    const pesoTotal = categorias.reduce((sum, item) => sum + (Number(item.quant_atual) || 0) * (Number(item.peso_vivo_atual_kg_cab) || 0), 0)
+    // Cabeças na data da folha (não o saldo de hoje): lote esvaziado depois da data ainda conta.
+    const { quantidade: quantidadeCabecas, pesoTotal, categorias: nomesCategorias } = cabecasNoDia({
+      loteId: loteId || '',
+      categorias,
+      movimentacoes: (movimentacoesResult.data || []) as MovimentacaoSaldo[],
+      mortes: (mortesResult.data || []) as MorteSaldo[],
+      inicioDia: boundsDia.start,
+      fimDia: boundsDia.end,
+    })
     const leitura = loteId ? leituras.get(loteId) : undefined
     const ajuste = leitura?.leitura_cocho == null ? null : ajustesPorNota.get(Number(leitura.leitura_cocho)) ?? 0
     const totalAnterior = totalUltimoDiaDaOcupacao(
@@ -279,10 +315,11 @@ export async function carregarLancamentoTratos(
       linhaNome: null,
       loteId,
       loteNome: lote?.nome || 'Sem lote',
+      ocupacaoEncerrada: ocupacao.data_final != null,
       dietaNome: planosPorLote.get(loteId || '') || null,
       quantidadeCabecas: quantidadeCabecas || null,
       pesoVivoKg: quantidadeCabecas > 0 ? pesoTotal / quantidadeCabecas : null,
-      categorias: categorias.map((item) => item.categoria).filter(Boolean).join(', '),
+      categorias: nomesCategorias.join(', '),
       tratoAnteriorKg: totalAnterior,
       leituraDia: leitura?.leitura_cocho == null ? null : Number(leitura.leitura_cocho),
       ajusteLeituraPct: ajuste,

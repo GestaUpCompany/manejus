@@ -265,13 +265,19 @@ export function LancamentoTratos() {
 
   const dados = fazendaId && programacaoId ? { fazendaId, data, tipo, programacaoId, linhas } : null
   const tratosPreenchidos = linhas.reduce((total, linha) => total + linha.tratos.filter((trato) => trato.kgReal !== null).length, 0)
-  const avisos = linhas.flatMap((linha) => {
+  // Lote que já saiu do curral não tem o que corrigir daqui: o aviso vai para um bloco discreto.
+  const avisos: string[] = []
+  const avisosLotesEncerrados: string[] = []
+  for (const linha of linhas) {
     const faltantes: string[] = []
     if (!linha.loteId) faltantes.push('sem lote vinculado')
-    if (!linha.dietaNome) faltantes.push('sem dieta ativa')
-    if (!linha.quantidadeCabecas) faltantes.push('sem cabeças ativas')
-    return faltantes.length ? [`${linha.curralNome} (${linha.loteNome}): ${faltantes.join(', ')}`] : []
-  })
+    if (!linha.dietaNome) faltantes.push('sem plano nutricional vigente nesta data')
+    if (!linha.quantidadeCabecas) faltantes.push('sem cabeças nesta data')
+    if (faltantes.length === 0) continue
+    const texto = `${linha.curralNome} (${linha.loteNome}): ${faltantes.join(', ')}`
+    if (linha.ocupacaoEncerrada && linha.loteId) avisosLotesEncerrados.push(texto)
+    else avisos.push(texto)
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-[1800px] mx-auto">
@@ -303,11 +309,25 @@ export function LancamentoTratos() {
       {success && <div className="rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-700">{success}</div>}
       {!loading && avisos.length > 0 && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-          <p className="font-semibold">Dados incompletos em {avisos.length} curral(is):</p>
+          <p className="font-semibold">Dados incompletos em {avisos.length} curral(is) em {formatarData(data)}:</p>
+          <p className="mt-0.5 text-xs">
+            Os avisos valem para a data selecionada, não para a situação de hoje, e não impedem o lançamento.
+          </p>
           <ul className="mt-1 list-disc pl-5 space-y-0.5">
             {avisos.map((aviso) => <li key={aviso}>{aviso}</li>)}
           </ul>
         </div>
+      )}
+
+      {!loading && avisosLotesEncerrados.length > 0 && (
+        <details className="rounded-lg border border-border-base bg-surface-2 p-3 text-xs text-content-muted">
+          <summary className="cursor-pointer font-medium">
+            {avisosLotesEncerrados.length} curral(is) de lotes que já saíram, com cadastro incompleto em {formatarData(data)} (sem ação necessária)
+          </summary>
+          <ul className="mt-1 list-disc pl-5 space-y-0.5">
+            {avisosLotesEncerrados.map((aviso) => <li key={aviso}>{aviso}</li>)}
+          </ul>
+        </details>
       )}
 
       {!loading && !programacaoId && (
