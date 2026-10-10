@@ -3,7 +3,7 @@ import { useAuth } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import { Card, CardSkeleton } from '@gestaup/ui'
 import { getFazendaIdForUser } from '@gestaup/shared'
-import { useLotes, usePastos } from '@gestaup/shared'
+import { useCurrais, useLotes, usePastos } from '@gestaup/shared'
 
 interface HistoricoItem {
   historico_id: string
@@ -11,6 +11,8 @@ interface HistoricoItem {
   lote_nome: string
   pasto_id?: string
   pasto_nome?: string
+  curral_id?: string
+  curral_nome?: string
   modulo_id?: string
   modulo_nome?: string
   data_hora_entrada: string
@@ -26,7 +28,15 @@ interface HistoricoItem {
   periodo_ocupacao_horas?: number | null
 }
 
-type VisualizacaoTipo = 'pasto' | 'modulo'
+type VisualizacaoTipo = 'pasto' | 'modulo' | 'curral'
+
+// View de histórico por tipo. Curral não tem área útil nem meta: as colunas de taxa (UA/ha), meta e
+// desvio não se aplicam e ficam ocultas nesse modo.
+const VIEW_POR_TIPO: Record<VisualizacaoTipo, string> = {
+  pasto: 'v_historico_ocupacao_pasto',
+  modulo: 'v_historico_ocupacao_modulo',
+  curral: 'v_historico_ocupacao_curral',
+}
 
 export function HistoricoOcupacao() {
   const { user } = useAuth()
@@ -44,11 +54,13 @@ export function HistoricoOcupacao() {
   const [loteSelecionado, setLoteSelecionado] = useState('')
   const [pastoSelecionado, setPastoSelecionado] = useState('')
   const [moduloSelecionado, setModuloSelecionado] = useState('')
+  const [curralSelecionado, setCurralSelecionado] = useState('')
   const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
   const [modulosDisponiveis, setModulosDisponiveis] = useState<{id: string, nome: string}[]>([])
 
   const { data: lotesDisponiveis = [] } = useLotes(fazendaId)
   const { data: pastosDisponiveis = [] } = usePastos(fazendaId)
+  const { data: curraisDisponiveis = [] } = useCurrais(fazendaId)
 
   // Filtros por métricas
   const [taxaLotacaoMin, setTaxaLotacaoMin] = useState('')
@@ -74,7 +86,7 @@ export function HistoricoOcupacao() {
 
   useEffect(() => {
     setPaginaAtual(1)
-  }, [searchTerm, statusFiltro, dataInicio, dataFim, periodoRapido, loteSelecionado, pastoSelecionado, moduloSelecionado, taxaLotacaoMin, taxaLotacaoMax, diasMin, diasMax, tipo])
+  }, [searchTerm, statusFiltro, dataInicio, dataFim, periodoRapido, loteSelecionado, pastoSelecionado, moduloSelecionado, curralSelecionado, taxaLotacaoMin, taxaLotacaoMax, diasMin, diasMax, tipo])
 
   const loadHistorico = async () => {
     if (!user || !fazendaId) return
@@ -97,7 +109,7 @@ export function HistoricoOcupacao() {
       return
     }
 
-    const viewName = tipo === 'pasto' ? 'v_historico_ocupacao_pasto' : 'v_historico_ocupacao_modulo'
+    const viewName = VIEW_POR_TIPO[tipo]
 
     const { data, error } = await supabase
       .from(viewName as any)
@@ -136,7 +148,8 @@ export function HistoricoOcupacao() {
         const busca =
           item.lote_nome.toLowerCase().includes(termoBusca) ||
           (item.pasto_nome?.toLowerCase().includes(termoBusca) ?? false) ||
-          (item.modulo_nome?.toLowerCase().includes(termoBusca) ?? false)
+          (item.modulo_nome?.toLowerCase().includes(termoBusca) ?? false) ||
+          (item.curral_nome?.toLowerCase().includes(termoBusca) ?? false)
         if (!busca) return false
       }
 
@@ -151,6 +164,7 @@ export function HistoricoOcupacao() {
       if (loteSelecionado && item.lote_id !== loteSelecionado) return false
       if (pastoSelecionado && item.pasto_id !== pastoSelecionado) return false
       if (moduloSelecionado && item.modulo_id !== moduloSelecionado) return false
+      if (curralSelecionado && item.curral_id !== curralSelecionado) return false
 
       if (minTaxa != null && (item.taxa_lotacao_ua_ha == null || item.taxa_lotacao_ua_ha < minTaxa)) return false
       if (maxTaxa != null && (item.taxa_lotacao_ua_ha == null || item.taxa_lotacao_ua_ha > maxTaxa)) return false
@@ -159,7 +173,7 @@ export function HistoricoOcupacao() {
 
       return true
     })
-  }, [historico, searchTerm, statusFiltro, dataInicio, dataFim, periodoRapido, loteSelecionado, pastoSelecionado, moduloSelecionado, taxaLotacaoMin, taxaLotacaoMax, diasMin, diasMax])
+  }, [historico, searchTerm, statusFiltro, dataInicio, dataFim, periodoRapido, loteSelecionado, pastoSelecionado, moduloSelecionado, curralSelecionado, taxaLotacaoMin, taxaLotacaoMax, diasMin, diasMax])
 
   const totalPaginas = Math.max(1, Math.ceil(filtrado.length / ITENS_POR_PAGINA))
   const paginaSegura = Math.min(paginaAtual, totalPaginas)
@@ -194,11 +208,22 @@ export function HistoricoOcupacao() {
     setLoteSelecionado('')
     setPastoSelecionado('')
     setModuloSelecionado('')
+    setCurralSelecionado('')
     setTaxaLotacaoMin('')
     setTaxaLotacaoMax('')
     setDiasMin('')
     setDiasMax('')
   }
+
+  // Ao trocar a visão (pasto/módulo/curral), os filtros de entidade e de taxa da visão anterior
+  // não se aplicam à nova (a view não tem essas colunas) e zerariam a lista.
+  useEffect(() => {
+    setPastoSelecionado('')
+    setModuloSelecionado('')
+    setCurralSelecionado('')
+    setTaxaLotacaoMin('')
+    setTaxaLotacaoMax('')
+  }, [tipo])
 
   // Quando período rápido é selecionado, limpar os inputs de data manual
   useEffect(() => {
@@ -213,7 +238,7 @@ export function HistoricoOcupacao() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-content-strong">Histórico de Ocupação</h1>
-          <p className="text-sm text-content-muted mt-1">Entradas e saídas de lotes em pastos e módulos</p>
+          <p className="text-sm text-content-muted mt-1">Entradas e saídas de lotes em pastos, módulos e currais</p>
         </div>
       </div>
 
@@ -239,6 +264,14 @@ export function HistoricoOcupacao() {
                 }`}
               >
                 Por Módulo
+              </button>
+              <button
+                onClick={() => setTipo('curral')}
+                className={`flex-1 sm:flex-none px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  tipo === 'curral' ? 'bg-surface-1 text-primary dark:text-primary-light shadow-sm' : 'text-content-muted'
+                }`}
+              >
+                Por Curral
               </button>
             </div>
 
@@ -312,49 +345,66 @@ export function HistoricoOcupacao() {
                   <option key={l.id} value={l.id}>{l.nome}</option>
                 ))}
               </select>
-              <select
-                value={pastoSelecionado}
-                onChange={(e) => setPastoSelecionado(e.target.value)}
-                className="px-2 py-1.5 border border-surface-3 rounded text-xs w-full sm:w-auto min-w-[120px]"
-              >
-                <option value="">Pasto</option>
-                {pastosDisponiveis.map(p => (
-                  <option key={p.id} value={p.id}>{p.nome}</option>
-                ))}
-              </select>
-              <select
-                value={moduloSelecionado}
-                onChange={(e) => setModuloSelecionado(e.target.value)}
-                className="px-2 py-1.5 border border-surface-3 rounded text-xs w-full sm:w-auto min-w-[120px]"
-              >
-                <option value="">Módulo</option>
-                {modulosDisponiveis.map(m => (
-                  <option key={m.id} value={m.id}>{m.nome}</option>
-                ))}
-              </select>
+              {tipo === 'curral' ? (
+                <select
+                  value={curralSelecionado}
+                  onChange={(e) => setCurralSelecionado(e.target.value)}
+                  className="px-2 py-1.5 border border-surface-3 rounded text-xs w-full sm:w-auto min-w-[120px]"
+                >
+                  <option value="">Curral</option>
+                  {curraisDisponiveis.map(c => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <select
+                    value={pastoSelecionado}
+                    onChange={(e) => setPastoSelecionado(e.target.value)}
+                    className="px-2 py-1.5 border border-surface-3 rounded text-xs w-full sm:w-auto min-w-[120px]"
+                  >
+                    <option value="">Pasto</option>
+                    {pastosDisponiveis.map(p => (
+                      <option key={p.id} value={p.id}>{p.nome}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={moduloSelecionado}
+                    onChange={(e) => setModuloSelecionado(e.target.value)}
+                    className="px-2 py-1.5 border border-surface-3 rounded text-xs w-full sm:w-auto min-w-[120px]"
+                  >
+                    <option value="">Módulo</option>
+                    {modulosDisponiveis.map(m => (
+                      <option key={m.id} value={m.id}>{m.nome}</option>
+                    ))}
+                  </select>
+                </>
+              )}
             </div>
 
             {/* Filtros por métricas */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-surface-2 px-3 py-2 rounded-lg w-full sm:w-auto">
               <span className="text-xs font-medium text-content-muted whitespace-nowrap">Métricas:</span>
-              <div className="flex items-center gap-1 w-full sm:w-auto">
-                <span className="text-xs text-content-muted whitespace-nowrap">UA/ha</span>
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={taxaLotacaoMin}
-                  onChange={(e) => setTaxaLotacaoMin(e.target.value)}
-                  className="w-16 px-2 py-1.5 border border-surface-3 rounded text-xs"
-                />
-                <span className="text-content-faint">-</span>
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={taxaLotacaoMax}
-                  onChange={(e) => setTaxaLotacaoMax(e.target.value)}
-                  className="w-16 px-2 py-1.5 border border-surface-3 rounded text-xs"
-                />
-              </div>
+              {tipo !== 'curral' && (
+                <div className="flex items-center gap-1 w-full sm:w-auto">
+                  <span className="text-xs text-content-muted whitespace-nowrap">UA/ha</span>
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={taxaLotacaoMin}
+                    onChange={(e) => setTaxaLotacaoMin(e.target.value)}
+                    className="w-16 px-2 py-1.5 border border-surface-3 rounded text-xs"
+                  />
+                  <span className="text-content-faint">-</span>
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={taxaLotacaoMax}
+                    onChange={(e) => setTaxaLotacaoMax(e.target.value)}
+                    className="w-16 px-2 py-1.5 border border-surface-3 rounded text-xs"
+                  />
+                </div>
+              )}
               <div className="flex items-center gap-1 w-full sm:w-auto">
                 <span className="text-xs text-content-muted whitespace-nowrap">Dias</span>
                 <input
@@ -396,7 +446,7 @@ export function HistoricoOcupacao() {
       ) : filtrado.length === 0 ? (
         <Card>
           <p className="text-center text-content-muted py-8">
-            {searchTerm || statusFiltro !== 'todos' || dataInicio || dataFim || periodoRapido || loteSelecionado || pastoSelecionado || moduloSelecionado || taxaLotacaoMin || taxaLotacaoMax || diasMin || diasMax ? 'Nenhum registro encontrado com os filtros aplicados' : 'Nenhum histórico de ocupação disponível'}
+            {searchTerm || statusFiltro !== 'todos' || dataInicio || dataFim || periodoRapido || loteSelecionado || pastoSelecionado || moduloSelecionado || curralSelecionado || taxaLotacaoMin || taxaLotacaoMax || diasMin || diasMax ? 'Nenhum registro encontrado com os filtros aplicados' : 'Nenhum histórico de ocupação disponível'}
           </p>
         </Card>
       ) : (
@@ -406,11 +456,9 @@ export function HistoricoOcupacao() {
               <thead>
                 <tr className="bg-surface-2">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">Lote</th>
-                  {tipo === 'pasto' ? (
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">Pasto</th>
-                  ) : (
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">Módulo</th>
-                  )}
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
+                    {tipo === 'pasto' ? 'Pasto' : tipo === 'curral' ? 'Curral' : 'Módulo'}
+                  </th>
                   {tipo === 'pasto' && (
                     <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">Módulo</th>
                   )}
@@ -421,9 +469,13 @@ export function HistoricoOcupacao() {
                   <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Peso Entrada</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Cab. Saída</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Peso Saída</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Meta (dias)</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Desvio (%)</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-primary dark:text-primary-light uppercase tracking-wider">Taxa (UA/ha)</th>
+                  {tipo !== 'curral' && (
+                    <>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Meta (dias)</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-content-muted uppercase tracking-wider">Desvio (%)</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-primary dark:text-primary-light uppercase tracking-wider">Taxa (UA/ha)</th>
+                    </>
+                  )}
                   <th className="px-4 py-3 text-center text-xs font-semibold text-content-muted uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
@@ -431,11 +483,9 @@ export function HistoricoOcupacao() {
                 {itensPaginados.map((item) => (
                   <tr key={item.historico_id} className="hover:bg-surface-2 transition-colors">
                     <td className="px-4 py-3 font-medium text-content-strong whitespace-nowrap">{item.lote_nome}</td>
-                    {tipo === 'pasto' ? (
-                      <td className="px-4 py-3 text-content-muted whitespace-nowrap">{item.pasto_nome || '—'}</td>
-                    ) : (
-                      <td className="px-4 py-3 text-content-muted whitespace-nowrap">{item.modulo_nome || '—'}</td>
-                    )}
+                    <td className="px-4 py-3 text-content-muted whitespace-nowrap">
+                      {(tipo === 'pasto' ? item.pasto_nome : tipo === 'curral' ? item.curral_nome : item.modulo_nome) || '—'}
+                    </td>
                     {tipo === 'pasto' && (
                       <td className="px-4 py-3 text-content-muted text-xs whitespace-nowrap">{item.modulo_nome || '—'}</td>
                     )}
@@ -452,17 +502,21 @@ export function HistoricoOcupacao() {
                     <td className="px-4 py-3 text-right text-content-muted whitespace-nowrap">{formatarPeso(item.peso_vivo_medio_entrada_kg)}</td>
                     <td className="px-4 py-3 text-right text-content-muted whitespace-nowrap">{item.cabecas_saida ?? '—'}</td>
                     <td className="px-4 py-3 text-right text-content-muted whitespace-nowrap">{formatarPeso(item.peso_vivo_medio_saida_kg)}</td>
-                    <td className="px-4 py-3 text-right text-content-muted whitespace-nowrap">{item.meta_intervalo_ocupacao_dias ?? '—'}</td>
-                    <td className={`px-4 py-3 text-right whitespace-nowrap ${getDesvioClass(item.desvio_tempo_ocupacao_percent)}`}>
-                      {item.desvio_tempo_ocupacao_percent != null
-                        ? `${item.desvio_tempo_ocupacao_percent > 0 ? '+' : ''}${item.desvio_tempo_ocupacao_percent.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap font-semibold text-primary dark:text-primary-light">
-                      {item.taxa_lotacao_ua_ha != null
-                        ? item.taxa_lotacao_ua_ha.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                        : '—'}
-                    </td>
+                    {tipo !== 'curral' && (
+                      <>
+                        <td className="px-4 py-3 text-right text-content-muted whitespace-nowrap">{item.meta_intervalo_ocupacao_dias ?? '—'}</td>
+                        <td className={`px-4 py-3 text-right whitespace-nowrap ${getDesvioClass(item.desvio_tempo_ocupacao_percent)}`}>
+                          {item.desvio_tempo_ocupacao_percent != null
+                            ? `${item.desvio_tempo_ocupacao_percent > 0 ? '+' : ''}${item.desvio_tempo_ocupacao_percent.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
+                            : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap font-semibold text-primary dark:text-primary-light">
+                          {item.taxa_lotacao_ua_ha != null
+                            ? item.taxa_lotacao_ua_ha.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            : '—'}
+                        </td>
+                      </>
+                    )}
                     <td className="px-4 py-3 text-center whitespace-nowrap">
                       {item.data_hora_saida == null ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-800 dark:text-green-200">

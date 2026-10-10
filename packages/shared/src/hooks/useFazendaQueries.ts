@@ -57,12 +57,12 @@ export function useCurrais(fazendaId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('currais')
-        .select('id, nome, linha_id, ativo')
+        .select('id, nome, linha_id, ativo, lote_id')
         .eq('fazenda_id', fazendaId!)
         .is('deleted_at', null)
         .order('nome', { ascending: true })
       if (error) throw error
-      return data as { id: string; nome: string; linha_id: string | null; ativo: boolean }[]
+      return data as { id: string; nome: string; linha_id: string | null; ativo: boolean; lote_id: string | null }[]
     },
   })
 }

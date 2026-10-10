@@ -392,10 +392,13 @@ export function Currais() {
       return
     }
 
-    // Alocação em curral vazio usa a RPC atômica (valida sistema do lote,
-    // disponibilidade e grava o feed target). Troca ou remoção de lote segue
-    // pelo update direto: o trigger em currais.lote_id fecha/abre a ocupação.
+    // Curral x lote é 1:1. Alocação em curral vazio (alocar_lote_curral) e troca de lote
+    // em curral ocupado (trocar_lote_curral) usam RPCs atômicas: validam sistema do lote,
+    // fecham a ocupação anterior em D-1 e gravam o feed target. Só a remoção do lote segue
+    // pelo update direto (o trigger em currais.lote_id encerra a ocupação).
     const alocarViaRpc = Boolean(loteIdNovo) && !loteIdAtual
+    const trocarViaRpc = Boolean(loteIdNovo) && Boolean(loteIdAtual) && loteIdNovo !== loteIdAtual
+    const ocuparViaRpc = alocarViaRpc || trocarViaRpc
 
     let error: any = null
     let curralId = editingCurral?.id || ''
@@ -405,7 +408,7 @@ export function Currais() {
         .update({
           nome: curralFormData.nome,
           linha_id: curralFormData.linha_id || null,
-          ...(alocarViaRpc ? {} : { lote_id: loteIdNovo }),
+          ...(ocuparViaRpc ? {} : { lote_id: loteIdNovo }),
         })
         .eq('id', editingCurral.id)
       error = updateError
@@ -424,18 +427,20 @@ export function Currais() {
       curralId = novo?.id || ''
     }
 
-    if (!error && alocarViaRpc && curralId) {
-      const { data: alocRes, error: alocError } = await supabase.rpc('alocar_lote_curral', {
-        p_curral_id: curralId,
-        p_lote_id: loteIdNovo,
-        p_kg_mn_dia_dia1: kgDia1,
-      })
+    if (!error && ocuparViaRpc && curralId) {
+      const { data: alocRes, error: alocError } = await supabase.rpc(
+        alocarViaRpc ? 'alocar_lote_curral' : 'trocar_lote_curral',
+        {
+          p_curral_id: curralId,
+          p_lote_id: loteIdNovo,
+          p_kg_mn_dia_dia1: kgDia1,
+        }
+      )
       if (alocError || !alocRes?.success) {
         error = { message: alocRes?.error || alocError?.message || 'Erro ao alocar lote no curral' }
       }
     } else if (!error && editingCurral && loteIdNovo) {
-      // Lote mantido ou trocado: sincroniza o previsto do dia 1 na ocupação aberta
-      // (a troca já abriu ocupação nova via trigger em currais.lote_id).
+      // Lote mantido: sincroniza o previsto do dia 1 na ocupação aberta.
       const { data: ocup } = await supabase
         .from('lote_curral_historico')
         .select('id, kg_mn_dia_dia1')
@@ -771,11 +776,14 @@ export function Currais() {
                       {editingCurral?.lote_nome || 'Lote atual'}
                     </option>
                   )}
-                  {lotes.map((lote) => (
-                    <option key={lote.id} value={lote.id} disabled={!!lote.pasto_id}>
-                      {lote.nome}{lote.pasto_id ? ' (em pasto)' : ''}
-                    </option>
-                  ))}
+                  {lotes.map((lote) => {
+                    const outroCurral = currais.find((c) => c.lote_id === lote.id && c.id !== editingCurral?.id)
+                    return (
+                      <option key={lote.id} value={lote.id} disabled={!!lote.pasto_id || !!outroCurral}>
+                        {lote.nome}{lote.pasto_id ? ' (em pasto)' : outroCurral ? ` (no ${outroCurral.nome})` : ''}
+                      </option>
+                    )
+                  })}
                 </select>
                 {curralFormData.lote_id && lotes.find(l => l.id === curralFormData.lote_id)?.pasto_id && (
                   <p className="text-xs text-red-500 mt-1">

@@ -945,16 +945,13 @@ export async function fetchFabricaAcompanhamento(
       }
     }
 
-    // Ocupação de cada curral nesta data (maior data_inicial <= data)
-    const ocupPorCurral = new Map<string, any>()
-    for (const o of ocupacoes) {
-      if (o.data_inicial > data) continue
-      if (o.data_final != null && o.data_final < data) continue
-      const atual = ocupPorCurral.get(o.curral_id)
-      if (!atual || o.data_inicial > atual.data_inicial) ocupPorCurral.set(o.curral_id, o)
-    }
+    // Ocupações que cobrem esta data. Curral x lote é 1:1 (constraints lch_sem_sobreposicao_*):
+    // no máximo uma por curral.
+    const ocupDoDia = ocupacoes.filter(
+      (o) => o.data_inicial <= data && (o.data_final == null || o.data_final >= data)
+    )
 
-    for (const o of ocupPorCurral.values()) {
+    for (const o of ocupDoDia) {
       const tipo = TIPO_POR_SISTEMA[(o.lotes as any)?.sistema_producao]
       if (!tipo) continue
       const prog = progPorTipoNoDia.get(tipo)

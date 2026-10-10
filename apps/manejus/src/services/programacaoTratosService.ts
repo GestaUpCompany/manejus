@@ -216,10 +216,10 @@ export async function salvarOrdemCurraisTrato(
 }
 
 /**
- * Resolve as ocupações que cobrem uma data específica: para cada curral, a
- * ocupação de maior data_inicial com data_inicial <= data e
- * (data_final null ou >= data). Troca de lote no mesmo dia resolve para a mais
- * recente.
+ * Resolve as ocupações que cobrem uma data específica: data_inicial <= data e
+ * (data_final null ou >= data). Curral x lote é 1:1 (constraints
+ * lch_sem_sobreposicao_*): cada curral tem no máximo uma ocupação por data, e o dia
+ * da troca pertence ao lote que entra.
  */
 export async function getOcupacoesNaData(
   fazendaId: string,
@@ -234,15 +234,7 @@ export async function getOcupacoesNaData(
 
   if (error || !rows) return []
 
-  const porCurral = new Map<string, any>()
-  for (const row of rows as any[]) {
-    const atual = porCurral.get(row.curral_id)
-    if (!atual || row.data_inicial > atual.data_inicial) {
-      porCurral.set(row.curral_id, row)
-    }
-  }
-
-  return [...porCurral.values()].map((o) => ({
+  return (rows as any[]).map((o) => ({
     ocupacao_id: o.id as string,
     curral_id: o.curral_id as string,
     curral_nome: (o.currais?.nome as string) ?? '—',

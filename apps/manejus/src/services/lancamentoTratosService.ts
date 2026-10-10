@@ -197,16 +197,9 @@ export async function carregarLancamentoTratos(
   if (percentuaisResult.error) throw percentuaisResult.error
   if (ocupacoesResult.error) throw ocupacoesResult.error
 
-  // Participação vem da ocupação do curral na data, não do cronograma:
-  // para cada curral, a ocupação de maior data_inicial que cobre a data.
-  const ocupacaoPorCurral = new Map<string, any>()
-  for (const o of (ocupacoesResult.data || []) as any[]) {
-    const atual = ocupacaoPorCurral.get(o.curral_id)
-    if (!atual || o.data_inicial > atual.data_inicial) {
-      ocupacaoPorCurral.set(o.curral_id, o)
-    }
-  }
-  const ocupacoes = [...ocupacaoPorCurral.values()].filter(
+  // Participação vem da ocupação do curral na data, não do cronograma. Curral x lote é
+  // 1:1 (constraints lch_sem_sobreposicao_*): no máximo uma ocupação por curral cobre a data.
+  const ocupacoes = ((ocupacoesResult.data || []) as any[]).filter(
     (o) => o.lotes?.sistema_producao === SISTEMA_POR_TIPO[tipo]
   )
   if (ocupacoes.length === 0) {

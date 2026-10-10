@@ -1197,25 +1197,29 @@ export function Lotes() {
       }
     }
 
-    // Gerenciar associação do lote com curral. Só desvincula/vincula quando o
-    // curral realmente mudou: cada troca fecha e abre uma ocupação em
-    // lote_curral_historico (dia 1 reinicia por ocupação), então regravar o
-    // mesmo curral destruiria o histórico e o feed target do lote.
+    // Gerenciar associação do lote com curral. Só mexe quando o curral realmente
+    // mudou: cada troca encerra e abre uma ocupação em lote_curral_historico (dia 1
+    // reinicia por ocupação), então regravar o mesmo curral destruiria o histórico e
+    // o feed target do lote. Curral x lote é 1:1: mover_lote_curral libera o curral
+    // anterior e ocupa o novo na mesma transação, e falha se o destino tem outro lote.
     const curralAnterior = editingLote?.curral_id || null
     const curralNovo = isConfinamento ? (formData.curral_id || null) : null
     if (curralAnterior !== curralNovo) {
-      if (curralAnterior) {
-        await supabase.from('currais').update({ lote_id: null }).eq('id', curralAnterior)
-      }
       if (curralNovo) {
-        const { data: alocRes, error: alocError } = await supabase.rpc('alocar_lote_curral', {
-          p_curral_id: curralNovo,
+        const { data: alocRes, error: alocError } = await supabase.rpc('mover_lote_curral', {
           p_lote_id: loteId,
+          p_curral_destino_id: curralNovo,
         })
         if (alocError || !alocRes?.success) {
-          toast.error(`Lote salvo, mas não foi possível alocá-lo no curral: ${alocRes?.error || alocError?.message}`)
+          toast.error(`Lote salvo, mas não foi possível movê-lo para o curral: ${alocRes?.error || alocError?.message}`)
+        }
+      } else if (curralAnterior) {
+        const { error: liberaError } = await supabase.from('currais').update({ lote_id: null }).eq('id', curralAnterior)
+        if (liberaError) {
+          toast.error(`Lote salvo, mas não foi possível liberar o curral anterior: ${liberaError.message}`)
         }
       }
+      queryClient.invalidateQueries({ queryKey: ['currais', fazendaId] })
     }
 
     // Recalculate all categories to ensure calculated fields are up-to-date before saving
@@ -2418,9 +2422,11 @@ export function Lotes() {
                       className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${errors.curral_id ? 'border-red-400' : 'border-border-base'} bg-surface-1 text-content-strong placeholder-content-faint`}
                     >
                       <option value="">Selecione</option>
-                      {currais.map((curral) => (
-                        <option key={curral.id} value={curral.id}>{curral.nome}</option>
-                      ))}
+                      {currais
+                        .filter((curral) => !curral.lote_id || curral.lote_id === editingLote?.id)
+                        .map((curral) => (
+                          <option key={curral.id} value={curral.id}>{curral.nome}</option>
+                        ))}
                     </select>
                   ) : (
                     <select
@@ -3887,7 +3893,8 @@ export function Lotes() {
           }}
           solicitacao={solicitacaoRevisao}
           pastos={pastos}
-          currais={currais}
+          // Curral x lote é 1:1: só currais livres, mais o do próprio lote de origem (transferência total o libera).
+          currais={currais.filter((c) => !c.lote_id || c.lote_id === solicitacaoRevisao.lote_origem_id)}
           usuarioId={user?.id || ''}
           onAprovado={() => {
             loadLotes()
