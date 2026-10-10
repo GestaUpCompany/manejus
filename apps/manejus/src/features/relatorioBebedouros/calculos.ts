@@ -238,7 +238,11 @@ export interface OcorrenciaCalculada {
 }
 
 export function calcularChecklist(registros: RegistroChecklistBase[]) {
-  const comChecklist = registros.filter((r) => r.checklist && Object.keys(r.checklist).length > 0)
+  // "Com checklist" = respondeu algum item do checklist. Chaves que não são item (ex.: foto_bebedouro, a foto
+  // principal do registro que o PWA grava no checklist, inclusive em fazenda sem checklist) não contam.
+  const comChecklist = registros.filter(
+    (r) => r.checklist && CHECKLIST_ITEMS.some((item) => r.checklist![item.key] !== undefined),
+  )
   const ocorrencias: OcorrenciaCalculada[] = comChecklist
     .map((r) => ({
       data: r.data,

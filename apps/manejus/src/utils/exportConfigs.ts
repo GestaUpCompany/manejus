@@ -165,6 +165,7 @@ export const ENFERMARIA_EXPORT_CONFIG: TableExportConfig = {
     { source: 'nome_usuario', header: 'Usuário' },
     { source: 'pasto', header: 'Pasto' },
     { source: 'lote', header: 'Lote' },
+    { source: 'id_manejo', header: 'ID Manejo' },
     { source: 'brinco', header: 'Brinco' },
     { source: 'chip', header: 'Chip' },
     { source: 'categoria', header: 'Categoria' },

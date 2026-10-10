@@ -63,6 +63,18 @@ Fazendas Jacamim (`d8900758-1e41-4855-a55e-17f8e00fea7e`) e Sementes Tropical - 
 
 **Disparador**: quando mencionar sobreposição de ocupação de curral, `lote_curral_historico` duplicado, "troca de lote no mesmo dia", CF- 02, AR-26-03, ou os backups `backup.lch_limpeza_*`, `backup.ptc_limpeza_*`, ler esta seção.
 
+## Enfermaria: ID manejo gravado e exibido (2026-10-09)
+
+`registros_enfermaria` ganhou a coluna `id_manejo` (migration `20261009150000_enfermaria_id_manejo.sql`, aplicada com `db push`): antes só brinco e chip eram gravados e o animal identificado só por manejo ficava sem ID. O PWA passa a enviar o campo (e também `individuo_id`). No Painel: ID Manejo na lista (cartão e busca), no detalhe e na exportação. Registros antigos têm `id_manejo` nulo.
+
+## Bebedouros: foto principal do PWA no checklist não distorce o relatório (2026-10-09)
+
+O PWA passou a gravar a foto principal do bebedouro em `registros_bebedouros.checklist.foto_bebedouro` (`{ valor: true, observacao: '', foto_url }`), inclusive em fazenda sem checklist ativo, onde o checklist antes era `null` (`registros_bebedouros` não tem coluna `foto_url`).
+
+**Relatório** (`features/relatorioBebedouros/calculos.ts`, `calcularChecklist`): "com checklist" agora exige ao menos uma chave de `CHECKLIST_ITEMS`. Antes qualquer chave contava, e um registro só com a foto inflava "Registros com checklist" e diluía os percentuais do ranking e do KPI de negativos (mesmo cálculo no relatório geral e no relatório público). Teste novo em `calculos.test.ts`.
+
+**Detalhes do registro** (`BebedourosDetalhes.tsx`): a foto principal tem bloco próprio "Foto do bebedouro". Ela saiu de "Fotos dos problemas", onde aparecia com a legenda crua `foto_bebedouro`.
+
 ## Chibata: itens de Produção Fábrica que não chegaram ao banco, restaurados (2026-10-09)
 
 Fazenda Chibata (`d3965505-74d5-4af7-9858-f773d2e8aab3`, produção). Formulações com saldo negativo (E/A Engorda TIP 1,8%, Ração 0,5% Seca REP., SAL UREADO) porque cabeçalhos de `registros_saida_insumos` chegaram ao banco sem todos os itens (`saida_insumos_itens`), e o crédito de `producao` nasce do item (`trg_saida_insumos_itens_mov`).

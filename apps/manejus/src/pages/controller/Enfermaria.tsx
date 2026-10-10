@@ -16,6 +16,7 @@ interface RegistroEnfermaria {
   data: string
   pasto?: string
   lote?: string
+  id_manejo?: string
   brinco?: string
   chip?: string
   categoria?: string
@@ -77,6 +78,7 @@ export function Enfermaria() {
 
   const filteredRegistros = registros.filter((registro) => {
     const matchesSearch =
+      (registro.id_manejo && registro.id_manejo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.brinco && registro.brinco.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.chip && registro.chip.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -205,6 +207,10 @@ export function Enfermaria() {
                   <div className="flex justify-between">
                     <span className="text-content-muted">Usuário:</span>
                     <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Manejo:</span>
+                    <span className="text-content-strong font-medium">{registro.id_manejo || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-content-muted">Brinco:</span>

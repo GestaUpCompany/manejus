@@ -116,4 +116,25 @@ describe('calcularChecklist', () => {
     expect(r.kpis).toMatchObject({ comChecklist: 2, negativos: 1, pctNegativos: 50 })
     expect(r.ocorrenciasPorBebedouro).toEqual([{ bebedouro: 'B1', quantidade: 1 }])
   })
+
+  it('registro só com a foto principal (foto_bebedouro) não conta como checklist respondido', () => {
+    const comItens = {
+      data: '2026-03-02',
+      numero_bebedouro: 'B1',
+      responsavel: null,
+      observacao: null,
+      checklist: { agua_suficiente: { valor: false, observacao: 'seco' }, foto_bebedouro: { valor: true, observacao: '' } },
+    }
+    const soFoto = {
+      data: '2026-03-03',
+      numero_bebedouro: 'B2',
+      responsavel: null,
+      observacao: null,
+      checklist: { foto_bebedouro: { valor: true, observacao: '' } },
+    }
+    const r = calcularChecklist([comItens, soFoto])
+    expect(r.kpis).toMatchObject({ totalRegistros: 2, comChecklist: 1, negativos: 1, pctNegativos: 100 })
+    expect(r.ranking.find((x) => x.key === 'agua_suficiente')).toMatchObject({ negativos: 1, total: 1, pctNegativo: 100 })
+    expect(r.ocorrenciasPorBebedouro).toEqual([{ bebedouro: 'B1', quantidade: 1 }])
+  })
 })
