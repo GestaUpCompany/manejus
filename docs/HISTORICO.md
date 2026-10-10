@@ -5,7 +5,7 @@
 - Curral: saída = currais com lote (lote derivado de `currais.lote_id`, só Confinamento/TIP/Sequestro); entrada = só currais livres e ativos; contagem por categoria, escores e equipe como no pasto. Sem foto/GPS e sem checklist de avaliação geral (itens de pasto).
 - IndexedDB 32→33 com store `curral`; sync `curral → registros_curral` (upsert por `local_id`); após criar, o PWA relê a linha e guarda `movimentacaoStatus/Erro` (selo "Troca aplicada/recusada" em `/caderneta/curral/lista`).
 - Testado em localhost na fazenda de testes: troca ENS-C1→ENS-C2→ENS-C3 aplicada, histórico com hora, registro com `movimentacao_status = aplicada`; migração 33 confirmada; pasto sem regressão; rascunhos separados.
-- Achado fora do escopo: `registros_pastagens.equipe_nomes` está nulo em 50/50 registros recentes (o mapeador lê `equipeNomes`, o payload envia `equipe_nomes`). Curral já lê os dois.
+- Corrigido: `registros_pastagens.equipe_nomes` (mapeador lia só `equipeNomes`). Teste completo em 2026-10-10: pasto P10→P30 (contado Sim, checklist, equipe gravada) e curral D1→Curral 7 (68 de 70 cabeças, histórico com cabeças/peso). Curral cujo lote está inativo/não carrega é bloqueado com mensagem. Pendente: lote ativo de sistema fora de Confinamento/TIP/Sequestro dentro de curral não testado (não há na fazenda de testes); P20 tem 2 lotes na fazenda de testes e a tela de pasto usa só o primeiro.
 
 ## Curral × lote 1:1 imposto no banco, Fase 1 (2026-10-10)
 
