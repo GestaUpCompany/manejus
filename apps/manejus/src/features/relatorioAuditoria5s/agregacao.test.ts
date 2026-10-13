@@ -32,6 +32,27 @@ describe('resultadoRegistro', () => {
     expect(r.secoes.every((s) => s.percentual === 100)).toBe(true)
   })
 
+  it('NA (não se aplica) fica fora do percentual e é contado à parte', () => {
+    const base = itens(['limpeza_1'])
+    const r = resultadoRegistro(reg({ itens: { ...base, utilizacao_1: 'NA', utilizacao_2: 'NA' } }))
+    expect(r).toMatchObject({ conformes: 22, naoConformes: 1, naoAplicaveis: 2 })
+    expect(r.percentual).toBe(95.65) // 22 / 23
+    expect(r.secoes[0]).toMatchObject({ id: 'utilizacao', conformes: 3, naoAplicaveis: 2, percentual: 100 })
+  })
+
+  it('pilar todo NA não tem percentual e não derruba o geral', () => {
+    const todosNaLimpeza = Object.fromEntries(chaves.map((c) => [c, c.startsWith('limpeza') ? 'NA' : 'C']))
+    const r = resultadoRegistro(reg({ itens: todosNaLimpeza }))
+    expect(r.secoes.find((s) => s.id === 'limpeza')?.percentual).toBeNull()
+    expect(r.percentual).toBe(100)
+  })
+
+  it('NA não entra no ranking de itens não conformes nem no total de respondidos', () => {
+    const ranking = rankingItens([reg({ itens: { ...itens(), utilizacao_1: 'NA' } }), reg({ itens: itens(['utilizacao_1']) })])
+    expect(ranking).toHaveLength(1)
+    expect(ranking[0]).toMatchObject({ chave: 'utilizacao_1', naoConformes: 1, respondidos: 1, percentualNaoConforme: 100 })
+  })
+
   it('itens nulos não geram percentual', () => {
     expect(resultadoRegistro({ itens: null }).percentual).toBeNull()
   })

@@ -483,6 +483,10 @@ export const AUDITORIA_5S_EXPORT_CONFIG: TableExportConfig = {
     { source: 'percentual_conformidade', header: 'Conformidade (%)', format: 'number' },
     { source: 'total_conformes', header: 'Itens C', format: 'number' },
     { source: 'total_nao_conformes', header: 'Itens N', format: 'number' },
+    { source: 'itens', header: 'Itens Não se aplica (–)', format: 'number', transform: (value) => {
+      if (!value || typeof value !== 'object') return 0
+      return Object.values(value).filter((v) => v === 'NA').length
+    }},
     { source: 'itens', header: 'Itens não conformes', transform: (value) => {
       if (!value || typeof value !== 'object') return ''
       return SECOES_5S.flatMap((s) => s.itens.filter((i) => value[i.chave] === 'N').map((i) => `${s.titulo}: ${i.negativa}`)).join(' | ')

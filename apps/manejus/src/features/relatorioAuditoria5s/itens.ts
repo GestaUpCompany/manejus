@@ -1,5 +1,5 @@
 // Cópia dos itens da Auditoria 5S do PWA (frontend/src/utils/auditoria5sItens.ts).
-// A chave é o que fica gravado em registros_auditoria_5s.itens; ao mudar a lista, atualize os dois repos.
+// A chave é o que fica gravado em registros_auditoria_5s.itens ('C' | 'N' | 'NA'); ao mudar a lista, atualize os dois repos.
 
 export interface Item5S {
   chave: string
