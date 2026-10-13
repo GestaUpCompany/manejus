@@ -2,6 +2,16 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
+## Policies de escrita abertas (`true`) em ~30 tabelas: isolamento por fazenda incompleto (achado em 2026-10-08)
+
+**Achado (auditoria de `pg_policies`)**: qualquer usuário logado, de qualquer fazenda, pode INSERT/UPDATE/DELETE (e SELECT) nas tabelas abaixo; a RLS está ligada, mas a policy é `true`. Isso quebra o isolamento entre fazendas e faz a RLS **não ser um limite suficiente** para o canal de teste (por isso a trava em código em `packages/shared/src/guardrail`).
+- **Escrita por `anon` (sem login), prioridade máxima:** `rotinas` (SELECT/INSERT/UPDATE/DELETE), `plano_categoria_personalizacao` (policy `ALL` para `public`), `currais` (INSERT), `logs_sync_errors` (INSERT, provavelmente intencional para o PWA).
+- **Escrita por qualquer `authenticated`:** `funcionarios`, `fornecedores` (INSERT), `pluviometros`, `locais`, `causas_morte`, `maquinas_veiculos`, `implementos`, `currais`, `tratamentos`, `medicamentos`, `mineral`, `proteinado`, `racao`, `bebedouros`, `checklist_regras`, `frigorificos`, `setores`, `racas` (INSERT), `funcionario_setores`, `linhas_confinamento`, `vagoes`, `registros_fabrica_confinamento` e `_insumos`, `pasto_bebedouros`, `lote_categorias_transicoes`, `faixas_categorias`.
+- **Leitura aberta (decidir se é intencional):** `bebedouros`, `checklist_regras`, `grupos_fazenda` (`public`), `precos_categorias` (`anon`).
+- **47 funções `SECURITY DEFINER` executáveis por usuário logado sem guarda aparente** (regex em `pg_get_functiondef`): muitas são leituras de relatório, mas revisar as de escrita, em especial `vision_atualizar_payload`, `vision_atualizar_relatorio`, `vision_excluir_relatorio`, `set_audit_context`, `autenticar_peao_app`, `guard_super_admin`.
+**Como corrigir**: continuar a Fase B de isolamento (lotes 2a catálogos, 2b estrutura da fazenda, 2c pessoas, 3 fábrica/históricos, 4 varredura final) no padrão `is_admin_user() OR caller_has_fazenda_access(fazenda_id)`, `TO authenticated`, `REVOKE ALL FROM anon`. Atenção ao PWA: o peão lê/escreve várias dessas tabelas por `auth.uid()`; policy restritiva demais gera selects vazios em campo sem erro (conferir `syncService.ts` e o papel `peao` antes de cada lote).
+**Disparadores**: "policy true", "isolamento por fazenda", "RLS aberta", "Fase B", `rotinas`, `plano_categoria_personalizacao`.
+
 ## Sanidade dos indivíduos (desenho pronto, adiada em 2026-10-08)
 
 **Decisão**: o responsável pulou a sanidade da Fase 4 de Indivíduos; a Reprodução vem primeiro. **Desenho completo e preservado** em `docs/PLANO_INDIVIDUOS_FASE4_SANIDADE_REPRODUCAO.md` (modelo `aplicacoes_sanitarias` por animal ou lote, colunas de carência e intervalo em `medicamentos`, view do histórico unificado, aba Sanidade na ficha, manejo em lote, alerta `CARENCIA_ATIVA` na OS de abate, sub-fases S1 e S2).
@@ -166,3 +176,8 @@ O que a tela/seção deve cobrir:
 Fonte de dados já existe: `programacao_tratos` (sem filtro `ativo`) + `programacao_tratos_percentuais` + join opcional em `registros_oferta_trato`. Sem migration necessária.
 
 Disparador: quando mencionar "tela de versões", "histórico de versões do cronograma", "visualizar versões de tratos", ou editar versão futura/não-vigente, ler esta seção.
+
+## Idade das categorias: pendências (2026-10-13)
+- `transferir_lote_entre_fazendas` deve copiar `idade_data_ref` junto com `idade` (hoje a cópia reinicia a data-base).
+- Validar `data_pesagem` absurda (ex.: `0001-01-01`, `0026-09-29`) na origem (painel/PWA) e no trigger `trg_lote_categorias_idade_ref`.
+- Cron duplicado: jobs `update-peso-vivo-daily` (04:00 UTC) e `update-dados-lotes` (03:00 UTC) chamam `update_dados_lotes()`; manter só um.
