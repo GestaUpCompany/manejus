@@ -345,7 +345,7 @@ export function Auditoria5s() {
             <table className="min-w-full divide-y divide-border-base">
               <thead className="bg-surface-2">
                 <tr>
-                  {['Data', 'Setor', 'Responsável', 'Conformidade', 'C', 'N'].map((h) => (
+                  {['Data', 'Setor', 'Responsável', 'Conformidade', 'C', 'N', '–'].map((h) => (
                     <th key={h} className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                       {h}
                     </th>
@@ -369,6 +369,7 @@ export function Auditoria5s() {
                       </td>
                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{res.conformes}</td>
                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{res.naoConformes}</td>
+                      <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{res.naoAplicaveis}</td>
                     </tr>
                   )
                 })}

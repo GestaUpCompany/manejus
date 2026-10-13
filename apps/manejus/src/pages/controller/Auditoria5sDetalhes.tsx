@@ -77,10 +77,11 @@ export function Auditoria5sDetalhes() {
             </DetailSection>
 
             <DetailSection title="Resultado" highlighted>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <DetailField label="Conformidade" value={textoPercentual(resultado!.percentual)} />
                 <DetailField label="Itens conformes (C)" value={String(resultado!.conformes)} />
                 <DetailField label="Itens não conformes (N)" value={String(resultado!.naoConformes)} />
+                <DetailField label="Não se aplica (–)" value={String(resultado!.naoAplicaveis)} />
               </div>
             </DetailSection>
 
@@ -98,6 +99,7 @@ export function Auditoria5sDetalhes() {
                             {i + 1}) {item.texto}
                           </span>
                           <span
+                            title={resposta === 'NA' ? 'Não se aplica' : undefined}
                             className={`shrink-0 rounded px-2 py-0.5 text-xs font-bold ${
                               resposta === 'C'
                                 ? 'bg-green-100 text-green-800'
@@ -106,7 +108,7 @@ export function Auditoria5sDetalhes() {
                                   : 'bg-surface-2 text-content-muted'
                             }`}
                           >
-                            {resposta || '-'}
+                            {resposta === 'NA' ? '–' : resposta || '-'}
                           </span>
                         </li>
                       )

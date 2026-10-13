@@ -3,6 +3,7 @@
 //
 // O percentual é sempre recalculado a partir de `itens` (C/N), não dos totais gravados pelo PWA:
 // assim uma auditoria antiga ou editada continua coerente com as respostas.
+// 'NA' (não se aplica) não entra no percentual nem como conforme nem como não conforme.
 
 import { SECOES_5S } from './itens'
 
@@ -22,12 +23,14 @@ export interface ResultadoSecao {
   titulo: string
   conformes: number
   naoConformes: number
+  naoAplicaveis: number
   percentual: number | null
 }
 
 export interface ResultadoRegistro {
   conformes: number
   naoConformes: number
+  naoAplicaveis: number
   percentual: number | null
   secoes: ResultadoSecao[]
 }
@@ -40,15 +43,18 @@ export function resultadoRegistro(registro: Pick<RegistroAuditoria5s, 'itens'>):
   const secoes = SECOES_5S.map((secao) => {
     let conformes = 0
     let naoConformes = 0
+    let naoAplicaveis = 0
     for (const { chave } of secao.itens) {
       if (itens[chave] === 'C') conformes++
       else if (itens[chave] === 'N') naoConformes++
+      else if (itens[chave] === 'NA') naoAplicaveis++
     }
-    return { id: secao.id, titulo: secao.titulo, conformes, naoConformes, percentual: percentualDe(conformes, conformes + naoConformes) }
+    return { id: secao.id, titulo: secao.titulo, conformes, naoConformes, naoAplicaveis, percentual: percentualDe(conformes, conformes + naoConformes) }
   })
   const conformes = secoes.reduce((acc, s) => acc + s.conformes, 0)
   const naoConformes = secoes.reduce((acc, s) => acc + s.naoConformes, 0)
-  return { conformes, naoConformes, percentual: percentualDe(conformes, conformes + naoConformes), secoes }
+  const naoAplicaveis = secoes.reduce((acc, s) => acc + s.naoAplicaveis, 0)
+  return { conformes, naoConformes, naoAplicaveis, percentual: percentualDe(conformes, conformes + naoConformes), secoes }
 }
 
 /** Soma C/N de várias auditorias e devolve o percentual ponderado pelos itens respondidos. */
