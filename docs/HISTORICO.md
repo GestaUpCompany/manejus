@@ -2174,3 +2174,12 @@ Implementado em 2026-10-13. Seção "Rebanho por Faixa Etária" no Dashboard do 
 - Faixas: 0-4, 5-12, 13-24, 25-36, 36+ meses e "sem idade". Sexo: Fêmea, Macho, Indefinido.
 - Idade vem de `lote_categorias.idade` (meses, valor do cadastro, não envelhece sozinho). Na fazenda de testes, 85 de 356 cabeças estavam sem idade. Evoluir para idade calculada por data de nascimento fica como possível melhoria.
 - Hook `useRebanhoFaixaEtaria` em `useDashboardQueries.ts`.
+
+## Idade atual das categorias (cron diário) e backfill
+
+Implementado em 2026-10-13. `lote_categorias.idade` (meses) é a idade na data-base e segue como está (PWA, relatórios e cópias). Novas colunas: `idade_data_ref` (data em que `idade` era verdadeira) e `idade_atual` (idade + meses completos desde `idade_data_ref`).
+- Migrations `20261013120000_idade_atual_categorias` (colunas, `calcular_idade_atual`, trigger `trg_lote_categorias_idade_ref`, `atualizar_idade_categorias()` e job `atualizar-idade-categorias` às 07:00 UTC = 03:00 Cuiabá) e `20261013121000_rpc_rebanho_faixa_etaria_idade_atual` (dashboard usa `COALESCE(idade_atual, idade)`). Rollbacks em `supabase/rollbacks/`.
+- Trigger: ao inserir com idade ou mudar `idade`, `idade_data_ref = COALESCE(data_pesagem, hoje)`; mudar só `data_pesagem` não reinicia a idade. Se o chamador informar `idade_data_ref`, é respeitada.
+- Backfill (2026-10-13, autorizado, todas as fazendas): 687 categorias ativas com `idade` e sem `idade_data_ref`; `idade_data_ref = data_pesagem` se entre 2020-01-01 e hoje, senão `created_at::date`. Backup: `backup.lote_categorias_idade_20261013` (id, idade, idade_data_ref, idade_atual, data_pesagem, updated_at). Resultado: 687 preenchidas, 494 envelheceram, cron idempotente (0 linhas na segunda execução). Para reverter: `UPDATE lote_categorias SET idade_data_ref = NULL, idade_atual = NULL WHERE id IN (SELECT id FROM backup.lote_categorias_idade_20261013)`.
+- Datas-base inválidas encontradas e tratadas pelo fallback: `data_pesagem` `0001-01-01` (categoria `85beb267-8194-4369-aeb0-9260897c1af3`), `0026-09-29` (`b5991115-3ab8-4093-b10d-c33f6aca0bc4`) e uma futura (2026-12-15). 23 categorias sem `data_pesagem` usaram `created_at`.
+- Pendências: `transferir_lote_entre_fazendas` copia `idade` sem copiar `idade_data_ref` (a cópia reinicia a data-base); o trigger não valida `data_pesagem` absurda para novos registros.
