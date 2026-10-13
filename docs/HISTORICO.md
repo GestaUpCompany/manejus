@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório Zootécnico dos Lotes em Excel (2026-10-13)
+Réplica do "Controle de Lotes" (PDF `Relatório Zootécnico.pdf`, Fazenda Estrela Jacamim) como exportação Excel em Relatórios (card "Relatório Zootécnico dos Lotes", janela de consumo em dias, padrão 22). Sem migration.
+- Código: `features/relatorioZootecnico/agregacao.ts` (linhas por categoria ativa com saldo > 0 + linha Geral ponderada por cabeças; área útil contada uma vez por pasto), `services/relatorioZootecnicoService.ts` (carga + exceljs), testes em `agregacao.test.ts`.
+- Fontes: `lotes`, `lote_categorias`, `pastos.area_util_ha`, `v_lote_pasto_ocupacao_atual.taxa_lotacao_ua_ha`, `formulacoes.teor_ms_dieta` e a RPC `get_dados_relatorio_consumo_fazenda` (duas chamadas: desde a 1ª pesagem e a janela). "Valor carcaça (R$/@)" reaproveita `preco_venda_projetado_reais_arroba` (campo já existente no formulário da categoria). Valor de estoque = cab × peso atual × RC ÷ 15 × preço; capital = cab × `preco_custo_cab`; peso de entrada em @ = kg ÷ 30.
+- Verificado na fazenda de testes (3 categorias de boi gordo receberam rc 52, preço 310, custo 3.500 via SQL, pois o guardrail do `teste-api.mjs` não grava em `lote_categorias`, que não tem `fazenda_id`): estoque e capital conferem com o SQL. Na Jacamim (só leitura) estrutura, 8.666 cab e contagens de preenchimento conferem.
+- Limitações: consumo depende de `registros_suplementacao` (a Jacamim usa `registros_oferta_trato`, então sai vazio); nenhuma fazenda de produção tem o preço da @ preenchido, então valor carcaça/estoque saem vazios; %PV vem direto da RPC e não foi auditado. Avaliado e não adotado: consumo por `registros_oferta_trato` (mediana real ÷ planejado 1,07, mas cauda com dias de 2 a 3 ordens e até 166 kg/cab; exigiria saldo de cabeças do dia e tratamento de outliers).
+
 ## Clima: exportação ajustada e importação por planilha-modelo (2026-10-13)
 - Exportação (`CLIMA_EXPORT_CONFIG`): sem a coluna `local_id`; `Choveu` e `Esvaziou Pluviômetros` normalizadas para Sim/Não.
 - Importação: botão "Importar planilha" em `RegistrosClima.tsx` (`ImportarClimaModal`, `services/climaImportacao.ts`, `utils/modeloImportacaoClima.ts`). Uma linha por leitura (data + hora), uma coluna "<pluviômetro> (mm)" por pluviômetro ativo; obrigatórias: Data, Hora, Responsável (cabeçalho vermelho com `*`).
