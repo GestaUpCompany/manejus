@@ -109,12 +109,21 @@ export async function generatePdf({ html, format = 'A4', landscape = true, timeo
     )
   }
 
-  const browser = await puppeteer.launch({
-    args: (isVercel ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox']).concat(launchArgs),
+  const launchOptions = {
+    // /dev/shm é pequeno em serverless; sem a flag o Chromium pode cair ao renderizar páginas pesadas.
+    args: (isVercel ? chromium.args : ['--no-sandbox', '--disable-setuid-sandbox']).concat('--disable-dev-shm-usage', launchArgs),
     defaultViewport: { width: 1280, height: 900 },
     executablePath,
     headless: true,
-  })
+  }
+  // Uma segunda tentativa cobre falhas transitórias de cold start (extração do binário em /tmp).
+  let browser
+  try {
+    browser = await puppeteer.launch(launchOptions)
+  } catch (error) {
+    console.warn('[PDF] Falha ao iniciar o Chromium, tentando novamente:', error)
+    browser = await puppeteer.launch(launchOptions)
+  }
   try {
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'load', timeout: timeoutMs })

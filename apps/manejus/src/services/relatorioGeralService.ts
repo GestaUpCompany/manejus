@@ -15,10 +15,31 @@ interface GerarRelatorioGeralParams {
   reports: PayloadRelatorioGeral[]
 }
 
+const LOGO_MAX_LADO_PX = 400
+
+// Reduz o logo antes de enviar: o PDF mostra logos em poucos mm, e o base64 original
+// vai duplicado em várias páginas do HTML, pressionando a memória da função.
+function reduzirLogo(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const escala = Math.min(1, LOGO_MAX_LADO_PX / Math.max(img.width, img.height))
+      if (escala === 1) return resolve(dataUrl)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * escala)
+      canvas.height = Math.round(img.height * escala)
+      canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL('image/png'))
+    }
+    img.onerror = () => resolve(dataUrl)
+    img.src = dataUrl
+  })
+}
+
 async function carregarLogo(path?: string | null): Promise<string> {
   if (!path) return ''
   try {
-    return await carregarLogoComoBase64(path)
+    return await reduzirLogo(await carregarLogoComoBase64(path))
   } catch {
     return ''
   }
@@ -48,17 +69,21 @@ export async function gerarRelatorioGeral(params: GerarRelatorioGeralParams): Pr
   if (tamanho > MAX_BODY_BYTES) {
     throw new Error('O conjunto selecionado excede 4 MB. Reduza o período ou a quantidade de relatórios.')
   }
-  const response = await fetch('/api/pdf/geral', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body,
-  })
+  const enviar = () =>
+    fetch('/api/pdf/geral', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body,
+    })
+  let response = await enviar()
+  // 5xx sem JSON é queda da função na plataforma (ex.: FUNCTION_INVOCATION_FAILED): uma nova tentativa costuma pegar instância sã.
+  if (response.status >= 500) response = await enviar()
   if (!response.ok) {
     const erro = await response.json().catch(() => null)
-    throw new Error(erro?.error ?? `Falha ao gerar o PDF (${response.status})`)
+    throw new Error(erro?.error ?? `O servidor não conseguiu gerar o PDF agora (${response.status}). Tente novamente em instantes.`)
   }
   return response.blob()
 }
