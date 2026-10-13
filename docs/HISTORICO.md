@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Clima: exportação ajustada e importação por planilha-modelo (2026-10-13)
+- Exportação (`CLIMA_EXPORT_CONFIG`): sem a coluna `local_id`; `Choveu` e `Esvaziou Pluviômetros` normalizadas para Sim/Não.
+- Importação: botão "Importar planilha" em `RegistrosClima.tsx` (`ImportarClimaModal`, `services/climaImportacao.ts`, `utils/modeloImportacaoClima.ts`). Uma linha por leitura (data + hora), uma coluna "<pluviômetro> (mm)" por pluviômetro ativo; obrigatórias: Data, Hora, Responsável (cabeçalho vermelho com `*`).
+- Duplicidade: linha ignorada se já existe registro na mesma data/hora (fuso Cuiabá); `local_id = painel-clima-<fazenda>-<data>T<hora>` (índice único `registros_clima_local_id_key`). Insert direto, sem RPC/migration (a policy da tabela permite).
+- Validações no Excel e repetidas na importação: data real e não futura, hora 00:00–23:59, responsável da lista de funcionários ativos, mm 0–500 com até 2 casas, "Choveu = Não" incompatível com mm > 0, temperatura -60..60, umidade 0..100, observação ≤ 500, colunas "(mm)" desconhecidas abortam a importação.
+- Não testado no Excel nem importado em fazenda real; testes unitários em `climaImportacao.test.ts`.
+
 ## Relatório de consumo: saldo de cabeças pela média do período (2026-10-13)
 Lote esvaziado (Lote 2 Descarte, fazenda `f5d64d63…`, `quant_atual = 0` em todas as categorias) não gerava o relatório: a RPC `get_dados_relatorio_consumo` validava e ponderava por `lote_categorias.quant_atual` (saldo de hoje).
 - Migration `20261013100000_relatorio_consumo_saldo_medio_periodo` (rollback em `supabase/rollbacks/`): nova `calculate_quant_em(lote, categoria, ate)` (mesma regra de `calculate_quant_atual`, só movimentações com `data < ate`; a original não mudou). Saldo da categoria no período = `ROUND((saldo no início + saldo no fim) / 2)`; sem filtro de datas, início/fim = primeira/última data de registro da série.
