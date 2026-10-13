@@ -55,11 +55,11 @@ export function norm(v: unknown): string {
     .replace(/\s+/g, ' ')
 }
 
-function normHeader(v: unknown): string {
+export function normHeader(v: unknown): string {
   return norm(v).replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-function buildMap(opcoes: readonly string[], aliases: Record<string, string> = {}): Map<string, string> {
+export function buildMap(opcoes: readonly string[], aliases: Record<string, string> = {}): Map<string, string> {
   const map = new Map<string, string>()
   for (const o of opcoes) map.set(norm(o), o)
   for (const [alias, canonico] of Object.entries(aliases)) map.set(norm(alias), canonico)
@@ -141,7 +141,7 @@ function str(v: unknown): string {
   return (v ?? '').toString().trim()
 }
 
-function parseNumero(v: unknown): number | null {
+export function parseNumero(v: unknown): number | null {
   if (v === undefined || v === null || v === '') return null
   if (typeof v === 'number') return Number.isFinite(v) ? v : null
   const s = str(v)

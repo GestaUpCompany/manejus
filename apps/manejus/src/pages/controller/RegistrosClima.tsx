@@ -7,6 +7,8 @@ import { exportToXLSX } from '@gestaup/shared'
 import { CLIMA_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '@gestaup/shared'
 import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
+import { ImportarClimaModal } from '../../components/clima/ImportarClimaModal'
+import type { PluviometroModelo } from '../../services/climaImportacao'
 
 interface RegistroClima {
   id: string
@@ -35,6 +37,10 @@ export function RegistrosClima() {
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [fazendaId, setFazendaId] = useState<string | undefined>()
+  const [pluviometros, setPluviometros] = useState<PluviometroModelo[]>([])
+  const [responsaveis, setResponsaveis] = useState<string[]>([])
+  const [importOpen, setImportOpen] = useState(false)
 
   useEffect(() => {
     loadRegistros()
@@ -49,7 +55,25 @@ export function RegistrosClima() {
     if (!vinculos || vinculos.length === 0) return
 
     const fazendaId = vinculos[0].fazenda_id
+    setFazendaId(fazendaId)
     getFazendaNome(fazendaId).then(setFazendaNome)
+
+    supabase
+      .from('pluviometros')
+      .select('id, nome, localizacao')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .order('nome')
+      .then(({ data }) => setPluviometros((data || []) as PluviometroModelo[]))
+
+    supabase
+      .from('funcionarios')
+      .select('nome')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .is('deleted_at', null)
+      .order('nome')
+      .then(({ data }) => setResponsaveis((data || []).map((f: { nome: string }) => f.nome).filter(Boolean)))
 
     const query = supabase
       .from('registros_clima')
@@ -100,13 +124,18 @@ export function RegistrosClima() {
       <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
-          <Button
-            onClick={() => exportToXLSX(filteredRegistros, CLIMA_EXPORT_CONFIG, fazendaNome)}
-            disabled={filteredRegistros.length === 0}
-            className="w-full sm:w-auto text-sm"
-          >
-            Exportar XLSX
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button variant="secondary" onClick={() => setImportOpen(true)} className="w-full sm:w-auto text-sm">
+              Importar planilha
+            </Button>
+            <Button
+              onClick={() => exportToXLSX(filteredRegistros, CLIMA_EXPORT_CONFIG, fazendaNome)}
+              disabled={filteredRegistros.length === 0}
+              className="w-full sm:w-auto text-sm"
+            >
+              Exportar XLSX
+            </Button>
+          </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div className="sm:col-span-2">
@@ -149,6 +178,16 @@ export function RegistrosClima() {
           </div>
         </div>
       </Card>
+
+      <ImportarClimaModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        fazendaId={fazendaId}
+        nomeUsuario={user?.nome || ''}
+        pluviometros={pluviometros}
+        responsaveis={responsaveis}
+        onImported={loadRegistros}
+      />
 
       {registros.length === 0 ? (
         <EmptyState title="Nenhum registro encontrado" />

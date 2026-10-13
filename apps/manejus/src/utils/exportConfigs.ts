@@ -405,9 +405,18 @@ export const CANTINA_EXPORT_CONFIG: TableExportConfig = {
   ]
 }
 
+const normalizarSimNao = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') return ''
+  const texto = String(value).trim().toLowerCase()
+  if (['true', 'verdadeiro', 'sim', 's', '1'].includes(texto)) return 'Sim'
+  if (['false', 'falso', 'nao', 'não', 'n', '0'].includes(texto)) return 'Não'
+  return ''
+}
+
 export const CLIMA_EXPORT_CONFIG: TableExportConfig = {
   tableName: 'registros_clima',
   sheetName: 'Clima',
+  exclude: ['local_id'],
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
     { source: 'nome_usuario', header: 'Usuário' },
@@ -423,6 +432,8 @@ export const CLIMA_EXPORT_CONFIG: TableExportConfig = {
         return `${pluviometro}${local}: ${medicao}`
       }).join(' | ')
     }},
+    { source: 'choveu', header: 'Choveu', transform: normalizarSimNao },
+    { source: 'esvaziou_pluviometros', header: 'Esvaziou Pluviômetros', transform: normalizarSimNao },
     { source: 'observacao', header: 'Observação' }
   ]
 }
