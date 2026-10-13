@@ -358,7 +358,7 @@ export function Auditoria5s() {
                   return (
                     <tr
                       key={r.id}
-                      onClick={() => navigate(`/controller/cadernetas/auditoria-5s/${r.id}`)}
+                      onClick={() => navigate(`/controller/checklists/auditoria-5s/${r.id}`)}
                       className="cursor-pointer hover:bg-surface-2 transition-colors"
                     >
                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{formatDate(r.data)}</td>

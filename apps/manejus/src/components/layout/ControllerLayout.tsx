@@ -156,6 +156,7 @@ const menuStructure: MenuItem[] = [
     ),
     items: [
       { label: 'Cadernetas', path: '/controller/cadernetas' },
+      { label: 'Checklists', path: '/controller/checklists' },
       { label: 'Rotinas', path: '/controller/rotinas' },
       { label: 'Auditoria de Rotinas', path: '/controller/auditoria-rotinas' },
       { label: 'Uso das Cadernetas', path: '/controller/rastreio-cadernetas' },

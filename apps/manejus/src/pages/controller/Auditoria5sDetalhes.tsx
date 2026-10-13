@@ -61,7 +61,7 @@ export function Auditoria5sDetalhes() {
       loading={loading}
       loadError={loadError}
       notFound={!registro}
-      onBack={() => navigate('/controller/cadernetas/auditoria-5s')}
+      onBack={() => navigate('/controller/checklists/auditoria-5s')}
       title="Detalhes da Auditoria 5S"
     >
       {() => (

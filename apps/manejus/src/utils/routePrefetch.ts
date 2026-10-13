@@ -38,6 +38,7 @@ const routeImporters: Record<string, () => Promise<unknown>> = {
 
   // Aplicativo
   '/controller/cadernetas': () => import('../pages/controller/Cadernetas'),
+  '/controller/checklists': () => import('../pages/controller/Checklists'),
   '/controller/rotinas': () => import('../pages/controller/Rotinas'),
   '/controller/auditoria-rotinas': () => import('../pages/controller/AuditoriaRotinas'),
   '/controller/rastreio-cadernetas': () => import('../pages/controller/RastreioCadernetas'),

@@ -11,6 +11,7 @@ export type CadernetaImage =
   | 'abastecimento'
   | 'cantina'
   | 'limpeza'
+  | 'auditoria-5s'
   | 'operacoes-maquinas'
   | 'almoxarifado'
   | 'manutencao-maquinas'
@@ -42,6 +43,7 @@ export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   abastecimento: '/images/cadernetas/abastecimento.png',
   cantina: '/images/cadernetas/cantina.png',
   limpeza: '/images/cadernetas/limpeza.png',
+  'auditoria-5s': '/images/cadernetas/auditoria-5s.jpg',
   'operacoes-maquinas': '/images/cadernetas/operacoes-maquinas.png',
   almoxarifado: '/images/almoxarifado.png',
   'manutencao-maquinas': '/images/manutencao-maquinas.png',
@@ -74,6 +76,7 @@ export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
   abastecimento: 'Abastecimento',
   cantina: 'Saída Cantina',
   limpeza: 'Limpeza',
+  'auditoria-5s': 'Auditoria 5S',
   'operacoes-maquinas': 'Operações de Máquinas',
   almoxarifado: 'Almoxarifado',
   'manutencao-maquinas': 'Manutenção de Máquinas',
@@ -106,6 +109,7 @@ export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
   abastecimento: 'Registros de abastecimento de veículos',
   cantina: 'Registros de alimentação (cantina e marmita)',
   limpeza: 'Registros de limpeza e manutenção',
+  'auditoria-5s': 'Auditoria 5S: checklist de utilização, organização, limpeza, padronização e disciplina',
   'operacoes-maquinas': 'Registros de operações de máquinas',
   almoxarifado: 'Registros de almoxarifado',
   'manutencao-maquinas': 'Registros de manutenção de máquinas',

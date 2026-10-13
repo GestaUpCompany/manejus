@@ -30,6 +30,11 @@ export function Breadcrumbs({ maxItems = 3 }: BreadcrumbsProps) {
       breadcrumbs.push({ label: 'Cadernetas', path: '/controller/cadernetas' })
     }
 
+    // Mesmo para checklists: /controller/checklists/<checklist>
+    if (pathnames.includes('checklists') && pathnames.length > 2) {
+      breadcrumbs.push({ label: 'Checklists', path: '/controller/checklists' })
+    }
+
     pathnames.forEach((path, index) => {
       const routePath = `/${pathnames.slice(0, index + 1).join('/')}`
       
