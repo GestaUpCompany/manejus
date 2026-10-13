@@ -16,11 +16,12 @@ body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
 .page { width: 1280px; height: 720px; position: relative; overflow: hidden; background: #F5F8FA; display: flex; flex-direction: column; }
 .page-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 48px 8px 48px; }
 .title-block h1 { font-size:33px; font-weight: 800; color: var(--blue); letter-spacing: -0.5px; }
+.title-block .t-sub { font-size:18px; font-weight: 700; color: var(--muted); letter-spacing: 0; }
 .title-block .kicker { font-size:12px; font-weight: 700; letter-spacing: 3px; color: var(--green-dark); text-transform: uppercase; margin-top: 5px; }
 .page-logo { height: 62px; }
 
-.kpis { display: grid; gap: 12px; padding: 4px 48px 10px 48px; }
-.kpi { border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green); padding: 8px 14px 9px 14px; background: #fff; box-shadow: 0 1px 2px rgba(18,38,58,.05), 0 4px 14px rgba(18,38,58,.06); width: fit-content; min-width: 200px; }
+.kpis { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 48px 10px 48px; }
+.kpi { border: 1px solid var(--line); border-radius: 10px; border-top: 3px solid var(--green); padding: 8px 14px 9px 14px; background: #fff; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); width: fit-content; min-width: 180px; }
 .kpi.blue-top { border-top-color: var(--blue); }
 .kpi.red-top { border-top-color: var(--red); }
 .kpi.amber-top { border-top-color: var(--amber); }
@@ -28,7 +29,7 @@ body { font-family: 'Archivo', 'Segoe UI', sans-serif; }
 .kpi .val { font-size:24px; font-weight: 800; color: var(--blue); letter-spacing: -0.3px; }
 .kpi .val small { font-size:13px; font-weight: 600; color: var(--muted); }
 
-.table-wrap { margin: 0 48px; padding: 10px 18px 14px 18px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+.table-wrap, .fc-wrap { margin: 0 48px; padding: 10px 18px 14px 18px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); }
 table { width: 100%; border-collapse: collapse; font-size:14px; }
 thead .cols th { font-size:10.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); padding: 5px 8px; border-bottom: 2px solid var(--ink); text-align: right; white-space: nowrap; }
 thead .cols th:first-child { text-align: left; }
@@ -45,9 +46,9 @@ tbody tr.total td:first-child { border-radius: 0 0 0 8px; }
 tbody tr.total td:last-child { border-radius: 0 0 8px 0; }
 td.strong { font-weight: 700; }
 
-.chart-wrap { margin: 8px 48px 0 48px; padding: 12px 18px 8px 18px; flex: 1; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
-.chart1 { margin: 0 48px 10px 48px; padding: 12px 18px 10px 18px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
-.chart-row > div, .content > div { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+.chart-wrap { margin: 8px 48px 0 48px; padding: 12px 18px 8px 18px; flex: 1; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); }
+.chart1, .chart2 { margin: 0 48px 10px 48px; padding: 12px 18px 10px 18px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); }
+.chart-row > div, .content > div, .charts > div:not(.charts-bottom), .charts-bottom > div, .bottom-row > div { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); }
 .chart-title { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; display: flex; align-items: center; gap: 18px; }
 .legend { display: flex; gap: 16px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
 .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
@@ -69,7 +70,7 @@ text.axis.dense { font-size:9px; }
 .linelbl { font-family: 'Archivo'; font-size:11px; fill: #fff; font-weight: 600; }
 
 .panels { display: flex; gap: 16px; padding: 0 48px; }
-.panel { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fff; box-shadow: 0 1px 2px rgba(18,38,58,.04), 0 4px 14px rgba(18,38,58,.05); }
+.panel { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fff; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); }
 .panel h3 { font-size:12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
 .caption { font-size:11px; color: var(--muted); margin-top: 6px; }
 
@@ -92,7 +93,7 @@ text.axis.dense { font-size:9px; }
   <div class="page-head">
     <div class="title-block">
       <h1>Compra de Animais</h1>
-      <div class="kicker">Jan – Ago · 2026 · Fazenda Guanabara</div>
+      <div class="kicker">Jan – Ago · 2026 · Fazenda</div>
     </div>
     <img class="page-logo" src="C:\Users\USER\Documents\GestaUp-Cadernetas-Gestao\tmp_pbix\Report\StaticResources\RegisteredResources\Gestaup_Intelligence-0127124017850949067.png" alt="">
   </div>
@@ -112,6 +113,8 @@ text.axis.dense { font-size:9px; }
 <defs><linearGradient id="ag1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17A34A" stop-opacity="0.32"/><stop offset="1" stop-color="#17A34A" stop-opacity="0.02"/></linearGradient></defs>
 <path d="M91.5,165 L92,165.0 L235,165.0 L378,143.3 L521,97.5 L664,55.7 L807,119.3 L950,105.3 L1093,32.3 L1092.5,165 Z" fill="url(#ag1)"/>
 <polyline points="92,165.0 235,165.0 378,143.3 521,97.5 664,55.7 807,119.3 950,105.3 1093,32.3" fill="none" stroke="#17A34A" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="91.5" cy="165.0" r="4" fill="#17A34A"/>
+<circle cx="234.5" cy="165.0" r="4" fill="#17A34A"/>
 <circle cx="377.5" cy="143.3" r="4" fill="#17A34A"/>
 <circle cx="520.5" cy="97.5" r="4" fill="#17A34A"/>
 <circle cx="663.5" cy="55.7" r="4" fill="#17A34A"/>
@@ -123,6 +126,16 @@ text.axis.dense { font-size:9px; }
 <text x="1092.5" y="18.3" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">238</text>
 <text x="1092.5" y="20.3" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">238</text>
 <text x="1092.5" y="19.3" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#0B3D6E">238</text>
+<text x="90.5" y="152.0" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">0</text>
+<text x="92.5" y="152.0" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">0</text>
+<text x="91.5" y="151.0" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">0</text>
+<text x="91.5" y="153.0" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">0</text>
+<text x="91.5" y="152.0" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#0B3D6E">0</text>
+<text x="233.5" y="152.0" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">0</text>
+<text x="235.5" y="152.0" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">0</text>
+<text x="234.5" y="151.0" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">0</text>
+<text x="234.5" y="153.0" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">0</text>
+<text x="234.5" y="152.0" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#0B3D6E">0</text>
 <text x="376.5" y="130.3" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">39</text>
 <text x="378.5" y="130.3" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">39</text>
 <text x="377.5" y="129.3" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#fff">39</text>
@@ -160,16 +173,16 @@ text.axis.dense { font-size:9px; }
 
   <div class="chart-row">
     <div>
-      <div class="chart-title">Cabeças por categoria<span class="legend"><span><span class="sw bar"></span>Cabeças</span></span></div>
-      <svg viewBox="0 0 690 190" preserveAspectRatio="none" style="width:100%;height:190px"><line x1="0" y1="155" x2="690" y2="155" stroke="#C9D2DB" stroke-width="1"/>
-<line x1="0" y1="88.5" x2="690" y2="88.5" stroke="#EDF1F5" stroke-width="1"/>
-<line x1="0" y1="44.6" x2="690" y2="44.6" stroke="#EDF1F5" stroke-width="1"/>
-<rect x="142.5" y="29.7" width="80.0" height="125.3" rx="4" fill="#0B3D6E" opacity="0.92"/>
-<rect x="467.5" y="148.4" width="80.0" height="6.6" rx="4" fill="#0B3D6E" opacity="0.92"/>
-<text class="vlbl" x="182.5" y="21.7" text-anchor="middle" style="font-size:13.7px;font-weight:600">744</text>
-<text class="vlbl" x="507.5" y="140.4" text-anchor="middle" style="font-size:13.7px;font-weight:600">39</text>
-<text class="axis" x="182.5" y="178" text-anchor="middle">5 a 12 meses · Macho</text>
-<text class="axis" x="507.5" y="178" text-anchor="middle">13 a 24 meses · Macho</text></svg>
+      <div class="chart-title">Cabeças por categoria<span class="legend"><span><span class="sw bar" style="background:#17A34A"></span>Comercial</span></span></div>
+      <svg viewBox="0 0 690 232" preserveAspectRatio="none" style="width:100%;height:232px"><line x1="0" y1="199" x2="690" y2="199" stroke="#C9D2DB" stroke-width="1"/>
+<line x1="0" y1="109.5" x2="690" y2="109.5" stroke="#EDF1F5" stroke-width="1"/>
+<line x1="0" y1="20.0" x2="690" y2="20.0" stroke="#EDF1F5" stroke-width="1"/>
+<rect x="139.5" y="34.6" width="80.0" height="164.4" rx="2" fill="#17A34A" opacity="0.92"/>
+<rect x="470.5" y="190.4" width="80.0" height="8.6" rx="2" fill="#17A34A" opacity="0.92"/>
+<text x="179.5" y="28.6" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#12263A">744</text>
+<text x="510.5" y="184.4" text-anchor="middle" font-family="Archivo" font-size="13.7" font-weight="600" fill="#12263A">39</text>
+<text x="179.5" y="215.0" text-anchor="middle" font-family="Archivo" font-size="13.0" fill="#5B6B7B">5 a 12 meses · Macho</text>
+<text x="510.5" y="215.0" text-anchor="middle" font-family="Archivo" font-size="13.0" fill="#5B6B7B">13 a 24 meses · Macho</text></svg>
     </div>
     <div>
       <div class="chart-title">Distribuição por tipo de compra</div>
