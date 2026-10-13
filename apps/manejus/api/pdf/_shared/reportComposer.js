@@ -2,6 +2,7 @@ import { escapeHtml, dateFmt } from './formatters.js'
 import { REPORT_REGISTRY } from './reportRegistry.js'
 import { BASE_CSS } from './template.js'
 import { FLOW_ENGINE_JS } from './flowEngine.js'
+import { getChartJsScript } from './chartjs.js'
 
 const COVER_CSS = `
 .cover-page{padding:0;overflow:hidden;color:#fff;background:linear-gradient(135deg,#083f2a 0%,#0b6a42 45%,#153b59 100%)}
@@ -62,7 +63,7 @@ function renderFinalPage({ logoFazenda, logoEmpresa, page, totalPages }) {
   return `<section class="page final-page"><div class="final-content"><h1 class="final-signoff">Atenciosamente,</h1><div class="final-company">Gesta'Up</div><div class="final-brand">Manej'Us <b>360</b></div><div class="final-logos">${logoEmpresa ? `<div class="final-logo-box company">${image(logoEmpresa, 'GestaUp Company')}</div>` : ''}${logoFazenda ? `<div class="final-logo-box farm">${image(logoFazenda, 'Logo da fazenda')}</div>` : ''}</div></div><footer class="report-footer"><span>Gesta'Up · Infográfico Mensal</span><span>Página ${page} de ${totalPages}</span></footer></section>`
 }
 
-export async function composeReports({ reports, cover }) {
+async function renderReports(reports) {
   const rendered = []
   for (const report of reports) {
     const adapter = REPORT_REGISTRY[report.tipo]
@@ -71,6 +72,61 @@ export async function composeReports({ reports, cover }) {
     const document = extractDocument(await adapter.render(report.dados))
     rendered.push({ adapter, dados: report.dados, pages: countPages(document.body), ...document })
   }
+  return rendered
+}
+
+// Mantém só o script de paginação: suficiente para contar as páginas finais sem
+// carregar Chart.js nem desenhar gráficos (a paginação roda antes dos gráficos).
+function stripScriptsExceptPagination(body) {
+  return body.replace(/<script>(?!window\.__paginateFlows\(\)<\/script>)[\s\S]*?<\/script>/g, '')
+}
+
+/**
+ * Divide o infográfico em partes (capa, uma por seção, encerramento) que o
+ * chamador renderiza em páginas separadas do navegador e junta depois. O pico de
+ * memória passa a ser o de uma seção, e não o de todos os gráficos juntos.
+ * `html({ offset, total, countOnly })`: `offset` é o nº de páginas anteriores no
+ * PDF final, `total` o total de páginas; `countOnly` gera uma versão sem gráficos
+ * apenas para contar páginas.
+ */
+export async function composeReportParts({ reports, cover }) {
+  const chartJs = await getChartJsScript().catch(() => '')
+  const rendered = await renderReports(reports)
+
+  const document = ({ style, body, chart, offset, total }) =>
+    `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Infográfico Mensal</title><style>${BASE_CSS}${style}${COVER_CSS}</style><script>${FLOW_ENGINE_JS}</script>${chart && chartJs ? `<script>${chartJs}</script>` : ''}</head><body>${body}<script>window.__pageOffset=${offset};window.__pageTotal=${total};window.__numberPages();window.__chartsReady=true</script></body></html>`
+
+  const parts = [
+    {
+      id: 'capa',
+      html: ({ offset, total }) => document({ style: '', body: renderCover({ ...cover, totalPages: total }), chart: false, offset, total }),
+    },
+    ...rendered.map((report) => {
+      // O UMD do Chart.js vem embutido no body de cada seção; carregá-lo uma vez no head basta.
+      const usaChart = chartJs !== '' && report.body.includes(`<script>${chartJs}</script>`)
+      const body = usaChart ? report.body.split(`<script>${chartJs}</script>`).join('') : report.body
+      return {
+        id: report.adapter.title,
+        html: ({ offset, total, countOnly }) =>
+          document({
+            style: report.style,
+            body: countOnly ? stripScriptsExceptPagination(body) : body,
+            chart: usaChart && !countOnly,
+            offset,
+            total,
+          }),
+      }
+    }),
+    {
+      id: 'encerramento',
+      html: ({ offset, total }) => document({ style: '', body: renderFinalPage({ ...cover, page: total, totalPages: total }), chart: false, offset, total }),
+    },
+  ]
+  return parts
+}
+
+export async function composeReports({ reports, cover }) {
+  const rendered = await renderReports(reports)
 
   const totalPages = 2 + rendered.reduce((sum, report) => sum + report.pages, 0)
   let offset = 1

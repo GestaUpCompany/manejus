@@ -19,7 +19,7 @@
 
 import { escapeHtml, dateFmt, numFmt, intFmt } from './_shared/formatters.js'
 import { rodeioAlertas } from './_shared/labels.js'
-import { getChartJsScript } from './_shared/chartjs.js'
+import { CHART_DPR, getChartJsScript } from './_shared/chartjs.js'
 import { generatePdf } from './_shared/puppeteer.js'
 import {
   renderHeader,
@@ -124,8 +124,8 @@ const CHARTS_INIT_JS = `
   if (!Chart) { window.__chartsReady = true; return }
   Chart.defaults.animation = false
   // Sem isso o canvas rasteriza na resolução CSS (~96dpi) e pixela no
-  // zoom do PDF. 3x mantém o tamanho visual e triplica a densidade.
-  Chart.defaults.devicePixelRatio = 3
+  // zoom do PDF. CHART_DPR mantém o tamanho visual e multiplica a densidade.
+  Chart.defaults.devicePixelRatio = ${CHART_DPR}
   Chart.defaults.font.family = 'Arial, Helvetica, sans-serif'
 
   var charts = (window.__reportData && window.__reportData.charts) || []
