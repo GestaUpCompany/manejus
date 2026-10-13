@@ -2,7 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@gestaup/shared'
 import { Card, Button, ErrorState, PageSkeleton } from '@gestaup/ui'
 import { CADERNETA_IMAGES, CADERNETA_TITLES } from '../../types/images'
-import { useFazenda, useDashboardStats, useGadoStats, useRecentActivities, useFormulacoesBackfillAlert } from '../../hooks/useDashboardQueries'
+import { useFazenda, useDashboardStats, useGadoStats, useRecentActivities, useFormulacoesBackfillAlert, useRebanhoFaixaEtaria } from '../../hooks/useDashboardQueries'
+import type { RebanhoFaixaEtariaItem } from '../../hooks/useDashboardQueries'
 import { CADERNETA_GRUPOS } from '../../utils/cadernetas'
 
 function StatCard({
@@ -44,6 +45,63 @@ function StatCard({
           {icon}
         </div>
       </div>
+    </Card>
+  )
+}
+
+const FAIXAS_ETARIAS = [
+  { key: '0-4', label: '0 a 4 meses' },
+  { key: '5-12', label: '5 a 12 meses' },
+  { key: '13-24', label: '13 a 24 meses' },
+  { key: '25-36', label: '25 a 36 meses' },
+  { key: '36+', label: 'Acima de 36 meses' },
+]
+
+function RebanhoFaixaEtariaTable({ itens }: { itens: RebanhoFaixaEtariaItem[] }) {
+  const soma = (faixa: string, sexo?: string) =>
+    itens.filter((i) => i.faixa === faixa && (!sexo || i.sexo === sexo)).reduce((acc, i) => acc + i.cabecas, 0)
+
+  const temIndefinido = itens.some((i) => i.sexo === 'Indefinido')
+  const temSemIdade = itens.some((i) => i.faixa === 'sem_idade')
+  const sexos = ['Fêmea', 'Macho', ...(temIndefinido ? ['Indefinido'] : [])]
+  const linhas = [...FAIXAS_ETARIAS, ...(temSemIdade ? [{ key: 'sem_idade', label: 'Sem idade informada' }] : [])]
+  const totalGeral = itens.reduce((acc, i) => acc + i.cabecas, 0)
+
+  return (
+    <Card className="bg-surface-1 border border-border-subtle overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs text-content-muted border-b border-border-subtle">
+            <th className="p-3 font-medium">Faixa etária</th>
+            {sexos.map((s) => (
+              <th key={s} className="p-3 font-medium text-right">{s}</th>
+            ))}
+            <th className="p-3 font-medium text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border-subtle">
+          {linhas.map((linha) => (
+            <tr key={linha.key}>
+              <td className="p-3 text-content">{linha.label}</td>
+              {sexos.map((s) => (
+                <td key={s} className="p-3 text-right text-content">{soma(linha.key, s)}</td>
+              ))}
+              <td className="p-3 text-right font-semibold text-content-strong">{soma(linha.key)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="border-t border-border-subtle bg-surface-2">
+            <td className="p-3 font-semibold text-content-strong">Total</td>
+            {sexos.map((s) => (
+              <td key={s} className="p-3 text-right font-semibold text-content-strong">
+                {itens.filter((i) => i.sexo === s).reduce((acc, i) => acc + i.cabecas, 0)}
+              </td>
+            ))}
+            <td className="p-3 text-right font-bold text-primary dark:text-primary-light">{totalGeral}</td>
+          </tr>
+        </tfoot>
+      </table>
     </Card>
   )
 }
@@ -106,6 +164,7 @@ export function ControllerDashboard() {
   const { data: fazenda, isLoading: loadingFazenda, isError: fazendaError, error: fazendaErr, refetch: refetchFazenda } = useFazenda(user?.id)
   const { data: stats, isLoading: loadingStats, isError: statsError, error: statsErr, refetch: refetchStats } = useDashboardStats(user?.id)
   const { data: gadoStats } = useGadoStats(user?.id)
+  const { data: rebanhoFaixaEtaria } = useRebanhoFaixaEtaria(user?.id)
   const { data: recentActivities } = useRecentActivities(user?.id)
   const { data: formulacoesBackfill } = useFormulacoesBackfillAlert(user?.id)
 
@@ -352,6 +411,17 @@ export function ControllerDashboard() {
           />
         </div>
       </div>
+
+      {/* Rebanho por Faixa Etária e Sexo */}
+      {(rebanhoFaixaEtaria ?? []).length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-content-strong">Rebanho por Faixa Etária</h3>
+          <p className="text-xs text-content-faint mb-4">
+            Saldo atual em cabeças, pela idade informada no cadastro de cada categoria do lote.
+          </p>
+          <RebanhoFaixaEtariaTable itens={rebanhoFaixaEtaria ?? []} />
+        </div>
+      )}
 
       {/* Animais por Lote */}
       {gadoData.animaisPorLote.length > 0 && (

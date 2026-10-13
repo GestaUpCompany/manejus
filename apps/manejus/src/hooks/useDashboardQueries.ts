@@ -58,6 +58,24 @@ export function useGadoStats(userId: string | undefined) {
   })
 }
 
+export type RebanhoFaixaEtariaItem = { faixa: string; sexo: string; cabecas: number }
+
+export function useRebanhoFaixaEtaria(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['rebanho-faixa-etaria', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const fazendaId = await getFazendaId(userId!)
+      if (!fazendaId) return [] as RebanhoFaixaEtariaItem[]
+
+      const { data, error } = await supabase.rpc('get_rebanho_faixa_etaria', { p_fazenda_id: fazendaId })
+      if (error) throw error
+
+      return (data as RebanhoFaixaEtariaItem[]) ?? []
+    },
+  })
+}
+
 export function useRecentActivities(userId: string | undefined) {
   return useQuery({
     queryKey: ['recent-activities', userId],
