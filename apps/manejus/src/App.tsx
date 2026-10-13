@@ -71,6 +71,7 @@ const BebedourosCadastro = laz(() => import('./pages/controller/BebedourosCadast
 
 // Controller - cadernetas
 const Cadernetas = laz(() => import('./pages/controller/Cadernetas'), 'Cadernetas')
+const Checklists = laz(() => import('./pages/controller/Checklists'), 'Checklists')
 const Maternidade = laz(() => import('./pages/controller/Maternidade'), 'Maternidade')
 const MaternidadeDetalhes = laz(() => import('./pages/controller/MaternidadeDetalhes'), 'MaternidadeDetalhes')
 const Enfermaria = laz(() => import('./pages/controller/Enfermaria'), 'Enfermaria')
@@ -686,6 +687,16 @@ function App() {
             }
           />
           <Route
+            path="/controller/checklists"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <Checklists />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
             path="/controller/cadernetas/maternidade"
             element={
               <ControllerRoute>
@@ -936,7 +947,7 @@ function App() {
             }
           />
           <Route
-            path="/controller/cadernetas/auditoria-5s"
+            path="/controller/checklists/auditoria-5s"
             element={
               <ControllerRoute>
                 <ControllerLayout>
@@ -946,7 +957,7 @@ function App() {
             }
           />
           <Route
-            path="/controller/cadernetas/auditoria-5s/:id"
+            path="/controller/checklists/auditoria-5s/:id"
             element={
               <ControllerRoute>
                 <ControllerLayout>

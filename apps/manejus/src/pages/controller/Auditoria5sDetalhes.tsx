@@ -61,7 +61,7 @@ export function Auditoria5sDetalhes() {
       loading={loading}
       loadError={loadError}
       notFound={!registro}
-      onBack={() => navigate('/controller/cadernetas/auditoria-5s')}
+      onBack={() => navigate('/controller/checklists/auditoria-5s')}
       title="Detalhes da Auditoria 5S"
     >
       {() => (
@@ -90,17 +90,17 @@ export function Auditoria5sDetalhes() {
               const obs = registro!.observacoes?.[secao.id]
               return (
                 <DetailSection key={secao.id} title={`${secao.titulo} (${textoPercentual(res.percentual)})`}>
-                  <ul className="space-y-2">
+                  <ul className="grid w-fit max-w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2 text-sm">
                     {secao.itens.map((item, i) => {
                       const resposta = registro!.itens?.[item.chave]
                       return (
-                        <li key={item.chave} className="flex items-start justify-between gap-3 text-sm">
+                        <li key={item.chave} className="contents">
                           <span className="text-content-strong">
                             {i + 1}) {item.texto}
                           </span>
                           <span
                             title={resposta === 'NA' ? 'Não se aplica' : undefined}
-                            className={`shrink-0 rounded px-2 py-0.5 text-xs font-bold ${
+                            className={`rounded px-2 py-0.5 text-center text-xs font-bold ${
                               resposta === 'C'
                                 ? 'bg-green-100 text-green-800'
                                 : resposta === 'N'

@@ -63,7 +63,6 @@ export const CADERNETA_GRUPOS: CadernetaGrupo[] = [
     itens: [
       { id: 'bebedouros', path: '/controller/cadernetas/bebedouros' },
       { id: 'limpeza', path: '/controller/cadernetas/limpeza' },
-      { id: 'auditoria-5s', path: '/controller/cadernetas/auditoria-5s' },
       { id: 'problemas', path: '/controller/cadernetas/problemas' },
       { id: 'clima', path: '/controller/cadernetas/clima' },
     ],
@@ -137,3 +136,8 @@ export const CADERNETAS: CadernetaOption[] = CADERNETA_GRUPOS.flatMap((grupo) =>
     label: CADERNETA_LABELS[item.id] || item.id,
   }))
 )
+
+// Checklists e auditorias periódicas (menu "Checklists" do Painel), separados das cadernetas de registro de campo.
+export const CHECKLIST_ITENS = [
+  { id: 'auditoria-5s', path: '/controller/checklists/auditoria-5s' },
+] as const
