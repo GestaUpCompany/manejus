@@ -417,7 +417,7 @@ export function ControllerDashboard() {
         <div>
           <h3 className="text-lg font-semibold text-content-strong">Rebanho por Faixa Etária</h3>
           <p className="text-xs text-content-faint mb-4">
-            Saldo atual em cabeças, pela idade informada no cadastro de cada categoria do lote.
+            Saldo atual em cabeças, pela idade de cada categoria do lote, atualizada automaticamente todo dia a partir da idade e da data informadas no cadastro.
           </p>
           <RebanhoFaixaEtariaTable itens={rebanhoFaixaEtaria ?? []} />
         </div>
