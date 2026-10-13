@@ -158,6 +158,20 @@ export const BEBEDOUROS_EXPORT_CONFIG: TableExportConfig = {
   ]
 }
 
+export const PENDENCIAS_BEBEDOUROS_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'pendencias_bebedouros',
+  sheetName: 'Pendências Bebedouros',
+  columns: [
+    { source: 'bebedouro', header: 'Bebedouro' },
+    { source: 'item', header: 'Item' },
+    { source: 'desde', header: 'Aberta em', format: 'date' },
+    { source: 'dias_em_aberto', header: 'Dias em aberto', format: 'number' },
+    { source: 'ocorrencias', header: 'Registros seguidos', format: 'number' },
+    { source: 'observacao', header: 'Observação' },
+    { source: 'foto_url', header: 'Foto' }
+  ]
+}
+
 export const ENFERMARIA_EXPORT_CONFIG: TableExportConfig = {
   tableName: 'registros_enfermaria',
   sheetName: 'Enfermaria',
