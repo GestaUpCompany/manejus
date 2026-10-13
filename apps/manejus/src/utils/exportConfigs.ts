@@ -1,4 +1,5 @@
 import { TableExportConfig } from '@gestaup/shared'
+import { SECOES_5S } from '../features/relatorioAuditoria5s/itens'
 
 export const MATERNIDADE_EXPORT_CONFIG: TableExportConfig = {
   tableName: 'registros_maternidade',
@@ -457,6 +458,28 @@ export const LIMPEZA_EXPORT_CONFIG: TableExportConfig = {
       return String(value)
     }},
     { source: 'observacao', header: 'Observação' }
+  ]
+}
+
+export const AUDITORIA_5S_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'registros_auditoria_5s',
+  sheetName: 'Auditoria 5S',
+  columns: [
+    { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
+    { source: 'setor', header: 'Setor' },
+    { source: 'responsavel', header: 'Responsável' },
+    { source: 'percentual_conformidade', header: 'Conformidade (%)', format: 'number' },
+    { source: 'total_conformes', header: 'Itens C', format: 'number' },
+    { source: 'total_nao_conformes', header: 'Itens N', format: 'number' },
+    { source: 'itens', header: 'Itens não conformes', transform: (value) => {
+      if (!value || typeof value !== 'object') return ''
+      return SECOES_5S.flatMap((s) => s.itens.filter((i) => value[i.chave] === 'N').map((i) => `${s.titulo}: ${i.negativa}`)).join(' | ')
+    }},
+    { source: 'observacoes', header: 'Observações', transform: (value) => {
+      if (!value || typeof value !== 'object') return ''
+      return SECOES_5S.filter((s) => value[s.id]).map((s) => `${s.titulo}: ${value[s.id]}`).join(' | ')
+    }}
   ]
 }
 

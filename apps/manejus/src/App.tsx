@@ -96,6 +96,8 @@ const SaidaCantina = laz(() => import('./pages/controller/SaidaCantina'), 'Saida
 const RegistrosSaidaCantinaDetalhes = laz(() => import('./pages/controller/RegistrosSaidaCantinaDetalhes'), 'RegistrosSaidaCantinaDetalhes')
 const RegistrosLimpeza = laz(() => import('./pages/controller/RegistrosLimpeza'), 'RegistrosLimpeza')
 const RegistrosLimpezaDetalhes = laz(() => import('./pages/controller/RegistrosLimpezaDetalhes'), 'RegistrosLimpezaDetalhes')
+const Auditoria5s = laz(() => import('./pages/controller/Auditoria5s'), 'Auditoria5s')
+const Auditoria5sDetalhes = laz(() => import('./pages/controller/Auditoria5sDetalhes'), 'Auditoria5sDetalhes')
 const RegistrosOperacoesMaquinas = laz(() => import('./pages/controller/RegistrosOperacoesMaquinas'), 'RegistrosOperacoesMaquinas')
 const RegistrosOperacoesMaquinasDetalhes = laz(() => import('./pages/controller/RegistrosOperacoesMaquinasDetalhes'), 'RegistrosOperacoesMaquinasDetalhes')
 const Almoxarifado = laz(() => import('./pages/controller/Almoxarifado'), 'Almoxarifado')
@@ -929,6 +931,26 @@ function App() {
               <ControllerRoute>
                 <ControllerLayout>
                   <RegistrosLimpezaDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/auditoria-5s"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <Auditoria5s />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/auditoria-5s/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <Auditoria5sDetalhes />
                 </ControllerLayout>
               </ControllerRoute>
             }
