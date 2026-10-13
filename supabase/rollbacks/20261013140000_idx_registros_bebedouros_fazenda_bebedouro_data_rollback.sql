@@ -1,0 +1,2 @@
+-- Rollback de 20261013140000_idx_registros_bebedouros_fazenda_bebedouro_data.sql
+DROP INDEX IF EXISTS public.idx_registros_bebedouros_fazenda_bebedouro_data;
