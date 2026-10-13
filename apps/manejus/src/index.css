@@ -314,13 +314,27 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   .trato-print-root table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 8pt;
+    table-layout: fixed;
+    font-size: 7.5pt;
   }
+
+  /* Colunas informativas estreitas; as de Real (sem largura) dividem todo o espaço restante. */
+  .trato-print-root col.trato-col-lote { width: 24mm; }
+  .trato-print-root col.trato-col-curral { width: 14mm; }
+  .trato-print-root col.trato-col-dieta { width: 16mm; }
+  .trato-print-root col.trato-col-qtd { width: 9mm; }
+  .trato-print-root col.trato-col-anterior { width: 12mm; }
+  .trato-print-root col.trato-col-leitura { width: 10mm; }
+  .trato-print-root col.trato-col-diario { width: 12mm; }
+  .trato-print-root col.trato-col-consumo { width: 11mm; }
+  .trato-print-root col.trato-col-previsto { width: 11mm; }
+  .trato-print-root col.trato-col-total { width: 12mm; }
 
   .trato-print-root th,
   .trato-print-root td {
     border: 1px solid #a6a6a6;
-    padding: 4px 5px;
+    padding: 3px 2px;
+    overflow-wrap: anywhere;
     text-align: center;
     vertical-align: middle;
   }
@@ -339,8 +353,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
   .trato-print-root td.trato-print-real {
     background: #f2f2f2;
-    min-width: 14mm;
-    height: 9mm;
+    height: 13mm;
   }
 }
 

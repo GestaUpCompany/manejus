@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { Fragment, useEffect, useRef, useState, useCallback } from 'react'
 import { useAuth } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import {
@@ -134,6 +134,45 @@ function toFarmTimeOnly(dateStr: string | null | undefined): string {
 }
 
 const PER_PAGE = 25
+const DIAS_POR_PAGINA = 10
+
+interface GrupoDia {
+  dia: string
+  registros: RegistroTrato[]
+  totalPlanejado: number | null
+  totalReal: number | null
+  qtdCurrais: number
+}
+
+function somaOuNull(valores: (number | null)[]): number | null {
+  const preenchidos = valores.filter((v): v is number => v != null)
+  return preenchidos.length ? preenchidos.reduce((s, v) => s + v, 0) : null
+}
+
+/** Agrupa os tratos por dia (fuso da fazenda), do mais recente ao mais antigo. */
+function agruparPorDia(tratos: RegistroTrato[]): GrupoDia[] {
+  const mapa = new Map<string, RegistroTrato[]>()
+  for (const t of tratos) {
+    const dia = toFarmDateOnly(t.data) || t.data.slice(0, 10)
+    const lista = mapa.get(dia)
+    if (lista) lista.push(t)
+    else mapa.set(dia, [t])
+  }
+  return [...mapa.entries()]
+    .sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
+    .map(([dia, registros]) => {
+      const ordenados = [...registros].sort((a, b) =>
+        a.ordem_trato - b.ordem_trato || (a.curral_nome || '').localeCompare(b.curral_nome || '', 'pt-BR', { numeric: true })
+      )
+      return {
+        dia,
+        registros: ordenados,
+        totalPlanejado: somaOuNull(ordenados.map(r => r.kg_planejado)),
+        totalReal: somaOuNull(ordenados.map(r => r.kg_ofertado_real)),
+        qtdCurrais: new Set(ordenados.map(r => r.curral_id)).size,
+      }
+    })
+}
 
 export function RegistrosTratosLeituras() {
   const { user } = useAuth()
@@ -158,6 +197,8 @@ export function RegistrosTratosLeituras() {
   const [lotes, setLotes] = useState<Opcao[]>([])
   const [currais, setCurrais] = useState<Opcao[]>([])
   const [tratos, setTratos] = useState<RegistroTrato[]>([])
+  const [pageDias, setPageDias] = useState(1)
+  const [diasAbertos, setDiasAbertos] = useState<Set<string>>(new Set())
   const [leituras, setLeituras] = useState<RegistroLeitura[]>([])
 
   const [editTrato, setEditTrato] = useState<RegistroTrato | null>(null)
@@ -233,25 +274,34 @@ export function RegistrosTratosLeituras() {
       }
 
       if (aba === 'tratos') {
-        let query = supabase
-          .from('registros_oferta_trato')
-          .select('id, data, curral_id, lote_id, ordem_trato, kg_planejado, kg_ofertado_real, leitura_cocho_nota, nome_usuario, origem, lotes(nome), currais(nome)', { count: 'exact' })
-          .eq('fazenda_id', fazendaId)
-          .is('deleted_at', null)
-          .gte('data', inicioIso)
-          .lt('data', fimIso)
-          .order('data', { ascending: false })
-          .order('ordem_trato', { ascending: true })
-          .range(from, to)
+        // Agrupado por dia: busca todo o período (em blocos, por causa do limite de linhas
+        // do PostgREST) e a paginação é feita por dia no cliente, para o somatório não ser cortado.
+        const TAMANHO_BLOCO = 1000
+        const linhas: any[] = []
+        for (let ini = 0; ; ini += TAMANHO_BLOCO) {
+          let query = supabase
+            .from('registros_oferta_trato')
+            .select('id, data, curral_id, lote_id, ordem_trato, kg_planejado, kg_ofertado_real, leitura_cocho_nota, nome_usuario, origem, lotes(nome), currais(nome)')
+            .eq('fazenda_id', fazendaId)
+            .is('deleted_at', null)
+            .gte('data', inicioIso)
+            .lt('data', fimIso)
+            .order('data', { ascending: false })
+            .order('ordem_trato', { ascending: true })
+            .order('id', { ascending: true })
+            .range(ini, ini + TAMANHO_BLOCO - 1)
 
-        if (loteFiltro) query = query.eq('lote_id', loteFiltro)
-        if (curralFiltro) query = query.eq('curral_id', curralFiltro)
-        if (termo) query = query.or(orPart(['nome_usuario', 'origem']))
+          if (loteFiltro) query = query.eq('lote_id', loteFiltro)
+          if (curralFiltro) query = query.eq('curral_id', curralFiltro)
+          if (termo) query = query.or(orPart(['nome_usuario', 'origem']))
 
-        const { data, count, error: err } = await query
-        if (err) throw err
-        setTotalCount(count ?? 0)
-        setTratos((data || []).map((r: any) => ({
+          const { data, error: err } = await query
+          if (err) throw err
+          linhas.push(...(data || []))
+          if (!data || data.length < TAMANHO_BLOCO) break
+        }
+        setPageDias(1)
+        setTratos(linhas.map((r: any) => ({
           id: r.id,
           data: r.data,
           curral_id: r.curral_id,
@@ -475,6 +525,14 @@ export function RegistrosTratosLeituras() {
   }
 
   const registrosAtivos = aba === 'tratos' ? tratos : leituras
+  const grupos = aba === 'tratos' ? agruparPorDia(tratos) : []
+  const gruposPagina = grupos.slice((pageDias - 1) * DIAS_POR_PAGINA, pageDias * DIAS_POR_PAGINA)
+  const alternarDia = (dia: string) => setDiasAbertos(prev => {
+    const proximo = new Set(prev)
+    if (proximo.has(dia)) proximo.delete(dia)
+    else proximo.add(dia)
+    return proximo
+  })
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
@@ -586,9 +644,47 @@ export function RegistrosTratosLeituras() {
             </thead>
             <tbody>
               {aba === 'tratos'
-                ? (registrosAtivos as RegistroTrato[]).map(t => (
+                ? gruposPagina.map(g => {
+                  const aberto = diasAbertos.has(g.dia)
+                  return (
+                  <Fragment key={g.dia}>
+                    <tr
+                      className="border-b border-border-base bg-surface-2 hover:bg-surface-2/70 cursor-pointer font-semibold"
+                      onClick={() => alternarDia(g.dia)}
+                    >
+                      <td className="p-3 text-content-strong whitespace-nowrap">
+                        <button
+                          type="button"
+                          aria-expanded={aberto}
+                          aria-label={`${aberto ? 'Recolher' : 'Expandir'} tratos de ${formatDate(g.registros[0].data)}`}
+                          className="inline-flex items-center gap-2"
+                        >
+                          <svg
+                            aria-hidden="true"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={`h-4 w-4 text-content-muted transition-transform ${aberto ? 'rotate-90' : ''}`}
+                          >
+                            <path d="M7 4l6 6-6 6" />
+                          </svg>
+                          {formatDate(g.registros[0].data)}
+                        </button>
+                      </td>
+                      <td className="p-3 text-content-muted font-normal" colSpan={3}>
+                        {g.registros.length} {g.registros.length === 1 ? 'trato' : 'tratos'} em {g.qtdCurrais} {g.qtdCurrais === 1 ? 'curral' : 'currais'}
+                      </td>
+                      <td className="p-3 text-content-strong text-right">{formatKg(g.totalPlanejado)}</td>
+                      <td className="p-3 text-content-strong text-right">{formatKg(g.totalReal)}</td>
+                      <td className="p-3" colSpan={3} />
+                      {canManage && <td className="p-3" />}
+                    </tr>
+                    {aberto && g.registros.map(t => (
                     <tr key={t.id} className="border-b border-border-subtle hover:bg-surface-2">
-                      <td className="p-3 text-content whitespace-nowrap">{formatDateTime(t.data)}</td>
+                      <td className="p-3 pl-9 text-content-muted whitespace-nowrap">{toFarmTimeOnly(t.data)}</td>
                       <td className="p-3 text-content">{t.curral_nome || '—'}</td>
                       <td className="p-3 text-content">{t.lote_nome || '—'}</td>
                       <td className="p-3 text-content">{t.ordem_trato}º</td>
@@ -602,7 +698,7 @@ export function RegistrosTratosLeituras() {
                         ) : '—'}
                       </td>
                       <td className="p-3 text-content-muted">{t.nome_usuario || '—'}</td>
-                      <td className="p-3 text-content-muted">{t.origem || '—'}</td>
+                      <td className="p-3 text-content-muted">{t.origem?.toLowerCase() === 'pwa' ? 'Aplicativo' : t.origem || '—'}</td>
                       {canManage && (
                         <td className="p-3 text-right whitespace-nowrap">
                           <Button variant="secondary" size="sm" onClick={() => openEditTrato(t)}>Editar</Button>{' '}
@@ -610,7 +706,10 @@ export function RegistrosTratosLeituras() {
                         </td>
                       )}
                     </tr>
-                  ))
+                    ))}
+                  </Fragment>
+                  )
+                })
                 : (registrosAtivos as RegistroLeitura[]).map(l => (
                     <tr key={l.id} className="border-b border-border-subtle hover:bg-surface-2">
                       <td className="p-3 text-content whitespace-nowrap">{formatDateTime(l.data)}</td>
@@ -641,12 +740,21 @@ export function RegistrosTratosLeituras() {
         </Card>
       )}
 
-      <Pagination
-        page={page}
-        totalItems={totalCount}
-        perPage={PER_PAGE}
-        onPageChange={setPage}
-      />
+      {aba === 'tratos' ? (
+        <Pagination
+          page={pageDias}
+          totalItems={grupos.length}
+          perPage={DIAS_POR_PAGINA}
+          onPageChange={setPageDias}
+        />
+      ) : (
+        <Pagination
+          page={page}
+          totalItems={totalCount}
+          perPage={PER_PAGE}
+          onPageChange={setPage}
+        />
+      )}
 
       {/* Modal edição de trato */}
       <Modal

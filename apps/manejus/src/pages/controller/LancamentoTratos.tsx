@@ -87,22 +87,36 @@ function FolhaTratoImpressao({ dados, fazendaNome, fazendaLogoUrl, tipoLabel }: 
         <span>Tipo de programação: {tipoLabel}</span>
       </div>
       <table>
+        <colgroup>
+          <col className="trato-col-lote" />
+          <col className="trato-col-curral" />
+          <col className="trato-col-dieta" />
+          <col className="trato-col-qtd" />
+          <col className="trato-col-anterior" />
+          <col className="trato-col-leitura" />
+          <col className="trato-col-diario" />
+          <col className="trato-col-consumo" />
+          {Array.from({ length: quantidadeTratos }, (_, index) => (
+            <Fragment key={index}><col className="trato-col-previsto" /><col /></Fragment>
+          ))}
+          <col className="trato-col-total" />
+        </colgroup>
         <thead>
           <tr>
             <th rowSpan={2}>Lote</th>
             <th rowSpan={2}>Curral</th>
-            <th rowSpan={2}>Dieta em Uso</th>
-            <th rowSpan={2}>Qtd. Cab.</th>
-            <th rowSpan={2}>Trato Anterior (kg)</th>
-            <th rowSpan={2}>Leitura do Dia</th>
-            <th rowSpan={2}>Trato Diário Previsto (kg)</th>
-            <th rowSpan={2}>Consumo Dia (kg/cab/dia)</th>
+            <th rowSpan={2}>Dieta</th>
+            <th rowSpan={2}>Cab.</th>
+            <th rowSpan={2}>Anterior (kg)</th>
+            <th rowSpan={2}>Leitura</th>
+            <th rowSpan={2}>Diário (kg)</th>
+            <th rowSpan={2}>kg/cab /dia</th>
             {Array.from({ length: quantidadeTratos }, (_, index) => <th key={index} colSpan={2}>{index + 1}º Trato</th>)}
-            <th rowSpan={2}>Total Previsto (kg)</th>
+            <th rowSpan={2}>Total (kg)</th>
           </tr>
           <tr>
             {Array.from({ length: quantidadeTratos }, (_, index) => (
-              <Fragment key={index}><th>Previsto</th><th>Real</th></Fragment>
+              <Fragment key={index}><th>Prev.</th><th>Real</th></Fragment>
             ))}
           </tr>
         </thead>
