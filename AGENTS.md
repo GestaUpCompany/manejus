@@ -110,3 +110,4 @@ Quando mencionar qualquer um destes tópicos, ler a seção correspondente em `d
 - "Vision", "Vision'Up", "sistema financeiro", "monorepo", "módulo financeiro" → `docs/VISION_ARQUITETURA_FUTURA.md` (Arquitetura Vision + auditoria da planilha fonte)
 - "pill de pasto/curral", "localização do lote no relatório de consumo", `localizacao_por_lote`, `pasto_nome`/`curral_nome` no info → `docs/HISTORICO.md` (Pill de localização no relatório de consumo)
 - "ordenar currais", "ordem da folha de trato", `ordem_folha_trato`, `salvarOrdemCurraisTrato` → `docs/HISTORICO.md` (Ordem manual dos currais na folha de trato)
+- "Farm Plan", "farmplan", `apps/farmplan`, `tcjrztbivvosrxjnjqom` → `apps/farmplan/README.md` (arquitetura, SQLs, Edge Functions, crons) e `docs/HISTORICO.md` (Farm Plan incorporado ao monorepo). Banco separado do painel: não usar `supabase/migrations/` da raiz para ele
