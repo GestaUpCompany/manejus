@@ -81,6 +81,8 @@ export default async function handler(req, res) {
         periodoLabel: body.periodoLabel,
       },
     })
+    const memMb = () => Math.round(process.memoryUsage().rss / 1048576)
+    console.log(`[PDF Geral] secoes=${reports.length} html=${Math.round(html.length / 1024)}KB rss=${memMb()}MB`)
     const pdf = await generatePdf({
       html,
       format: 'A4',
@@ -89,6 +91,7 @@ export default async function handler(req, res) {
         await page.waitForFunction('window.__chartsReady === true', { timeout: 20000 }).catch(() => {})
       },
     })
+    console.log(`[PDF Geral] pdf=${Math.round(pdf.length / 1024)}KB rss=${memMb()}MB`)
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', 'attachment; filename="infografico-mensal.pdf"')
     res.setHeader('Cache-Control', 'no-store')
