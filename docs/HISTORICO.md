@@ -2166,3 +2166,11 @@ Complemento (2026-10-09): a dieta da folha também passou a ser o plano nutricio
 Ajuste (2026-10-09): o saldo na data passou a considerar as categorias vigentes em cada instante (`created_at`/`data_fim`), não só as ativas hoje; lotes recategorizados no próprio dia (ex.: Canastra 1 e 2, TIP 16/18, fazenda d8900758, "boi magro" encerrada em 06/10 às 16h01) voltam a mostrar as cabeças que tinham. O total é por instante (início e fim do dia), então a recategorização não conta o gado duas vezes. Substitui a limitação "só categorias hoje ativas" da entrada acima.
 
 Avisos da folha (2026-10-09): pendências de cadastro (sem plano/sem cabeças) de lotes cuja ocupação já terminou (`lote_curral_historico.data_final` preenchida) saem do alerta amarelo e vão para um bloco recolhido, sem destaque; o alerta amarelo fica só com o que ainda é corrigível (ocupação aberta ou sem lote vinculado). Os textos informam que valem para a data selecionada e não bloqueiam o lançamento.
+
+## Rebanho por faixa etária e sexo no Dashboard
+
+Implementado em 2026-10-13. Seção "Rebanho por Faixa Etária" no Dashboard do controller (entre Métricas de Produção e Animais por Lote).
+- RPC `get_rebanho_faixa_etaria(p_fazenda_id)` (migration `20261013110000`, rollback em `supabase/rollbacks/`), com `guard_fazenda`. Saldo = `COALESCE(quant_atual, quant_inicial, 0)` de `lote_categorias` ativas em lotes ativos.
+- Faixas: 0-4, 5-12, 13-24, 25-36, 36+ meses e "sem idade". Sexo: Fêmea, Macho, Indefinido.
+- Idade vem de `lote_categorias.idade` (meses, valor do cadastro, não envelhece sozinho). Na fazenda de testes, 85 de 356 cabeças estavam sem idade. Evoluir para idade calculada por data de nascimento fica como possível melhoria.
+- Hook `useRebanhoFaixaEtaria` em `useDashboardQueries.ts`.
