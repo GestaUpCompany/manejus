@@ -10,6 +10,8 @@ interface ChecklistItem {
   valor: boolean
   observacao: string
   foto_url?: string
+  // Resposta do peão à pergunta de pendência anterior deste item (resolvida | mantida)
+  pendencia?: { situacao?: 'resolvida' | 'mantida'; desde?: string }
 }
 
 interface RegistroBebedouros {
@@ -229,6 +231,34 @@ export function BebedourosDetalhes() {
                 {registro!.checklist?.aterro_acesso_bebedouro_ideal?.observacao && <DetailField label="Obs. Aterro" value={registro!.checklist.aterro_acesso_bebedouro_ideal.observacao} />}
                 {registro!.checklist?.espacamento_bebedouro_ideal?.observacao && <DetailField label="Obs. Espaçamento" value={registro!.checklist.espacamento_bebedouro_ideal.observacao} />}
                 {registro!.checklist?.boia_protecao_boas_condicoes?.observacao && <DetailField label="Obs. Boia" value={registro!.checklist.boia_protecao_boas_condicoes.observacao} />}
+                {(() => {
+                  const respondidas = Object.entries(registro!.checklist ?? {}).filter(([, item]) => item?.pendencia?.situacao)
+                  if (respondidas.length === 0) return null
+                  return (
+                    <div>
+                      <p className="text-xs font-medium text-content-muted uppercase tracking-wider mb-2">
+                        Pendências anteriores
+                      </p>
+                      <ul className="space-y-1">
+                        {respondidas.map(([campo, item]) => (
+                          <li key={campo} className="flex items-center justify-between gap-3 text-sm">
+                            <span className="text-content-strong">
+                              {CHECKLIST_FOTO_LABELS[campo] ?? campo}
+                              {item?.pendencia?.desde ? ` (desde ${formatDate(item.pendencia.desde)})` : ''}
+                            </span>
+                            <span
+                              className={`shrink-0 rounded px-2 py-0.5 text-xs font-bold ${
+                                item?.pendencia?.situacao === 'resolvida' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-900'
+                              }`}
+                            >
+                              {item?.pendencia?.situacao === 'resolvida' ? 'Resolvida' : 'Ainda pendente'}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })()}
                 {registro!.checklist?.foto_bebedouro?.foto_url && (
                   <div>
                     <p className="text-xs font-medium text-content-muted uppercase tracking-wider mb-2">
