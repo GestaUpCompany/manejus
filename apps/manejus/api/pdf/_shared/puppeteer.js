@@ -83,20 +83,7 @@ export async function findLocalChrome(puppeteer) {
   return null
 }
 
-/**
- * Gera um PDF a partir de um HTML completo usando Puppeteer.
- * @param {Object} opts
- * @param {string} opts.html   Documento HTML completo (<!doctype html>...).
- * @param {'A4'|'A3'|'Letter'} [opts.format]  Formato do papel. Default: A4.
- * @param {boolean} [opts.landscape]          Orientação paisagem. Default: true.
- * @param {number}  [opts.timeoutMs]          Timeout para carregar a página. Default: 30000.
- * @param {string[]} [opts.launchArgs]        Flags extras de launch do Chromium
- *        (ex: '--enable-unsafe-swiftshader' para WebGL de mapas).
- * @param {(page: import('puppeteer-core').Page) => Promise<void>} [opts.beforePdf]
- *        Hook opcional para aguardar sinais dinâmicos (ex: window.__chartsReady).
- * @returns {Promise<Buffer>} Buffer com o PDF renderizado.
- */
-export async function generatePdf({ html, format = 'A4', landscape = true, timeoutMs = 30000, launchArgs = [], beforePdf }) {
+async function launchBrowser(launchArgs) {
   const [{ default: chromium }, { default: puppeteer }] = await Promise.all([
     import('@sparticuz/chromium'),
     import('puppeteer-core'),
@@ -117,26 +104,81 @@ export async function generatePdf({ html, format = 'A4', landscape = true, timeo
     headless: true,
   }
   // Uma segunda tentativa cobre falhas transitórias de cold start (extração do binário em /tmp).
-  let browser
   try {
-    browser = await puppeteer.launch(launchOptions)
+    return await puppeteer.launch(launchOptions)
   } catch (error) {
     console.warn('[PDF] Falha ao iniciar o Chromium, tentando novamente:', error)
-    browser = await puppeteer.launch(launchOptions)
+    return puppeteer.launch(launchOptions)
   }
+}
+
+/**
+ * Abre o Chromium, executa `fn(browser)` e fecha o browser mesmo em caso de erro.
+ * @template T
+ * @param {(browser: import('puppeteer-core').Browser) => Promise<T>} fn
+ * @param {{ launchArgs?: string[] }} [opts]
+ * @returns {Promise<T>}
+ */
+export async function withBrowser(fn, { launchArgs = [] } = {}) {
+  const browser = await launchBrowser(launchArgs)
   try {
-    const page = await browser.newPage()
-    await page.setContent(html, { waitUntil: 'load', timeout: timeoutMs })
-    if (beforePdf) await beforePdf(page)
-    const pdf = await page.pdf({
-      format,
-      landscape,
-      printBackground: true,
-      preferCSSPageSize: true,
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
-    })
-    return Buffer.from(pdf)
+    return await fn(browser)
   } finally {
     await browser.close()
   }
+}
+
+/**
+ * Carrega `html` numa página nova, roda `fn(page)` e fecha a página (liberando os
+ * canvases) antes de devolver o resultado.
+ */
+export async function withHtmlPage(browser, html, fn, { timeoutMs = 30000 } = {}) {
+  const page = await browser.newPage()
+  try {
+    await page.setContent(html, { waitUntil: 'load', timeout: timeoutMs })
+    return await fn(page)
+  } finally {
+    await page.close()
+  }
+}
+
+/** Imprime a página no formato padrão dos relatórios (sem margem, com fundo). */
+export async function printPage(page, { format = 'A4', landscape = true } = {}) {
+  const pdf = await page.pdf({
+    format,
+    landscape,
+    printBackground: true,
+    preferCSSPageSize: true,
+    margin: { top: '0', right: '0', bottom: '0', left: '0' },
+  })
+  return Buffer.from(pdf)
+}
+
+/**
+ * Gera um PDF a partir de um HTML completo usando Puppeteer.
+ * @param {Object} opts
+ * @param {string} opts.html   Documento HTML completo (<!doctype html>...).
+ * @param {'A4'|'A3'|'Letter'} [opts.format]  Formato do papel. Default: A4.
+ * @param {boolean} [opts.landscape]          Orientação paisagem. Default: true.
+ * @param {number}  [opts.timeoutMs]          Timeout para carregar a página. Default: 30000.
+ * @param {string[]} [opts.launchArgs]        Flags extras de launch do Chromium
+ *        (ex: '--enable-unsafe-swiftshader' para WebGL de mapas).
+ * @param {(page: import('puppeteer-core').Page) => Promise<void>} [opts.beforePdf]
+ *        Hook opcional para aguardar sinais dinâmicos (ex: window.__chartsReady).
+ * @returns {Promise<Buffer>} Buffer com o PDF renderizado.
+ */
+export async function generatePdf({ html, format = 'A4', landscape = true, timeoutMs = 30000, launchArgs = [], beforePdf }) {
+  return withBrowser(
+    (browser) =>
+      withHtmlPage(
+        browser,
+        html,
+        async (page) => {
+          if (beforePdf) await beforePdf(page)
+          return printPage(page, { format, landscape })
+        },
+        { timeoutMs },
+      ),
+    { launchArgs },
+  )
 }

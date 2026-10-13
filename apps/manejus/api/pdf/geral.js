@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { generatePdf } from './_shared/puppeteer.js'
-import { composeReports } from './_shared/reportComposer.js'
+import { renderPartsToPdf } from './_shared/partsPdf.js'
+import { composeReportParts } from './_shared/reportComposer.js'
 import { isReportType } from './_shared/reportRegistry.js'
 import { createAuthenticatedSupabase, downloadImageDataUrl } from './_shared/supabaseAuth.js'
 
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido' })
   }
   const body = req.body
-  if (Buffer.byteLength(JSON.stringify(body ?? null), 'utf8') > MAX_BODY_BYTES) {
+  if (Number(req.headers?.['content-length'] ?? 0) > MAX_BODY_BYTES) {
     return res.status(413).json({ error: 'O conjunto de relatórios excede o limite de 4 MB' })
   }
   const invalid = validarBody(body)
@@ -70,7 +70,7 @@ export default async function handler(req, res) {
       ...report,
       dados: { ...report.dados, logoGestao: body.logoGestao ?? '', logoFazenda: body.logoFazenda ?? '' },
     }))
-    const html = await composeReports({
+    const parts = await composeReportParts({
       reports,
       cover: {
         fazendaNome: body.fazendaNome,
@@ -82,15 +82,8 @@ export default async function handler(req, res) {
       },
     })
     const memMb = () => Math.round(process.memoryUsage().rss / 1048576)
-    console.log(`[PDF Geral] secoes=${reports.length} html=${Math.round(html.length / 1024)}KB rss=${memMb()}MB`)
-    const pdf = await generatePdf({
-      html,
-      format: 'A4',
-      landscape: true,
-      beforePdf: async (page) => {
-        await page.waitForFunction('window.__chartsReady === true', { timeout: 20000 }).catch(() => {})
-      },
-    })
+    console.log(`[PDF Geral] secoes=${reports.length} partes=${parts.length} rss=${memMb()}MB`)
+    const pdf = await renderPartsToPdf(parts, memMb)
     console.log(`[PDF Geral] pdf=${Math.round(pdf.length / 1024)}KB rss=${memMb()}MB`)
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', 'attachment; filename="infografico-mensal.pdf"')

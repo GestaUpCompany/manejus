@@ -42,3 +42,7 @@ export async function getChartJsScript() {
   cachedScript = await fetchFromCdn()
   return cachedScript
 }
+
+// Densidade dos canvases dos gráficos no PDF. 2x (~190 dpi em A4) segue nítido; 3x custava
+// 9x os pixels CSS por canvas e estourava os 2 GB da função (Hobby) no infográfico.
+export const CHART_DPR = 2

@@ -71,4 +71,23 @@ describe('compositor do relatório geral', () => {
     expect(html).toContain('Página 6 de 6')
     expect(html).not.toContain('Distribuição geográfica')
   })
+
+  it('divide em partes (capa, seção, encerramento) com Chart.js uma única vez e numeração por offset', async () => {
+    const module = await import(COMPOSER_PATH)
+    const morte = {
+      dataInicio: '2026-09-01', dataFim: '2026-09-29', fazendaNome: 'Fazenda Teste', logoGestao: '', logoFazenda: '',
+      linhas: [{ id: '1', data: '2026-09-02', lote_nome: 'Lote 1', pasto: 'P1', sexo: 'Macho', idade: '1', peso_vivo: 300, categoria: 'Garrote', causa_morte: 'Acidente', diagnosticos: null }],
+      resumo: { total_mortes: 1, media_por_dia: 1, peso_medio: 300, causa_mais_frequente: 'Acidente', causa_mais_frequente_count: 1, por_causa: [{ label: 'Acidente', valor: 1 }], por_categoria: [{ label: 'Garrote', valor: 1 }], por_sexo: [{ label: 'Macho', valor: 1 }], por_pasto: [{ label: 'P1', valor: 1 }], matriz_causa_categoria: { causas: ['Acidente'], categorias: ['Garrote'], matriz: { Acidente: { Garrote: 1 } } }, frequencia_diagnosticos: [] },
+    }
+    const parts = await module.composeReportParts({ cover, reports: [{ tipo: 'morte', dados: morte }, { tipo: 'morte', dados: { ...morte, linhas: [] } }] })
+    expect(parts.map((part: { id: string }) => part.id)).toEqual(['capa', 'Relatório de Mortalidade', 'encerramento'])
+    const secao = parts[1].html({ offset: 1, total: 9 })
+    expect(secao.match(/new Chart\(/g)?.length).toBeGreaterThan(0)
+    expect(secao).toContain('window.__pageOffset=1;window.__pageTotal=9')
+    const umd = (secao.match(/<script>/g) ?? []).length
+    const contagem = parts[1].html({ offset: 0, total: 1, countOnly: true })
+    expect((contagem.match(/<script>/g) ?? []).length).toBeLessThan(umd)
+    expect(contagem).not.toContain('new Chart(')
+    expect(contagem).toContain('window.__paginateFlows()')
+  })
 })

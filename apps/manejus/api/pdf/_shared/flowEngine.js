@@ -231,14 +231,17 @@ function paginateFlows(packFlow) {
 }
 
 // Numera "Página X de Y" em todas as páginas (inclusive capa/encerramento e
-// relatórios sem fluxo) com base no DOM final.
+// relatórios sem fluxo) com base no DOM final. Quando o documento é só um trecho
+// do infográfico (renderizado separadamente), window.__pageOffset/__pageTotal
+// posicionam as páginas dentro do PDF completo.
 function numberPages() {
   var pages = Array.prototype.slice.call(document.querySelectorAll('section.page'))
-  var total = pages.length
+  var offset = window.__pageOffset || 0
+  var total = window.__pageTotal || pages.length
   pages.forEach(function (page, idx) {
     Array.prototype.slice.call(page.querySelectorAll('span,div')).forEach(function (el) {
       if (el.children.length === 0 && /^Página \d+ de \d+$/.test((el.textContent || '').trim())) {
-        el.textContent = 'Página ' + (idx + 1) + ' de ' + total
+        el.textContent = 'Página ' + (offset + idx + 1) + ' de ' + total
       }
     })
   })

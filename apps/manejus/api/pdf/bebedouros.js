@@ -23,7 +23,7 @@
 // (última / próxima limpeza) cobre essa leitura.
 
 import { escapeHtml, dateFmt } from './_shared/formatters.js'
-import { getChartJsScript } from './_shared/chartjs.js'
+import { CHART_DPR, getChartJsScript } from './_shared/chartjs.js'
 import { generatePdf } from './_shared/puppeteer.js'
 import {
   renderHeader,
@@ -209,7 +209,7 @@ const CHARTS_INIT_JS = `
   var Chart = window.Chart
   if (!Chart) { window.__chartsReady = true; return }
   Chart.defaults.animation = false
-  Chart.defaults.devicePixelRatio = 3
+  Chart.defaults.devicePixelRatio = ${CHART_DPR}
   Chart.defaults.font.family = 'Arial, Helvetica, sans-serif'
 
   var charts = (window.__reportData && window.__reportData.charts) || []
