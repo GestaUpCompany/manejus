@@ -63,6 +63,7 @@ export const CADERNETA_GRUPOS: CadernetaGrupo[] = [
     itens: [
       { id: 'bebedouros', path: '/controller/cadernetas/bebedouros' },
       { id: 'limpeza', path: '/controller/cadernetas/limpeza' },
+      { id: 'auditoria-5s', path: '/controller/cadernetas/auditoria-5s' },
       { id: 'problemas', path: '/controller/cadernetas/problemas' },
       { id: 'clima', path: '/controller/cadernetas/clima' },
     ],
@@ -109,6 +110,7 @@ const CADERNETA_LABELS: Record<string, string> = {
   abastecimento: 'Abastecimento',
   cantina: 'Alimentação',
   limpeza: 'Limpeza',
+  'auditoria-5s': 'Auditoria 5S',
   'operacoes-maquinas': 'Operações de Máquinas',
   'manutencao-maquinas': 'Manutenção de Máquinas',
   problemas: 'Problemas',
