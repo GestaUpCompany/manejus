@@ -641,7 +641,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                     {[
                       { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' },
-                      { label: 'Nº Cab. Atual', value: formatarInteiro(info.n_cabecas_atual) },
+                      { label: 'Nº Cab. (média do período)', value: formatarInteiro(info.n_cabecas_atual) },
                       { label: 'Raça', value: info.raca || '—' },
                       { label: 'Categoria', value: info.categoria ? info.categoria.split(', ').map(c => c.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') : '—' },
                       { label: 'Dieta', value: info.dieta || '—' },

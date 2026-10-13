@@ -324,7 +324,7 @@ function custoMedio(dados) {
 function pillsHtml(info) {
   const pills = [
     { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' },
-    { label: 'Nº Cab. Atual', value: intFmt(info.n_cabecas_atual) },
+    { label: 'Nº Cab. (média do período)', value: intFmt(info.n_cabecas_atual) },
     { label: 'Raça', value: info.raca || '—' },
     { label: 'Categoria', value: info.categoria ? titleCase(info.categoria) : '—' },
     { label: 'Dieta', value: info.dieta || '—' },

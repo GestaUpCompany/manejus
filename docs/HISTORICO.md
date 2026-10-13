@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de consumo: saldo de cabeças pela média do período (2026-10-13)
+Lote esvaziado (Lote 2 Descarte, fazenda `f5d64d63…`, `quant_atual = 0` em todas as categorias) não gerava o relatório: a RPC `get_dados_relatorio_consumo` validava e ponderava por `lote_categorias.quant_atual` (saldo de hoje).
+- Migration `20261013100000_relatorio_consumo_saldo_medio_periodo` (rollback em `supabase/rollbacks/`): nova `calculate_quant_em(lote, categoria, ate)` (mesma regra de `calculate_quant_atual`, só movimentações com `data < ate`; a original não mudou). Saldo da categoria no período = `ROUND((saldo no início + saldo no fim) / 2)`; sem filtro de datas, início/fim = primeira/última data de registro da série.
+- Categorias sem saldo no período saem da ponderação (CTE `cats_pond`); erro só se o lote inteiro não tiver cabeças no período ou faltar peso em categoria com saldo.
+- Pill "Nº Cab. Atual" virou "Nº Cab. (média do período)" (página pública, `relatorioConsumoPDF.ts`, `api/pdf/consumo.js`). Campo `n_cabecas_atual` mantido.
+- Verificado: Lote 2 passou a retornar 53 cabeças e 38 pontos, sem erro; demais lotes sem erro. Limitação: filtro de categorias segue `ativo = true AND data_fim IS NULL`.
+
 ## Manejo de currais no PWA, Fase 4 (2026-10-10)
 `PastagensPage` virou um wrapper com seletor **Pastos | Currais** (`?modo=curral`): `PastagensPastoForm` (formulário antigo, intacto) e `PastagensCurralForm` (novo). Cada modo tem rascunho próprio (`pastagens` / `curral`), então alternar não perde dados.
 - Curral: saída = currais com lote (lote derivado de `currais.lote_id`, só Confinamento/TIP/Sequestro); entrada = só currais livres e ativos; contagem por categoria, escores e equipe como no pasto. Sem foto/GPS e sem checklist de avaliação geral (itens de pasto).

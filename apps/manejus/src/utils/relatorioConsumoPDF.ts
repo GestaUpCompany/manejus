@@ -463,7 +463,7 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
   const rightMargin = 8
   const pills = [
     { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' },
-    { label: 'Nº Cab. Atual', value: formatarInteiro(info.n_cabecas_atual) },
+    { label: 'Nº Cab. (média do período)', value: formatarInteiro(info.n_cabecas_atual) },
     { label: 'Raça', value: info.raca || '—' },
     { label: 'Categoria', value: (info.categoria ? info.categoria.split(/,\s*/).map((c) => c.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') : '—') },
     { label: 'Dieta', value: info.dieta || '—' },
