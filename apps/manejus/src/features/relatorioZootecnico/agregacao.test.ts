@@ -5,6 +5,7 @@ function cat(parcial: Partial<CategoriaZootecnica> = {}): CategoriaZootecnica {
   return {
     loteNome: 'L',
     pastoNome: null,
+    curralNome: null,
     areaUtilHa: null,
     taxaLotacaoUaHa: null,
     categoria: null,

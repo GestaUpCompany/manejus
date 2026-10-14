@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { colunasZootecnicas, formatarCelula, montarTabelaZootecnica } from './colunas'
-import { montarLinhaGeral } from './agregacao'
+import { colunasZootecnicas, dividirPorManejo, formatarCelula, montarTabelaZootecnica } from './colunas'
+import { montarLinhaGeral, montarLinha, type CategoriaZootecnica } from './agregacao'
 
 describe('formatarCelula', () => {
   it('formata por tipo em pt-BR', () => {
@@ -24,6 +24,25 @@ describe('montarTabelaZootecnica', () => {
     const t = montarTabelaZootecnica(geral, [], 22)
     expect(t.geral).toHaveLength(colunasZootecnicas(22).length)
     expect(t.colunas.some((c) => c.grupo === 'Consumo 22 dias')).toBe(true)
-    expect(t.linhas).toEqual([])
+    expect(t.secoes).toEqual([])
+  })
+})
+
+const cat = (loteNome: string, curralNome: string | null): CategoriaZootecnica => ({
+  loteNome, pastoNome: curralNome ? null : 'P1', curralNome, areaUtilHa: null, taxaLotacaoUaHa: null, categoria: null, raca: null,
+  sexo: null, estrategia: null, cabecas: 10, dataPesagem: null, pesoEntradaKg: null, pesoAtualKg: null, pesoMetaKg: null,
+  dataMeta: null, periodoDias: null, rcPercent: null, precoVendaArroba: null, precoCustoCab: null, consumoMetaPercentPv: null,
+  teorMsPercent: null, serieGeral: [], serieJanela: [],
+})
+
+describe('dividirPorManejo', () => {
+  it('separa lotes a pasto dos de curral e omite seção vazia', () => {
+    const linhas = [montarLinha(cat('L1', null)), montarLinha(cat('L2', 'C1')), montarLinha(cat('L3', 'C2'))]
+    const secoes = dividirPorManejo(linhas)
+    expect(secoes.map((s) => s.titulo)).toEqual(['Lotes a pasto', 'Lotes em currais (confinamento)'])
+    expect(secoes[1].linhas).toHaveLength(2)
+    expect(secoes[1].total.cabecas).toBe(20)
+    expect(secoes.map((s) => s.total.loteNome)).toEqual(['Total a pasto', 'Total em currais'])
+    expect(dividirPorManejo([linhas[0]])).toHaveLength(1)
   })
 })

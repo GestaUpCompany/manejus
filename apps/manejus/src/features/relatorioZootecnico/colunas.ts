@@ -1,4 +1,4 @@
-import type { LinhaZootecnica } from './agregacao'
+import { montarLinhaGeral, type LinhaZootecnica } from './agregacao'
 
 export type TipoColuna = 'texto' | 'num2' | 'int' | 'pct1' | 'pct2' | 'brl' | 'data'
 
@@ -27,6 +27,7 @@ export function colunasZootecnicas(dias: number): ColunaZootecnica[] {
   return [
     { grupo: 'Identificação', header: 'Lote', width: 28, tipo: 'texto', valor: (l) => l.loteNome },
     { grupo: 'Identificação', header: 'Pasto', width: 14, tipo: 'texto', valor: (l) => l.pastoNome },
+    { grupo: 'Identificação', header: 'Curral', width: 12, tipo: 'texto', valor: (l) => l.curralNome },
     { grupo: 'Identificação', header: 'Área útil (ha)', width: 11, tipo: 'num2', valor: (l) => l.areaUtilHa },
     { grupo: 'Identificação', header: 'Tx. lotação (UA/ha)', width: 12, tipo: 'num2', valor: (l) => l.taxaLotacaoUaHa },
     { grupo: 'Identificação', header: 'Cabeças', width: 9, tipo: 'int', valor: (l) => l.cabecas },
@@ -76,19 +77,39 @@ export function formatarCelula(tipo: TipoColuna, v: string | number | null): str
   }
 }
 
+export interface SecaoZootecnica {
+  titulo: string
+  linhas: LinhaZootecnica[]
+  total: LinhaZootecnica
+}
+
+// Lote com curral vinculado é confinamento; sem curral, está a pasto. Seções vazias são omitidas.
+export function dividirPorManejo(linhas: LinhaZootecnica[]): SecaoZootecnica[] {
+  const pasto = linhas.filter((l) => !l.curralNome)
+  const curral = linhas.filter((l) => !!l.curralNome)
+  return [
+    { titulo: 'Lotes a pasto', rotulo: 'Total a pasto', linhas: pasto },
+    { titulo: 'Lotes em currais (confinamento)', rotulo: 'Total em currais', linhas: curral },
+  ]
+    .filter((s) => s.linhas.length > 0)
+    .map(({ titulo, rotulo, linhas }) => ({ titulo, linhas, total: { ...montarLinhaGeral(linhas), loteNome: rotulo } }))
+}
+
 export interface TabelaZootecnica {
   colunas: { grupo: string; header: string; tipo: TipoColuna }[]
   geral: string[]
-  linhas: string[][]
+  // total é null quando há uma seção só (seria idêntico à linha Geral)
+  secoes: { titulo: string; total: string[] | null; linhas: string[][] }[]
 }
 
 // Tabela já formatada, usada pela tela e pelo PDF (o endpoint só desenha)
 export function montarTabelaZootecnica(geral: LinhaZootecnica, linhas: LinhaZootecnica[], dias: number): TabelaZootecnica {
   const cols = colunasZootecnicas(dias)
   const fmt = (l: LinhaZootecnica) => cols.map((c) => formatarCelula(c.tipo, c.valor(l)))
+  const secoes = dividirPorManejo(linhas)
   return {
     colunas: cols.map(({ grupo, header, tipo }) => ({ grupo, header, tipo })),
     geral: fmt(geral),
-    linhas: linhas.map(fmt),
+    secoes: secoes.map((s) => ({ titulo: s.titulo, total: secoes.length > 1 ? fmt(s.total) : null, linhas: s.linhas.map(fmt) })),
   }
 }

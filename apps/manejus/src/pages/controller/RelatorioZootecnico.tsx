@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth, getFazendaIdForUser } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import { useToast, PageSkeleton } from '@gestaup/ui'
 import { carregarRelatorioZootecnico, gerarExcelZootecnico } from '../../services/relatorioZootecnicoService'
-import { montarTabelaZootecnica } from '../../features/relatorioZootecnico/colunas'
+import { montarTabelaZootecnica, type TabelaZootecnica } from '../../features/relatorioZootecnico/colunas'
 import { gerarRelatorioZootecnicoPDFPuppeteer } from '../../utils/relatorioZootecnicoPDFPuppeteer'
 
 function baixar(blob: Blob, nome: string) {
@@ -15,6 +15,22 @@ function baixar(blob: Blob, nome: string) {
   a.download = nome
   a.click()
   URL.revokeObjectURL(url)
+}
+
+function LinhaTabela({ valores, colunas, destaque }: { valores: string[]; colunas: TabelaZootecnica['colunas']; destaque?: 'geral' | 'total' }) {
+  const fundo = destaque === 'geral' ? 'bg-green-100 dark:bg-green-900' : destaque === 'total' ? 'bg-green-50 dark:bg-green-900/50' : 'bg-surface-1'
+  return (
+    <tr className={destaque ? `${fundo} font-bold text-green-900 dark:text-green-100` : 'border-t border-border-subtle hover:bg-surface-2'}>
+      {valores.map((valor, i) => (
+        <td
+          key={i}
+          className={`whitespace-nowrap px-2 py-1.5 ${colunas[i].tipo === 'texto' ? 'text-left' : 'text-right tabular-nums'} ${i === 0 ? `sticky left-0 z-10 ${fundo}` : ''}`}
+        >
+          {valor}
+        </td>
+      ))}
+    </tr>
+  )
 }
 
 const fmtBr = (iso: string) => iso.split('-').reverse().join('/')
@@ -152,23 +168,23 @@ export function RelatorioZootecnico() {
               </tr>
             </thead>
             <tbody>
-              {[tabela.geral, ...tabela.linhas].map((linha, r) => (
-                <tr key={r} className={r === 0 ? 'bg-green-100 font-bold text-green-900 dark:bg-green-900/40 dark:text-green-100' : 'border-t border-border-subtle hover:bg-surface-2'}>
-                  {linha.map((valor, i) => (
-                    <td
-                      key={i}
-                      className={`whitespace-nowrap px-2 py-1.5 ${tabela.colunas[i].tipo === 'texto' ? 'text-left' : 'text-right tabular-nums'} ${
-                        i === 0 ? `sticky left-0 z-10 ${r === 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-surface-1'}` : ''
-                      }`}
-                    >
-                      {valor}
+              <LinhaTabela valores={tabela.geral} colunas={tabela.colunas} destaque="geral" />
+              {tabela.secoes.map((secao) => (
+                <Fragment key={secao.titulo}>
+                  <tr className="bg-surface-2">
+                    <td colSpan={tabela.colunas.length} className="sticky left-0 px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wide text-content-strong">
+                      {secao.titulo}
                     </td>
+                  </tr>
+                  {secao.total && <LinhaTabela valores={secao.total} colunas={tabela.colunas} destaque="total" />}
+                  {secao.linhas.map((linha, r) => (
+                    <LinhaTabela key={r} valores={linha} colunas={tabela.colunas} />
                   ))}
-                </tr>
+                </Fragment>
               ))}
             </tbody>
           </table>
-          {tabela.linhas.length === 0 && <p className="p-4 text-sm text-content-muted">Nenhum lote ativo com animais.</p>}
+          {tabela.secoes.length === 0 && <p className="p-4 text-sm text-content-muted">Nenhum lote ativo com animais.</p>}
         </div>
       )}
     </div>

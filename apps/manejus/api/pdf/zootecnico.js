@@ -2,7 +2,7 @@
 // formatada (mesma fonte de colunas da tela e do Excel: features/relatorioZootecnico/colunas.ts);
 // aqui só se desenha. Com 25 colunas a A4 paisagem não comporta uma tabela só,
 // então a tabela é dividida em dois blocos (Identificação+Desempenho e
-// Financeiro+Consumo+Meta), ambos repetindo a coluna Lote e a linha Geral.
+// Financeiro+Consumo+Meta), ambos repetindo a coluna Lote e a linha Geral. As linhas vêm em seções (lotes a pasto / em currais), cada uma com sua linha de total.
 // Cada bloco pagina em ROWS_PER_PAGE linhas; o bloco 2 sempre começa em página nova.
 
 import { escapeHtml, dateFmt } from './_shared/formatters.js'
@@ -13,7 +13,7 @@ import { renderHeader, page as pageSection, htmlDocument } from './_shared/templ
 const MAX_LINHAS = 1000
 const MAX_COLUNAS = 40
 const MAX_BODY_BYTES = 8_000_000
-const ROWS_PER_PAGE = 13
+const ROWS_PER_PAGE = 12
 // Os dois primeiros grupos (Identificação e Desempenho) formam o bloco 1
 const GRUPOS_BLOCO_1 = 2
 
@@ -21,9 +21,10 @@ const ZOO_CSS = `
 .zoo-group th{background:#14532d;text-align:center;font-size:9px;padding:4px 3px;border-left:1px solid #0b6a42}
 .zoo-table th,.zoo-table td{font-size:8px;padding:4px 3px;line-height:1.2}
 .zoo-table th{text-align:center;vertical-align:middle}
-.zoo-table td{text-align:right}
-.zoo-table td.zoo-txt{text-align:left}
+.zoo-table td{text-align:right;white-space:nowrap}
+.zoo-table td.zoo-txt{text-align:left;white-space:normal}
 .zoo-geral td{background:#dcfce7;font-weight:700;color:#14532d}
+.zoo-total td{background:#f0fdf4;font-weight:700;color:#14532d}
 `
 
 function isPDFData(v) {
@@ -31,8 +32,9 @@ function isPDFData(v) {
   if (typeof v.fazendaNome !== 'string') return false
   if (typeof v.fazendaId !== 'string' || !v.fazendaId) return false
   const t = v.tabela
-  if (!t || !Array.isArray(t.colunas) || !Array.isArray(t.linhas) || !Array.isArray(t.geral)) return false
-  return t.colunas.length > 0 && t.colunas.length <= MAX_COLUNAS && t.linhas.length <= MAX_LINHAS
+  if (!t || !Array.isArray(t.colunas) || !Array.isArray(t.secoes) || !Array.isArray(t.geral)) return false
+  const totalLinhas = t.secoes.reduce((s, x) => s + (Array.isArray(x?.linhas) ? x.linhas.length : MAX_LINHAS + 1), 0)
+  return t.colunas.length > 0 && t.colunas.length <= MAX_COLUNAS && totalLinhas <= MAX_LINHAS && t.secoes.every((x) => x.total === null || Array.isArray(x.total))
 }
 
 function footer(janelaInicio, janelaFim, dias, page, totalPages) {
@@ -41,12 +43,12 @@ function footer(janelaInicio, janelaFim, dias, page, totalPages) {
 
 // Larguras proporcionais: texto largo recebe mais espaço
 function larguras(cols) {
-  const pesos = cols.map((c) => (c.header === 'Lote' ? 3 : c.tipo === 'texto' ? 1.8 : 1.2))
+  const pesos = cols.map((c) => (c.header === 'Lote' ? 3 : c.tipo === 'texto' ? 1.8 : c.tipo === 'data' || c.tipo === 'brl' ? 1.7 : 1.2))
   const total = pesos.reduce((s, p) => s + p, 0)
   return pesos.map((p) => `${((p / total) * 100).toFixed(2)}%`)
 }
 
-function tabelaBloco(colunasIdx, tabela, linhas, titulo) {
+function tabelaBloco(colunasIdx, tabela, secao, linhas, titulo) {
   const cols = colunasIdx.map((i) => tabela.colunas[i])
   const grupos = []
   for (const c of cols) {
@@ -59,8 +61,8 @@ function tabelaBloco(colunasIdx, tabela, linhas, titulo) {
   const headCols = `<tr>${cols.map((c) => `<th>${escapeHtml(c.header)}</th>`).join('')}</tr>`
   const celulas = (valores, classe = '') =>
     `<tr${classe ? ` class="${classe}"` : ''}>${colunasIdx.map((i, k) => `<td${cols[k].tipo === 'texto' ? ' class="zoo-txt"' : ''}>${escapeHtml(valores[i] ?? '—')}</td>`).join('')}</tr>`
-  const corpo = celulas(tabela.geral, 'zoo-geral') + linhas.map((l) => celulas(l)).join('')
-  return `<div class="table-block"><h3 class="table-title">${escapeHtml(titulo)}<span>${tabela.linhas.length} ${tabela.linhas.length === 1 ? 'linha' : 'linhas'}</span></h3><table class="zoo-table">${colgroup}<thead>${headGrupos}${headCols}</thead><tbody>${corpo}</tbody></table></div>`
+  const corpo = celulas(tabela.geral, 'zoo-geral') + (secao.total ? celulas(secao.total, 'zoo-total') : '') + linhas.map((l) => celulas(l)).join('')
+  return `<div class="table-block"><h3 class="table-title">${escapeHtml(titulo)}<span>${secao.linhas.length} ${secao.linhas.length === 1 ? 'linha' : 'linhas'}</span></h3><table class="zoo-table">${colgroup}<thead>${headGrupos}${headCols}</thead><tbody>${corpo}</tbody></table></div>`
 }
 
 function chunk(arr, size) {
@@ -86,7 +88,9 @@ export async function renderZootecnicoHtml(input) {
   const blocos = [{ idx: idx1, titulo: 'Identificação e desempenho' }]
   if (idx2.length > 1) blocos.push({ idx: idx2, titulo: 'Financeiro, consumo e meta' })
 
-  const paginas = blocos.flatMap((b) => chunk(tabela.linhas, ROWS_PER_PAGE).map((linhas, i, todas) => ({ ...b, linhas, continuacao: i > 0, total: todas.length })))
+  const paginas = tabela.secoes.flatMap((secao) =>
+    blocos.flatMap((b) => chunk(secao.linhas, ROWS_PER_PAGE).map((linhas, i) => ({ ...b, secao, linhas, continuacao: i > 0 }))),
+  )
   const totalPages = paginas.length
 
   const body = paginas
@@ -94,7 +98,7 @@ export async function renderZootecnicoHtml(input) {
       pageSection(`
         ${renderHeader({ ...brand, reportTitle: 'Relatório Zootécnico dos Lotes' })}
         ${n === 0 ? `<div class="period-badge">Consumo da janela: ${dateFmt(janelaInicio)} a ${dateFmt(janelaFim)} (${dias} dias)</div>` : ''}
-        ${tabelaBloco(p.idx, tabela, p.linhas, p.continuacao ? `${p.titulo} (continuação)` : p.titulo)}
+        ${tabelaBloco(p.idx, tabela, p.secao, p.linhas, `${p.secao.titulo} · ${p.titulo}${p.continuacao ? ' (continuação)' : ''}`)}
         ${footer(janelaInicio, janelaFim, dias, n + 1, totalPages)}
       `),
     )

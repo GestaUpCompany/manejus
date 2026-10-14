@@ -7,7 +7,7 @@ import {
   type LinhaZootecnica,
   type SerieConsumoDia,
 } from '../features/relatorioZootecnico/agregacao'
-import { colunasZootecnicas, FORMATO_EXCEL, type TipoColuna } from '../features/relatorioZootecnico/colunas'
+import { colunasZootecnicas, dividirPorManejo, FORMATO_EXCEL, type TipoColuna } from '../features/relatorioZootecnico/colunas'
 
 export interface DadosRelatorioZootecnico {
   fazendaNome: string
@@ -103,7 +103,7 @@ export async function carregarRelatorioZootecnico(
     return { fazendaNome, janelaInicio, janelaFim, linhas: [], geral }
   }
 
-  const [catRes, pastosRes, formRes, ocupRes, planosRes] = await Promise.all([
+  const [catRes, pastosRes, formRes, ocupRes, planosRes, curraisRes] = await Promise.all([
     supabase
       .from('lote_categorias')
       .select(
@@ -122,8 +122,9 @@ export async function carregarRelatorioZootecnico(
       .is('lote_categoria_id', null)
       .in('lote_id', loteIds)
       .order('data_inicio', { ascending: false, nullsFirst: false }),
+    supabase.from('currais').select('nome, lote_id').eq('fazenda_id', fazendaId).is('deleted_at', null).in('lote_id', loteIds),
   ])
-  for (const r of [catRes, pastosRes, formRes, ocupRes, planosRes]) if (r.error) throw r.error
+  for (const r of [catRes, pastosRes, formRes, ocupRes, planosRes, curraisRes]) if (r.error) throw r.error
 
   const categorias = ((catRes.data ?? []) as CategoriaRow[]).filter((c) => (c.quant_atual ?? 0) > 0)
   const pastos = new Map((pastosRes.data ?? []).map((p) => [p.id as string, p]))
@@ -134,6 +135,9 @@ export async function carregarRelatorioZootecnico(
   for (const p of planosRes.data ?? []) {
     if (p.lote_id && p.formulacao_id && !formulacaoDoPlano.has(p.lote_id as string)) formulacaoDoPlano.set(p.lote_id as string, p.formulacao_id as string)
   }
+  // curral x lote é 1:1 em qualquer instante (uq_currais_lote_unico)
+  const curralDoLote = new Map<string, string>()
+  for (const c of curraisRes.data ?? []) if (c.lote_id) curralDoLote.set(c.lote_id as string, c.nome as string)
   const loteMap = new Map(lotes.map((l) => [l.id, l]))
 
   const inicioGeral =
@@ -151,6 +155,7 @@ export async function carregarRelatorioZootecnico(
       const cat: CategoriaZootecnica = {
         loteNome: lote.nome,
         pastoNome: (pasto?.nome as string | undefined) ?? null,
+        curralNome: curralDoLote.get(c.lote_id) ?? null,
         areaUtilHa: num(pasto?.area_util_ha),
         taxaLotacaoUaHa: lotacao.get(c.lote_id) ?? null,
         categoria: c.categoria,
@@ -233,7 +238,17 @@ export async function gerarExcelZootecnico(dados: DadosRelatorioZootecnico, dias
     }
   }
   escrever(dados.geral, true)
-  dados.linhas.forEach((l) => escrever(l, false))
+  const secoes = dividirPorManejo(dados.linhas)
+  for (const secao of secoes) {
+    const titulo = ws.addRow([secao.titulo])
+    titulo.font = { bold: true }
+    titulo.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE5E7EB' } }
+    })
+    ws.mergeCells(titulo.number, 1, titulo.number, cols.length)
+    if (secoes.length > 1) escrever(secao.total, true)
+    secao.linhas.forEach((l) => escrever(l, false))
+  }
 
   const buf = await wb.xlsx.writeBuffer()
   return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
