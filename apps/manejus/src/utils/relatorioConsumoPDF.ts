@@ -9,6 +9,8 @@ export interface DadoRelatorioConsumo {
   consumo_percent_pv: number
   leitura_cocho: number | null
   custo_reais_cab_dia: number | null
+  /** 'confinamento' nos pontos vindos de consumo_confinamento_dia; ausente nos de pasto */
+  origem?: string
 }
 
 export interface InfoLote {

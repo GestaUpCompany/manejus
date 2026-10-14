@@ -1,8 +1,5 @@
 {
   "permissions": {
-    "additionalDirectories": [
-      "../Caderneta-Digital-Gesta-Up"
-    ],
     "allow": [
       "Bash(pnpm install)",
       "Bash(pnpm install:*)",
@@ -27,15 +24,11 @@
       "Bash(git commit:*)",
       "Bash(git show:*)",
       "Bash(ls:*)",
-      "Bash(supabase db push)",
-      "Bash(supabase db push:*)",
       "Bash(supabase db diff:*)",
       "Bash(supabase migration list)",
       "Bash(supabase migration list:*)",
-      "Bash(supabase migration repair:*)",
       "Bash(supabase gen types:*)",
       "Bash(supabase functions list)",
-      "Bash(supabase functions deploy:*)",
       "mcp__supabase__list_organizations",
       "mcp__supabase__list_projects",
       "mcp__supabase__get_project",
@@ -55,7 +48,8 @@
       "mcp__chrome-devtools__take_snapshot",
       "mcp__chrome-devtools__take_screenshot",
       "mcp__chrome-devtools__list_console_messages",
-      "mcp__chrome-devtools__list_network_requests"
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__fill"
     ],
     "deny": [
       "Read(.env)",
@@ -70,7 +64,31 @@
       "Bash(supabase db reset:*)",
       "Bash(git reset --hard:*)",
       "Bash(rm -rf:*)",
-      "mcp__supabase__apply_migration"
+      "mcp__supabase__apply_migration",
+      "Bash(supabase projects delete:*)",
+      "Bash(supabase secrets:*)",
+      "Bash(supabase db execute:*)",
+      "Bash(supabase db query:*)",
+      "Bash(supabase migration apply:*)",
+      "Bash(supabase link:*)",
+      "Bash(supabase stop --backup=false:*)",
+      "Bash(supabase sso disable:*)",
+      "Edit(.claude/**)",
+      "Write(.claude/**)",
+      "Write(.mcp.json)",
+      "Edit(.mcp.json)",
+      "Read(.claude/settings.local.json)",
+      "Edit/Write(**/.env.*)",
+      "Read(//c/Users/USER/.claude.json)"
+    ],
+    "ask": [
+      "Bash(supabase db push*)",
+      "Bash(supabase functions deploy*)",
+      "Bash(supabase migration repair*)",
+      "mcp__supabase__execute_sql"
+    ],
+    "additionalDirectories": [
+      "../Caderneta-Digital-Gesta-Up"
     ]
   }
 }

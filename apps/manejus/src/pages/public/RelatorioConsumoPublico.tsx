@@ -50,12 +50,40 @@ interface LoteDisponivel {
   lote_nome: string
 }
 
+type TipoManejo = 'pasto' | 'confinamento'
+type FiltroTipo = 'todos' | TipoManejo
+
+const TIPO_LABEL: Record<TipoManejo, string> = { pasto: 'Pasto', confinamento: 'Confinamento' }
+
 interface LoteDados {
   lote_id: string
   lote_nome: string
   escopo?: string
   info: InfoLote
   dados: DadoRelatorioConsumo[]
+}
+
+interface LoteSeparado extends LoteDados {
+  tipoManejo: TipoManejo
+}
+
+// Um lote pode ter pontos de pasto e de confinamento no mesmo período (ex.: mudou de
+// pasto para o curral). Cada tipo vira um card próprio, para as médias e o gráfico não
+// misturarem as duas realidades. Sem pontos, o curral no cadastro indica confinamento.
+function separarPorTipoManejo(lotes: LoteDados[]): LoteSeparado[] {
+  const saida: LoteSeparado[] = []
+  for (const lote of lotes) {
+    const conf = lote.dados.filter((d) => d.origem === 'confinamento')
+    const pasto = lote.dados.filter((d) => d.origem !== 'confinamento')
+    if (lote.dados.length === 0) {
+      saida.push({ ...lote, tipoManejo: lote.info.curral_nome ? 'confinamento' : 'pasto' })
+      continue
+    }
+    if (pasto.length > 0) saida.push({ ...lote, dados: pasto, tipoManejo: 'pasto' })
+    if (conf.length > 0) saida.push({ ...lote, dados: conf, tipoManejo: 'confinamento' })
+  }
+  // Pasto primeiro, depois confinamento; dentro de cada um mantém a ordem (por dieta) da RPC
+  return [...saida.filter((l) => l.tipoManejo === 'pasto'), ...saida.filter((l) => l.tipoManejo === 'confinamento')]
 }
 
 interface DadosRelatorioConsumo {
@@ -207,6 +235,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [filtroLote, setFiltroLote] = useState<Set<string>>(new Set())
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos')
   const [loteDropdownOpen, setLoteDropdownOpen] = useState(false)
   const [exportandoPDF, setExportandoPDF] = useState(false)
   const loteDropdownRef = useRef<HTMLDivElement>(null)
@@ -263,19 +292,44 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
       })
     }, 300)
     return () => clearTimeout(timer)
-  }, [dados, filtroLote, dataInicio, dataFim])
+  }, [dados, filtroLote, filtroTipo, dataInicio, dataFim])
+
+  const lotesSeparados = useMemo(() => (dados ? separarPorTipoManejo(dados.lotes) : []), [dados])
+
+  const contagemPorTipo = useMemo(
+    () => ({
+      pasto: lotesSeparados.filter((l) => l.tipoManejo === 'pasto').length,
+      confinamento: lotesSeparados.filter((l) => l.tipoManejo === 'confinamento').length,
+    }),
+    [lotesSeparados],
+  )
+
+  // Lotes do dropdown: só os do tipo escolhido (quando o tipo é "Todos", todos os disponíveis)
+  const lotesDoDropdown = useMemo(() => {
+    if (!dados) return []
+    if (filtroTipo === 'todos') return dados.lotes_disponiveis
+    const ids = new Set(lotesSeparados.filter((l) => l.tipoManejo === filtroTipo).map((l) => l.lote_id))
+    return dados.lotes_disponiveis.filter((l) => ids.has(l.lote_id))
+  }, [dados, filtroTipo, lotesSeparados])
 
   const lotesFiltrados = useMemo(() => {
-    if (!dados) return []
-    if (filtroLote.size === 0) return dados.lotes
-    return dados.lotes.filter((l) => filtroLote.has(l.lote_id))
-  }, [dados, filtroLote])
+    let lista = lotesSeparados
+    if (filtroTipo !== 'todos') lista = lista.filter((l) => l.tipoManejo === filtroTipo)
+    if (filtroLote.size > 0) lista = lista.filter((l) => filtroLote.has(l.lote_id))
+    return lista
+  }, [lotesSeparados, filtroTipo, filtroLote])
 
-  const temFiltrosAtivos = filtroLote.size > 0 || dataInicio || dataFim
+  const temFiltrosAtivos = filtroLote.size > 0 || filtroTipo !== 'todos' || dataInicio || dataFim
 
   const limparFiltros = () => {
     setDataInicio('')
     setDataFim('')
+    setFiltroLote(new Set())
+    setFiltroTipo('todos')
+  }
+
+  const escolherTipo = (tipo: FiltroTipo) => {
+    setFiltroTipo(tipo)
     setFiltroLote(new Set())
   }
 
@@ -290,10 +344,10 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
 
   const toggleAllLotes = () => {
     if (!dados) return
-    if (filtroLote.size === dados.lotes_disponiveis.length) {
+    if (filtroLote.size === lotesDoDropdown.length) {
       setFiltroLote(new Set())
     } else {
-      setFiltroLote(new Set(dados.lotes_disponiveis.map((l) => l.lote_id)))
+      setFiltroLote(new Set(lotesDoDropdown.map((l) => l.lote_id)))
     }
   }
 
@@ -439,6 +493,30 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
       {/* Slicers */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de lote</label>
+            <div className="flex w-full sm:w-96 rounded-lg border border-gray-300 overflow-hidden text-sm" role="group" aria-label="Tipo de lote">
+                {([
+                  ['todos', 'Todos'],
+                  ['pasto', `Pasto (${contagemPorTipo.pasto})`],
+                  ['confinamento', `Confinamento (${contagemPorTipo.confinamento})`],
+                ] as [FiltroTipo, string][]).map(([valor, rotulo]) => {
+                  const ativo = filtroTipo === valor
+                  return (
+                    <button
+                      key={valor}
+                      type="button"
+                      onClick={() => escolherTipo(valor)}
+                      aria-pressed={ativo}
+                      className={`flex-1 px-2 py-2 whitespace-nowrap transition-colors ${ativo ? 'text-white font-semibold' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                      style={ativo ? { backgroundColor: GREEN_DARK } : undefined}
+                    >
+                      {rotulo}
+                    </button>
+                  )
+                })}
+            </div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Data início</label>
@@ -492,7 +570,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                       onClick={toggleAllLotes}
                       className="text-xs text-green-700 hover:text-green-800 font-medium"
                     >
-                      {filtroLote.size === dados?.lotes_disponiveis.length && (dados?.lotes_disponiveis.length ?? 0) > 0
+                      {filtroLote.size === lotesDoDropdown.length && lotesDoDropdown.length > 0
                         ? 'Desmarcar todos'
                         : 'Selecionar todos'}
                     </button>
@@ -505,7 +583,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                       </button>
                     )}
                   </div>
-                  {dados?.lotes_disponiveis.map((l) => (
+                  {lotesDoDropdown.map((l) => (
                     <label
                       key={l.lote_id}
                       className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer text-sm"
@@ -580,13 +658,28 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
 
             // Separador visual por dieta: renderiza um header quando a dieta muda
             const dietaAtual = info.dieta || 'Sem dieta'
-            const dietaAnterior = index > 0 ? (lotesFiltrados[index - 1].info.dieta || 'Sem dieta') : null
+            const anterior = index > 0 ? lotesFiltrados[index - 1] : null
+            const dietaAnterior = anterior ? (anterior.info.dieta || 'Sem dieta') : null
+            const mudouTipo = anterior !== null && anterior.tipoManejo !== lote.tipoManejo
             const mudouDieta = dietaAnterior !== null && dietaAnterior !== dietaAtual
             const primeiraDieta = index === 0
+            const mostrarTipo = primeiraDieta || mudouTipo
+            // Gráfico de confinamento não tem leitura de cocho por ponto: não desenha a linha vazia
+            const temLeitura = lote.dados.some((d) => d.leitura_cocho != null)
 
             return (
-              <div key={`${lote.lote_id}-${lote.escopo || 'lote'}`}>
-              {(primeiraDieta || mudouDieta) && (
+              <div key={`${lote.lote_id}-${lote.escopo || 'lote'}-${lote.tipoManejo}`}>
+              {mostrarTipo && (
+                <div className="mb-3 mt-2 first:mt-0">
+                  <h2
+                    className="text-base font-extrabold tracking-wide uppercase px-4 py-2 rounded-lg text-white"
+                    style={{ backgroundColor: lote.tipoManejo === 'confinamento' ? BLUE_BAR : GREEN_DARK }}
+                  >
+                    {lote.tipoManejo === 'confinamento' ? 'Lotes em confinamento' : 'Lotes a pasto'}
+                  </h2>
+                </div>
+              )}
+              {(primeiraDieta || mudouTipo || mudouDieta) && (
                 <div className="mb-4 mt-2 first:mt-0">
                   <div className="flex items-center gap-3">
                     <div className="h-px flex-1 bg-gray-300"></div>
@@ -602,6 +695,9 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                 <div className="px-5 py-3 flex items-center justify-between" style={{ backgroundColor: GREEN_DARK }}>
                   <h2 className="text-base font-bold text-white">
                     {lote.lote_nome}
+                    {lote.tipoManejo === 'confinamento' && (
+                      <span className="ml-2 px-2 py-0.5 rounded bg-white text-[11px] font-semibold align-middle" style={{ color: BLUE_BAR }}>{TIPO_LABEL.confinamento}</span>
+                    )}
                     {lote.escopo === 'creep' && (
                       <span className="ml-2 px-2 py-0.5 rounded bg-amber-400 text-amber-900 text-[11px] font-semibold align-middle">Creep Feeding</span>
                     )}
@@ -760,6 +856,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                               content={ConsumoPercentPVLabel}
                             />
                           </Line>
+                          {temLeitura && (
                           <Line
                             yAxisId="leitura"
                             type="monotone"
@@ -775,6 +872,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                               content={LeituraCochoLabel}
                             />
                           </Line>
+                          )}
                         </ComposedChart>
                       </ResponsiveContainer>
                     </div>
