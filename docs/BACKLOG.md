@@ -4,7 +4,6 @@ Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar 
 
 ## Relatório de consumo: pendências do gráfico e da leitura de cocho (2026-10-14)
 
-- **Aplicar a migration `20261014160000_relatorio_consumo_confinamento_leitura`** (`supabase db push`, depois commitar e pushar o arquivo e o rollback, hoje não versionados). Liga a nota de D+1 aos pontos de confinamento; só aparece em fazendas que registram leituras no PWA (a Santa Cecília tem 0).
 - **Gráfico da página pública (Recharts) ainda sobrepõe rótulos** no pé do gráfico (CMS, %PV e leitura de cocho); a correção anti-colisão e a faixa da leitura foram feitas só no PDF (`api/pdf/consumo.js`). Aplicar a mesma ideia em `criarLabelsAntiColisao` de `RelatorioConsumoPublico.tsx`.
 - Remover `gerarRelatorioConsumoPDF` e o resto do jsPDF de consumo em `relatorioConsumoPDF.ts` (sem uso desde o PDF por Puppeteer); manter só os tipos e `carregarLogoComoBase64`, usados por outros relatórios.
 - Opcional: nota de rodapé no confinamento ("nota lida na manhã seguinte ao trato") para evitar a comparação ingênua com o pasto.

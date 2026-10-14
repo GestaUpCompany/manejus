@@ -1,0 +1,4 @@
+-- Rollback de 20261014160000_relatorio_consumo_confinamento_leitura.sql:
+-- reexecutar o CREATE OR REPLACE FUNCTION public.get_dados_relatorio_consumo de
+-- supabase/migrations/20261014150000_relatorio_consumo_historico_sem_repeticao.sql
+-- (a versao anterior; nenhuma outra estrutura foi criada).
