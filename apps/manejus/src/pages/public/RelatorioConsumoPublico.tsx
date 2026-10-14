@@ -380,6 +380,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
           fazenda_logo_url: relatorioInfo.fazenda_logo_url,
         },
         dados: l.dados,
+        tipoManejo: l.tipoManejo,
       }))
 
       const blob = await gerarRelatorioConsumoPDFPuppeteer({
@@ -734,19 +735,31 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                 {/* KPIs + Pills */}
                 <div className="p-5 space-y-4">
                   {/* Pills (Pasto/Curral, Nº Cab, Raça, Categoria, Dieta) */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {[
-                      { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' },
+                      info.pasto_nome && info.curral_nome
+                        ? { label: 'Local', value: info.local_label || `${info.pasto_nome} → ${info.curral_nome}` }
+                        : { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' },
                       { label: 'Nº Cab. (média do período)', value: formatarInteiro(info.n_cabecas_atual) },
                       { label: 'Raça', value: info.raca || '—' },
                       { label: 'Categoria', value: info.categoria ? info.categoria.split(', ').map(c => c.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') : '—' },
                       { label: 'Dieta', value: info.dieta || '—' },
-                    ].map((p) => (
-                      <div key={p.label} className="rounded-lg p-2.5 text-center text-white shadow-sm" style={{ backgroundColor: GREEN_DARK }}>
-                        <p className="text-sm font-bold leading-tight truncate">{p.value}</p>
-                        <p className="text-[10px] opacity-90 leading-tight mt-0.5">{p.label}</p>
-                      </div>
-                    ))}
+                    ].map((p) => {
+                      // Local/dieta com mudança no período vêm como "A → B → C": uma etapa por linha
+                      const etapas = p.value.split(' → ')
+                      return (
+                        <div
+                          key={p.label}
+                          className={`rounded-lg p-2.5 text-center text-white shadow-sm flex flex-col justify-center ${etapas.length > 1 ? 'flex-[2_1_220px]' : 'flex-[1_1_110px]'}`}
+                          style={{ backgroundColor: GREEN_DARK }}
+                        >
+                          {etapas.map((etapa, i) => (
+                            <p key={i} className="text-sm font-bold leading-tight break-words">{i > 0 ? '→ ' : ''}{etapa}</p>
+                          ))}
+                          <p className="text-[10px] opacity-90 leading-tight mt-0.5">{p.label}</p>
+                        </div>
+                      )
+                    })}
                   </div>
 
                   {/* KPIs (Peso Entrada, Consumo %PV, R$/cab/dia, Peso Atual, Período Dieta Atual, Período Total, Data Prevista) */}

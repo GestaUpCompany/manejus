@@ -60,9 +60,13 @@ const CONSUMO_CSS = `
 .lote-title{position:absolute;left:50%;top:calc(50% - 5mm);transform:translate(-50%,-50%);color:#0b6a42;font-size:20px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;max-width:65%;overflow:hidden;text-overflow:ellipsis}
 .lote-title .header-badge{margin-top:0;margin-left:8px;vertical-align:2px}
 .pills-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:3mm}
-.consumo-pill{background:#0b6a42;color:#fff;border-radius:5px;padding:5px 10px;text-align:center;min-width:0;flex:1 1 60px}
-.consumo-pill .pill-value{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.consumo-pill{background:#0b6a42;color:#fff;border-radius:5px;padding:5px 10px;text-align:center;min-width:0;flex:1 1 60px;display:flex;flex-direction:column;justify-content:center}
+.consumo-pill.longo{flex:2 1 150px}
+.consumo-pill .pill-value{font-size:13px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+.consumo-pill.longo .pill-value{font-size:12px}
 .consumo-pill .pill-label{font-size:10px;opacity:.9;margin-top:1px}
+.lote-title .tipo-badge{display:inline-block;margin-left:8px;vertical-align:2px;background:#0b6a42;color:#fff;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;border-radius:4px;padding:2px 7px}
+.lote-title .tipo-badge.confinamento{background:#1E3A5F}
 .dieta-sep{display:flex;align-items:center;gap:10px;margin:2mm 0 3mm;color:#0b6a42;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
 .dieta-sep::before,.dieta-sep::after{content:'';flex:1;height:1px;background:#cfdad3}
 .lote-body{display:grid;grid-template-columns:40mm 1fr;gap:6px;flex:1;min-height:0}
@@ -106,8 +110,15 @@ const CHARTS_INIT_JS = `
     var dados = entry.dados || []
     if (!dados.length) { maybeDone(); return }
 
+    var temLeitura = dados.some(function(d){return d.leitura_cocho != null})
     var maxCms = Math.max.apply(null, dados.map(function(d){return d.trato_kg_cab_dia}).concat([1]))
     var maxPv = Math.max.apply(null, dados.map(function(d){return d.consumo_percent_pv}).concat([1]))
+    // A Leitura de Cocho (eixo y2, oculto) ocupa uma faixa própria no topo da área do
+    // gráfico (90% a 98% da altura), longe dos rótulos de CMS e %PV, que ficam embaixo.
+    var maxLeit = Math.max.apply(null, dados.map(function(d){return d.leitura_cocho != null ? Number(d.leitura_cocho) : 0}).concat([3]))
+    var leitRange = maxLeit / 0.08
+    var leitMin = -0.90 * leitRange
+    var leitMax = leitMin + leitRange
 
     // Para poucas barras (1 a 3) o Chart.js estica o tamanho. Limitamos
     // a largura para não virar uma faixa gigante no gráfico.
@@ -170,12 +181,12 @@ const CHARTS_INIT_JS = `
         responsive: true,
         maintainAspectRatio: false,
         animation: false,
-        layout: { padding: { top: 30, right: 20, bottom: 30, left: 10 } },
+        layout: { padding: { top: 12, right: 20, bottom: 10, left: 10 } },
         plugins: {
           legend: {
             position: 'top',
             align: 'center',
-            labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, color: DARK_TEXT, font: { size: 12, weight: 'bold' } },
+            labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, color: DARK_TEXT, font: { size: 12, weight: 'bold' }, filter: function(item) { return item.datasetIndex !== 2 || temLeitura } },
           },
           title: { display: true, text: 'Consumo Médio %PV', align: 'center', color: DARK_TEXT, font: { size: 16, weight: 'bold' }, padding: { bottom: 8 } },
           tooltip: { enabled: false },
@@ -189,7 +200,7 @@ const CHARTS_INIT_JS = `
           y: {
             position: 'left',
             beginAtZero: true,
-            suggestedMax: maxCms * 1.15,
+            suggestedMax: maxCms * 1.22,
             title: { display: true, text: 'CMS (kg/cab/dia)', color: DARK_TEXT, font: { size: 12, weight: 'bold' } },
             ticks: { color: LEITURA_COLOR, font: { size: 11 } },
             grid: { color: '#E5E7EB' },
@@ -197,12 +208,12 @@ const CHARTS_INIT_JS = `
           y1: {
             position: 'right',
             beginAtZero: true,
-            suggestedMax: maxPv * 1.25,
+            suggestedMax: maxPv * 1.28,
             title: { display: true, text: '% PV', color: GREEN_LINE, font: { size: 12, weight: 'bold' } },
             ticks: { color: GREEN_LINE, font: { size: 11 }, callback: function(val){ return Number(val).toFixed(1) + '%' } },
             grid: { display: false },
           },
-          y2: { display: false, min: -1, max: 25 },
+          y2: { display: false, min: leitMin, max: leitMax },
         },
       },
       plugins: [{
@@ -219,15 +230,7 @@ const CHARTS_INIT_JS = `
           var consumoDataset = chart.data.datasets[1]
           var leituraDataset = chart.data.datasets[2]
 
-          // 1. Rótulos do CMS (acima da barra)
-          ctx.font = 'bold 13px Arial, sans-serif'
-          ctx.fillStyle = DARK_TEXT
-          tratoMeta.data.forEach(function(bar, j) {
-            var value = Number(tratoDataset.data[j]).toFixed(2)
-            ctx.fillText(value, bar.x, bar.y - 12)
-          })
-
-          // 2. Linha + pontos + rótulos da Leitura de Cocho
+          // 1. Linha + pontos da Leitura de Cocho (desenhados antes dos rótulos)
           var validLeitura = leituraMeta.data.filter(function(pt) { return !pt.skip })
           if (validLeitura.length > 1) {
             ctx.beginPath()
@@ -241,47 +244,82 @@ const CHARTS_INIT_JS = `
             }
             ctx.stroke()
           }
-          validLeitura.forEach(function(pt) {
+          // Bolinha com o valor dentro: dispensa rótulo solto e não disputa espaço
+          leituraMeta.data.forEach(function(pt, j) {
+            if (pt.skip) return
             ctx.beginPath()
-            ctx.arc(pt.x, pt.y, 4, 0, 2 * Math.PI)
+            ctx.arc(pt.x, pt.y, 8, 0, 2 * Math.PI)
             ctx.fillStyle = LEITURA_COLOR
             ctx.fill()
             ctx.lineWidth = 1.5
             ctx.strokeStyle = WHITE
             ctx.stroke()
-          })
-
-          // Pré-calcula posições Y do Consumo %PV para detecção de colisão
-          var consumoYByIndex = {}
-          consumoMeta.data.forEach(function(pt, j) {
-            if (!pt.skip) consumoYByIndex[j] = pt.y
-          })
-
-          ctx.font = 'bold 11px Arial, sans-serif'
-          leituraMeta.data.forEach(function(pt, j) {
-            if (pt.skip) return
-            var value = leituraDataset.data[j] != null ? String(leituraDataset.data[j]) : ''
-            var consumoY = consumoYByIndex[j]
-            var colideComConsumo = consumoY != null && Math.abs(pt.y - consumoY) < 24
-            var labelY = colideComConsumo ? pt.y + 20 : pt.y - 10
-            ctx.lineWidth = 2
-            ctx.strokeStyle = DARK_TEXT
-            ctx.strokeText(value, pt.x, labelY)
+            ctx.font = 'bold 10px Arial, sans-serif'
             ctx.fillStyle = WHITE
-            ctx.fillText(value, pt.x, labelY)
+            ctx.textBaseline = 'middle'
+            ctx.fillText(leituraDataset.data[j] != null ? String(leituraDataset.data[j]) : '', pt.x, pt.y + 0.5)
+            ctx.textBaseline = 'alphabetic'
           })
 
-          // 3. Rótulos do Consumo %PV (por último, com posição dinâmica)
+          // 2. Rótulos com posicionamento anti-colisão. Cada rótulo tenta posições
+          // candidatas (acima do ponto, depois abaixo, cada vez mais longe) e fica na
+          // primeira que não cruza outro rótulo nem um marcador, sempre dentro da área
+          // do gráfico (nunca sobre o eixo X). Prioridade: CMS, Consumo %PV, Leitura.
+          var area = chart.chartArea
+          var topLimit = area.top
+          var bottomLimit = area.bottom - 3
+          var placed = []
+
+          function overlaps(a, b) {
+            return !(a.x2 <= b.x1 || a.x1 >= b.x2 || a.y2 <= b.y1 || a.y1 >= b.y2)
+          }
+          function isFree(b) {
+            for (var m = 0; m < placed.length; m++) if (overlaps(placed[m], b)) return false
+            return true
+          }
+          function reserve(cx, cy, r) {
+            placed.push({ x1: cx - r, x2: cx + r, y1: cy - r, y2: cy + r })
+          }
+          // Devolve o Y (baseline) do texto, ou null se nenhuma candidata coube.
+          function place(cx, baseY, text, size, offsets) {
+            var w = ctx.measureText(text).width
+            for (var o = 0; o < offsets.length; o++) {
+              var y = baseY + offsets[o]
+              if (y - size < topLimit || y > bottomLimit) continue
+              var b = { x1: cx - w / 2 - 2, x2: cx + w / 2 + 2, y1: y - size, y2: y + 3 }
+              if (isFree(b)) { placed.push(b); return y }
+            }
+            return null
+          }
+          function drawText(text, x, y, fill, halo, haloWidth) {
+            ctx.lineJoin = 'round'
+            ctx.lineWidth = haloWidth
+            ctx.strokeStyle = halo
+            ctx.strokeText(text, x, y)
+            ctx.fillStyle = fill
+            ctx.fillText(text, x, y)
+          }
+
+          consumoMeta.data.forEach(function(pt) { if (!pt.skip) reserve(pt.x, pt.y, 8) })
+          leituraMeta.data.forEach(function(pt) { if (!pt.skip) reserve(pt.x, pt.y, 10) })
+
+          // CMS: acima da barra; se não houver espaço, dentro dela (texto branco)
           ctx.font = 'bold 13px Arial, sans-serif'
-          ctx.fillStyle = GREEN_LINE
+          tratoMeta.data.forEach(function(bar, j) {
+            var value = Number(tratoDataset.data[j]).toFixed(2)
+            var y = place(bar.x, bar.y, value, 13, [-8, -24, -40, -56])
+            if (y != null) drawText(value, bar.x, y, DARK_TEXT, 'rgba(255,255,255,0.9)', 3)
+            else drawText(value, bar.x, Math.min(bar.y + 16, bottomLimit), WHITE, 'rgba(30,58,95,0.9)', 3)
+          })
+
+          // Consumo %PV: acima do ponto; abaixo se o espaço de cima estiver ocupado
+          ctx.font = 'bold 13px Arial, sans-serif'
           consumoMeta.data.forEach(function(pt, j) {
             if (pt.skip) return
             var value = Number(consumoDataset.data[j]).toFixed(2) + '%'
-            var bar = tratoMeta.data[j]
-            var barraTopo = bar ? bar.y : null
-            var colide = barraTopo != null && Math.abs(pt.y - barraTopo) < 18
-            var labelY = colide ? pt.y + 20 : pt.y - 18
-            ctx.fillText(value, pt.x, labelY)
+            var y = place(pt.x, pt.y, value, 13, [-12, 22, -30, 40, -48, 58, -66])
+            if (y == null) y = Math.max(topLimit + 13, Math.min(pt.y - 12, bottomLimit))
+            drawText(value, pt.x, y, GREEN_LINE, 'rgba(255,255,255,0.95)', 3.5)
           })
 
           ctx.restore()
@@ -321,19 +359,27 @@ function custoMedio(dados) {
   return validos.reduce((s, d) => s + (d.custo_reais_cab_dia || 0), 0) / validos.length
 }
 
+// Local e dieta podem ter mais de uma etapa no período ("A → B → C"): cada etapa
+// vira uma linha do pill (as seguintes com seta) e o pill ganha mais largura.
 function pillsHtml(info) {
+  const local = info.pasto_nome && info.curral_nome
+    ? { label: 'Local', value: info.local_label || `${info.pasto_nome} → ${info.curral_nome}` }
+    : { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' }
   const pills = [
-    { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' },
+    local,
     { label: 'Nº Cab. (média do período)', value: intFmt(info.n_cabecas_atual) },
     { label: 'Raça', value: info.raca || '—' },
     { label: 'Categoria', value: info.categoria ? titleCase(info.categoria) : '—' },
     { label: 'Dieta', value: info.dieta || '—' },
   ]
   return `<div class="pills-row">${pills
-    .map(
-      (p) =>
-        `<div class="consumo-pill"><div class="pill-value">${escapeHtml(p.value)}</div><div class="pill-label">${escapeHtml(p.label)}</div></div>`,
-    )
+    .map((p) => {
+      const etapas = String(p.value).split(' → ')
+      const linhas = etapas
+        .map((e, i) => `<div class="pill-value">${i > 0 ? '→ ' : ''}${escapeHtml(e)}</div>`)
+        .join('')
+      return `<div class="consumo-pill${etapas.length > 1 ? ' longo' : ''}">${linhas}<div class="pill-label">${escapeHtml(p.label)}</div></div>`
+    })
     .join('')}</div>`
 }
 
@@ -370,19 +416,25 @@ export async function renderConsumoHtml(input) {
   const pagesHtml = []
   let pageIndex = 0
   let dietaAnterior = null
+  let tipoAnterior = null
 
   lotesPaginados.forEach(({ lote, chunks }) => {
     const info = lote.info
     const dados = lote.dados || []
     const dietaAtual = info.dieta || 'Sem dieta'
     const mudouDieta = dietaAnterior !== null && dietaAnterior !== dietaAtual
-    const mostrarDieta = dietaAnterior === null || mudouDieta
+    // Cada lote leva um selo "Pasto"/"Confinamento" no título (todas as páginas); o
+    // separador de dieta recomeça a cada mudança de tipo, como na página pública.
+    const tipo = lote.tipoManejo === 'confinamento' || lote.tipoManejo === 'pasto' ? lote.tipoManejo : null
+    const mudouTipo = tipo !== null && tipoAnterior !== null && tipo !== tipoAnterior
+    const mostrarDieta = dietaAnterior === null || mudouDieta || mudouTipo
     dietaAnterior = dietaAtual
+    if (tipo !== null) tipoAnterior = tipo
 
     chunks.forEach((chunk, ci) => {
       const isContinuation = ci > 0
       const sectionName = isContinuation ? `${info.lote_nome} (continuação)` : info.lote_nome
-      const loteTitle = `<div class="lote-title">${escapeHtml(sectionName)}${info.escopo === 'creep' ? '<span class="header-badge">Creep Feeding</span>' : ''}</div>`
+      const loteTitle = `<div class="lote-title">${escapeHtml(sectionName)}${tipo ? `<span class="tipo-badge ${tipo}">${tipo === 'confinamento' ? 'Confinamento' : 'Pasto'}</span>` : ''}${info.escopo === 'creep' ? '<span class="header-badge">Creep Feeding</span>' : ''}</div>`
       pageIndex += 1
       const canvasId = `chart-consumo-${pageIndex}`
       const hasData = chunk.length > 0
