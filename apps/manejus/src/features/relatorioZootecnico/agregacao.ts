@@ -83,7 +83,8 @@ export function resumirConsumo(serie: SerieConsumoDia[], teorMsPercent: number |
     mnKgCabDia: mn,
     msKgCabDia: mn !== null && teorMsPercent ? (mn * teorMsPercent) / 100 : null,
     percentPv: media(serie.map((d) => d.consumo_percent_pv)),
-    custoCabDia: media(serie.map((d) => d.custo_reais_cab_dia)),
+    // custo 0 = dieta sem preço de insumo cadastrado: não é custo real, fica vazio
+    custoCabDia: media(serie.map((d) => (d.custo_reais_cab_dia && d.custo_reais_cab_dia > 0 ? d.custo_reais_cab_dia : null))),
   }
 }
 

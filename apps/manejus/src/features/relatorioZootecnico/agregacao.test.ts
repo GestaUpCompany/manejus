@@ -67,3 +67,10 @@ describe('relatorioZootecnico/agregacao', () => {
     expect(montarLinhaGeral([a, b, c]).areaUtilHa).toBe(15)
   })
 })
+
+describe('relatorioZootecnico/custo', () => {
+  it('custo 0 na série não vira custo real', () => {
+    const r = resumirConsumo([{ trato_kg_cab_dia: 10, consumo_percent_pv: 2, custo_reais_cab_dia: 0 }], 50)
+    expect(r.custoCabDia).toBeNull()
+  })
+})
