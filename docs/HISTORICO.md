@@ -1,5 +1,11 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## POPs personalizados por fazenda: lado do painel (2026-10-14)
+Os botões amarelos de POP do PWA abriam só imagens fixas de `public/docs`. Agora a fazenda sobe o próprio POP em Configurações; o PWA ainda não consome (próxima etapa).
+- Migration `20261014180000_fazenda_pops` (+ rollback): bucket público `pops` (10 MB, jpeg/webp/png, escrita por pasta `{fazenda_id}/` via `user_has_fazenda_access`) e tabela `fazenda_pops` (`slug` em maternidade, pastagens, cocho, bebedouros, fezes, escore; `ordem`, `path`, `versao`, `deleted_at`). Sem linhas para o slug, o PWA mantém o padrão (retrocompatível).
+- Painel: `components/pops/PopsConfig.tsx` (seção em `Configuracoes.tsx`), `services/popsService.ts` (substitui o POP inteiro: sobe as novas páginas, troca as linhas, só então apaga as antigas; "restaurar padrão" faz soft-delete), `features/pops/` (regras e testes) e `paginas.ts` (PDF via `pdfjs-dist` ou imagens JPG/PNG/WebP, retrato A4, convertidas em JPEG de 1240 px).
+- Pendente no PWA: `config/pops.ts` + `usePopImages`, `PopButton`, warm cache (IndexedDB + Cache API `pop-images`) para o personalizado aparecer offline desde a primeira atualização.
+
 ## Relatório Zootécnico: visualização inline e PDF via Puppeteer (2026-10-14)
 Antes só havia exportação Excel. Agora o relatório pode ser visto na tela e baixado em PDF. Sem migration.
 - Tela: rota `/controller/relatorios/zootecnico` (`pages/controller/RelatorioZootecnico.tsx`, TanStack Query), tabela com cabeçalho agrupado, linha Geral em destaque, coluna Lote fixa na rolagem, campo de janela (`?dias=`), botões "Baixar PDF" e "Exportar Excel". No card de Relatórios (`Relatorios.tsx`) ficaram três botões: Visualizar, Baixar PDF e Exportar Excel.
