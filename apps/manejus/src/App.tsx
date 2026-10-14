@@ -134,6 +134,7 @@ const RecebimentoCompra = laz(() => import('./pages/controller/RecebimentoCompra
 
 // Controller - outros
 const RelatorioGado = laz(() => import('./pages/controller/RelatorioGado'), 'RelatorioGado')
+const RelatorioZootecnico = laz(() => import('./pages/controller/RelatorioZootecnico'), 'RelatorioZootecnico')
 const RelatorioSaude = laz(() => import('./pages/controller/RelatorioSaude'), 'RelatorioSaude')
 const MaquinasVeiculos = laz(() => import('./pages/controller/MaquinasVeiculos'), 'MaquinasVeiculos')
 const Setores = laz(() => import('./pages/controller/Setores'), 'Setores')
@@ -992,6 +993,16 @@ function App() {
               <ControllerRoute>
                 <ControllerLayout>
                   <RelatorioGado />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/relatorios/zootecnico"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <RelatorioZootecnico />
                 </ControllerLayout>
               </ControllerRoute>
             }

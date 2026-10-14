@@ -6,6 +6,7 @@ import { getFazendaIdForUser } from '@gestaup/shared'
 import { useToast, PageSkeleton, ConfirmModal } from '@gestaup/ui'
 import { RelatorioGeralModal } from '../../components/relatorios/RelatorioGeralModal'
 import { carregarRelatorioZootecnico, gerarExcelZootecnico } from '../../services/relatorioZootecnicoService'
+import { gerarRelatorioZootecnicoPDFPuppeteer } from '../../utils/relatorioZootecnicoPDFPuppeteer'
 
 interface RelatorioPublico {
   id: string
@@ -121,6 +122,7 @@ export function Relatorios() {
   const [showInactive, setShowInactive] = useState(false)
   const [diasZootecnico, setDiasZootecnico] = useState(22)
   const [gerandoZootecnico, setGerandoZootecnico] = useState(false)
+  const [gerandoZootecnicoPdf, setGerandoZootecnicoPdf] = useState(false)
   const [confirmAction, setConfirmAction] = useState<{ type: string; id?: string } | null>(null)
 
   useEffect(() => {
@@ -147,6 +149,27 @@ export function Relatorios() {
       toast.error('Não foi possível gerar o relatório zootécnico')
     } finally {
       setGerandoZootecnico(false)
+    }
+  }
+
+  const baixarPdfZootecnico = async () => {
+    if (!fazendaId || !fazendaNome) return
+    setGerandoZootecnicoPdf(true)
+    try {
+      const dados = await carregarRelatorioZootecnico(fazendaId, fazendaNome, diasZootecnico)
+      const blob = await gerarRelatorioZootecnicoPDFPuppeteer({ fazendaId, fazendaLogoUrl, dados, dias: diasZootecnico })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Relatório Zootécnico - ${fazendaNome}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('PDF do relatório zootécnico gerado')
+    } catch (err) {
+      console.error(err)
+      toast.error(err instanceof Error ? err.message : 'Não foi possível gerar o PDF do relatório zootécnico')
+    } finally {
+      setGerandoZootecnicoPdf(false)
     }
   }
 
@@ -343,13 +366,19 @@ export function Relatorios() {
         <div className="flex flex-col gap-3 rounded-2xl border border-surface-3 bg-surface-1 p-5 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-lg font-bold text-content-strong">Relatório Zootécnico dos Lotes</h2>
-            <p className="mt-1 text-sm text-content-muted">Controle de lotes em Excel: pesos, metas, consumo (geral e por janela), valor de estoque e custo alimentar.</p>
+            <p className="mt-1 text-sm text-content-muted">Controle de lotes: veja na tela, baixe em PDF ou Excel: pesos, metas, consumo (geral e por janela), valor de estoque e custo alimentar.</p>
           </div>
           <div className="flex items-center gap-3">
             <label className="text-sm text-content">
               Janela de consumo (dias)
               <input type="number" min={1} max={365} value={diasZootecnico} onChange={(e) => setDiasZootecnico(Math.max(1, Math.min(365, Number(e.target.value) || 22)))} className="ml-2 w-20 rounded-lg border border-surface-3 bg-surface-1 px-2 py-1" />
             </label>
+            <button type="button" onClick={() => navigate(`/controller/relatorios/zootecnico?dias=${diasZootecnico}`)} className="shrink-0 rounded-lg border border-surface-3 px-5 py-2 text-sm font-semibold text-content hover:bg-surface-2">
+              Visualizar
+            </button>
+            <button type="button" disabled={gerandoZootecnicoPdf} onClick={baixarPdfZootecnico} className="shrink-0 rounded-lg border border-surface-3 px-5 py-2 text-sm font-semibold text-content hover:bg-surface-2 disabled:opacity-50">
+              {gerandoZootecnicoPdf ? 'Gerando PDF...' : 'Baixar PDF'}
+            </button>
             <button type="button" disabled={gerandoZootecnico} onClick={exportarZootecnico} className="shrink-0 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50">
               {gerandoZootecnico ? 'Gerando...' : 'Exportar Excel'}
             </button>
