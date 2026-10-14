@@ -7,6 +7,7 @@ import {
   type LinhaZootecnica,
   type SerieConsumoDia,
 } from '../features/relatorioZootecnico/agregacao'
+import { colunasZootecnicas, FORMATO_EXCEL, type TipoColuna } from '../features/relatorioZootecnico/colunas'
 
 export interface DadosRelatorioZootecnico {
   fazendaNome: string
@@ -178,53 +179,15 @@ export async function carregarRelatorioZootecnico(
   return { fazendaNome, janelaInicio, janelaFim, linhas, geral: montarLinhaGeral(linhas) }
 }
 
-type Coluna = {
-  header: string
-  grupo: string
-  width: number
-  fmt?: string
-  valor: (l: LinhaZootecnica) => string | number | Date | null
-}
-
-const dataBr = (iso: string | null): Date | null => (iso ? new Date(`${iso.slice(0, 10)}T00:00:00Z`) : null)
-const pct = (v: number | null): number | null => (v === null ? null : v / 100)
-
-function colunas(dias: number): Coluna[] {
-  const j = `${dias} dias`
-  return [
-    { grupo: 'Identificação', header: 'Lote', width: 28, valor: (l) => l.loteNome },
-    { grupo: 'Identificação', header: 'Pasto', width: 14, valor: (l) => l.pastoNome },
-    { grupo: 'Identificação', header: 'Área útil (ha)', width: 11, fmt: '#,##0.00', valor: (l) => l.areaUtilHa },
-    { grupo: 'Identificação', header: 'Tx. lotação (UA/ha)', width: 12, fmt: '#,##0.00', valor: (l) => l.taxaLotacaoUaHa },
-    { grupo: 'Identificação', header: 'Cabeças', width: 9, fmt: '#,##0', valor: (l) => l.cabecas },
-    { grupo: 'Identificação', header: 'Categoria', width: 14, valor: (l) => l.categoria },
-    { grupo: 'Identificação', header: 'Raça', width: 12, valor: (l) => l.raca },
-    { grupo: 'Identificação', header: 'Sexo', width: 8, valor: (l) => l.sexo },
-    { grupo: 'Identificação', header: 'Estratégia nutricional', width: 20, valor: (l) => l.estrategia },
-    { grupo: 'Desempenho', header: 'Data pesagem', width: 12, fmt: 'dd/mm/yyyy', valor: (l) => dataBr(l.dataPesagem) },
-    { grupo: 'Desempenho', header: 'Peso entrada (kg)', width: 12, fmt: '#,##0.00', valor: (l) => l.pesoEntradaKg },
-    { grupo: 'Desempenho', header: 'Peso entrada (@)', width: 12, fmt: '#,##0.00', valor: (l) => l.pesoEntradaArroba },
-    { grupo: 'Desempenho', header: 'Peso atual (kg)', width: 12, fmt: '#,##0.00', valor: (l) => l.pesoAtualKg },
-    { grupo: 'Desempenho', header: 'Peso meta (kg)', width: 12, fmt: '#,##0.00', valor: (l) => l.pesoMetaKg },
-    { grupo: 'Desempenho', header: 'Data meta', width: 12, fmt: 'dd/mm/yyyy', valor: (l) => dataBr(l.dataMeta) },
-    { grupo: 'Desempenho', header: 'Período (dias)', width: 10, fmt: '#,##0', valor: (l) => l.periodoDias },
-    { grupo: 'Desempenho', header: 'Rend. carcaça', width: 10, fmt: '0.0%', valor: (l) => pct(l.rcPercent) },
-    { grupo: 'Financeiro', header: 'Valor carcaça (R$/@)', width: 13, fmt: '"R$" #,##0.00', valor: (l) => l.precoVendaArroba },
-    { grupo: 'Financeiro', header: 'Valor estoque (R$)', width: 15, fmt: '"R$" #,##0.00', valor: (l) => l.valorEstoque },
-    { grupo: 'Financeiro', header: 'Capital atual (R$)', width: 15, fmt: '"R$" #,##0.00', valor: (l) => l.capitalAtual },
-    { grupo: 'Consumo geral', header: 'MN (kg/cab/dia)', width: 11, fmt: '#,##0.00', valor: (l) => l.geral.mnKgCabDia },
-    { grupo: 'Consumo geral', header: 'MS (kg/cab/dia)', width: 11, fmt: '#,##0.00', valor: (l) => l.geral.msKgCabDia },
-    { grupo: 'Consumo geral', header: '%PV', width: 8, fmt: '0.00"%"', valor: (l) => l.geral.percentPv },
-    { grupo: `Consumo ${j}`, header: 'MN (kg/cab/dia)', width: 11, fmt: '#,##0.00', valor: (l) => l.janela.mnKgCabDia },
-    { grupo: `Consumo ${j}`, header: 'MS (kg/cab/dia)', width: 11, fmt: '#,##0.00', valor: (l) => l.janela.msKgCabDia },
-    { grupo: `Consumo ${j}`, header: '%PV', width: 8, fmt: '0.00"%"', valor: (l) => l.janela.percentPv },
-    { grupo: 'Meta e custo', header: 'Consumo meta (%PV)', width: 12, fmt: '0.00"%"', valor: (l) => l.consumoMetaPercentPv },
-    { grupo: 'Meta e custo', header: 'Custo alimentar (R$/cab/dia)', width: 15, fmt: '"R$" #,##0.00', valor: (l) => l.janela.custoCabDia ?? l.geral.custoCabDia },
-  ]
+const valorExcel = (tipo: TipoColuna, v: string | number | null): string | number | Date | null => {
+  if (v === null || v === undefined) return null
+  if (tipo === 'data') return new Date(`${String(v).slice(0, 10)}T00:00:00Z`)
+  if (tipo === 'pct1') return Number(v) / 100
+  return v
 }
 
 export async function gerarExcelZootecnico(dados: DadosRelatorioZootecnico, dias: number): Promise<Blob> {
-  const cols = colunas(dias)
+  const cols = colunasZootecnicas(dias)
   const wb = new ExcelJS.Workbook()
   const ws = wb.addWorksheet('Controle de Lotes', { views: [{ state: 'frozen', xSplit: 1, ySplit: 4 }] })
   ws.columns = cols.map((c) => ({ width: c.width }))
@@ -257,9 +220,10 @@ export async function gerarExcelZootecnico(dados: DadosRelatorioZootecnico, dias
   cab.height = 32
 
   const escrever = (l: LinhaZootecnica, destaque: boolean) => {
-    const row = ws.addRow(cols.map((c) => c.valor(l) ?? null))
+    const row = ws.addRow(cols.map((c) => valorExcel(c.tipo, c.valor(l))))
     cols.forEach((c, i) => {
-      if (c.fmt) row.getCell(i + 1).numFmt = c.fmt
+      const fmt = FORMATO_EXCEL[c.tipo]
+      if (fmt) row.getCell(i + 1).numFmt = fmt
     })
     if (destaque) {
       row.font = { bold: true }

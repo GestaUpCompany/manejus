@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório Zootécnico: visualização inline e PDF via Puppeteer (2026-10-14)
+Antes só havia exportação Excel. Agora o relatório pode ser visto na tela e baixado em PDF. Sem migration.
+- Tela: rota `/controller/relatorios/zootecnico` (`pages/controller/RelatorioZootecnico.tsx`, TanStack Query), tabela com cabeçalho agrupado, linha Geral em destaque, coluna Lote fixa na rolagem, campo de janela (`?dias=`), botões "Baixar PDF" e "Exportar Excel". No card de Relatórios (`Relatorios.tsx`) ficaram três botões: Visualizar, Baixar PDF e Exportar Excel.
+- Colunas numa fonte única: `features/relatorioZootecnico/colunas.ts` (`colunasZootecnicas`, `formatarCelula`, `montarTabelaZootecnica`, `FORMATO_EXCEL`). Tela, PDF e Excel leem dela; o Excel só converte data para `Date` e RC para fração. Testes em `colunas.test.ts`.
+- PDF: `api/pdf/zootecnico.js` (Puppeteer, A4 paisagem), registrado em `vite.config.ts`. Dois blocos de colunas por causa da largura (detalhes em `ArquiteturaRelatoriosPDF.md`). **Exige token**: o client envia `Authorization: Bearer` e `fazendaId`; o endpoint valida com `createAuthenticatedSupabase` (401 sem sessão, 403 sem acesso à fazenda), como o Infográfico.
+- Verificado: typecheck, lint e testes (283); PDF gerado e conferido pelo usuário em teste manual.
+
 ## Relatório de consumo: local e dieta do período, selo por tipo e gráfico legível (2026-10-14)
 Queixa: o Lote 08 (Fazenda Santa Cecília) mudou de local e dieta em 09/10, mas o relatório de 01 a 30/09 mostrava Baia 2 e Ração Recria Sequestro. Causa: a RPC `get_dados_relatorio_consumo` lia o estado **atual** (`lotes.pasto_id`, `currais.lote_id`, plano ativo hoje, `now()` nos dias), só os pontos de consumo respeitavam o período.
 - Migration `20261014140000_relatorio_consumo_historico_periodo` (+ rollback): `local_hist` (`lote_pasto_historico` e `lote_curral_historico` que tocam o período) e `dieta_hist` (`planos_nutricionais` do lote sem categoria que tocam o período, creep segue o fallback). `pasto_nome`/`curral_nome`/`dieta` viram a lista cronológica do período (`A → B → C`); sem histórico no período, vale o local atual. O plano vigente (`pn_lote`) passa a ser o do **fim** do período (inclui encerrados; rascunho = inativo sem `data_fim` fica fora) e `dias`/`dias_total`/data prevista usam `LEAST(hoje, fim do período)`. `info` ganhou `local_label`, `local_historico`, `dieta_historico`.
