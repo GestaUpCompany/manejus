@@ -5,6 +5,7 @@ Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar 
 ## Relatório de consumo: pendências do gráfico e da leitura de cocho (2026-10-14)
 
 - **Gráfico da página pública (Recharts) ainda sobrepõe rótulos** no pé do gráfico (CMS, %PV e leitura de cocho); a correção anti-colisão e a faixa da leitura foram feitas só no PDF (`api/pdf/consumo.js`). Aplicar a mesma ideia em `criarLabelsAntiColisao` de `RelatorioConsumoPublico.tsx`.
+- **Relatório mensal geral sem o selo e sem a separação por tipo**: `features/relatorioGeral/loaders.ts` monta os lotes de consumo sem `tipoManejo` (a separação pasto/confinamento só existe em `separarPorTipoManejo`, dentro de `RelatorioConsumoPublico.tsx`). Na seção de consumo do infográfico, um lote com pontos de pasto e de confinamento no período aparece num gráfico só e sem selo. Extrair `separarPorTipoManejo` para um módulo compartilhado e usá-lo no loader.
 - Remover `gerarRelatorioConsumoPDF` e o resto do jsPDF de consumo em `relatorioConsumoPDF.ts` (sem uso desde o PDF por Puppeteer); manter só os tipos e `carregarLogoComoBase64`, usados por outros relatórios.
 - Opcional: nota de rodapé no confinamento ("nota lida na manhã seguinte ao trato") para evitar a comparação ingênua com o pasto.
 **Disparadores**: "leitura de cocho no relatório", "rótulos do gráfico de consumo", "PDF de consumo", `consumo.js`.

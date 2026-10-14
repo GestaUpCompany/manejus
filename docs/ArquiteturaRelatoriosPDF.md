@@ -43,7 +43,12 @@ gráficos e CSS extra. Tudo o mais (Chrome, Chart.js, template) vem do
 ## Relatórios já migrados para Puppeteer
 
 - **Mortalidade** (`api/pdf/morte.js`): resumo executivo + 5 gráficos + tabela de detalhamento paginada. KPIs em grid de 4 colunas. Tabelas com bordas verticais e zebra striping.
-- **Consumo** (`api/pdf/consumo.js`): relatório multi-lote com gráficos de evolução por lote, tabela de detalhamento e seção de dieta.
+- **Consumo** (`api/pdf/consumo.js`): relatório multi-lote, uma página (ou mais, 12 pontos por página) por lote, com KPIs laterais, pills no topo, separador de dieta e o gráfico composto CMS (barras) + Consumo %PV (linha) + Leitura de Cocho. Sem tabela de detalhamento. Pontos de interesse:
+  - **Pills de local e dieta**: o `info` traz `local_label` e a lista do período (`A → B → C`). O texto corre na horizontal, cada etapa é inseparável (quebra só entre etapas) e cada pill pede a largura do próprio texto (`flex-basis`); não truncar.
+  - **Tipo de manejo**: o client envia `tipoManejo` por lote (`pasto`/`confinamento`, calculado em `RelatorioConsumoPublico.tsx`). O título leva o selo e o separador de dieta recomeça a cada mudança de tipo. Sem `tipoManejo` (ex.: seção de consumo do relatório geral) não há selo.
+  - **Rótulos do gráfico** (`CHARTS_INIT_JS`, plugin `customLabels`): posicionamento anti-colisão. Cada rótulo tenta posições candidatas, evita marcadores e outros rótulos e nunca desce sobre o eixo X; CMS e %PV têm contorno branco. A Leitura de Cocho usa o eixo oculto `y2` mapeado para uma faixa no topo (90 a 98% da altura), com o valor dentro da bolinha; a legenda omite "Leitura Cocho" quando o lote não tem leitura.
+  - Para inspecionar sem Chromium: `renderConsumoHtml(input)` é exportada e devolve o HTML completo; basta gravar e abrir em localhost.
+  - `gerarRelatorioConsumoPDF` (jsPDF) em `src/utils/relatorioConsumoPDF.ts` não é mais usada.
 - **Abastecimento** (`api/pdf/abastecimento.js`): KPIs laterais + 3 gráficos de barras (máquina, combustível, operação) + 2 tabelas de detalhamento paginadas. Usa `LEFT JOIN` com `maquinas_veiculos` para retornar `marca` e `modelo` separados via RPC, e abrevia marcas conhecidas (John Deere → JD, Volkswagen → VW, Massey Ferguson → MF, etc) no endpoint e no frontend.
 - **Bebedouros** (`api/pdf/bebedouros.js`): dois modos mutuamente exclusivos na Seção 1 (dia único vs período), KPIs com barra lateral colorida por status (componente local `kpiStatus`, não o `kpi()` padrão), gráfico de período paginado por espaço vertical disponível (pre-chunk dinâmico, não N fixo), linha tracejada de meta individual por bebedouro, tabela de ocorrências com texto livre paginada em 15 linhas por página.
 
