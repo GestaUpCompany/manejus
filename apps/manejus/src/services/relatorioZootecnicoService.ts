@@ -43,9 +43,11 @@ interface CategoriaRow {
 }
 
 interface ConsumoRpcLote {
-  info: { lote_id: string }
+  info: { lote_id: string; escopo?: string }
   dados: SerieConsumoDia[] | null
 }
+
+const ehCreep = (categoria: string | null) => /^bezerr[oa] ao p[eé]$/i.test((categoria ?? '').trim())
 
 const num = (v: unknown): number | null => {
   if (v === null || v === undefined || v === '') return null
@@ -72,7 +74,7 @@ async function consumoPorLote(fazendaId: string, ini: string, fim: string): Prom
   if (error) throw error
   const mapa = new Map<string, SerieConsumoDia[]>()
   for (const l of (data?.dados?.lotes ?? []) as ConsumoRpcLote[]) {
-    mapa.set(l.info.lote_id, l.dados ?? [])
+    mapa.set(`${l.info.lote_id}|${l.info.escopo ?? 'lote'}`, l.dados ?? [])
   }
   return mapa
 }
@@ -100,7 +102,7 @@ export async function carregarRelatorioZootecnico(
     return { fazendaNome, janelaInicio, janelaFim, linhas: [], geral }
   }
 
-  const [catRes, pastosRes, formRes, ocupRes] = await Promise.all([
+  const [catRes, pastosRes, formRes, ocupRes, planosRes] = await Promise.all([
     supabase
       .from('lote_categorias')
       .select(
@@ -111,13 +113,26 @@ export async function carregarRelatorioZootecnico(
     supabase.from('pastos').select('id, nome, area_util_ha').eq('fazenda_id', fazendaId),
     supabase.from('formulacoes').select('id, teor_ms_dieta').eq('fazenda_id', fazendaId),
     supabase.from('v_lote_pasto_ocupacao_atual').select('lote_id, taxa_lotacao_ua_ha').in('lote_id', loteIds),
+    supabase
+      .from('planos_nutricionais')
+      .select('lote_id, formulacao_id, data_inicio')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .is('lote_categoria_id', null)
+      .in('lote_id', loteIds)
+      .order('data_inicio', { ascending: false, nullsFirst: false }),
   ])
-  for (const r of [catRes, pastosRes, formRes, ocupRes]) if (r.error) throw r.error
+  for (const r of [catRes, pastosRes, formRes, ocupRes, planosRes]) if (r.error) throw r.error
 
   const categorias = ((catRes.data ?? []) as CategoriaRow[]).filter((c) => (c.quant_atual ?? 0) > 0)
   const pastos = new Map((pastosRes.data ?? []).map((p) => [p.id as string, p]))
   const teor = new Map((formRes.data ?? []).map((f) => [f.id as string, num(f.teor_ms_dieta)]))
   const lotacao = new Map((ocupRes.data ?? []).map((o) => [o.lote_id as string, num(o.taxa_lotacao_ua_ha)]))
+  // dieta do lote pelo plano ativo mais recente (a categoria nem sempre tem formulacao_id próprio)
+  const formulacaoDoPlano = new Map<string, string>()
+  for (const p of planosRes.data ?? []) {
+    if (p.lote_id && p.formulacao_id && !formulacaoDoPlano.has(p.lote_id as string)) formulacaoDoPlano.set(p.lote_id as string, p.formulacao_id as string)
+  }
   const loteMap = new Map(lotes.map((l) => [l.id, l]))
 
   const inicioGeral =
@@ -130,6 +145,7 @@ export async function carregarRelatorioZootecnico(
   const linhas = categorias
     .map((c): LinhaZootecnica => {
       const lote = loteMap.get(c.lote_id)!
+      const escopo = ehCreep(c.categoria) ? 'creep' : 'lote'
       const pasto = lote.pasto_id ? pastos.get(lote.pasto_id) : undefined
       const cat: CategoriaZootecnica = {
         loteNome: lote.nome,
@@ -151,9 +167,9 @@ export async function carregarRelatorioZootecnico(
         precoVendaArroba: num(c.preco_venda_projetado_reais_arroba),
         precoCustoCab: num(c.preco_custo_cab),
         consumoMetaPercentPv: num(c.consumo_meta_porcentagem_pesovivo),
-        teorMsPercent: c.formulacao_id ? (teor.get(c.formulacao_id) ?? null) : null,
-        serieGeral: serieGeral.get(c.lote_id) ?? [],
-        serieJanela: serieJanela.get(c.lote_id) ?? [],
+        teorMsPercent: teor.get(c.formulacao_id ?? formulacaoDoPlano.get(c.lote_id) ?? '') ?? null,
+        serieGeral: serieGeral.get(`${c.lote_id}|${escopo}`) ?? [],
+        serieJanela: serieJanela.get(`${c.lote_id}|${escopo}`) ?? [],
       }
       return montarLinha(cat)
     })
