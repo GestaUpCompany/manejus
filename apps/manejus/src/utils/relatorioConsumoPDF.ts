@@ -28,6 +28,7 @@ export interface InfoLote {
   n_cabecas_atual: number | null
   pasto_nome?: string | null
   curral_nome?: string | null
+  local_label?: string | null
   raca: string | null
   categoria: string | null
   dieta: string | null
@@ -44,6 +45,7 @@ export interface ParametrosRelatorioConsumo {
 export interface LoteRelatorio {
   info: InfoLote
   dados: DadoRelatorioConsumo[]
+  tipoManejo?: 'pasto' | 'confinamento'
 }
 
 const MAX_DATA_POINTS_PER_PAGE = 20
@@ -464,7 +466,9 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
   const minPillWidth = 40
   const rightMargin = 8
   const pills = [
-    { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' },
+    info.pasto_nome && info.curral_nome
+      ? { label: 'Local', value: info.local_label || `${info.pasto_nome} → ${info.curral_nome}` }
+      : { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' },
     { label: 'Nº Cab. (média do período)', value: formatarInteiro(info.n_cabecas_atual) },
     { label: 'Raça', value: info.raca || '—' },
     { label: 'Categoria', value: (info.categoria ? info.categoria.split(/,\s*/).map((c) => c.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') : '—') },

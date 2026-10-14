@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { Fragment, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@gestaup/supabase'
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
@@ -380,6 +380,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
           fazenda_logo_url: relatorioInfo.fazenda_logo_url,
         },
         dados: l.dados,
+        tipoManejo: l.tipoManejo,
       }))
 
       const blob = await gerarRelatorioConsumoPDFPuppeteer({
@@ -734,19 +735,38 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                 {/* KPIs + Pills */}
                 <div className="p-5 space-y-4">
                   {/* Pills (Pasto/Curral, Nº Cab, Raça, Categoria, Dieta) */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {[
-                      { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' },
+                      info.pasto_nome && info.curral_nome
+                        ? { label: 'Local', value: info.local_label || `${info.pasto_nome} → ${info.curral_nome}` }
+                        : { label: info.curral_nome ? 'Curral' : info.pasto_nome ? 'Pasto' : 'Pasto/Curral', value: info.curral_nome || info.pasto_nome || '—' },
                       { label: 'Nº Cab. (média do período)', value: formatarInteiro(info.n_cabecas_atual) },
                       { label: 'Raça', value: info.raca || '—' },
                       { label: 'Categoria', value: info.categoria ? info.categoria.split(', ').map(c => c.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') : '—' },
                       { label: 'Dieta', value: info.dieta || '—' },
-                    ].map((p) => (
-                      <div key={p.label} className="rounded-lg p-2.5 text-center text-white shadow-sm" style={{ backgroundColor: GREEN_DARK }}>
-                        <p className="text-sm font-bold leading-tight truncate">{p.value}</p>
-                        <p className="text-[10px] opacity-90 leading-tight mt-0.5">{p.label}</p>
-                      </div>
-                    ))}
+                    ].map((p) => {
+                      // Local/dieta com mudança no período vêm como "A → B → C": o texto corre na
+                      // horizontal e só quebra entre etapas; cada pill pede a largura do próprio texto
+                      const etapas = p.value.split(' → ')
+                      const largura = Math.max(110, Math.round(p.value.length * 8.2 + 24))
+                      return (
+                        <div
+                          key={p.label}
+                          className="rounded-lg p-2.5 text-center text-white shadow-sm flex flex-col justify-center"
+                          style={{ backgroundColor: GREEN_DARK, flex: `${largura} 1 ${largura}px` }}
+                        >
+                          <p className="text-sm font-bold leading-tight break-words">
+                            {etapas.map((etapa, i) => (
+                              <Fragment key={i}>
+                                <span className="inline-block whitespace-nowrap">{etapa}{i < etapas.length - 1 ? ' →' : ''}</span>
+                                {i < etapas.length - 1 ? ' ' : ''}
+                              </Fragment>
+                            ))}
+                          </p>
+                          <p className="text-[10px] opacity-90 leading-tight mt-0.5">{p.label}</p>
+                        </div>
+                      )
+                    })}
                   </div>
 
                   {/* KPIs (Peso Entrada, Consumo %PV, R$/cab/dia, Peso Atual, Período Dieta Atual, Período Total, Data Prevista) */}

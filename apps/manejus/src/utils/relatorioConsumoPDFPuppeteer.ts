@@ -37,12 +37,14 @@ export async function gerarRelatorioConsumoPDFPuppeteer(
       n_cabecas_atual: l.info.n_cabecas_atual,
       pasto_nome: l.info.pasto_nome,
       curral_nome: l.info.curral_nome,
+      local_label: l.info.local_label,
       raca: l.info.raca,
       categoria: l.info.categoria,
       dieta: l.info.dieta,
       escopo: l.info.escopo,
     },
     dados: l.dados,
+    tipoManejo: l.tipoManejo,
   }))
 
   const response = await fetch('/api/pdf/consumo', {
