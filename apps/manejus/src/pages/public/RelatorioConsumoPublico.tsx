@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { Fragment, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@gestaup/supabase'
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
@@ -745,17 +745,24 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                       { label: 'Categoria', value: info.categoria ? info.categoria.split(', ').map(c => c.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') : '—' },
                       { label: 'Dieta', value: info.dieta || '—' },
                     ].map((p) => {
-                      // Local/dieta com mudança no período vêm como "A → B → C": uma etapa por linha
+                      // Local/dieta com mudança no período vêm como "A → B → C": o texto corre na
+                      // horizontal e só quebra entre etapas; cada pill pede a largura do próprio texto
                       const etapas = p.value.split(' → ')
+                      const largura = Math.max(110, Math.round(p.value.length * 8.2 + 24))
                       return (
                         <div
                           key={p.label}
-                          className={`rounded-lg p-2.5 text-center text-white shadow-sm flex flex-col justify-center ${etapas.length > 1 ? 'flex-[2_1_220px]' : 'flex-[1_1_110px]'}`}
-                          style={{ backgroundColor: GREEN_DARK }}
+                          className="rounded-lg p-2.5 text-center text-white shadow-sm flex flex-col justify-center"
+                          style={{ backgroundColor: GREEN_DARK, flex: `${largura} 1 ${largura}px` }}
                         >
-                          {etapas.map((etapa, i) => (
-                            <p key={i} className="text-sm font-bold leading-tight break-words">{i > 0 ? '→ ' : ''}{etapa}</p>
-                          ))}
+                          <p className="text-sm font-bold leading-tight break-words">
+                            {etapas.map((etapa, i) => (
+                              <Fragment key={i}>
+                                <span className="inline-block whitespace-nowrap">{etapa}{i < etapas.length - 1 ? ' →' : ''}</span>
+                                {i < etapas.length - 1 ? ' ' : ''}
+                              </Fragment>
+                            ))}
+                          </p>
                           <p className="text-[10px] opacity-90 leading-tight mt-0.5">{p.label}</p>
                         </div>
                       )

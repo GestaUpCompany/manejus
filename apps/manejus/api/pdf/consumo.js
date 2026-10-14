@@ -61,9 +61,8 @@ const CONSUMO_CSS = `
 .lote-title .header-badge{margin-top:0;margin-left:8px;vertical-align:2px}
 .pills-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:3mm}
 .consumo-pill{background:#0b6a42;color:#fff;border-radius:5px;padding:5px 10px;text-align:center;min-width:0;flex:1 1 60px;display:flex;flex-direction:column;justify-content:center}
-.consumo-pill.longo{flex:2 1 150px}
 .consumo-pill .pill-value{font-size:13px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
-.consumo-pill.longo .pill-value{font-size:12px}
+.consumo-pill .pill-etapa{display:inline-block;white-space:nowrap}
 .consumo-pill .pill-label{font-size:10px;opacity:.9;margin-top:1px}
 .lote-title .tipo-badge{display:inline-block;margin-left:8px;vertical-align:2px;background:#0b6a42;color:#fff;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;border-radius:4px;padding:2px 7px}
 .lote-title .tipo-badge.confinamento{background:#1E3A5F}
@@ -359,8 +358,10 @@ function custoMedio(dados) {
   return validos.reduce((s, d) => s + (d.custo_reais_cab_dia || 0), 0) / validos.length
 }
 
-// Local e dieta podem ter mais de uma etapa no período ("A → B → C"): cada etapa
-// vira uma linha do pill (as seguintes com seta) e o pill ganha mais largura.
+// Local e dieta podem ter mais de uma etapa no período ("A → B → C"): o texto corre na
+// horizontal e só quebra entre etapas (a seta fica no fim da etapa anterior) quando falta
+// largura. Cada pill pede a largura do próprio texto (flex-basis), então o espaço da linha
+// é dividido na proporção do conteúdo.
 function pillsHtml(info) {
   const local = info.pasto_nome && info.curral_nome
     ? { label: 'Local', value: info.local_label || `${info.pasto_nome} → ${info.curral_nome}` }
@@ -375,10 +376,11 @@ function pillsHtml(info) {
   return `<div class="pills-row">${pills
     .map((p) => {
       const etapas = String(p.value).split(' → ')
-      const linhas = etapas
-        .map((e, i) => `<div class="pill-value">${i > 0 ? '→ ' : ''}${escapeHtml(e)}</div>`)
-        .join('')
-      return `<div class="consumo-pill${etapas.length > 1 ? ' longo' : ''}">${linhas}<div class="pill-label">${escapeHtml(p.label)}</div></div>`
+      const largura = Math.max(90, Math.round(String(p.value).length * 7.8 + 28))
+      const texto = etapas
+        .map((e, i) => `<span class="pill-etapa">${escapeHtml(e)}${i < etapas.length - 1 ? ' →' : ''}</span>`)
+        .join(' ')
+      return `<div class="consumo-pill" style="flex:${largura} 1 ${largura}px"><div class="pill-value">${texto}</div><div class="pill-label">${escapeHtml(p.label)}</div></div>`
     })
     .join('')}</div>`
 }
