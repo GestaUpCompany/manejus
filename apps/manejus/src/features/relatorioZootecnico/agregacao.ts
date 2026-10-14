@@ -7,6 +7,7 @@ export interface SerieConsumoDia {
 export interface CategoriaZootecnica {
   loteNome: string
   pastoNome: string | null
+  curralNome: string | null
   areaUtilHa: number | null
   taxaLotacaoUaHa: number | null
   categoria: string | null
@@ -39,6 +40,7 @@ export interface ResumoConsumo {
 export interface LinhaZootecnica {
   loteNome: string
   pastoNome: string | null
+  curralNome: string | null
   areaUtilHa: number | null
   taxaLotacaoUaHa: number | null
   categoria: string | null
@@ -97,6 +99,7 @@ export function montarLinha(cat: CategoriaZootecnica): LinhaZootecnica {
   return {
     loteNome: cat.loteNome,
     pastoNome: cat.pastoNome,
+    curralNome: cat.curralNome,
     areaUtilHa: cat.areaUtilHa,
     taxaLotacaoUaHa: cat.taxaLotacaoUaHa,
     categoria: cat.categoria,
@@ -161,6 +164,7 @@ export function montarLinhaGeral(linhas: LinhaZootecnica[]): LinhaZootecnica {
   return {
     loteNome: 'Geral',
     pastoNome: null,
+    curralNome: null,
     areaUtilHa: somarAreaPorPasto(linhas),
     taxaLotacaoUaHa: mediaPonderada(linhas, (l) => l.taxaLotacaoUaHa),
     categoria: null,

@@ -21,13 +21,21 @@ describe('HTML do PDF zootécnico', () => {
       janelaInicio: '2026-09-23',
       janelaFim: '2026-10-14',
       dias: 22,
-      tabela: { colunas, geral: ['Geral', '410,00', 'R$ 99,00'], linhas },
+      tabela: {
+        colunas,
+        geral: ['Geral', '410,00', 'R$ 99,00'],
+        secoes: [
+          { titulo: 'Lotes a pasto', total: ['Total', '1,00', 'R$ 1,00'], linhas },
+          { titulo: 'Lotes em currais (confinamento)', total: ['Total', '2,00', 'R$ 2,00'], linhas: linhas.slice(0, 2) },
+        ],
+      },
     })
     expect(html).toContain('Identificação e desempenho')
     expect(html).toContain('Financeiro, consumo e meta')
     expect(html).toContain('Lote 30')
     expect(html).toContain('R$ 99,00')
-    // 30 linhas / 13 por página = 3 páginas por bloco, 2 blocos
-    expect((html.match(/<section class="page">/g) ?? []).length).toBe(6)
+    expect(html).toContain('Lotes em currais (confinamento)')
+    // pasto: 30 linhas / 12 = 3 páginas x 2 blocos; currais: 1 página x 2 blocos
+    expect((html.match(/<section class="page">/g) ?? []).length).toBe(8)
   })
 })

@@ -4,6 +4,7 @@ import { useFazenda } from '../../hooks/useDashboardQueries'
 import { updateFazenda } from '@gestaup/shared'
 import { uploadLogo, deleteLogo } from '../../services/storageService'
 import { Card } from '@gestaup/ui'
+import { PopsConfig } from '../../components/pops/PopsConfig'
 
 export function Configuracoes() {
   const { user } = useAuth()
@@ -80,7 +81,7 @@ export function Configuracoes() {
     <div className="max-w-3xl">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-content-strong">Configurações</h2>
-        <p className="text-sm text-content-muted mt-1">Identidade visual da fazenda</p>
+        <p className="text-sm text-content-muted mt-1">Identidade visual e POPs da fazenda</p>
       </div>
 
       <Card className="bg-surface-1 p-6">
@@ -132,6 +133,8 @@ export function Configuracoes() {
           </div>
         </div>
       </Card>
+
+      <PopsConfig fazendaId={fazenda.id} />
     </div>
   )
 }

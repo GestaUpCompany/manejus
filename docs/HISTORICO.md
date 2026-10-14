@@ -1,11 +1,18 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## POPs personalizados por fazenda: lado do painel (2026-10-14)
+Os botões amarelos de POP do PWA abriam só imagens fixas de `public/docs`. Agora a fazenda sobe o próprio POP em Configurações; o PWA ainda não consome (próxima etapa).
+- Migration `20261014180000_fazenda_pops` (+ rollback): bucket público `pops` (10 MB, jpeg/webp/png, escrita por pasta `{fazenda_id}/` via `user_has_fazenda_access`) e tabela `fazenda_pops` (`slug` em maternidade, pastagens, cocho, bebedouros, fezes, escore; `ordem`, `path`, `versao`, `deleted_at`). Sem linhas para o slug, o PWA mantém o padrão (retrocompatível).
+- Painel: `components/pops/PopsConfig.tsx` (seção em `Configuracoes.tsx`), `services/popsService.ts` (substitui o POP inteiro: sobe as novas páginas, troca as linhas, só então apaga as antigas; "restaurar padrão" faz soft-delete), `features/pops/` (regras e testes) e `paginas.ts` (PDF via `pdfjs-dist` ou imagens JPG/PNG/WebP, retrato A4, convertidas em JPEG de 1240 px).
+- Pendente no PWA: `config/pops.ts` + `usePopImages`, `PopButton`, warm cache (IndexedDB + Cache API `pop-images`) para o personalizado aparecer offline desde a primeira atualização.
+
 ## Relatório Zootécnico: visualização inline e PDF via Puppeteer (2026-10-14)
 Antes só havia exportação Excel. Agora o relatório pode ser visto na tela e baixado em PDF. Sem migration.
 - Tela: rota `/controller/relatorios/zootecnico` (`pages/controller/RelatorioZootecnico.tsx`, TanStack Query), tabela com cabeçalho agrupado, linha Geral em destaque, coluna Lote fixa na rolagem, campo de janela (`?dias=`), botões "Baixar PDF" e "Exportar Excel". No card de Relatórios (`Relatorios.tsx`) ficaram três botões: Visualizar, Baixar PDF e Exportar Excel.
 - Colunas numa fonte única: `features/relatorioZootecnico/colunas.ts` (`colunasZootecnicas`, `formatarCelula`, `montarTabelaZootecnica`, `FORMATO_EXCEL`). Tela, PDF e Excel leem dela; o Excel só converte data para `Date` e RC para fração. Testes em `colunas.test.ts`.
 - PDF: `api/pdf/zootecnico.js` (Puppeteer, A4 paisagem), registrado em `vite.config.ts`. Dois blocos de colunas por causa da largura (detalhes em `ArquiteturaRelatoriosPDF.md`). **Exige token**: o client envia `Authorization: Bearer` e `fazendaId`; o endpoint valida com `createAuthenticatedSupabase` (401 sem sessão, 403 sem acesso à fazenda), como o Infográfico.
-- Verificado: typecheck, lint e testes (283); PDF gerado e conferido pelo usuário em teste manual.
+- Verificado: typecheck, lint e testes; PDF gerado e conferido pelo usuário em teste manual.
+- Ajustes seguintes (mesmo dia): coluna **Curral** (de `currais.lote_id`, 1:1 com o lote) após Pasto; lotes separados em seções "a pasto" (sem curral) e "em currais (confinamento)" (com curral) em tela, PDF e Excel, cada uma com linha de total própria (`Total a pasto`/`Total em currais`, omitida se só há uma seção); PDF com 12 linhas por página, células numéricas sem quebra e colunas de data/R$ mais largas (a data quebrava o "6" de 2026).
 
 ## Relatório de consumo: local e dieta do período, selo por tipo e gráfico legível (2026-10-14)
 Queixa: o Lote 08 (Fazenda Santa Cecília) mudou de local e dieta em 09/10, mas o relatório de 01 a 30/09 mostrava Baia 2 e Ração Recria Sequestro. Causa: a RPC `get_dados_relatorio_consumo` lia o estado **atual** (`lotes.pasto_id`, `currais.lote_id`, plano ativo hoje, `now()` nos dias), só os pontos de consumo respeitavam o período.
