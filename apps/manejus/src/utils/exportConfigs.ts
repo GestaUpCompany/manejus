@@ -172,6 +172,20 @@ export const PENDENCIAS_BEBEDOUROS_EXPORT_CONFIG: TableExportConfig = {
   ]
 }
 
+export const PENDENCIAS_RODEIO_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'pendencias_rodeio',
+  sheetName: 'Pendências Rodeio',
+  columns: [
+    { source: 'lote', header: 'Lote' },
+    { source: 'item', header: 'Item' },
+    { source: 'desde', header: 'Aberta em', format: 'date' },
+    { source: 'dias_em_aberto', header: 'Dias em aberto', format: 'number' },
+    { source: 'ocorrencias', header: 'Rodeios seguidos', format: 'number' },
+    { source: 'observacao', header: 'Observação' },
+    { source: 'foto_url', header: 'Foto' }
+  ]
+}
+
 export const ENFERMARIA_EXPORT_CONFIG: TableExportConfig = {
   tableName: 'registros_enfermaria',
   sheetName: 'Enfermaria',
