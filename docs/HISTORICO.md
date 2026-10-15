@@ -1,5 +1,16 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Folha de trato: layout adaptativo e páginas equilibradas (2026-10-15)
+
+Impressão de `pages/controller/LancamentoTratos.tsx` (`FolhaTratoImpressao`) e bloco "Folha de Trato" de `index.css`. Só front, sem migration. Motivo: a folha comportava ~10 currais por página (célula Real fixa em 13 mm) e fazendas com 40+ currais saíam em muitas folhas; o peão escreve e confere à mão, então o campo Real precisa continuar grande.
+
+- **Orientação por nº de tratos** (`utils/folhaTratoLayout.ts`, + testes): até 2 tratos em retrato, 3 ou mais em paisagem. O `@page` é injetado pelo componente (CSS puro não o torna dinâmico); o `@page` fixo saiu do `index.css`.
+- **Altura da linha adaptativa** via `--trato-linha-h`, de 13 mm (poucos currais, como antes) até 8 mm (mínimo legível). Usa a maior altura em que tudo cabe numa página.
+- **Paginação equilibrada** quando nem a 8 mm cabe: 45 currais em retrato viram 23 + 22. Cabeçalho completo só na 1ª página; as demais repetem o `thead` e mostram data e "Página x/y". Linhas com `break-inside: avoid`.
+- **Colunas:** informativas redimensionadas (Dieta 28 mm e Lote 26 mm para a dieta caber em 2 linhas; Prev. 12 mm para não quebrar "1.202,7"); sobra toda para as colunas Real. Cabeçalho (logos, título) mais enxuto.
+- **Verificado** com a folha TIP da Fazenda Jacamim (43 currais, 3 tratos): 3 páginas de paisagem (17/17/15) em vez de 6. Primeira tentativa com colunas estreitas demais quebrava Dieta em 4 linhas e dobrava as folhas; corrigido ao alargar Lote/Dieta.
+- **Limite conhecido:** a capacidade é estimada pelas constantes de `folhaTratoLayout.ts`; nomes de lote/dieta muito longos podem crescer a linha e empurrar um curral para a página seguinte.
+
 ## Auditoria 5S: pendências, nota do setor e novo detalhe (2026-10-15)
 
 Migration `20261015140000_auditoria_5s_pendencias_nota` em `registros_auditoria_5s`: `nao_conformidades jsonb` (`{chave: {observacao, foto_url, pendencia?: {situacao, desde}}}`), `nota_geral smallint` com CHECK 0 a 5 (nula nos registros antigos) e índice `(fazenda_id, setor_id, data desc)`. Rollback em `supabase/rollbacks/`.
