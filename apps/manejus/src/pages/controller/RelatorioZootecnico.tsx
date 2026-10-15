@@ -7,6 +7,8 @@ import { useToast, PageSkeleton } from '@gestaup/ui'
 import { carregarRelatorioZootecnico, gerarExcelZootecnico } from '../../services/relatorioZootecnicoService'
 import { colunasZootecnicas, montarTabelaZootecnica, type TabelaZootecnica } from '../../features/relatorioZootecnico/colunas'
 import { aplicarConfigColunas, useConfigColunasZootecnico } from '../../features/relatorioZootecnico/configColunas'
+import { usePredefinicoesColunas } from '../../features/relatorioZootecnico/predefinicoesColunas'
+import { PredefinicoesColunasZootecnico } from '../../components/relatorios/PredefinicoesColunasZootecnico'
 import { gerarRelatorioZootecnicoPDFPuppeteer } from '../../utils/relatorioZootecnicoPDFPuppeteer'
 
 function baixar(blob: Blob, nome: string) {
@@ -84,6 +86,8 @@ export function RelatorioZootecnico() {
   // Os ids não dependem da janela de dias, então a configuração vale para qualquer janela
   const idsColunas = useMemo(() => colunasZootecnicas(dias).map((c) => c.id), [dias])
   const colunasConfig = useConfigColunasZootecnico(`zootecnico-colunas:${user?.id ?? 'anon'}:${fazenda.data?.id ?? ''}`, idsColunas)
+
+  const predefinicoes = usePredefinicoesColunas(`zootecnico-predefinicoes:${user?.id ?? 'anon'}:${fazenda.data?.id ?? ''}`, idsColunas)
 
   const tabela = useMemo(
     () => (tabelaCompleta ? aplicarConfigColunas(tabelaCompleta, colunasConfig.config) : null),
@@ -215,6 +219,19 @@ export function RelatorioZootecnico() {
 
       {tabelaCompleta && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-content-muted">
+          <PredefinicoesColunasZootecnico
+            lista={predefinicoes.lista}
+            ativa={predefinicoes.ativa}
+            config={colunasConfig.config}
+            configDe={predefinicoes.configDe}
+            onAplicar={(p) => {
+              colunasConfig.aplicar(predefinicoes.configDe(p))
+              predefinicoes.marcarAtiva(p.id)
+            }}
+            onSalvar={(nome) => predefinicoes.salvar(nome, colunasConfig.config)}
+            onAtualizarAtiva={() => predefinicoes.atualizarAtiva(colunasConfig.config)}
+            onExcluir={predefinicoes.excluir}
+          />
           <span>
             Arraste os títulos para reordenar. Para ocultar: ícone <IconeOcultar className="inline h-3.5 w-3.5 align-text-bottom" /> no título, ou <kbd className="rounded border border-surface-3 px-1">Shift</kbd>+clique na primeira e na última coluna de um intervalo.
           </span>

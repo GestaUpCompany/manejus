@@ -90,6 +90,7 @@ export function useConfigColunasZootecnico(chave: string, ids: string[]) {
       moverPara: (id: string, alvo: string) => atualizar((c) => ({ ...c, ordem: moverColunaPara(c.ordem, id, alvo) })),
       ocultar: (...alvos: string[]) => atualizar((c) => ({ ...c, ocultas: [...new Set([...c.ocultas, ...alvos])] })),
       mostrar: (id: string) => atualizar((c) => ({ ...c, ocultas: c.ocultas.filter((x) => x !== id) })),
+      aplicar: (nova: ConfigColunas) => atualizar(() => nova),
       mostrarTodas: () => atualizar((c) => ({ ...c, ocultas: [] })),
       restaurarPadrao: () => atualizar(() => ({ ordem: ids, ocultas: [] })),
     }),
