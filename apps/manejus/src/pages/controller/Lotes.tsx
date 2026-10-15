@@ -2410,6 +2410,26 @@ export function Lotes() {
                     <p className="text-xs text-red-500 mt-1">{errors.nome}</p>
                   )}
                 </div>
+                <div className="col-span-1 sm:col-span-1 lg:col-span-1 xl:col-span-1">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                    Sistema de Produção <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.sistema_producao}
+                    onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}
+                    required
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint"
+                  >
+                    <option value="">Selecione</option>
+                    <option value="Cria">Cria</option>
+                    <option value="Confinamento">Confinamento</option>
+                    <option value="Engorda">Engorda</option>
+                    <option value="Recria">Recria</option>
+                    <option value="RIP">RIP</option>
+                    <option value="Sequestro">Sequestro</option>
+                    <option value="TIP">TIP</option>
+                  </select>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     {usaCurral(formData.sistema_producao) ? 'Curral' : 'Pasto'} <span className="text-red-500">*</span>
@@ -2417,7 +2437,7 @@ export function Lotes() {
                   {usaCurral(formData.sistema_producao) ? (
                     <select
                       value={formData.curral_id}
-                      onChange={(e) => { setFormData({ ...formData, curral_id: e.target.value, pasto_id: '' }); if (errors.curral_id) setErrors((p) => ({ ...p, curral_id: '' })) }}
+                      onChange={(e) => { setFormData({ ...formData, curral_id: e.target.value }); if (errors.curral_id) setErrors((p) => ({ ...p, curral_id: '' })) }}
                       required
                       className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${errors.curral_id ? 'border-red-400' : 'border-border-base'} bg-surface-1 text-content-strong placeholder-content-faint`}
                     >
@@ -2431,7 +2451,7 @@ export function Lotes() {
                   ) : (
                     <select
                       value={formData.pasto_id}
-                      onChange={(e) => { setFormData({ ...formData, pasto_id: e.target.value, curral_id: '' }); if (errors.pasto_id) setErrors((p) => ({ ...p, pasto_id: '' })) }}
+                      onChange={(e) => { setFormData({ ...formData, pasto_id: e.target.value }); if (errors.pasto_id) setErrors((p) => ({ ...p, pasto_id: '' })) }}
                       required
                       className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${errors.pasto_id ? 'border-red-400' : 'border-border-base'} bg-surface-1 text-content-strong placeholder-content-faint`}
                     >
@@ -2443,26 +2463,6 @@ export function Lotes() {
                   )}
                   {errors.curral_id && <p className="text-xs text-red-500 mt-1">{errors.curral_id}</p>}
                   {errors.pasto_id && <p className="text-xs text-red-500 mt-1">{errors.pasto_id}</p>}
-                </div>
-                <div className="col-span-1 sm:col-span-1 lg:col-span-1 xl:col-span-1">
-                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
-                    Sistema de Produção <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.sistema_producao}
-                    onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value, pasto_id: '', curral_id: '' })}
-                    required
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint"
-                  >
-                    <option value="">Selecione</option>
-                    <option value="Cria">Cria</option>
-                    <option value="Confinamento">Confinamento</option>
-                    <option value="Engorda">Engorda</option>
-                    <option value="Recria">Recria</option>
-                    <option value="RIP">RIP</option>
-                    <option value="Sequestro">Sequestro</option>
-                    <option value="TIP">TIP</option>
-                  </select>
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-1 xl:col-span-1">
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
