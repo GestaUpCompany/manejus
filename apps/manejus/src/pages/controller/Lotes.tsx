@@ -16,6 +16,7 @@ import { getFazendaIdForUser } from '@gestaup/shared'
 import { usePastos, useCurrais } from '@gestaup/shared'
 import { exportToXLSXMultiSheet, type ColumnConfig } from '@gestaup/shared'
 import { usaCurral } from '../../utils/lotes'
+import { SelectPesquisavel } from '../../components/lotes/SelectPesquisavel'
 
 interface LoteCategoria {
   id?: string
@@ -198,7 +199,7 @@ export function Lotes() {
   const [ocupacaoPorLote, setOcupacaoPorLote] = useState<Record<string, any>>({})
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [showInactive, setShowInactive] = useState(false)
-  const [filtroLocal, setFiltroLocal] = useState<'todos' | 'pasto' | 'confinamento' | 'tip'>('todos')
+  const [filtroLocal, setFiltroLocal] = useState<'todos' | 'pasto' | 'confinamento' | 'sequestro' | 'tip'>('todos')
   const [isPlanoLoteModalOpen, setIsPlanoLoteModalOpen] = useState(false)
   const [avisoEnfermariaFechado, setAvisoEnfermariaFechado] = useState(false)
   const [isPlanoDraftModalOpen, setIsPlanoDraftModalOpen] = useState(false)
@@ -2308,6 +2309,7 @@ export function Lotes() {
     todos: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l)).length,
     pasto: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && !usaCurral(l.sistema_producao)).length,
     confinamento: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao === 'Confinamento').length,
+    sequestro: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao === 'Sequestro').length,
     tip: lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao === 'TIP').length,
   }), [lotes, showInactive, searchTerm])
 
@@ -2318,6 +2320,7 @@ export function Lotes() {
       filtroLocal === 'todos' ? true :
       filtroLocal === 'pasto' ? !usaCurral(lote.sistema_producao) :
       filtroLocal === 'tip' ? lote.sistema_producao === 'TIP' :
+      filtroLocal === 'sequestro' ? lote.sistema_producao === 'Sequestro' :
       lote.sistema_producao === 'Confinamento'
     ), [lotes, showInactive, searchTerm, filtroLocal])
 
@@ -2435,31 +2438,25 @@ export function Lotes() {
                     {usaCurral(formData.sistema_producao) ? 'Curral' : 'Pasto'} <span className="text-red-500">*</span>
                   </label>
                   {usaCurral(formData.sistema_producao) ? (
-                    <select
+                    <SelectPesquisavel
                       value={formData.curral_id}
-                      onChange={(e) => { setFormData({ ...formData, curral_id: e.target.value }); if (errors.curral_id) setErrors((p) => ({ ...p, curral_id: '' })) }}
-                      required
-                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${errors.curral_id ? 'border-red-400' : 'border-border-base'} bg-surface-1 text-content-strong placeholder-content-faint`}
-                    >
-                      <option value="">Selecione</option>
-                      {currais
+                      onChange={(v) => { setFormData({ ...formData, curral_id: v }); if (errors.curral_id) setErrors((p) => ({ ...p, curral_id: '' })) }}
+                      error={!!errors.curral_id}
+                      searchPlaceholder="Buscar curral..."
+                      emptyMessage="Nenhum curral encontrado"
+                      options={currais
                         .filter((curral) => !curral.lote_id || curral.lote_id === editingLote?.id)
-                        .map((curral) => (
-                          <option key={curral.id} value={curral.id}>{curral.nome}</option>
-                        ))}
-                    </select>
+                        .map((curral) => ({ value: curral.id, label: curral.nome }))}
+                    />
                   ) : (
-                    <select
+                    <SelectPesquisavel
                       value={formData.pasto_id}
-                      onChange={(e) => { setFormData({ ...formData, pasto_id: e.target.value }); if (errors.pasto_id) setErrors((p) => ({ ...p, pasto_id: '' })) }}
-                      required
-                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${errors.pasto_id ? 'border-red-400' : 'border-border-base'} bg-surface-1 text-content-strong placeholder-content-faint`}
-                    >
-                      <option value="">Selecione</option>
-                      {pastos.map((pasto) => (
-                        <option key={pasto.id} value={pasto.id}>{pasto.nome}</option>
-                      ))}
-                    </select>
+                      onChange={(v) => { setFormData({ ...formData, pasto_id: v }); if (errors.pasto_id) setErrors((p) => ({ ...p, pasto_id: '' })) }}
+                      error={!!errors.pasto_id}
+                      searchPlaceholder="Buscar pasto..."
+                      emptyMessage="Nenhum pasto encontrado"
+                      options={pastos.map((pasto) => ({ value: pasto.id, label: pasto.nome }))}
+                    />
                   )}
                   {errors.curral_id && <p className="text-xs text-red-500 mt-1">{errors.curral_id}</p>}
                   {errors.pasto_id && <p className="text-xs text-red-500 mt-1">{errors.pasto_id}</p>}

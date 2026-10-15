@@ -6,9 +6,9 @@ interface LoteFiltersProps {
   onSearchChange: (value: string) => void
   showInactive: boolean
   onToggleInactive: () => void
-  filtroLocal: 'todos' | 'pasto' | 'confinamento' | 'tip'
-  onFiltroChange: (filtro: 'todos' | 'pasto' | 'confinamento' | 'tip') => void
-  counts: { todos: number; pasto: number; confinamento: number; tip: number }
+  filtroLocal: 'todos' | 'pasto' | 'confinamento' | 'sequestro' | 'tip'
+  onFiltroChange: (filtro: 'todos' | 'pasto' | 'confinamento' | 'sequestro' | 'tip') => void
+  counts: { todos: number; pasto: number; confinamento: number; sequestro: number; tip: number }
   onNewLote: () => void
   onImport: () => void
   onExport: () => void
@@ -94,6 +94,12 @@ function LoteFiltersComponent({
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border min-h-[44px] ${filtroLocal === 'confinamento' ? 'bg-amber-700 dark:bg-amber-600 text-white border-amber-700 dark:border-amber-600' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
         >
           Confinamento <span className="opacity-60 ml-1">{counts.confinamento}</span>
+        </button>
+        <button
+          onClick={() => onFiltroChange('sequestro')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border min-h-[44px] ${filtroLocal === 'sequestro' ? 'bg-stone-700 dark:bg-stone-600 text-white border-stone-700 dark:border-stone-600' : 'bg-surface-1 text-content-muted border-border-base hover:bg-surface-2'}`}
+        >
+          Sequestro <span className="opacity-60 ml-1">{counts.sequestro}</span>
         </button>
         <button
           onClick={() => onFiltroChange('tip')}

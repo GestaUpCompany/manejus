@@ -1,5 +1,15 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório Zootécnico: ordem por local e colunas configuráveis; Lotes: filtro Sequestro e busca em Pasto/Curral (2026-10-15)
+
+Só front (`apps/manejus`), sem migration.
+
+- **Ordem do Relatório Zootécnico** (`features/relatorioZootecnico/colunas.ts`, `dividirPorManejo`): dentro de cada seção, ordem alfabética (pt-BR, numérica) pelo curral e, sem curral, pelo pasto; desempate pelo lote; sem nenhum dos dois, no fim. O PDF e o Excel usam a mesma função e herdam a ordem.
+- **Colunas na tela** (`RelatorioZootecnico.tsx`, `configColunas.ts`): cada coluna tem `id` estável (os headers MN/MS/%PV se repetem). Reordenar só por arrastar o título; ocultar pelo ícone de olho riscado, Delete com o título focado, ou Shift+clique na primeira e na última coluna de um intervalo (barra no rodapé com Ocultar/Cancelar, Enter/Delete/Esc). Colunas ocultas viram chips "+ Nome" acima da tabela; "Restaurar padrão". Sempre sobra ao menos uma coluna. PDF e Excel **não** seguem essa configuração.
+- **Predefinições** (`predefinicoesColunas.ts`, `components/relatorios/PredefinicoesColunasZootecnico.tsx`): salvar, aplicar, atualizar e excluir combinações de ordem + ocultas. Persistência em `localStorage` por usuário e fazenda (chaves `zootecnico-colunas:*` e `zootecnico-predefinicoes:*`), portanto não acompanham o usuário entre navegadores; levar ao banco exigiria tabela nova (migration). Ids removidos são descartados e colunas novas entram no fim da predefinição antiga.
+- **Lotes:** filtro "Sequestro" (cor stone) entre Confinamento e TIP (`LoteFilters.tsx`, `Lotes.tsx`). Dropdown de Pasto/Curral do formulário virou `components/lotes/SelectPesquisavel.tsx` (busca sem acento, ↑/↓/Enter/Esc, portal). Corrigido o bug em que a lista abria no topo da tela: focar o campo antes de posicionar o portal rolava a página; agora posiciona em `useLayoutEffect` e foca com `preventScroll`.
+- **Pendência conhecida:** o selo do card de lote (`LoteCard.tsx`) mostra "Confinamento" para lotes em Sequestro.
+
 ## Folha de trato: layout adaptativo e páginas equilibradas (2026-10-15)
 
 Impressão de `pages/controller/LancamentoTratos.tsx` (`FolhaTratoImpressao`) e bloco "Folha de Trato" de `index.css`. Só front, sem migration. Motivo: a folha comportava ~10 currais por página (célula Real fixa em 13 mm) e fazendas com 40+ currais saíam em muitas folhas; o peão escreve e confere à mão, então o campo Real precisa continuar grande.
