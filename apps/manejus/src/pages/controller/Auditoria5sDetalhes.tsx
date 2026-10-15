@@ -5,6 +5,7 @@ import { supabase } from '@gestaup/supabase'
 import { Card, DetailLayout } from '@gestaup/ui'
 import { SECOES_5S } from '../../features/relatorioAuditoria5s/itens'
 import { resultadoRegistro, type RegistroAuditoria5s } from '../../features/relatorioAuditoria5s/agregacao'
+import { chaveSetor } from '../../features/relatorioAuditoria5s/porSetor'
 
 interface RegistroRow extends RegistroAuditoria5s {
   fazenda_id: string
@@ -109,6 +110,13 @@ export function Auditoria5sDetalhes() {
               <Meta rotulo="Data" valor={formatDate(registro!.data)} />
               <Meta rotulo="Responsável" valor={registro!.responsavel || '-'} />
               {registro!.nome_usuario && <Meta rotulo="Registrado por" valor={registro!.nome_usuario} />}
+              <button
+                type="button"
+                onClick={() => navigate(`/controller/checklists/auditoria-5s?aba=setor&setor=${encodeURIComponent(chaveSetor(registro!))}`)}
+                className="inline-flex items-center rounded-full border border-primary/40 px-3 py-1 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
+              >
+                Ver evolução do setor →
+              </button>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

@@ -19,6 +19,12 @@ interface RegistroParaPendencias {
 interface Props {
   registros: RegistroParaPendencias[]
   fazendaNome: string | null
+  /** Só as pendências deste setor (chave = setor_id ou nome em minúsculas). */
+  setorChave?: string | null
+  /** Chamado ao remover o filtro de setor (some o chip e volta a todos). */
+  onLimparSetor?: () => void
+  /** Versão enxuta para dentro da visão por setor: sem filtros, sem KPI de setores e sem exportar. */
+  compacto?: boolean
 }
 
 const LABEL = 'block text-xs sm:text-sm font-medium text-content mb-1 leading-tight'
@@ -41,14 +47,14 @@ function Kpi({ titulo, valor, destaque }: { titulo: string; valor: string; desta
  * Derivadas dos registros (sem tabela própria): o PWA pergunta ao auditor, na abertura seguinte do mesmo setor,
  * se cada item foi resolvido, e a resposta fica na própria auditoria (item C = resolvida; N = ainda pendente).
  */
-export function Auditoria5sPendencias({ registros, fazendaNome }: Props) {
+export function Auditoria5sPendencias({ registros, fazendaNome, setorChave = null, onLimparSetor, compacto = false }: Props) {
   const navigate = useNavigate()
   const [pilarFiltro, setPilarFiltro] = useState('')
   const [setorFiltro, setSetorFiltro] = useState('')
   const [minDias, setMinDias] = useState(0)
   const agora = useMemo(() => new Date().toISOString(), [])
 
-  const { abertas, resolvidas } = useMemo(
+  const { abertas: abertasTodas, resolvidas: resolvidasTodas } = useMemo(
     () =>
       pendenciasPorSetor(
         registros.map((r) => ({
@@ -63,6 +69,9 @@ export function Auditoria5sPendencias({ registros, fazendaNome }: Props) {
       ),
     [registros]
   )
+  const abertas = useMemo(() => (setorChave ? abertasTodas.filter((p) => p.setorChave === setorChave) : abertasTodas), [abertasTodas, setorChave])
+  const resolvidas = useMemo(() => (setorChave ? resolvidasTodas.filter((p) => p.setorChave === setorChave) : resolvidasTodas), [resolvidasTodas, setorChave])
+  const nomeSetorFixo = setorChave ? (abertasTodas.find((p) => p.setorChave === setorChave)?.setor ?? resolvidasTodas.find((p) => p.setorChave === setorChave)?.setor ?? '') : ''
 
   const resumo = useMemo(() => resumoPendencias5s(abertas, resolvidas, agora), [abertas, resolvidas, agora])
   const setoresComPendencia = useMemo(() => [...new Set(abertas.map((p) => p.setor))].sort((a, b) => a.localeCompare(b)), [abertas])
@@ -78,7 +87,7 @@ export function Auditoria5sPendencias({ registros, fazendaNome }: Props) {
     [abertas, pilarFiltro, setorFiltro, minDias, agora]
   )
 
-  const recentes = useMemo(() => resolvidas.filter((r) => diasEntre(r.resolvidaEm, agora) <= 30).slice(0, 15), [resolvidas, agora])
+  const recentes = useMemo(() => resolvidas.filter((r) => diasEntre(r.resolvidaEm, agora) <= 30).slice(0, compacto ? 5 : 15), [resolvidas, agora, compacto])
 
   const exportar = () =>
     exportToXLSX(
@@ -102,9 +111,20 @@ export function Auditoria5sPendencias({ registros, fazendaNome }: Props) {
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {setorChave && !compacto && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="inline-flex items-center gap-2 rounded-full bg-surface-2 px-3 py-1 text-content-strong">
+            Setor: <b>{nomeSetorFixo || 'selecionado'}</b>
+            {onLimparSetor && (
+              <button type="button" onClick={onLimparSetor} className="font-bold text-content-muted hover:text-content-strong" aria-label="Remover filtro de setor">✕</button>
+            )}
+          </span>
+        </div>
+      )}
+
+      <div className={`grid grid-cols-2 ${compacto ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-3 sm:gap-4`}>
         <Kpi titulo="Pendências abertas" valor={String(resumo.abertas)} destaque={resumo.abertas > 0} />
-        <Kpi titulo="Setores afetados" valor={String(resumo.setoresAfetados)} />
+        {!compacto && <Kpi titulo="Setores afetados" valor={String(resumo.setoresAfetados)} />}
         <Kpi titulo="Mais antiga" valor={resumo.maisAntigaDias === null ? '-' : textoDias(resumo.maisAntigaDias)} />
         <Kpi
           titulo="Tempo médio de resolução"
@@ -112,6 +132,7 @@ export function Auditoria5sPendencias({ registros, fazendaNome }: Props) {
         />
       </div>
 
+      {!compacto && (
       <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
@@ -154,6 +175,7 @@ export function Auditoria5sPendencias({ registros, fazendaNome }: Props) {
           </div>
         </div>
       </Card>
+      )}
 
       {abertas.length === 0 ? (
         <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
@@ -169,7 +191,7 @@ export function Auditoria5sPendencias({ registros, fazendaNome }: Props) {
           <Table>
             <Thead>
               <Tr>
-                <Th>Setor</Th>
+                {!compacto && <Th>Setor</Th>}
                 <Th>Pilar</Th>
                 <Th>Não conformidade</Th>
                 <Th>Desde</Th>
@@ -188,7 +210,7 @@ export function Auditoria5sPendencias({ registros, fazendaNome }: Props) {
                     onClick={() => abrirRegistro(p.registroUltimoId)}
                     className="cursor-pointer hover:bg-surface-2 transition-colors"
                   >
-                    <Td>{p.setor}</Td>
+                    {!compacto && <Td>{p.setor}</Td>}
                     <Td>{p.secao}</Td>
                     <Td>{p.label}</Td>
                     <Td>{formatDate(p.desde)}</Td>
@@ -220,7 +242,7 @@ export function Auditoria5sPendencias({ registros, fazendaNome }: Props) {
           <Table>
             <Thead>
               <Tr>
-                <Th>Setor</Th>
+                {!compacto && <Th>Setor</Th>}
                 <Th>Não conformidade</Th>
                 <Th>Aberta em</Th>
                 <Th>Resolvida em</Th>
@@ -234,7 +256,7 @@ export function Auditoria5sPendencias({ registros, fazendaNome }: Props) {
                   onClick={() => abrirRegistro(r.registroResolvidaId)}
                   className="cursor-pointer hover:bg-surface-2 transition-colors"
                 >
-                  <Td>{r.setor}</Td>
+                  {!compacto && <Td>{r.setor}</Td>}
                   <Td>{r.label}</Td>
                   <Td>{formatDate(r.abertaEm)}</Td>
                   <Td>{formatDate(r.resolvidaEm)}</Td>
