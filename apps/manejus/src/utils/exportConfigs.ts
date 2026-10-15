@@ -172,6 +172,21 @@ export const PENDENCIAS_BEBEDOUROS_EXPORT_CONFIG: TableExportConfig = {
   ]
 }
 
+export const PENDENCIAS_5S_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'pendencias_auditoria_5s',
+  sheetName: 'Pendências 5S',
+  columns: [
+    { source: 'setor', header: 'Setor' },
+    { source: 'pilar', header: 'Pilar' },
+    { source: 'item', header: 'Não conformidade' },
+    { source: 'desde', header: 'Aberta em', format: 'date' },
+    { source: 'dias_em_aberto', header: 'Dias em aberto', format: 'number' },
+    { source: 'ocorrencias', header: 'Auditorias seguidas', format: 'number' },
+    { source: 'observacao', header: 'Observação' },
+    { source: 'foto_url', header: 'Foto' }
+  ]
+}
+
 export const PENDENCIAS_RODEIO_EXPORT_CONFIG: TableExportConfig = {
   tableName: 'pendencias_rodeio',
   sheetName: 'Pendências Rodeio',
@@ -509,6 +524,7 @@ export const AUDITORIA_5S_EXPORT_CONFIG: TableExportConfig = {
     { source: 'setor', header: 'Setor' },
     { source: 'responsavel', header: 'Responsável' },
     { source: 'percentual_conformidade', header: 'Conformidade (%)', format: 'number' },
+    { source: 'nota_geral', header: 'Nota do setor (0-5)', format: 'number' },
     { source: 'total_conformes', header: 'Itens C', format: 'number' },
     { source: 'total_nao_conformes', header: 'Itens N', format: 'number' },
     { source: 'itens', header: 'Itens Não se aplica (–)', format: 'number', transform: (value) => {

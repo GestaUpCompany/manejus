@@ -16,6 +16,10 @@ export interface RegistroAuditoria5s {
   nome_usuario?: string | null
   itens: Record<string, string> | null
   observacoes: Record<string, string> | null
+  /** Nota do setor dada pelo auditor (0 a 5); nula nas auditorias anteriores à nota. */
+  nota_geral?: number | null
+  /** Evidência dos itens N: { chave: { observacao, foto_url, pendencia? } }. */
+  nao_conformidades?: Record<string, any> | null
 }
 
 export interface ResultadoSecao {
@@ -74,6 +78,14 @@ export interface ResumoGeral {
   percentual: number | null
   itensNaoConformes: number
   setoresAuditados: number
+  /** Média das notas do setor (0 a 5, 1 casa); null sem nenhuma auditoria com nota. */
+  notaMedia: number | null
+}
+
+/** Média das notas (0 a 5) das auditorias que têm nota; a nota 0 conta. */
+export function notaMedia(registros: Pick<RegistroAuditoria5s, 'nota_geral'>[]): number | null {
+  const notas = registros.map((r) => r.nota_geral).filter((n): n is number => typeof n === 'number')
+  return notas.length > 0 ? Math.round((notas.reduce((a, b) => a + b, 0) / notas.length) * 10) / 10 : null
 }
 
 export function resumoGeral(registros: RegistroAuditoria5s[]): ResumoGeral {
@@ -84,6 +96,7 @@ export function resumoGeral(registros: RegistroAuditoria5s[]): ResumoGeral {
     percentual: total.percentual,
     itensNaoConformes: total.naoConformes,
     setoresAuditados: setores.size,
+    notaMedia: notaMedia(registros),
   }
 }
 

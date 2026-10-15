@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Auditoria 5S: pendências, nota do setor e novo detalhe (2026-10-15)
+
+Migration `20261015140000_auditoria_5s_pendencias_nota` em `registros_auditoria_5s`: `nao_conformidades jsonb` (`{chave: {observacao, foto_url, pendencia?: {situacao, desde}}}`), `nota_geral smallint` com CHECK 0 a 5 (nula nos registros antigos) e índice `(fazenda_id, setor_id, data desc)`. Rollback em `supabase/rollbacks/`.
+
+- **Pendências** (`features/pendencias5s/calculo.ts`, cópia da regra do PWA em `utils/pendencias5s.ts`, mesmos testes): derivadas do histórico por setor + item, sem tabela. `N` abre, `C` fecha, `NA` ignora. Aba "Pendências" em `pages/controller/Auditoria5s.tsx` (`Auditoria5sPendencias.tsx`): KPIs, filtros por pilar/setor/prazo, XLSX, resolvidas dos últimos 30 dias.
+- **Nota:** KPI "Nota média do setor" (`notaMedia` em `agregacao.ts`, a nota 0 conta), coluna na lista e no XLSX.
+- **Detalhe** (`Auditoria5sDetalhes.tsx`): redesenhado em cabeçalho com indicadores, "Não conformidades" em destaque (foto, observação, selo de pendência) e cartões compactos por pilar.
+
 ## Cadastro de lotes: Sistema de Produção antes de Pasto/Curral (2026-10-15)
 
 No modal de `Lotes.tsx`, o campo "Sistema de Produção" passou a vir antes de "Pasto/Curral". Trocar o sistema zera `pasto_id`/`curral_id` (o campo alterna entre Pasto e Curral via `usaCurral`), então quem escolhia o pasto primeiro o perdia. Só mudou a ordem no JSX; o reset e a validação continuam iguais.
