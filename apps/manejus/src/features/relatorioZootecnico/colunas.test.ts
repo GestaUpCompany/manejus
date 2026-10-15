@@ -45,4 +45,13 @@ describe('dividirPorManejo', () => {
     expect(secoes.map((s) => s.total.loteNome)).toEqual(['Total a pasto', 'Total em currais'])
     expect(dividirPorManejo([linhas[0]])).toHaveLength(1)
   })
+
+  it('ordena pelo nome do curral e, sem curral, pelo nome do pasto', () => {
+    const comPasto = (loteNome: string, pastoNome: string | null) => montarLinha({ ...cat(loteNome, null), pastoNome })
+    const pasto = dividirPorManejo([comPasto('A', 'Pasto 10'), comPasto('B', 'Pasto 2'), comPasto('C', null), comPasto('D', 'Açude')])
+    expect(pasto[0].linhas.map((l) => l.loteNome)).toEqual(['D', 'B', 'A', 'C'])
+
+    const curral = dividirPorManejo([montarLinha(cat('X', 'Curral 3')), montarLinha(cat('Y', 'Curral 1')), montarLinha(cat('Z', 'Curral 1'))])
+    expect(curral[0].linhas.map((l) => l.loteNome)).toEqual(['Y', 'Z', 'X'])
+  })
 })
