@@ -10,6 +10,10 @@ Só front (`apps/manejus`), sem migration.
 - **Lotes:** filtro "Sequestro" (cor stone) entre Confinamento e TIP (`LoteFilters.tsx`, `Lotes.tsx`). Dropdown de Pasto/Curral do formulário virou `components/lotes/SelectPesquisavel.tsx` (busca sem acento, ↑/↓/Enter/Esc, portal). Corrigido o bug em que a lista abria no topo da tela: focar o campo antes de posicionar o portal rolava a página; agora posiciona em `useLayoutEffect` e foca com `preventScroll`.
 - **Pendência conhecida:** o selo do card de lote (`LoteCard.tsx`) mostra "Confinamento" para lotes em Sequestro.
 
+## Vercel monorepo: ignoreCommand por app (2026-10-15)
+
+Todo push buildava `farmplan` e `vision`. Causas: (1) em `apps/manejus/vercel.json` e `apps/vision/vercel.json` o `ignoreCommand` estava dentro de `"git": {...}`, chave que a Vercel não lê para isso; `ignoreCommand` é propriedade de **nível superior** do `vercel.json`; (2) `apps/farmplan/vercel.json` não tinha `ignoreCommand`. Corrigido movendo para o nível superior e acrescentando ao farmplan (`git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- .`). Semântica: exit 0 pula o build, exit 1 builda; se o SHA anterior não existir no clone, o `git diff` falha (≠ 0) e o build roda (falha para o lado seguro). manejus e vision também observam `../../packages`, `pnpm-lock.yaml` e `pnpm-workspace.yaml`. Simulado localmente com um commit só de manejus + docs: farmplan e vision saem 0 (pulam), manejus sai 1 (builda). Só vale para `vercel.json` do Root Directory de cada projeto; o Ignored Build Step do painel da Vercel é sobrescrito por ele. Confirmar no primeiro push em staging que os deploys de farmplan e vision aparecem como "Canceled/Ignored".
+
 ## Folha de trato: layout adaptativo e páginas equilibradas (2026-10-15)
 
 Impressão de `pages/controller/LancamentoTratos.tsx` (`FolhaTratoImpressao`) e bloco "Folha de Trato" de `index.css`. Só front, sem migration. Motivo: a folha comportava ~10 currais por página (célula Real fixa em 13 mm) e fazendas com 40+ currais saíam em muitas folhas; o peão escreve e confere à mão, então o campo Real precisa continuar grande.
