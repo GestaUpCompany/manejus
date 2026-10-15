@@ -128,10 +128,13 @@ export interface RegistroAuditoriaComSetor extends RegistroPendencia5s {
 
 export interface PendenciaAbertaDoSetor extends PendenciaAberta5s {
   setor: string
+  /** Mesma chave de agrupamento do setor usada no relatório (setor_id ou nome em minúsculas). */
+  setorChave: string
 }
 
 export interface PendenciaResolvidaDoSetor extends PendenciaResolvida5s {
   setor: string
+  setorChave: string
 }
 
 /** Pendências de todos os setores. Agrupa por setor_id (ou pelo nome sem caixa, quando não há id); mostra o nome do registro mais recente. */
@@ -155,10 +158,10 @@ export function pendenciasPorSetor(registros: RegistroAuditoriaComSetor[]): {
 
   const abertas: PendenciaAbertaDoSetor[] = []
   const resolvidas: PendenciaResolvidaDoSetor[] = []
-  for (const grupo of grupos.values()) {
+  for (const [chave, grupo] of grupos.entries()) {
     const resultado = calcularPendencias5s(grupo.registros)
-    abertas.push(...resultado.abertas.map((p) => ({ ...p, setor: grupo.nome })))
-    resolvidas.push(...resultado.resolvidas.map((p) => ({ ...p, setor: grupo.nome })))
+    abertas.push(...resultado.abertas.map((p) => ({ ...p, setor: grupo.nome, setorChave: chave })))
+    resolvidas.push(...resultado.resolvidas.map((p) => ({ ...p, setor: grupo.nome, setorChave: chave })))
   }
   abertas.sort((a, b) => instante(a.desde) - instante(b.desde) || a.setor.localeCompare(b.setor))
   resolvidas.sort((a, b) => instante(b.resolvidaEm) - instante(a.resolvidaEm))

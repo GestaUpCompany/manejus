@@ -6,7 +6,17 @@ Migration `20261015140000_auditoria_5s_pendencias_nota` em `registros_auditoria_
 
 - **Pendências** (`features/pendencias5s/calculo.ts`, cópia da regra do PWA em `utils/pendencias5s.ts`, mesmos testes): derivadas do histórico por setor + item, sem tabela. `N` abre, `C` fecha, `NA` ignora. Aba "Pendências" em `pages/controller/Auditoria5s.tsx` (`Auditoria5sPendencias.tsx`): KPIs, filtros por pilar/setor/prazo, XLSX, resolvidas dos últimos 30 dias.
 - **Nota:** KPI "Nota média do setor" (`notaMedia` em `agregacao.ts`, a nota 0 conta), coluna na lista e no XLSX.
-- **Detalhe** (`Auditoria5sDetalhes.tsx`): redesenhado em cabeçalho com indicadores, "Não conformidades" em destaque (foto, observação, selo de pendência) e cartões compactos por pilar.
+- **Detalhe** (`Auditoria5sDetalhes.tsx`): redesenhado em cabeçalho com indicadores, "Não conformidades" em destaque (foto, observação, selo de pendência) e cartões compactos por pilar. Botão "Ver evolução do setor".
+
+### Auditoria 5S: visão geral e visão por setor (2026-10-15)
+
+`pages/controller/Auditoria5s.tsx` virou orquestrador com 4 abas e estado na URL (`?aba=geral|setor|pendencias|auditorias&setor=<chave>`): **Visão geral** (macro), **Por setor** (micro), **Pendências** e **Auditorias**. Filtros de período (30 dias / 90 dias / 12 meses / tudo, padrão 12 meses) e responsável valem para geral, setor e lista; as pendências são sempre o estado atual (histórico inteiro).
+
+- **Visão geral:** KPIs (inclui nota média e pendências abertas), cartões por setor (última nota, tendência vs anterior, sparkline, conformidade, pendências, "última auditoria há N dias", âmbar acima de 30), evolução comparada multi-setor (nota ou conformidade, por mês ou semana, chips para escolher setores, linha da média da fazenda), mapa de calor setor × pilar, ranking ordenável com XLSX, cobertura (sem auditoria / auditoria antiga), pilares e itens críticos com nº de setores afetados.
+- **Por setor:** KPIs do setor (com comparação com a média da fazenda), evolução da nota e da conformidade por auditoria (clicar no ponto abre a auditoria), pilares ao longo do tempo, pilares setor × fazenda, inconformidades do setor (abertas primeiro, situação aberta/resolvida), pendências do setor (componente `Auditoria5sPendencias` em modo `compacto`) e histórico.
+- **Camada de dados pura** em `features/relatorioAuditoria5s/porSetor.ts` (+ testes). A chave do setor (`chaveSetor`: `setor_id` ou nome em minúsculas) é a mesma das pendências (`setorChave` em `pendenciasPorSetor`), então cartão e pendência falam do mesmo setor; setor renomeado mantém o histórico pelo id. Nota 0 conta; auditoria antiga sem nota entra na conformidade, não na nota.
+- **Carga paginada:** `hooks/useAuditorias5s.ts` + `features/relatorioAuditoria5s/paginar.ts` percorrem as páginas de 1.000 linhas do PostgREST (antes a consulta `select('*')` truncaria o histórico em silêncio); só as colunas usadas.
+- **Verificado:** `tsc`, `vitest` (346 testes), lint (159 avisos, teto 161) e navegador (chrome-devtools) com 30 auditorias de teste em 6 setores na Fazenda Gesta'Up (marcador `responsavel = 'Seed E2E'`): cartões, ordenação, comparativo, mapa de calor, ranking, clique para o setor, URL com reload, estados vazios, setor com uma só auditoria, filtro de pendências por setor (contagem 19 = soma dos cartões), mobile 390 e tema escuro.
 
 ## Cadastro de lotes: Sistema de Produção antes de Pasto/Curral (2026-10-15)
 

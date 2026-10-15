@@ -172,6 +172,22 @@ export const PENDENCIAS_BEBEDOUROS_EXPORT_CONFIG: TableExportConfig = {
   ]
 }
 
+export const RANKING_SETORES_5S_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'ranking_setores_auditoria_5s',
+  sheetName: 'Ranking setores 5S',
+  columns: [
+    { source: 'setor', header: 'Setor' },
+    { source: 'auditorias', header: 'Auditorias', format: 'number' },
+    { source: 'nota_media', header: 'Nota média (0-5)', format: 'number' },
+    { source: 'ultima_nota', header: 'Última nota (0-5)', format: 'number' },
+    { source: 'variacao', header: 'Variação da nota', format: 'number' },
+    { source: 'conformidade', header: 'Conformidade (%)', format: 'number' },
+    { source: 'itens_n', header: 'Itens N', format: 'number' },
+    { source: 'pendencias_abertas', header: 'Pendências abertas', format: 'number' },
+    { source: 'ultima_auditoria', header: 'Última auditoria', format: 'date' }
+  ]
+}
+
 export const PENDENCIAS_5S_EXPORT_CONFIG: TableExportConfig = {
   tableName: 'pendencias_auditoria_5s',
   sheetName: 'Pendências 5S',

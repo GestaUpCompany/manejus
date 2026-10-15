@@ -189,7 +189,7 @@ export interface PontoEvolucao {
 }
 
 /** Segunda-feira da semana da data (YYYY-MM-DD), em UTC para não depender do fuso do navegador. */
-function inicioDaSemana(dia: string): string {
+export function inicioDaSemana(dia: string): string {
   const d = new Date(`${dia}T00:00:00Z`)
   const deslocamento = (d.getUTCDay() + 6) % 7
   d.setUTCDate(d.getUTCDate() - deslocamento)
