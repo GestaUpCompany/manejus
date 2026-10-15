@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth, exportToXLSX, formatDate, getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import { Button, Card, Input, CardSkeleton } from '@gestaup/ui'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { AUDITORIA_5S_EXPORT_CONFIG } from '../../utils/exportConfigs'
+import { Auditoria5sPendencias } from './Auditoria5sPendencias'
 import {
   evolucao,
   porPilar,
@@ -20,6 +21,7 @@ import {
 interface RegistroRow extends RegistroAuditoria5s {
   fazenda_id: string
   created_at: string
+  local_id?: string | null
 }
 
 interface SetorRow {
@@ -54,6 +56,8 @@ function Kpi({ titulo, valor, cor }: { titulo: string; valor: string; cor?: stri
 export function Auditoria5s() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const aba = searchParams.get('aba') === 'pendencias' ? 'pendencias' : 'registros'
   const [registros, setRegistros] = useState<RegistroRow[]>([])
   const [setores, setSetores] = useState<SetorRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -159,6 +163,30 @@ export function Auditoria5s() {
         </Card>
       )}
 
+      <div role="tablist" aria-label="Visão da auditoria" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-2 p-1 sm:inline-grid sm:w-80">
+        {([
+          { valor: 'registros', rotulo: 'Auditorias' },
+          { valor: 'pendencias', rotulo: 'Pendências' },
+        ] as const).map((op) => (
+          <button
+            key={op.valor}
+            type="button"
+            role="tab"
+            aria-selected={aba === op.valor}
+            onClick={() => setSearchParams(op.valor === 'pendencias' ? { aba: 'pendencias' } : {}, { replace: true })}
+            className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              aba === op.valor ? 'bg-primary text-white shadow' : 'text-content hover:bg-surface-1'
+            }`}
+          >
+            {op.rotulo}
+          </button>
+        ))}
+      </div>
+
+      {aba === 'pendencias' && <Auditoria5sPendencias registros={registros} fazendaNome={fazendaNome} />}
+
+      {aba === 'registros' && (
+      <>
       <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
@@ -224,6 +252,7 @@ export function Auditoria5s() {
             <Kpi titulo="Conformidade média" valor={textoPercentual(resumo.percentual)} cor={corPercentual(resumo.percentual)} />
             <Kpi titulo="Itens não conformes" valor={String(resumo.itensNaoConformes)} />
             <Kpi titulo="Setores auditados" valor={String(resumo.setoresAuditados)} />
+            <Kpi titulo="Nota média do setor" valor={resumo.notaMedia === null ? '-' : `${resumo.notaMedia.toLocaleString('pt-BR')}/5`} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -345,7 +374,7 @@ export function Auditoria5s() {
             <table className="min-w-full divide-y divide-border-base">
               <thead className="bg-surface-2">
                 <tr>
-                  {['Data', 'Setor', 'Responsável', 'Conformidade', 'C', 'N', '–'].map((h) => (
+                  {['Data', 'Setor', 'Responsável', 'Conformidade', 'Nota', 'C', 'N', '–'].map((h) => (
                     <th key={h} className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                       {h}
                     </th>
@@ -367,6 +396,7 @@ export function Auditoria5s() {
                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm font-semibold" style={{ color: corPercentual(res.percentual) }}>
                         {textoPercentual(res.percentual)}
                       </td>
+                      <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{typeof r.nota_geral === 'number' ? `${r.nota_geral}/5` : '-'}</td>
                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{res.conformes}</td>
                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{res.naoConformes}</td>
                       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{res.naoAplicaveis}</td>
@@ -377,6 +407,8 @@ export function Auditoria5s() {
             </table>
           </Card>
         </>
+      )}
+      </>
       )}
     </div>
   )

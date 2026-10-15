@@ -71,11 +71,16 @@ describe('resumoGeral', () => {
       reg({ setor: 'Curral', setor_id: 'setor-2' }),
       reg({ setor: 'Curral', setor_id: 'setor-2' }),
     ]
-    expect(resumoGeral(registros)).toEqual({ auditorias: 3, percentual: 98.67, itensNaoConformes: 1, setoresAuditados: 2 })
+    expect(resumoGeral(registros)).toEqual({ auditorias: 3, percentual: 98.67, itensNaoConformes: 1, setoresAuditados: 2, notaMedia: null })
   })
 
   it('sem registros', () => {
-    expect(resumoGeral([])).toEqual({ auditorias: 0, percentual: null, itensNaoConformes: 0, setoresAuditados: 0 })
+    expect(resumoGeral([])).toEqual({ auditorias: 0, percentual: null, itensNaoConformes: 0, setoresAuditados: 0, notaMedia: null })
+  })
+
+  it('nota média ignora auditorias sem nota e conta a nota 0', () => {
+    expect(resumoGeral([reg({ nota_geral: 0 }), reg({ nota_geral: 5 }), reg({ nota_geral: 4 }), reg()]).notaMedia).toBe(3)
+    expect(resumoGeral([reg({ nota_geral: 4 }), reg({ nota_geral: 3 }), reg({ nota_geral: 3 })]).notaMedia).toBe(3.3)
   })
 })
 
