@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import { Button, Card, Input, CardSkeleton } from '@gestaup/ui'
@@ -7,10 +7,14 @@ import { exportToXLSX } from '@gestaup/shared'
 import { RODEIO_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '@gestaup/shared'
 import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
+import { RodeioPendencias } from './RodeioPendencias'
 
 interface RegistroRodeio {
   id: string
   fazenda_id: string
+  local_id?: string | null
+  lote_id?: string | null
+  diagnosticos?: Record<string, any> | null
   dispositivo_id?: string
   nome_usuario?: string
   data: string
@@ -49,6 +53,8 @@ interface RegistroRodeio {
 export function Rodeio() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const aba = searchParams.get('aba') === 'pendencias' ? 'pendencias' : 'registros'
   const [registros, setRegistros] = useState<RegistroRodeio[]>([])
   const [loading, setLoading] = useState(true)
   const [fazendaNome, setFazendaNome] = useState<string | null>(null)
@@ -127,6 +133,30 @@ export function Rodeio() {
         <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Rodeio</h2>
       </div>
 
+      <div role="tablist" aria-label="Visão da caderneta" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-2 p-1 sm:inline-grid sm:w-80">
+        {([
+          { valor: 'registros', rotulo: 'Registros' },
+          { valor: 'pendencias', rotulo: 'Pendências' },
+        ] as const).map((op) => (
+          <button
+            key={op.valor}
+            type="button"
+            role="tab"
+            aria-selected={aba === op.valor}
+            onClick={() => setSearchParams(op.valor === 'pendencias' ? { aba: 'pendencias' } : {}, { replace: true })}
+            className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              aba === op.valor ? 'bg-primary text-white shadow' : 'text-content hover:bg-surface-1'
+            }`}
+          >
+            {op.rotulo}
+          </button>
+        ))}
+      </div>
+
+      {aba === 'pendencias' ? (
+        <RodeioPendencias registros={registros} fazendaNome={fazendaNome} />
+      ) : (
+      <>
       <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-content-strong">Filtros</h3>
@@ -296,6 +326,8 @@ export function Rodeio() {
             </table>
           </Card>
         </>
+      )}
+      </>
       )}
     </div>
   )

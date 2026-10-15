@@ -149,6 +149,36 @@ export function RodeioDetalhes() {
             {/* Problemas Identificados */}
             <DetailSection title="Problemas Identificados" highlighted>
               <DetailField label="Problemas" value={problemas.length > 0 ? problemas.join(', ') : 'Nenhum'} />
+              {(() => {
+                const respondidas = Object.entries(registro!.diagnosticos ?? {}).filter(
+                  ([, item]) => (item as any)?.pendencia?.situacao
+                ) as [string, { pendencia: { situacao: 'resolvida' | 'mantida'; desde?: string } }][]
+                if (respondidas.length === 0) return null
+                return (
+                  <div className="mt-4">
+                    <p className="text-xs font-medium text-content-muted uppercase tracking-wider mb-2">
+                      Pendências anteriores
+                    </p>
+                    <ul className="space-y-1">
+                      {respondidas.map(([campo, item]) => (
+                        <li key={campo} className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-content-strong">
+                            {formatProblemKey(campo)}
+                            {item.pendencia.desde ? ` (desde ${formatDate(item.pendencia.desde)})` : ''}
+                          </span>
+                          <span
+                            className={`shrink-0 rounded px-2 py-0.5 text-xs font-bold ${
+                              item.pendencia.situacao === 'resolvida' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-900'
+                            }`}
+                          >
+                            {item.pendencia.situacao === 'resolvida' ? 'Resolvida' : 'Ainda pendente'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              })()}
             </DetailSection>
           </div>
         </Card>
