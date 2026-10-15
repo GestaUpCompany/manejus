@@ -14,7 +14,7 @@ const colunas = [
 ]
 
 describe('HTML do PDF zootécnico', () => {
-  it('divide em blocos, repete a linha Geral e pagina', async () => {
+  it('divide em seções e blocos para o motor de fluxo', async () => {
     const linhas = Array.from({ length: 30 }, (_, i) => [`Lote ${i + 1}`, '400,00', 'R$ 10,00'])
     const html = await renderZootecnicoHtml({
       fazendaNome: 'Fazenda X',
@@ -35,7 +35,10 @@ describe('HTML do PDF zootécnico', () => {
     expect(html).toContain('Lote 30')
     expect(html).toContain('R$ 99,00')
     expect(html).toContain('Lotes em currais (confinamento)')
-    // pasto: 30 linhas / 12 = 3 páginas x 2 blocos; currais: 1 página x 2 blocos
-    expect((html.match(/<section class="page">/g) ?? []).length).toBe(8)
+    // 2 seções x 2 blocos, paginados no Chromium pelo motor de fluxo
+    expect((html.match(/fb fb-table/g) ?? []).length).toBe(4)
+    expect(html).toContain('data-flow-head')
+    // Geral e total no thead (repetem em cada página)
+    expect(html).toMatch(/<thead>.*zoo-geral.*zoo-total.*<\/thead>/s)
   })
 })
