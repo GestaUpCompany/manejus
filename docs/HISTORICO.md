@@ -1,5 +1,15 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório Zootécnico: ordem por local e colunas configuráveis; Lotes: filtro Sequestro e busca em Pasto/Curral (2026-10-15)
+
+Só front (`apps/manejus`), sem migration.
+
+- **Ordem do Relatório Zootécnico** (`features/relatorioZootecnico/colunas.ts`, `dividirPorManejo`): dentro de cada seção, ordem alfabética (pt-BR, numérica) pelo curral e, sem curral, pelo pasto; desempate pelo lote; sem nenhum dos dois, no fim. O PDF e o Excel usam a mesma função e herdam a ordem.
+- **Colunas na tela** (`RelatorioZootecnico.tsx`, `configColunas.ts`): cada coluna tem `id` estável (os headers MN/MS/%PV se repetem). Reordenar só por arrastar o título; ocultar pelo ícone de olho riscado, Delete com o título focado, ou Shift+clique na primeira e na última coluna de um intervalo (barra no rodapé com Ocultar/Cancelar, Enter/Delete/Esc). Colunas ocultas viram chips "+ Nome" acima da tabela; "Restaurar padrão". Sempre sobra ao menos uma coluna. PDF e Excel **não** seguem essa configuração.
+- **Predefinições** (`predefinicoesColunas.ts`, `components/relatorios/PredefinicoesColunasZootecnico.tsx`): salvar, aplicar, atualizar e excluir combinações de ordem + ocultas. Persistência em `localStorage` por usuário e fazenda (chaves `zootecnico-colunas:*` e `zootecnico-predefinicoes:*`), portanto não acompanham o usuário entre navegadores; levar ao banco exigiria tabela nova (migration). Ids removidos são descartados e colunas novas entram no fim da predefinição antiga.
+- **Lotes:** filtro "Sequestro" (cor stone) entre Confinamento e TIP (`LoteFilters.tsx`, `Lotes.tsx`). Dropdown de Pasto/Curral do formulário virou `components/lotes/SelectPesquisavel.tsx` (busca sem acento, ↑/↓/Enter/Esc, portal). Corrigido o bug em que a lista abria no topo da tela: focar o campo antes de posicionar o portal rolava a página; agora posiciona em `useLayoutEffect` e foca com `preventScroll`.
+- **Pendência conhecida:** o selo do card de lote (`LoteCard.tsx`) mostra "Confinamento" para lotes em Sequestro.
+
 ## Folha de trato: layout adaptativo e páginas equilibradas (2026-10-15)
 
 Impressão de `pages/controller/LancamentoTratos.tsx` (`FolhaTratoImpressao`) e bloco "Folha de Trato" de `index.css`. Só front, sem migration. Motivo: a folha comportava ~10 currais por página (célula Real fixa em 13 mm) e fazendas com 40+ currais saíam em muitas folhas; o peão escreve e confere à mão, então o campo Real precisa continuar grande.
@@ -10,6 +20,8 @@ Impressão de `pages/controller/LancamentoTratos.tsx` (`FolhaTratoImpressao`) e 
 - **Colunas:** informativas redimensionadas (Dieta 28 mm e Lote 26 mm para a dieta caber em 2 linhas; Prev. 12 mm para não quebrar "1.202,7"); sobra toda para as colunas Real. Cabeçalho (logos, título) mais enxuto.
 - **Verificado** com a folha TIP da Fazenda Jacamim (43 currais, 3 tratos): 3 páginas de paisagem (17/17/15) em vez de 6. Primeira tentativa com colunas estreitas demais quebrava Dieta em 4 linhas e dobrava as folhas; corrigido ao alargar Lote/Dieta.
 - **Limite conhecido:** a capacidade é estimada pelas constantes de `folhaTratoLayout.ts`; nomes de lote/dieta muito longos podem crescer a linha e empurrar um curral para a página seguinte.
+
+**Revisão (2026-10-15): sempre retrato, até 50 currais por folha.** A regra de orientação por nº de tratos foi removida (`orientacaoFolhaTrato` não existe mais; `@page` é sempre `A4 portrait`, margem 5 mm, `MARGEM_FOLHA_MM`). Linha mínima caiu de 8 para 5 mm (`LINHA_MIN_MM`), o que comporta 50 currais numa página (`CURRAIS_POR_FOLHA_ALVO`); acima disso a paginação equilibrada continua (80 currais viram 40 + 40). Fonte da tabela acompanha a linha (`--trato-fonte`: 7,5/7/6,5 pt). Colunas informativas em mm com escala `--trato-k` (`escalaColunasInfo`), que só encolhe quando há muitos tratos, para o campo Real nunca ficar abaixo de 10 mm; Dieta 30 mm. Células do corpo em linha única (`nowrap` + reticências), então lote/dieta longos são cortados em vez de crescer a linha. Cabeçalho (logos 6 mm, título 12 pt) mais compacto. Trade-off assumido a pedido: com 5 mm o campo Real fica pequeno para escrita à mão. **Verificado** com a folha TIP da Fazenda Jacamim (49 currais, 3 tratos, data 15/10/2026): 1 página, conteúdo de ~272 mm dos 287 mm úteis, linha de 5 mm, campo Real de 14,6 mm. A conferência foi numa prévia em tela com as regras de `@media print`, não numa impressão física.
 
 ## Auditoria 5S: pendências, nota do setor e novo detalhe (2026-10-15)
 
@@ -976,6 +988,7 @@ Nova rota `/controller/registros-tratos-leituras` ("Registros de Tratos e Leitur
 - UI em `src/pages/controller/RegistrosTratosLeituras.tsx`: datas exibidas e editadas no fuso da fazenda (`America/Cuiaba` via `toFarmDateOnly`/`formatDateTime`); ao salvar, a hora original do registro é preservada (inputs separados de data e hora). Ações visíveis apenas para `papel admin/controller`.
 - Verificado via SQL na fazenda de testes: edição de nota de leitura (2→3) e de kg de trato (235→240) gravam `alteracoes` corretas no `audit_log` com `usuario_email`; exclusões marcam `deleted_at`; chamada com usuário sem papel é rejeitada ("Permissão negada").
 - Ressalva conhecida: um UPDATE pendente na fila de sync do PWA para um registro excluído pode recriar/atualizar a linha (upsert por `local_id`), mesmo comportamento já aceito em `registros_suplementacao`.
+- 2026-10-15: a página de detalhe da Caderneta de Trato (`TratoConfinamentoDetalhes.tsx`, rota `/controller/cadernetas/trato-confinamento/:id`) ganhou botões Editar/Excluir no padrão de `SuplementacaoDetalhes`, liberados para todas as fazendas (sem lista fixa), visíveis para `admin`/`super_admin`/`controller`. Reusam as mesmas RPCs `editar_/excluir_registro_oferta_trato` (sem migration). Efeitos: o trigger `trg_consumo_confinamento_oferta` recalcula `consumo_confinamento_dia` (OLD e NEW); estoque de insumos não é afetado (baixa ocorre na fábrica de confinamento); `leitura_cocho_nota` do trato não entra no cálculo de consumo.
 
 **Disparador**: quando mencionar "editar/excluir trato", "editar/excluir leitura de cocho", `editar_registro_oferta_trato`, `editar_registro_leitura_cocho`, ou "registros de tratos e leituras", ler esta seção.
 

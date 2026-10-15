@@ -14,7 +14,7 @@ import {
 } from '../../services/lancamentoTratosService'
 import type { TipoProgramacao } from '../../services/programacaoTratosService'
 import { toFarmDateOnly } from '@gestaup/shared'
-import { calcularLayoutFolhaTrato } from '../../utils/folhaTratoLayout'
+import { calcularLayoutFolhaTrato, MARGEM_FOLHA_MM } from '../../utils/folhaTratoLayout'
 
 const TIPOS: { value: TipoProgramacao; label: string }[] = [
   { value: 'confinamento', label: 'Confinamento' },
@@ -80,8 +80,16 @@ function FolhaTratoImpressao({ dados, fazendaNome, fazendaLogoUrl, tipoLabel }: 
   })
   const rotuloPagina = (indice: number) => (totalPaginas > 1 ? ` · Página ${indice + 1}/${totalPaginas}` : '')
   return (
-    <div className="trato-print-root" aria-hidden="true" style={{ '--trato-linha-h': `${layout.alturaLinhaMm}mm` } as CSSProperties}>
-      <style>{`@page { size: A4 ${layout.orientacao}; margin: 8mm; }`}</style>
+    <div
+      className="trato-print-root"
+      aria-hidden="true"
+      style={{
+        '--trato-linha-h': `${layout.alturaLinhaMm}mm`,
+        '--trato-fonte': `${layout.fonteTabelaPt}pt`,
+        '--trato-k': layout.escalaColunas,
+      } as CSSProperties}
+    >
+      <style>{`@page { size: A4 portrait; margin: ${MARGEM_FOLHA_MM}mm; }`}</style>
       <div className="trato-print-brand">
         <div className="trato-print-brand-side">
           <img src="/images/manejus360.png" alt="Manej'Us 360" />

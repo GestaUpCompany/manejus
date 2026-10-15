@@ -276,68 +276,77 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 4px;
+    margin-bottom: 1mm;
   }
 
   .trato-print-brand-side {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 11pt;
+    gap: 6px;
+    font-size: 9pt;
   }
 
   .trato-print-brand img {
-    height: 9mm;
-    max-width: 40mm;
+    height: 6mm;
+    max-width: 30mm;
     object-fit: contain;
   }
 
 
   .trato-print-root h1 {
-    font-size: 14pt;
+    font-size: 12pt;
     font-weight: bold;
     font-style: italic;
     text-align: center;
-    margin: 0 0 4px;
+    margin: 0 0 1mm;
   }
 
   .trato-print-meta {
     display: flex;
     justify-content: space-between;
-    font-size: 10pt;
+    font-size: 8.5pt;
     font-weight: bold;
     background: #d9e2f3;
-    padding: 4px 8px;
-    margin-bottom: 6px;
+    padding: 1mm 2mm;
+    margin-bottom: 1.5mm;
   }
 
   .trato-print-root table {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
-    font-size: 7.5pt;
+    font-size: var(--trato-fonte, 7.5pt);
   }
 
-  /* Colunas informativas estreitas; as de Real (sem largura) dividem todo o espaço restante. */
-  .trato-print-root col.trato-col-lote { width: 26mm; }
-  .trato-print-root col.trato-col-curral { width: 14mm; }
-  .trato-print-root col.trato-col-dieta { width: 28mm; }
-  .trato-print-root col.trato-col-qtd { width: 9mm; }
-  .trato-print-root col.trato-col-anterior { width: 13mm; }
-  .trato-print-root col.trato-col-leitura { width: 12mm; }
-  .trato-print-root col.trato-col-diario { width: 12mm; }
-  .trato-print-root col.trato-col-consumo { width: 10mm; }
-  .trato-print-root col.trato-col-previsto { width: 12mm; }
-  .trato-print-root col.trato-col-total { width: 11mm; }
+  /*
+   * Colunas informativas estreitas (encolhem por --trato-k quando há muitos tratos);
+   * as de Real (sem largura) dividem todo o espaço restante.
+   */
+  .trato-print-root col.trato-col-lote { width: calc(22mm * var(--trato-k, 1)); }
+  .trato-print-root col.trato-col-curral { width: calc(13mm * var(--trato-k, 1)); }
+  .trato-print-root col.trato-col-dieta { width: calc(30mm * var(--trato-k, 1)); }
+  .trato-print-root col.trato-col-qtd { width: calc(8mm * var(--trato-k, 1)); }
+  .trato-print-root col.trato-col-anterior { width: calc(11mm * var(--trato-k, 1)); }
+  .trato-print-root col.trato-col-leitura { width: calc(8mm * var(--trato-k, 1)); }
+  .trato-print-root col.trato-col-diario { width: calc(11mm * var(--trato-k, 1)); }
+  .trato-print-root col.trato-col-consumo { width: calc(9mm * var(--trato-k, 1)); }
+  .trato-print-root col.trato-col-previsto { width: 11mm; }
+  .trato-print-root col.trato-col-total { width: calc(11mm * var(--trato-k, 1)); }
 
   .trato-print-root th,
   .trato-print-root td {
     border: 1px solid #a6a6a6;
-    padding: 2px 2px;
-    line-height: 1.15;
-    overflow-wrap: break-word;
+    padding: 0.3mm 0.6mm;
+    line-height: 1.1;
     text-align: center;
     vertical-align: middle;
+  }
+
+  /* Linha única: o texto longo (lote, dieta) é cortado em vez de aumentar a altura da linha. */
+  .trato-print-root tbody td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .trato-print-root thead > tr:first-child th {
