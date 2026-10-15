@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Detalhes do carregamento de vagão: layout e insumos agrupados (2026-10-15)
+Tela `pages/controller/FabricaConfinamentoDetalhes.tsx`. Só front, sem migration.
+- Cabeçalho com data, nº do trato, tipo e usuário; status virou selo (Concluído/Em aberto). Três cartões: Previsto, Produzido e Diferença (kg e % do previsto; neutro até ±2%, âmbar abaixo, vermelho acima). Vagão, Formulação e Capacidade (com % ocupado, ou "≈ N cargas (estimativa)" quando o previsto passa da capacidade).
+- **Insumo repetido = várias cargas de vagão.** Conferido em leitura na Fazenda Arizona (registro de 15/10, tipo sequestro): 40 linhas = 10 insumos × 4 pesagens; total previsto 7.382,60 kg contra vagão JF MIX 8000 de 3.000 kg. Registros de confinamento têm 10 linhas (1 carga). `registros_fabrica_confinamento_insumos.ordem` é a posição do insumo na formulação, não o nº da carga, e não existe campo que identifique a carga.
+- Tabela agrupada por insumo (chave `ordem|nome`): Previsto, Produzido e Diferença somados, "· N pesagens" e detalhe recolhível "Pesagem 1..N" (a ordem das pesagens não é garantida), linha de Total. Estado vazio e aviso de falha ao buscar insumos; `loading` encerra quando não há fazenda.
+- Pendente: warning `react-hooks/exhaustive-deps` em `loadRegistro` (já existia) quebra `lint --max-warnings 0`.
+
 ## POPs personalizados por fazenda: lado do painel (2026-10-14)
 Os botões amarelos de POP do PWA abriam só imagens fixas de `public/docs`. Agora a fazenda sobe o próprio POP em Configurações; o PWA ainda não consome (próxima etapa).
 - Migration `20261014180000_fazenda_pops` (+ rollback): bucket público `pops` (10 MB, jpeg/webp/png, escrita por pasta `{fazenda_id}/` via `user_has_fazenda_access`) e tabela `fazenda_pops` (`slug` em maternidade, pastagens, cocho, bebedouros, fezes, escore; `ordem`, `path`, `versao`, `deleted_at`). Sem linhas para o slug, o PWA mantém o padrão (retrocompatível).
