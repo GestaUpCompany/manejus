@@ -1,5 +1,11 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Cadastro de lotes: Sistema de Produção antes de Pasto/Curral (2026-10-15)
+
+No modal de `Lotes.tsx`, o campo "Sistema de Produção" passou a vir antes de "Pasto/Curral". Trocar o sistema zera `pasto_id`/`curral_id` (o campo alterna entre Pasto e Curral via `usaCurral`), então quem escolhia o pasto primeiro o perdia. Só mudou a ordem no JSX; o reset e a validação continuam iguais.
+
+Ajuste seguinte: trocar o sistema (ou o campo de pasto/curral) deixou de zerar `pasto_id`/`curral_id` no estado do formulário. Antes, sair de Confinamento e voltar perdia o curral até reabrir o modal. O salvar já ignora o campo que não vale para o sistema escolhido (`pasto_id` vira null em Confinamento/TIP e `curralNovo` em pasto), então manter os dois valores no estado é seguro.
+
 ## Detalhes do carregamento de vagão: layout e insumos agrupados (2026-10-15)
 Tela `pages/controller/FabricaConfinamentoDetalhes.tsx`. Só front, sem migration.
 - Cabeçalho com data, nº do trato, tipo e usuário; status virou selo (Concluído/Em aberto). Três cartões: Previsto, Produzido e Diferença (kg e % do previsto; neutro até ±2%, âmbar abaixo, vermelho acima). Vagão, Formulação e Capacidade (com % ocupado, ou "≈ N cargas (estimativa)" quando o previsto passa da capacidade).
