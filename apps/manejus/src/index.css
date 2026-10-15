@@ -276,7 +276,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 4px;
   }
 
   .trato-print-brand-side {
@@ -287,18 +287,18 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   }
 
   .trato-print-brand img {
-    height: 12mm;
-    max-width: 45mm;
+    height: 9mm;
+    max-width: 40mm;
     object-fit: contain;
   }
 
 
   .trato-print-root h1 {
-    font-size: 16pt;
+    font-size: 14pt;
     font-weight: bold;
     font-style: italic;
     text-align: center;
-    margin: 0 0 8px;
+    margin: 0 0 4px;
   }
 
   .trato-print-meta {
@@ -319,22 +319,23 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   }
 
   /* Colunas informativas estreitas; as de Real (sem largura) dividem todo o espaço restante. */
-  .trato-print-root col.trato-col-lote { width: 24mm; }
+  .trato-print-root col.trato-col-lote { width: 26mm; }
   .trato-print-root col.trato-col-curral { width: 14mm; }
-  .trato-print-root col.trato-col-dieta { width: 16mm; }
+  .trato-print-root col.trato-col-dieta { width: 28mm; }
   .trato-print-root col.trato-col-qtd { width: 9mm; }
-  .trato-print-root col.trato-col-anterior { width: 12mm; }
-  .trato-print-root col.trato-col-leitura { width: 10mm; }
+  .trato-print-root col.trato-col-anterior { width: 13mm; }
+  .trato-print-root col.trato-col-leitura { width: 12mm; }
   .trato-print-root col.trato-col-diario { width: 12mm; }
-  .trato-print-root col.trato-col-consumo { width: 11mm; }
-  .trato-print-root col.trato-col-previsto { width: 11mm; }
-  .trato-print-root col.trato-col-total { width: 12mm; }
+  .trato-print-root col.trato-col-consumo { width: 10mm; }
+  .trato-print-root col.trato-col-previsto { width: 12mm; }
+  .trato-print-root col.trato-col-total { width: 11mm; }
 
   .trato-print-root th,
   .trato-print-root td {
     border: 1px solid #a6a6a6;
-    padding: 3px 2px;
-    overflow-wrap: anywhere;
+    padding: 2px 2px;
+    line-height: 1.15;
+    overflow-wrap: break-word;
     text-align: center;
     vertical-align: middle;
   }
@@ -353,11 +354,25 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
   .trato-print-root td.trato-print-real {
     background: #f2f2f2;
-    height: 13mm;
+  }
+
+  /* Altura calculada por calcularLayoutFolhaTrato (13 mm com poucos currais, até 8 mm com muitos). */
+  .trato-print-root tbody tr {
+    height: var(--trato-linha-h, 13mm);
+    break-inside: avoid;
+  }
+
+  .trato-print-root thead {
+    display: table-header-group;
+  }
+
+  .trato-print-pagina + .trato-print-pagina {
+    break-before: page;
+  }
+
+  .trato-print-meta-cont {
+    margin-bottom: 4px;
   }
 }
 
-@page {
-  size: A4 landscape;
-  margin: 8mm;
-}
+/* O @page (orientação e margem) é injetado por FolhaTratoImpressao conforme o número de tratos. */

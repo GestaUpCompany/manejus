@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '@gestaup/shared'
 import { Button, Card, Input } from '@gestaup/ui'
@@ -14,6 +14,7 @@ import {
 } from '../../services/lancamentoTratosService'
 import type { TipoProgramacao } from '../../services/programacaoTratosService'
 import { toFarmDateOnly } from '@gestaup/shared'
+import { calcularLayoutFolhaTrato } from '../../utils/folhaTratoLayout'
 
 const TIPOS: { value: TipoProgramacao; label: string }[] = [
   { value: 'confinamento', label: 'Confinamento' },
@@ -69,8 +70,18 @@ function numeroFolha(valor: number | null, casas = 1): string {
 
 function FolhaTratoImpressao({ dados, fazendaNome, fazendaLogoUrl, tipoLabel }: { dados: LancamentoTratosData; fazendaNome: string; fazendaLogoUrl?: string | null; tipoLabel: string }) {
   const quantidadeTratos = dados.linhas.reduce((maior, linha) => Math.max(maior, linha.quantidadeTratos), 0)
+  const layout = calcularLayoutFolhaTrato(dados.linhas.length, quantidadeTratos)
+  const totalPaginas = layout.currais.length
+  let inicio = 0
+  const paginas = layout.currais.map((qtd) => {
+    const fatia = dados.linhas.slice(inicio, inicio + qtd)
+    inicio += qtd
+    return fatia
+  })
+  const rotuloPagina = (indice: number) => (totalPaginas > 1 ? ` · Página ${indice + 1}/${totalPaginas}` : '')
   return (
-    <div className="trato-print-root" aria-hidden="true">
+    <div className="trato-print-root" aria-hidden="true" style={{ '--trato-linha-h': `${layout.alturaLinhaMm}mm` } as CSSProperties}>
+      <style>{`@page { size: A4 ${layout.orientacao}; margin: 8mm; }`}</style>
       <div className="trato-print-brand">
         <div className="trato-print-brand-side">
           <img src="/images/manejus360.png" alt="Manej'Us 360" />
@@ -84,8 +95,16 @@ function FolhaTratoImpressao({ dados, fazendaNome, fazendaLogoUrl, tipoLabel }: 
       <h1>Folha de Trato {tipoLabel} - {fazendaNome}</h1>
       <div className="trato-print-meta">
         <span>Data do Trato: {formatarData(dados.data)}</span>
-        <span>Tipo de programação: {tipoLabel}</span>
+        <span>Tipo de programação: {tipoLabel}{rotuloPagina(0)}</span>
       </div>
+      {paginas.map((linhasPagina, indicePagina) => (
+      <div key={indicePagina} className="trato-print-pagina">
+      {indicePagina > 0 && (
+        <div className="trato-print-meta trato-print-meta-cont">
+          <span>Folha de Trato {tipoLabel} - {fazendaNome}</span>
+          <span>Data do Trato: {formatarData(dados.data)}{rotuloPagina(indicePagina)}</span>
+        </div>
+      )}
       <table>
         <colgroup>
           <col className="trato-col-lote" />
@@ -121,7 +140,7 @@ function FolhaTratoImpressao({ dados, fazendaNome, fazendaLogoUrl, tipoLabel }: 
           </tr>
         </thead>
         <tbody>
-          {dados.linhas.map((linha) => (
+          {linhasPagina.map((linha) => (
             <tr key={linha.curralId}>
               <td>{linha.loteNome}</td>
               <td>{linha.curralNome}</td>
@@ -145,6 +164,8 @@ function FolhaTratoImpressao({ dados, fazendaNome, fazendaLogoUrl, tipoLabel }: 
           ))}
         </tbody>
       </table>
+      </div>
+      ))}
     </div>
   )
 }
