@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, getFazendaIdForUser, useLotes } from '@gestaup/shared'
-import { Button, Card, CardSkeleton, EmptyState, ErrorState, Select, useToast } from '@gestaup/ui'
+import { Button, Card, CardSkeleton, EmptyState, ErrorState } from '@gestaup/ui'
+import { formatDate } from '@gestaup/shared'
 import {
   useConciliacaoLotes,
-  useDefinirModoIdentificacao,
   useIndividuosSemCategoria,
-  useModosIdentificacao,
-  type ModoIdentificacao,
+  usePendenciasSemAnimal,
 } from '../../hooks/useConciliacaoIdentificacao'
 import {
   filtrarConciliacao,
+  qualificacaoPorLote,
   resumirConciliacao,
+  resumirQualificacao,
   situacaoConciliacao,
   type FiltroConciliacao,
+  type NivelQualificacao,
   type SituacaoConciliacao,
 } from '../../utils/conciliacaoIdentificacao'
 
@@ -56,15 +58,16 @@ function Resumo({ titulo, valor, destaque }: { titulo: string; valor: number; de
   )
 }
 
-const MODOS: { value: ModoIdentificacao; label: string }[] = [
-  { value: 'agregado', label: 'Agregado (só contagem)' },
-  { value: 'parcial', label: 'Parcial (alguns identificados)' },
-  { value: 'individual', label: 'Individual (todos identificados)' },
-]
+const NIVEL: Record<NivelQualificacao, { rotulo: string; classe: string }> = {
+  agregado: { rotulo: 'Só contagem', classe: 'bg-surface-2 text-content-muted' },
+  parcial: { rotulo: 'Parcial', classe: 'bg-blue-500/10 text-blue-800 dark:text-blue-200' },
+  completo: { rotulo: 'Completo', classe: 'bg-green-500/10 text-green-800 dark:text-green-200' },
+}
+
+const percentual = (fracao: number) => `${Math.round(fracao * 100)}%`
 
 export function ConciliacaoIndividuos() {
   const { user } = useAuth()
-  const toast = useToast()
   const navigate = useNavigate()
   const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
   const [semFazenda, setSemFazenda] = useState(false)
@@ -86,28 +89,29 @@ export function ConciliacaoIndividuos() {
   const conciliacao = useConciliacaoLotes(fazendaId)
   const semCategoria = useIndividuosSemCategoria(fazendaId)
   const { data: lotes = [] } = useLotes(fazendaId)
-  const modos = useModosIdentificacao(fazendaId)
-  const definirModo = useDefinirModoIdentificacao(fazendaId)
   const nomeLote = useMemo(() => new Map(lotes.map((l) => [l.id, l.nome])), [lotes])
 
   const linhas = useMemo(() => conciliacao.data ?? [], [conciliacao.data])
   const resumo = useMemo(() => resumirConciliacao(linhas), [linhas])
   const visiveis = useMemo(() => filtrarConciliacao(linhas, filtro), [linhas, filtro])
-  // Lotes que já têm identificados ou um modo diferente de 'agregado'
-  const lotesComIdentificados = useMemo(() => new Set(linhas.map((l) => l.lote_id)), [linhas])
-  const lotesModo = useMemo(
-    () => (modos.data ?? []).filter((l) => l.modo_identificacao !== 'agregado' || lotesComIdentificados.has(l.id)),
-    [modos.data, lotesComIdentificados]
+  // O nível de cada lote é calculado pelos identificados confirmados; lotes sem cabeças nem identificados não entram
+  const qualificacao = useMemo(
+    () => qualificacaoPorLote(linhas).filter((l) => l.cabecas > 0 || l.identificados > 0),
+    [linhas]
   )
-
-  const alterarModo = async (loteId: string, modo: string) => {
-    try {
-      await definirModo.mutateAsync({ loteId, modo: modo as ModoIdentificacao })
-      toast.success('Modo de identificação atualizado.')
-    } catch (error) {
-      toast.error((error as Error).message || 'Não foi possível definir o modo.')
-    }
-  }
+  const resumoQualificacao = useMemo(() => resumirQualificacao(qualificacao), [qualificacao])
+  const lotesQualificados = useMemo(
+    () =>
+      qualificacao
+        .filter((l) => l.nivel !== 'agregado')
+        .sort(
+          (a, b) =>
+            b.qualificadas / Math.max(b.cabecas, 1) - a.qualificadas / Math.max(a.cabecas, 1) ||
+            a.lote_nome.localeCompare(b.lote_nome, 'pt-BR')
+        ),
+    [qualificacao]
+  )
+  const pendencias = usePendenciasSemAnimal(fazendaId, linhas)
 
   if (semFazenda) {
     return <EmptyState title="Selecione uma fazenda" description="A conciliação é feita por fazenda." />
@@ -135,6 +139,19 @@ export function ConciliacaoIndividuos() {
         <CardSkeleton />
       ) : (
         <>
+          <Card className="p-4">
+            <p className="text-sm text-content-muted">Qualificação da fazenda</p>
+            <p className="text-2xl font-bold mt-1 text-content-strong">
+              {resumoQualificacao.qualificadas.toLocaleString('pt-BR')} de {resumoQualificacao.cabecas.toLocaleString('pt-BR')} cabeças
+              identificadas ({percentual(resumoQualificacao.fracao)})
+            </p>
+            <p className="text-sm text-content-muted mt-1">
+              {resumoQualificacao.lotesPorNivel.completo} lote(s) completo(s), {resumoQualificacao.lotesPorNivel.parcial} parcial(is) e{' '}
+              {resumoQualificacao.lotesPorNivel.agregado} só com contagem. A contagem do lote continua sendo a do agregado; a
+              identificação é uma camada que se acrescenta aos poucos.
+            </p>
+          </Card>
+
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Resumo titulo="Categorias com identificados" valor={resumo.categoriasComIdentificados} />
             <Resumo titulo="Animais identificados" valor={resumo.identificados} />
@@ -207,27 +224,76 @@ export function ConciliacaoIndividuos() {
         </>
       )}
 
-      {lotesModo.length > 0 && (
+      {lotesQualificados.length > 0 && (
         <Card className="p-4 space-y-3">
           <div>
-            <h3 className="text-lg font-semibold text-content-strong">Modo de identificação dos lotes</h3>
+            <h3 className="text-lg font-semibold text-content-strong">Qualificação dos lotes</h3>
             <p className="text-sm text-content-muted">
-              Um lote só pode ser <strong>individual</strong> quando todos os animais de cada categoria estão identificados e com a
-              localização confirmada. O modo é um registro de intenção: a contagem continua sendo a do lote.
+              O nível é calculado: <strong>completo</strong> quando toda categoria com cabeças tem os animais identificados e com
+              localização confirmada; <strong>parcial</strong> quando só parte deles está. Lotes sem nenhum identificado seguem só com a
+              contagem e não aparecem aqui.
             </p>
           </div>
           <ul className="divide-y divide-border-base">
-            {lotesModo.map((l) => (
-              <li key={l.id} className="py-2 flex flex-wrap items-center justify-between gap-3">
-                <span className="text-sm font-medium text-content-strong">{l.nome}</span>
-                <div className="w-full sm:w-72">
-                  <Select
-                    label=""
-                    value={l.modo_identificacao}
-                    onChange={(valor) => alterarModo(l.id, valor)}
-                    options={MODOS}
-                  />
-                </div>
+            {lotesQualificados.map((l) => (
+              <li key={l.lote_id} className="py-2 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <span className="font-medium text-content-strong">{l.lote_nome}</span>
+                <span className="text-content">
+                  {l.qualificadas.toLocaleString('pt-BR')} de {l.cabecas.toLocaleString('pt-BR')} (
+                  {percentual(l.cabecas > 0 ? l.qualificadas / l.cabecas : 0)})
+                </span>
+                <span className="flex flex-wrap gap-2">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${NIVEL[l.nivel].classe}`}>
+                    {NIVEL[l.nivel].rotulo}
+                  </span>
+                  {l.incertos > 0 && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-800 dark:text-amber-200">
+                      {l.incertos} com localização incerta
+                    </span>
+                  )}
+                  {l.divergente && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-800 dark:text-red-200">
+                      Divergência
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {((pendencias.data?.mortes.length ?? 0) > 0 || (pendencias.data?.apartacoes.length ?? 0) > 0) && (
+        <Card className="p-4 space-y-3">
+          <div>
+            <h3 className="text-lg font-semibold text-content-strong">Informar quais animais</h3>
+            <p className="text-sm text-content-muted">
+              Eventos dos últimos 90 dias, em lotes com animais identificados, que ainda não dizem quais animais foram. É uma
+              sugestão: a contagem do lote já foi atualizada e nada aqui bloqueia a operação.
+            </p>
+          </div>
+          <ul className="divide-y divide-border-base">
+            {pendencias.data!.mortes.map((m) => (
+              <li key={m.id} className="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="text-content">
+                  <strong className="text-content-strong">Morte</strong> · {formatDate(m.data)} ·{' '}
+                  {m.lote ?? nomeLote.get(m.lote_id ?? '') ?? 'Lote'} · {m.categoria}
+                </span>
+                <Button size="sm" variant="secondary" onClick={() => navigate(`/controller/cadernetas/morte/${m.id}`)}>
+                  Informar animal
+                </Button>
+              </li>
+            ))}
+            {pendencias.data!.apartacoes.map((a) => (
+              <li key={a.id} className="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="text-content">
+                  <strong className="text-content-strong">Apartação</strong> · {formatDate(a.data)} ·{' '}
+                  {nomeLote.get(a.lote_origem_id ?? '') ?? 'Origem'} → {nomeLote.get(a.lote_destino_id ?? '') ?? 'Destino'} ·{' '}
+                  {a.numero_cabecas} {a.categoria}
+                </span>
+                <Button size="sm" variant="secondary" onClick={() => navigate(`/controller/cadernetas/movimentacao/${a.id}`)}>
+                  Informar animais
+                </Button>
               </li>
             ))}
           </ul>

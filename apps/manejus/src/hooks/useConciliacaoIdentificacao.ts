@@ -1,6 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@gestaup/supabase'
 import type { LinhaConciliacao } from '../utils/conciliacaoIdentificacao'
+import {
+  apartacoesSemAnimalSugeridas,
+  mortesSemAnimalSugeridas,
+  type MortePendente,
+  type MovimentacaoPendente,
+} from '../utils/pendenciasSemAnimal'
 
 export interface IndividuoSemCategoria {
   individuo_id: string
@@ -12,7 +18,10 @@ export interface IndividuoSemCategoria {
 
 const TAMANHO_PAGINA = 1000
 
-/** Conciliação por lote/categoria (identificados × agregado). Pagina por causa do limite de 1000 linhas do PostgREST. */
+/**
+ * Conciliação por lote/categoria (identificados × agregado), com TODAS as categorias dos lotes (inclusive sem identificados),
+ * porque o nível de qualificação do lote depende de todas as categorias com cabeças. Pagina pelo limite de 1000 linhas do PostgREST.
+ */
 export function useConciliacaoLotes(fazendaId: string | undefined) {
   return useQuery({
     // começa com 'lotes' para ser invalidada junto com baixa, exclusão e confirmação de localização
@@ -25,7 +34,6 @@ export function useConciliacaoLotes(fazendaId: string | undefined) {
           .from('vw_lote_categoria_identificacao')
           .select('lote_categoria_id, lote_id, lote_nome, categoria, quant_atual, identificados, incertos, nao_identificados, confirmados, divergencia')
           .eq('fazenda_id', fazendaId!)
-          .gt('identificados', 0)
           .order('lote_categoria_id', { ascending: true })
           .range(inicio, inicio + TAMANHO_PAGINA - 1)
         if (error) throw error
@@ -68,46 +76,65 @@ export function useIndividuosSemCategoria(fazendaId: string | undefined) {
   })
 }
 
-export type ModoIdentificacao = 'agregado' | 'parcial' | 'individual'
+const JANELA_DIAS = 90
 
-export interface LoteModo {
-  id: string
-  nome: string
-  modo_identificacao: ModoIdentificacao
+export interface PendenciasSemAnimal {
+  mortes: MortePendente[]
+  apartacoes: MovimentacaoPendente[]
 }
 
-/** Modo de identificação dos lotes ativos da fazenda. */
-export function useModosIdentificacao(fazendaId: string | undefined) {
+/**
+ * Sugestões de "informar o animal": mortes e apartações recentes (90 dias) de lotes que já têm animais identificados e
+ * ficaram sem animal informado. São sugestões; o agregado já foi descontado e nada disso bloqueia a operação.
+ */
+export function usePendenciasSemAnimal(fazendaId: string | undefined, linhas: LinhaConciliacao[]) {
+  const lotesComIdentificados = [...new Set(linhas.filter((l) => l.identificados > 0).map((l) => l.lote_id))].sort()
   return useQuery({
-    queryKey: ['lotes', 'modos-identificacao', fazendaId],
-    enabled: !!fazendaId,
-    queryFn: async (): Promise<LoteModo[]> => {
-      const { data, error } = await supabase
-        .from('lotes')
-        .select('id, nome, modo_identificacao')
-        .eq('fazenda_id', fazendaId!)
-        .eq('ativo', true)
-        .order('nome', { ascending: true })
-      if (error) throw error
-      return (data ?? []) as LoteModo[]
-    },
-  })
-}
+    queryKey: ['lotes', 'pendencias-sem-animal', fazendaId, lotesComIdentificados.join(',')],
+    enabled: !!fazendaId && lotesComIdentificados.length > 0,
+    queryFn: async (): Promise<PendenciasSemAnimal> => {
+      const desde = new Date(Date.now() - JANELA_DIAS * 86_400_000).toISOString()
 
-/** Define o modo; o banco recusa 'individual' enquanto houver animal sem identificação/confirmação no lote. */
-export function useDefinirModoIdentificacao(fazendaId: string | undefined) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ loteId, modo }: { loteId: string; modo: ModoIdentificacao }) => {
-      const { data, error } = await supabase.rpc('definir_modo_identificacao', {
-        p_fazenda_id: fazendaId!,
-        p_lote_id: loteId,
-        p_modo: modo,
-      })
-      if (error) throw new Error(error.message)
-      const resposta = data as { success: boolean; error?: string } | null
-      if (!resposta?.success) throw new Error(resposta?.error || 'Não foi possível definir o modo.')
+      const { data: mortes, error: erroMortes } = await supabase
+        .from('registros_morte')
+        .select('id, data, lote_id, lote, categoria, individuo_id')
+        .eq('fazenda_id', fazendaId!)
+        .is('deleted_at', null)
+        .is('individuo_id', null)
+        .in('lote_id', lotesComIdentificados)
+        .gte('data', desde)
+        .order('data', { ascending: false })
+        .limit(200)
+      if (erroMortes) throw erroMortes
+
+      const { data: movs, error: erroMovs } = await supabase
+        .from('registros_movimentacao')
+        .select('id, data, lote_origem_id, lote_destino_id, categoria, numero_cabecas')
+        .eq('fazenda_id', fazendaId!)
+        .is('deleted_at', null)
+        .is('os_id', null)
+        .is('individuo_id', null)
+        .in('motivo_movimentacao', ['Saída', 'Entrevero'])
+        .gte('data', desde)
+        .order('data', { ascending: false })
+        .limit(300)
+      if (erroMovs) throw erroMovs
+
+      const candidatas = (movs ?? []) as MovimentacaoPendente[]
+      const informados = new Map<string, number>()
+      if (candidatas.length > 0) {
+        const { data: ponte, error: erroPonte } = await supabase
+          .from('evento_individuos')
+          .select('evento_id')
+          .in('evento_id', candidatas.map((m) => m.id))
+        if (erroPonte) throw erroPonte
+        for (const l of (ponte ?? []) as { evento_id: string }[]) informados.set(l.evento_id, (informados.get(l.evento_id) ?? 0) + 1)
+      }
+
+      return {
+        mortes: mortesSemAnimalSugeridas((mortes ?? []) as MortePendente[], linhas),
+        apartacoes: apartacoesSemAnimalSugeridas(candidatas, linhas, informados),
+      }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lotes'] }),
   })
 }

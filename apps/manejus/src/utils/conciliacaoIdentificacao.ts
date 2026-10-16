@@ -52,3 +52,63 @@ export function resumirConciliacao(linhas: LinhaConciliacao[]): ResumoConciliaca
     incertos: comIdentificados.reduce((s, l) => s + l.incertos, 0),
   }
 }
+
+export type NivelQualificacao = 'agregado' | 'parcial' | 'completo'
+
+export interface QualificacaoLote {
+  lote_id: string
+  lote_nome: string
+  nivel: NivelQualificacao
+  /** cabeças contadas pelo agregado (categorias com cabeças) */
+  cabecas: number
+  /** identificados com localização confirmada, limitados à contagem de cada categoria */
+  qualificadas: number
+  identificados: number
+  incertos: number
+  divergente: boolean
+}
+
+/**
+ * Nível de qualificação por lote, calculado a partir das linhas por categoria (não é um estado declarado):
+ *  - agregado: nenhum animal identificado, só contagem;
+ *  - parcial: há identificados, mas nem toda categoria com cabeças está inteiramente confirmada;
+ *  - completo: toda categoria com cabeças tem confirmados >= quant_atual e não há divergência (excesso de identificados);
+ * Incerteza e divergência são sinalizações separadas, não níveis. Categorias com 0 cabeças não entram no cálculo.
+ */
+export function qualificacaoPorLote(linhas: LinhaConciliacao[]): QualificacaoLote[] {
+  const porLote = new Map<string, LinhaConciliacao[]>()
+  for (const l of linhas) porLote.set(l.lote_id, [...(porLote.get(l.lote_id) ?? []), l])
+
+  return [...porLote.entries()].map(([lote_id, cats]) => {
+    const comCabecas = cats.filter((c) => c.quant_atual > 0)
+    const identificados = cats.reduce((s, c) => s + c.identificados, 0)
+    const divergente = cats.some((c) => c.divergencia)
+    const completo = comCabecas.length > 0 && !divergente && comCabecas.every((c) => c.confirmados >= c.quant_atual)
+    return {
+      lote_id,
+      lote_nome: cats[0].lote_nome,
+      nivel: identificados === 0 ? 'agregado' : completo ? 'completo' : 'parcial',
+      cabecas: comCabecas.reduce((s, c) => s + c.quant_atual, 0),
+      qualificadas: comCabecas.reduce((s, c) => s + Math.min(c.confirmados, c.quant_atual), 0),
+      identificados,
+      incertos: cats.reduce((s, c) => s + c.incertos, 0),
+      divergente,
+    } satisfies QualificacaoLote
+  })
+}
+
+export interface ResumoQualificacao {
+  cabecas: number
+  qualificadas: number
+  /** fração 0..1 de cabeças com animal identificado e localização confirmada */
+  fracao: number
+  lotesPorNivel: Record<NivelQualificacao, number>
+}
+
+export function resumirQualificacao(lotes: QualificacaoLote[]): ResumoQualificacao {
+  const cabecas = lotes.reduce((s, l) => s + l.cabecas, 0)
+  const qualificadas = lotes.reduce((s, l) => s + l.qualificadas, 0)
+  const lotesPorNivel: Record<NivelQualificacao, number> = { agregado: 0, parcial: 0, completo: 0 }
+  for (const l of lotes) lotesPorNivel[l.nivel] += 1
+  return { cabecas, qualificadas, fracao: cabecas > 0 ? qualificadas / cabecas : 0, lotesPorNivel }
+}
