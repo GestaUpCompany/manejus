@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Manejo de curral: fila "Designações de lote" no painel (16/10/2026)
+
+Na Conciliação de indivíduos, nova seção lista as pendências abertas de `pendencias_designacao_lote` agrupadas por lote de origem, destino e categoria, com os animais, e dois botões por grupo: Confirmar mudança (RPC `confirmar_designacao_lote`, com confirmação do gestor, gera a movimentação Entrevero e liga os animais) e Descartar (RPC `descartar_designacao_lote`). Arquivos: `utils/designacoesLote.ts` (+ teste), `hooks/useDesignacoesLote.ts`, `pages/controller/ConciliacaoIndividuos.tsx`. A consulta com joins foi validada na fazenda de testes (pendência criada pelo `aplicar`, lida e descartada). RBAC: `manejo-curral` entra em `CADERNETAS` como caderneta só de campo. Ainda sem lista de sessões de manejo no painel.
+
 ## Manejo de curral: migration 3 e PWA ligado ponta a ponta (16/10/2026)
 
 O envio do PWA falhou com 42P10: o `upsert onConflict=local_id` não aceita índice parcial. Migration `20261016250000_manejo_curral_local_id_unico` troca os índices por únicos simples em `local_id` (padrão de registros_morte). Reenvio testado no preview, fazenda de testes: sessão offline fica `pending` e na fila, ao voltar a rede sobe, a RPC aplica (1 aplicado, 1 pendência), brinco 22 -> PWA-T1, agregado intacto (122/55). Restaurado: pendência descartada, brinco 22 de volta, sessão excluída.

@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, getFazendaIdForUser, useLotes } from '@gestaup/shared'
-import { Button, Card, CardSkeleton, EmptyState, ErrorState } from '@gestaup/ui'
+import { Button, Card, CardSkeleton, EmptyState, ErrorState, useToast } from '@gestaup/ui'
 import { formatDate } from '@gestaup/shared'
 import {
   useConciliacaoLotes,
   useIndividuosSemCategoria,
   usePendenciasSemAnimal,
 } from '../../hooks/useConciliacaoIdentificacao'
+import { useConfirmarDesignacoes, useDescartarDesignacoes, useDesignacoesLote } from '../../hooks/useDesignacoesLote'
+import { agruparDesignacoes, type GrupoDesignacao } from '../../utils/designacoesLote'
 import {
   filtrarConciliacao,
   qualificacaoPorLote,
@@ -112,6 +114,40 @@ export function ConciliacaoIndividuos() {
     [qualificacao]
   )
   const pendencias = usePendenciasSemAnimal(fazendaId, linhas)
+  const toast = useToast()
+  const designacoes = useDesignacoesLote(fazendaId)
+  const confirmarDesignacoes = useConfirmarDesignacoes(fazendaId)
+  const descartarDesignacoes = useDescartarDesignacoes(fazendaId)
+  const gruposDesignacao = useMemo(() => agruparDesignacoes(designacoes.data ?? []), [designacoes.data])
+  const ocupadoDesignacao = confirmarDesignacoes.isPending || descartarDesignacoes.isPending
+
+  const confirmarGrupo = async (g: GrupoDesignacao) => {
+    const n = g.pendencias.length
+    const ok = window.confirm(
+      `Confirmar a mudança de ${n} animal(is) (${g.categoria}) de "${g.lote_origem_nome}" para "${g.lote_destino_nome}"?
+
+` +
+        'Isso registra uma movimentação de apartação e altera a contagem dos dois lotes.'
+    )
+    if (!ok) return
+    try {
+      const movimentados = await confirmarDesignacoes.mutateAsync(g.pendencias.map((p) => p.id))
+      toast.success(`${movimentados} animal(is) movido(s) para ${g.lote_destino_nome}.`)
+    } catch (error) {
+      toast.error((error as Error).message || 'Não foi possível confirmar a designação.')
+    }
+  }
+
+  const descartarGrupo = async (g: GrupoDesignacao) => {
+    const n = g.pendencias.length
+    if (!window.confirm(`Descartar ${n} designação(ões) para "${g.lote_destino_nome}"? Nenhum lote nem contagem será alterado.`)) return
+    try {
+      const descartadas = await descartarDesignacoes.mutateAsync(g.pendencias.map((p) => p.id))
+      toast.success(`${descartadas} designação(ões) descartada(s).`)
+    } catch (error) {
+      toast.error((error as Error).message || 'Não foi possível descartar a designação.')
+    }
+  }
 
   if (semFazenda) {
     return <EmptyState title="Selecione uma fazenda" description="A conciliação é feita por fazenda." />
@@ -257,6 +293,41 @@ export function ConciliacaoIndividuos() {
                     </span>
                   )}
                 </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {gruposDesignacao.length > 0 && (
+        <Card className="p-4 space-y-3">
+          <div>
+            <h3 className="text-lg font-semibold text-content-strong">Designações de lote do manejo de curral</h3>
+            <p className="text-sm text-content-muted">
+              O peão escolheu o lote de destino destes animais no curral. Nada mudou ainda: ao confirmar, é registrada uma
+              movimentação de apartação (que altera a contagem dos lotes) com os animais ligados a ela.
+            </p>
+          </div>
+          <ul className="divide-y divide-border-base">
+            {gruposDesignacao.map((g) => (
+              <li key={g.chave} className="py-3 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="text-content">
+                    <strong className="text-content-strong">{g.pendencias.length}</strong> {g.categoria} ·{' '}
+                    {g.lote_origem_nome} → <strong className="text-content-strong">{g.lote_destino_nome}</strong>
+                  </span>
+                  <span className="flex gap-2">
+                    <Button size="sm" disabled={ocupadoDesignacao} onClick={() => confirmarGrupo(g)}>
+                      Confirmar mudança
+                    </Button>
+                    <Button size="sm" variant="secondary" disabled={ocupadoDesignacao} onClick={() => descartarGrupo(g)}>
+                      Descartar
+                    </Button>
+                  </span>
+                </div>
+                <p className="text-xs text-content-muted">
+                  {g.pendencias.map((p) => p.identificacao).join(', ')}
+                </p>
               </li>
             ))}
           </ul>
