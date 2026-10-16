@@ -1,5 +1,19 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Entrada retroativa não contada no lote destino: correção manual (2026-10-16)
+
+Fazenda `a53d7375-15c8-44fe-98d8-90e9f8423c65`, "Lote 4 Bez 0926". A movimentação `registros_movimentacao` `49a3415a-b1a4-48e6-b283-621ab19387ec` (Entrada, 89 Bezerro, 215 kg) foi lançada com data 25/09, anterior ao `created_at` (09/10) da `lote_categorias` `4e88cd79-b3e5-4f25-b1ce-984cdf636aaa`. Causa: `calculate_quant_atual` só soma movimentações com `data >= lote_categorias.created_at`, e o trigger `update_quant_atual_movimentacao` só dispara em INSERT (editar a data depois não recalcula, nem pondera o peso).
+
+Correção (UPDATEs autorizados, 1 linha cada, na `lote_categorias` acima):
+- `quant_atual` 100 → 189 (`calculate_quant_atual`).
+- `peso_vivo_atual_kg_cab` 219,23 → 217,24 (média ponderada 100 × 219,23 + 89 × 215), `data_pesagem` e `data_ajuste_peso` 25/09 → 16/10 (reinicia o GMD).
+- Antes da correção: movimentação já com `data` = 16/10 (editada pelo usuário).
+
+Prevenção (migration `20261016220000_movimentacao_data_retroativa`, rollback em `supabase/rollbacks/`):
+- Coluna `registros_movimentacao.data_informada` e trigger BEFORE INSERT `trigger_aa_movimentacao_ajusta_data`: se `data` for anterior ao maior `created_at` das categorias ativas envolvidas (origem/destino, mesma categoria), grava `data = now()` e guarda a data informada em `data_informada`. Vale também para registros vindos de sync offline.
+- Trigger AFTER UPDATE `trigger_movimentacao_recalc_quant_update`: editar data, cabeças, lotes, categoria ou `deleted_at` recalcula `quant_atual` (o peso não é reponderado no UPDATE).
+- Testado na fazenda de testes via `scripts/teste-api.mjs`: saída com data 01/09 gravada em 16/10 com `data_informada` preenchida, contagem 2 → 1; soft-delete devolveu 1 → 2.
+
 ## Indivíduos: baixa manual e exclusão respeitam o agregado do lote (2026-10-15)
 
 Branch `feat/individuos-coexistencia`. Princípio: o agregado (`lote_categorias.quant_atual`, calculado por movimentações) continua sendo a verdade da contagem; o indivíduo é um subconjunto e acompanha o evento agregado, nunca o contrário. Morte (trigger em `registros_morte`) e venda/abate/transferência (OS) já funcionavam assim; a baixa manual e a exclusão no painel eram o único caminho que só alterava `individuos`.

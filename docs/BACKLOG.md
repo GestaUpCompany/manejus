@@ -2,6 +2,10 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
+## Contagem do lote: corte por created_at mistura data do fato com snapshot (2026-10-16)
+
+`calculate_quant_atual`/`calculate_quant_em` usam `quant_inicial` mais um corte `data >= lote_categorias.created_at`. Hoje a data retroativa é contornada ajustando `data` para now() (`data_informada` guarda a original). Desenho mais robusto: livro-razão, com saldo inicial como lançamento e contagem por lançamentos, sem corte temporal. Invasivo (afeta `calculate_quant_em`, recategorização com `quant_base`, relatórios por período); avaliar em separado. Também pendente: ação explícita de "corrigir entrada" no painel que reponderee o peso.
+
 ## Relatório de consumo: pendências do gráfico e da leitura de cocho (2026-10-14)
 
 - **Gráfico da página pública (Recharts) ainda sobrepõe rótulos** no pé do gráfico (CMS, %PV e leitura de cocho); a correção anti-colisão e a faixa da leitura foram feitas só no PDF (`api/pdf/consumo.js`). Aplicar a mesma ideia em `criarLabelsAntiColisao` de `RelatorioConsumoPublico.tsx`.
