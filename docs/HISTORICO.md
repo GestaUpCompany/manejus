@@ -9,7 +9,8 @@ Branch `feat/individuos-coexistencia`. Princípio: o agregado (`lote_categorias.
 - **`excluir_individuo(p_fazenda_id, p_individuo_id)`**: soft-delete do animal e estorno das movimentações do próprio animal (`individuo_id`, 1 cabeça, sem OS) com recálculo do `quant_atual`. Bloqueia se houver morte ou OS vinculada. Animais que já estavam contados no lote sem movimentação própria continuam contados.
 - **Painel:** `useIndividuoAcoes` chama as RPCs e mostra a mensagem do servidor; modal de baixa só com Vivo/Doado e motivos Doação/Descarte/Outro (`utils/baixaIndividuo.ts`); botão de baixa desabilitado para animal baixado por OS ou morte.
 - **Testado** na fazenda de testes (`d649c65e-…`) com o login de controller: baixa 122→121, estorno →122, cadastro →123, exclusão →122.
-- **Pendências conhecidas:** o formulário de edição (`IndividuoNovo.tsx`) ainda permite trocar o status para Abatido/Venda Vivo/Transferido sem tocar no agregado; Descarte fica com status `Doado` porque o CHECK de `individuos.status` não tem `Descartado`; o plano completo de coexistência agregado × indivíduo (modo de identificação por lote, conciliação, ponte evento→animais, SISBOV/PNIB) ainda não foi implementado.
+- **Formulário de edição** (`IndividuoNovo.tsx`): o status ficou só leitura, com a indicação de usar a baixa da ficha. Antes permitia trocar para Abatido/Venda Vivo/Transferido sem tocar no agregado.
+- **Pendências conhecidas:** Descarte fica com status `Doado` porque o CHECK de `individuos.status` não tem `Descartado`; o plano completo de coexistência agregado × indivíduo (modo de identificação por lote, conciliação, ponte evento→animais, SISBOV/PNIB) ainda não foi implementado.
 
 ## Relatório Zootécnico: ordem por local e colunas configuráveis; Lotes: filtro Sequestro e busca em Pasto/Curral (2026-10-15)
 

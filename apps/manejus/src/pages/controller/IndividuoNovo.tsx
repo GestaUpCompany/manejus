@@ -10,7 +10,6 @@ import {
   categoriasMacho,
   categoriasFemea,
   origens,
-  statusEditaveis,
   toNumber,
 } from '../../utils/individualValidation'
 import {
@@ -859,16 +858,15 @@ export function IndividuoNovo() {
                     <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Status</label>
                     <select
                       value={form.status}
-                      onChange={(e) => handleChange('status', e.target.value)}
-                      className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      disabled
+                      title="O status muda pela baixa na ficha do animal, que também atualiza a quantidade do lote."
+                      className="w-full px-3 py-2 bg-surface-2 text-content-muted border border-surface-3 rounded-lg cursor-not-allowed"
                     >
-                      {(statusEditaveis.includes(form.status) || !form.status
-                        ? statusEditaveis
-                        : [form.status, ...statusEditaveis]
-                      ).map((s: string) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
+                      <option value={form.status}>{form.status}</option>
                     </select>
+                    <p className="text-xs text-content-muted mt-1">
+                      Para dar baixa ou reativar, use "Dar baixa / alterar status" na ficha do animal.
+                    </p>
                   </div>
                 </div>
               </div>
