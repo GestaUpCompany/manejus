@@ -5,7 +5,7 @@
 Migration `20261016310000_eventos_reprodutivos_local_id` (rollback em `supabase/rollbacks/`): `eventos_reprodutivos.local_id text` com índice único completo (índice parcial dá 42P10 no upsert) e `origem text NOT NULL DEFAULT 'painel'` (`painel|pwa`). Só colunas novas; painel e PWA antigo seguem válidos. O gatilho `trg_eventos_reprodutivos_validar` não depende da ordem de chegada (só olha fêmea, fazenda, data, touro, estação e a cobertura referenciada; o PWA não envia `evento_cobertura_id`).
 - **Painel:** caderneta `reproducao` na lista de cadernetas (`utils/cadernetas.ts`, aponta para `/controller/reproducao`), no grupo Gado, na permissão por funcionário e em `CADERNETAS_EM_TESTE` (só fazenda de testes, junto de `manejo-curral` e `sanidade`); `types/images.ts` com imagem provisória (cópia da de sanidade).
 - Teste: reenvio com o mesmo `local_id` (`ON CONFLICT (local_id) DO NOTHING`) não cria linha. Detalhes da tela no HISTORICO do PWA.
-- **Aberto:** `v_status_reprodutivo` mostra "Sem registro" para fêmea parida com diagnóstico Inconclusivo e sem cobertura (o ramo do inconclusivo ignora o marco de parto/aborto); corrigir com `CREATE OR REPLACE VIEW` (migration própria, a pedir ok).
+- **View corrigida** (migration `20261016320000_status_reprodutivo_inconclusivo_mantem_marco`, rollback em `supabase/rollbacks/`): diagnóstico Inconclusivo sem cobertura derrubava fêmea "Parida" para "Sem registro". Agora só Prenha/Vazia decide o status; o Inconclusivo cai em Coberta (se há cobertura) ou no marco de parto/aborto. Testado na fazenda de testes (MAE-BR-N1 segue Parida; evento `f0be0099-5d3b-4d32-94ae-db1ec441920a` revertido por soft-delete).
 
 ## Entrada retroativa não contada no lote destino: correção manual (2026-10-16)
 
