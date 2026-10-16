@@ -5,6 +5,8 @@ import { supabase } from '@gestaup/supabase'
 import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '@gestaup/ui'
 import { formatDate } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
+import { AnimaisDaMovimentacao } from '../../components/AnimaisDaMovimentacao'
+import { movimentacaoAceitaAnimais } from '../../hooks/useMovimentacaoAnimais'
 
 interface RegistroMovimentacao {
   id: string
@@ -17,6 +19,9 @@ interface RegistroMovimentacao {
   numero_cabecas?: number
   peso_vivo_atual_kg?: number
   motivo_movimentacao?: string
+  lote_origem_id?: string | null
+  lote_destino_id?: string | null
+  individuo_id?: string | null
   causa_observacao?: string
   observacao?: string
   brinco?: string
@@ -115,6 +120,12 @@ export function MovimentacaoDetalhes() {
             <DetailSection title="Categorias" highlighted>
               <DetailField label="Categoria" value={formatValue(registro!.categoria)} />
             </DetailSection>
+
+            {movimentacaoAceitaAnimais(registro!) && (
+              <DetailSection title="Animais identificados" highlighted>
+                <AnimaisDaMovimentacao movimentacao={registro!} />
+              </DetailSection>
+            )}
 
             {/* Motivação */}
             <DetailSection title="Motivação" highlighted>
