@@ -25,6 +25,8 @@ interface Medicamento {
   nome_comercial: string
   principio_ativo: string
   dose_recomendada?: string
+  carencia_abate_dias?: number | null
+  intervalo_reaplicacao_dias?: number | null
   ativo: boolean
 }
 
@@ -40,6 +42,8 @@ export function Medicamentos() {
     nome_comercial: '',
     principio_ativo: '',
     dose_recomendada: '',
+    carencia_abate_dias: '',
+    intervalo_reaplicacao_dias: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
@@ -114,6 +118,9 @@ export function Medicamentos() {
       nome_comercial: formData.nome_comercial,
       principio_ativo: formData.principio_ativo,
       dose_recomendada: formData.dose_recomendada,
+      carencia_abate_dias: formData.carencia_abate_dias.trim() === '' ? null : Number(formData.carencia_abate_dias),
+      intervalo_reaplicacao_dias:
+        formData.intervalo_reaplicacao_dias.trim() === '' ? null : Number(formData.intervalo_reaplicacao_dias),
     }
 
     let error
@@ -137,6 +144,8 @@ export function Medicamentos() {
         nome_comercial: '',
         principio_ativo: '',
         dose_recomendada: '',
+        carencia_abate_dias: '',
+        intervalo_reaplicacao_dias: '',
       })
       setShowForm(false)
       setEditingMedicamento(null)
@@ -153,6 +162,9 @@ export function Medicamentos() {
       nome_comercial: medicamento.nome_comercial,
       principio_ativo: medicamento.principio_ativo,
       dose_recomendada: medicamento.dose_recomendada || '',
+      carencia_abate_dias: medicamento.carencia_abate_dias != null ? String(medicamento.carencia_abate_dias) : '',
+      intervalo_reaplicacao_dias:
+        medicamento.intervalo_reaplicacao_dias != null ? String(medicamento.intervalo_reaplicacao_dias) : '',
     })
     setShowForm(true)
   }
@@ -164,6 +176,8 @@ export function Medicamentos() {
       nome_comercial: '',
       principio_ativo: '',
       dose_recomendada: '',
+      carencia_abate_dias: '',
+      intervalo_reaplicacao_dias: '',
     })
     setShowForm(false)
   }
@@ -296,6 +310,30 @@ export function Medicamentos() {
                 className="border-border-base focus:border-accent"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-content mb-1">Carência para abate (dias)</label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={formData.carencia_abate_dias}
+                onChange={(e) => setFormData({ ...formData, carencia_abate_dias: e.target.value })}
+                placeholder="Ex: 28 (opcional)"
+                className="border-border-base focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-content mb-1">Intervalo para reaplicar (dias)</label>
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                value={formData.intervalo_reaplicacao_dias}
+                onChange={(e) => setFormData({ ...formData, intervalo_reaplicacao_dias: e.target.value })}
+                placeholder="Ex: 180 (opcional)"
+                className="border-border-base focus:border-accent"
+              />
+            </div>
             <div className="flex gap-2 items-center">
               <Button type="submit" disabled={submitting}>
                 {submitting ? 'Salvando...' : 'Salvar'}
@@ -325,7 +363,14 @@ export function Medicamentos() {
             >
               <p className="text-sm text-content-muted mb-2">Princípio Ativo: {medicamento.principio_ativo}</p>
               {medicamento.dose_recomendada && (
-                <p className="text-sm text-content-muted mb-4">Dose: {medicamento.dose_recomendada}</p>
+                <p className="text-sm text-content-muted mb-2">Dose: {medicamento.dose_recomendada}</p>
+              )}
+              {(medicamento.carencia_abate_dias != null || medicamento.intervalo_reaplicacao_dias != null) && (
+                <p className="text-sm text-content-muted mb-4">
+                  {medicamento.carencia_abate_dias != null && `Carência: ${medicamento.carencia_abate_dias} d`}
+                  {medicamento.carencia_abate_dias != null && medicamento.intervalo_reaplicacao_dias != null && ' · '}
+                  {medicamento.intervalo_reaplicacao_dias != null && `Reaplicar em ${medicamento.intervalo_reaplicacao_dias} d`}
+                </p>
               )}
               <div className="flex flex-wrap gap-1 sm:gap-2">
                 <Button

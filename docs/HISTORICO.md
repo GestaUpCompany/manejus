@@ -2393,3 +2393,9 @@ Implementado em 2026-10-13. `lote_categorias.idade` (meses) é a idade na data-b
 ## Sanidade S1 (banco): view do histórico sanitário por animal (16/10/2026)
 - Migration `20261016280000_view_historico_sanitario_individuo` (rollback em `supabase/rollbacks/`): `v_historico_sanitario_individuo` (security_invoker) une aplicações sanitárias por animal, enfermaria (medicamentos do JSON, só quando array) e maternidade (medicamentos da mãe). Hoje no banco: 4 linhas de enfermaria e 1 de maternidade.
 - Testada com uma aplicação na fazenda de testes (aparece com carência). Restaurado: aplicação `7c88bca5-65c5-4829-b389-f18de5472405` com soft-delete.
+
+## Sanidade S1 (painel): aba Sanidade na ficha e carência/intervalo em Medicamentos (16/10/2026)
+- `Medicamentos.tsx`: campos opcionais "Carência para abate (dias)" e "Intervalo para reaplicar (dias)" (mostrados no card).
+- Ficha do animal: aba **Sanidade** (`components/SanidadeDoAnimal.tsx`, `hooks/useSanidade.ts`, `utils/sanidade.ts` com testes): carência ativa em destaque, doses a vencer (uma por produto), histórico unificado (`v_historico_sanitario_individuo`) e "Lançar aplicação" (escolhe produto do catálogo ou digita; carência/intervalo vêm do catálogo e são editáveis; exclusão por soft-delete só das aplicações). Só avisa, não bloqueia.
+- Validado no navegador na fazenda de testes (animal NEW-I1: carência 14 d → "faltam 14 dias", próxima dose em 10 d). Restaurado: aplicação `f1e0fd0c-c867-4138-a002-205b9f95a538` com soft-delete.
+- Pendente da sanidade: S2 (aplicação em lote, funções de carência, aviso `CARENCIA_ATIVA` na OS), página de pendências e notificações de sanidade.

@@ -36,9 +36,10 @@ import {
 } from '../../utils/baixaIndividuo'
 import { useDietaDoLote } from '../../hooks/useDietaDoLote'
 import { ReproducaoDoAnimal } from '../../components/ReproducaoDoAnimal'
+import { SanidadeDoAnimal } from '../../components/SanidadeDoAnimal'
 import { dietaAtual, dietasAnteriores, eventosDeDietaDoLote } from '../../utils/dietaDoLote'
 
-type Aba = 'resumo' | 'linha-do-tempo' | 'pesagens' | 'movimentacoes' | 'genealogia' | 'maternidade' | 'reproducao'
+type Aba = 'resumo' | 'linha-do-tempo' | 'pesagens' | 'movimentacoes' | 'genealogia' | 'maternidade' | 'reproducao' | 'sanidade'
 
 const ABAS: { id: Aba; label: string }[] = [
   { id: 'resumo', label: 'Resumo' },
@@ -48,6 +49,7 @@ const ABAS: { id: Aba; label: string }[] = [
   { id: 'genealogia', label: 'Genealogia' },
   { id: 'maternidade', label: 'Maternidade' },
   { id: 'reproducao', label: 'Reprodução' },
+  { id: 'sanidade', label: 'Sanidade' },
 ]
 
 const ROTULO_EVENTO: Record<TipoEventoLinhaDoTempo, { rotulo: string; classe: string }> = {
@@ -742,6 +744,12 @@ export function IndividuoDetalhe() {
           {aba === 'reproducao' && ind && (
             <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
               <ReproducaoDoAnimal individuoId={ind.id} fazendaId={ind.fazenda_id} sexo={ind.sexo} hoje={hojeFazenda} />
+            </Card>
+          )}
+
+          {aba === 'sanidade' && ind && (
+            <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
+              <SanidadeDoAnimal individuoId={ind.id} fazendaId={ind.fazenda_id} hoje={hojeFazenda} />
             </Card>
           )}
 
