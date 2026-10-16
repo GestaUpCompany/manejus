@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@gestaup/supabase'
 import {
+  dosesPendentesDaFazenda,
   montarAplicacaoLoteParaGravar,
   montarAplicacaoParaGravar,
   type FormAplicacao,
+  type DosePendente,
   type FormAplicacaoLote,
   type LinhaHistoricoSanitario,
   type MedicamentoCatalogo,
@@ -161,5 +163,90 @@ export function useExcluirAplicacao() {
       if (error) throw new Error(error.message)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sanidade'] }),
+  })
+}
+
+interface Identificacao {
+  id_brinco: string | null
+  id_manejo: string | null
+  id_chip: string | null
+  id_provisorio_cria: string | null
+}
+
+/** Mesma ordem de rotuloIndividuo: brinco, chip, manejo, provisório. */
+function rotuloIndividuo(i: Identificacao | null | undefined): string {
+  return i?.id_brinco || i?.id_chip || i?.id_manejo || i?.id_provisorio_cria || 'Sem identificação'
+}
+
+interface AplicacaoComIntervaloRow {
+  data: string
+  medicamento_nome: string
+  proxima_aplicacao_em: string | null
+  categoria: string | null
+  individuo_id: string | null
+  lote_id: string | null
+  individuo: Identificacao | null
+  lote: { nome: string } | null
+}
+
+/** Doses atrasadas ou previstas nos próximos 15 dias (aplicação mais recente de cada produto em cada animal ou lote). */
+export function useDosesPendentes(fazendaId: string | undefined, hoje: string) {
+  return useQuery({
+    queryKey: ['sanidade', 'doses-pendentes', fazendaId, hoje],
+    enabled: !!fazendaId,
+    queryFn: async (): Promise<DosePendente[]> => {
+      const { data, error } = await supabase
+        .from('aplicacoes_sanitarias')
+        .select(
+          'data, medicamento_nome, proxima_aplicacao_em, categoria, individuo_id, lote_id, individuo:individuos(id_brinco, id_manejo, id_chip, id_provisorio_cria), lote:lotes(nome)'
+        )
+        .eq('fazenda_id', fazendaId!)
+        .not('proxima_aplicacao_em', 'is', null)
+        .is('deleted_at', null)
+        .limit(5000)
+      if (error) throw error
+      const linhas = ((data ?? []) as unknown as AplicacaoComIntervaloRow[]).map((a) => ({
+        alvoChave: a.individuo_id ?? `${a.lote_id}|${(a.categoria ?? '').trim().toLowerCase()}`,
+        alvoRotulo: a.individuo_id
+          ? rotuloIndividuo(a.individuo)
+          : `${a.lote?.nome ?? 'Lote'}${a.categoria ? ` (${a.categoria})` : ''}`,
+        medicamento_nome: a.medicamento_nome,
+        data: a.data,
+        proxima_aplicacao_em: a.proxima_aplicacao_em,
+      }))
+      return dosesPendentesDaFazenda(linhas, hoje)
+    },
+  })
+}
+
+export interface AnimalEmCarencia {
+  individuo_id: string
+  liberacao_abate_em: string
+  medicamento_nome: string
+  rotulo: string
+}
+
+/** Animais vivos em carência hoje (função do banco), com a identificação para exibir. */
+export function useAnimaisEmCarencia(fazendaId: string | undefined) {
+  return useQuery({
+    queryKey: ['sanidade', 'animais-em-carencia', fazendaId],
+    enabled: !!fazendaId,
+    queryFn: async (): Promise<AnimalEmCarencia[]> => {
+      const { data, error } = await supabase.rpc('animais_em_carencia', { p_fazenda_id: fazendaId! })
+      if (error) throw error
+      const linhas = (data ?? []) as Omit<AnimalEmCarencia, 'rotulo'>[]
+      if (linhas.length === 0) return []
+      const { data: inds, error: erroInds } = await supabase
+        .from('individuos')
+        .select('id, id_brinco, id_manejo, id_chip, id_provisorio_cria')
+        .in('id', linhas.map((l) => l.individuo_id))
+      if (erroInds) throw erroInds
+      const rotulo = new Map(
+        ((inds ?? []) as (Identificacao & { id: string })[]).map((i) => [i.id, rotuloIndividuo(i)])
+      )
+      return linhas
+        .map((l) => ({ ...l, rotulo: rotulo.get(l.individuo_id) ?? 'Sem identificação' }))
+        .sort((a, b) => (a.liberacao_abate_em < b.liberacao_abate_em ? -1 : 1))
+    },
   })
 }

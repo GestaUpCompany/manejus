@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth, getFazendaIdForUser, formatDate, toFarmDateOnly, useLotes } from '@gestaup/shared'
 import { Button, Card, ConfirmModal, EmptyState, Input, PageSkeleton, Select, useToast } from '@gestaup/ui'
 import {
+  useAnimaisEmCarencia,
   useAplicacoesDeLote,
   useCategoriasDoLote,
+  useDosesPendentes,
   useExcluirAplicacao,
   useLancarAplicacaoLote,
   useLotesEmCarencia,
@@ -12,6 +14,7 @@ import {
 } from '../../hooks/useSanidade'
 import {
   TIPOS_APLICACAO,
+  textoDose,
   aplicarMedicamentoNoForm,
   formVazioAplicacaoLote,
   validarAplicacaoLote,
@@ -34,6 +37,8 @@ export function ManejoSanitario() {
   const catalogo = useMedicamentosCatalogo(fazendaId)
   const aplicacoes = useAplicacoesDeLote(fazendaId)
   const emCarencia = useLotesEmCarencia(fazendaId)
+  const animaisEmCarencia = useAnimaisEmCarencia(fazendaId)
+  const doses = useDosesPendentes(fazendaId, hoje)
   const lancar = useLancarAplicacaoLote(fazendaId)
   const excluir = useExcluirAplicacao()
 
@@ -99,6 +104,44 @@ export function ManejoSanitario() {
           para saber quais animais, lance a aplicação na aba Sanidade da ficha de cada um.
         </p>
       </div>
+
+      <Card className="p-4 sm:p-6">
+        <h2 className="text-lg font-semibold text-content-strong mb-3">Pendências sanitárias</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <h3 className="text-sm font-semibold text-content-muted uppercase mb-2">Doses atrasadas ou nos próximos 15 dias</h3>
+            {doses.isLoading ? (
+              <p className="text-content-muted">Carregando...</p>
+            ) : (doses.data?.length ?? 0) === 0 ? (
+              <p className="text-sm text-content-muted">Nenhuma dose pendente.</p>
+            ) : (
+              <ul className="space-y-2">
+                {doses.data!.map((d, i) => (
+                  <li key={`${d.alvoRotulo}-${d.medicamento}-${i}`} className="text-sm px-3 py-2 rounded-lg bg-amber-500/10 text-amber-800 dark:text-amber-200">
+                    ⚠️ {d.alvoRotulo}: {textoDose({ ...d, medicamento: d.medicamento })}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-content-muted uppercase mb-2">Animais em carência</h3>
+            {animaisEmCarencia.isLoading ? (
+              <p className="text-content-muted">Carregando...</p>
+            ) : (animaisEmCarencia.data?.length ?? 0) === 0 ? (
+              <p className="text-sm text-content-muted">Nenhum animal em carência hoje.</p>
+            ) : (
+              <ul className="space-y-2 max-h-72 overflow-y-auto">
+                {animaisEmCarencia.data!.map((a) => (
+                  <li key={a.individuo_id} className="text-sm px-3 py-2 rounded-lg bg-red-500/10 text-red-800 dark:text-red-200">
+                    ⛔ {a.rotulo}: libera em {formatDate(a.liberacao_abate_em)} ({a.medicamento_nome})
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </Card>
 
       <Card className="p-4 sm:p-6">
         <h2 className="text-lg font-semibold text-content-strong mb-4">Lançar aplicação em lote</h2>

@@ -171,6 +171,47 @@ export function textoCarencia(c: CarenciaAtiva): string {
   return `Em carência até ${dataBr(c.liberadoEm)} (faltam ${dias}) por ${c.medicamento}. Não destinar a abate ou venda para corte.`
 }
 
+// ---------- Pendências da fazenda ----------
+
+export interface AplicacaoParaPendencia {
+  /** identifica o alvo: animal, ou lote + categoria */
+  alvoChave: string
+  /** texto mostrado: brinco do animal ou nome do lote (categoria) */
+  alvoRotulo: string
+  medicamento_nome: string
+  data: string
+  proxima_aplicacao_em: string | null
+}
+
+export interface DosePendente {
+  alvoRotulo: string
+  medicamento: string
+  /** data prevista da dose */
+  data: string
+  atrasada: boolean
+  /** dias até a dose (negativo = atrasada) */
+  dias: number
+}
+
+/** Dose pendente: vale a aplicação mais recente de cada produto em cada alvo; entra se vencida ou até `janelaDias`. */
+export function dosesPendentesDaFazenda(linhas: AplicacaoParaPendencia[], hoje: string, janelaDias = 15): DosePendente[] {
+  const ultima = new Map<string, AplicacaoParaPendencia>()
+  for (const l of linhas) {
+    const chave = `${l.alvoChave}|${l.medicamento_nome.trim().toLowerCase()}`
+    const atual = ultima.get(chave)
+    if (!atual || l.data > atual.data) ultima.set(chave, l)
+  }
+  const saida: DosePendente[] = []
+  for (const l of ultima.values()) {
+    if (!l.proxima_aplicacao_em) continue
+    const dias = diasEntre(hoje, l.proxima_aplicacao_em)
+    if (dias <= janelaDias) {
+      saida.push({ alvoRotulo: l.alvoRotulo, medicamento: l.medicamento_nome, data: l.proxima_aplicacao_em, atrasada: dias < 0, dias })
+    }
+  }
+  return saida.sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0))
+}
+
 // ---------- Aplicação em lote ----------
 
 export interface FormAplicacaoLote extends FormAplicacao {

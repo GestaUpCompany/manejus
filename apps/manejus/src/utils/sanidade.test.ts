@@ -3,6 +3,7 @@ import {
   aplicarMedicamentoNoForm,
   carenciaAtiva,
   dosesAVencer,
+  dosesPendentesDaFazenda,
   formVazioAplicacao,
   formVazioAplicacaoLote,
   montarAplicacaoLoteParaGravar,
@@ -48,6 +49,34 @@ describe('formulário de aplicação', () => {
     })
     const livre = montarAplicacaoParaGravar({ ...formVazioAplicacao(HOJE), medicamentoNome: 'Caseiro' }, 'faz', 'ind')
     expect(livre).toMatchObject({ medicamento_id: null, carencia_abate_dias: null, intervalo_reaplicacao_dias: null })
+  })
+})
+
+describe('doses pendentes da fazenda', () => {
+  const ap = (alvoChave: string, medicamento_nome: string, data: string, proxima_aplicacao_em: string | null) => ({
+    alvoChave, alvoRotulo: alvoChave, medicamento_nome, data, proxima_aplicacao_em,
+  })
+
+  it('considera a aplicação mais recente de cada produto por alvo e separa atrasadas das próximas', () => {
+    const r = dosesPendentesDaFazenda(
+      [
+        ap('animal-1', 'Aftosa', '2026-04-01', '2026-09-28'),
+        ap('animal-1', 'Aftosa', '2026-10-01', '2027-03-30'),
+        ap('animal-1', 'Raiva', '2026-06-01', '2026-08-30'),
+        ap('lote-A|novilha', 'Brucelose', '2026-08-01', '2026-10-25'),
+        ap('lote-B|', 'Aftosa', '2026-10-01', '2026-12-30'),
+        ap('animal-2', 'Aftosa', '2026-10-01', null),
+      ],
+      HOJE
+    )
+    expect(r.map((d) => `${d.alvoRotulo}:${d.medicamento}`)).toEqual(['animal-1:Raiva', 'lote-A|novilha:Brucelose'])
+    expect(r[0]).toMatchObject({ atrasada: true, dias: -47 })
+    expect(r[1]).toMatchObject({ atrasada: false, dias: 9 })
+  })
+
+  it('a janela é ajustável', () => {
+    expect(dosesPendentesDaFazenda([ap('a', 'X', '2026-08-01', '2026-11-20')], HOJE, 15)).toHaveLength(0)
+    expect(dosesPendentesDaFazenda([ap('a', 'X', '2026-08-01', '2026-11-20')], HOJE, 40)).toHaveLength(1)
   })
 })
 
