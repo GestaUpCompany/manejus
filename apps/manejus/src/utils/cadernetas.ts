@@ -129,13 +129,20 @@ const CADERNETA_LABELS: Record<string, string> = {
   'recebimento-compra': 'Recepção de Animais',
 }
 
+// Cadernetas só do app de campo (sem tela de listagem no painel ainda): precisam constar no RBAC para o gestor
+// liberá-las a funcionários com acesso restrito; não entram em CADERNETA_GRUPOS porque não têm página no painel.
+const CADERNETAS_SOMENTE_CAMPO: CadernetaOption[] = [{ id: 'manejo-curral', label: 'Manejo de Curral' }]
+
 // Lista flat na mesma sequência dos grupos (usada por RBAC e rotinas)
-export const CADERNETAS: CadernetaOption[] = CADERNETA_GRUPOS.flatMap((grupo) =>
-  grupo.itens.map((item) => ({
-    id: item.id,
-    label: CADERNETA_LABELS[item.id] || item.id,
-  }))
-)
+export const CADERNETAS: CadernetaOption[] = [
+  ...CADERNETA_GRUPOS.flatMap((grupo) =>
+    grupo.itens.map((item) => ({
+      id: item.id,
+      label: CADERNETA_LABELS[item.id] || item.id,
+    }))
+  ),
+  ...CADERNETAS_SOMENTE_CAMPO,
+]
 
 // Checklists e auditorias periódicas (menu "Checklists" do Painel), separados das cadernetas de registro de campo.
 export const CHECKLIST_ITENS = [
