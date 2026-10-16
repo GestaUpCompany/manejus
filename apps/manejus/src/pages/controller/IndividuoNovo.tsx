@@ -10,6 +10,7 @@ import {
   categoriasMacho,
   categoriasFemea,
   origens,
+  dispositivosIdentificacao,
 } from '../../utils/individualValidation'
 import {
   checkDuplicateIdentification,
@@ -63,6 +64,11 @@ const INITIAL_FORM = {
   setor_atual: '',
   data_insercao_rastreabilidade: '',
   data_liberacao_sisbov: '',
+  codigo_sisbov: '',
+  codigo_pnib: '',
+  dispositivo_tipo: '',
+  data_identificacao: '',
+  data_vacina_brucelose: '',
 }
 
 export function IndividuoNovo() {
@@ -267,6 +273,11 @@ export function IndividuoNovo() {
           setor_atual: individuo.setor_atual || '',
           data_insercao_rastreabilidade: individuo.data_insercao_rastreabilidade || '',
           data_liberacao_sisbov: individuo.data_liberacao_sisbov || '',
+          codigo_sisbov: individuo.codigo_sisbov || '',
+          codigo_pnib: individuo.codigo_pnib || '',
+          dispositivo_tipo: individuo.dispositivo_tipo || '',
+          data_identificacao: individuo.data_identificacao || '',
+          data_vacina_brucelose: individuo.data_vacina_brucelose || '',
         })
       }
     } catch (error) {
@@ -508,7 +519,12 @@ export function IndividuoNovo() {
       )
     } catch (error) {
       console.error('Erro ao salvar indivíduo:', error)
-      toast.error('Erro ao salvar indivíduo: ' + (error as Error).message)
+      const mensagem = (error as Error).message
+      toast.error(
+        mensagem.includes('idx_individuos_codigo_sisbov_unico')
+          ? 'Este código SISBOV já está cadastrado em outro animal.'
+          : 'Erro ao salvar indivíduo: ' + mensagem
+      )
     } finally {
       setSubmitting(false)
     }
@@ -1026,6 +1042,59 @@ export function IndividuoNovo() {
                   className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
                 />
                 {errors.data_liberacao_sisbov && <p className="text-red-500 text-xs mt-1">{errors.data_liberacao_sisbov}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Código SISBOV (15 dígitos, começa com 076)</label>
+                <input
+                  type="text"
+                  value={form.codigo_sisbov}
+                  onChange={(e) => handleChange('codigo_sisbov', e.target.value)}
+                  inputMode="numeric" maxLength={15} placeholder="076000000000000" className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                />
+                {errors.codigo_sisbov && <p className="text-red-500 text-xs mt-1">{errors.codigo_sisbov}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Código PNIB</label>
+                <input
+                  type="text"
+                  value={form.codigo_pnib}
+                  onChange={(e) => handleChange('codigo_pnib', e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                />
+                {errors.codigo_pnib && <p className="text-red-500 text-xs mt-1">{errors.codigo_pnib}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Dispositivo de identificação</label>
+                <select
+                  value={form.dispositivo_tipo}
+                  onChange={(e) => handleChange('dispositivo_tipo', e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                >
+                  <option value="">Selecione...</option>
+                  {dispositivosIdentificacao.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Data da identificação (colocação do dispositivo)</label>
+                <input
+                  type="date"
+                  value={form.data_identificacao}
+                  onChange={(e) => handleChange('data_identificacao', e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                />
+                {errors.data_identificacao && <p className="text-red-500 text-xs mt-1">{errors.data_identificacao}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Data da vacina de brucelose</label>
+                <input
+                  type="date"
+                  value={form.data_vacina_brucelose}
+                  onChange={(e) => handleChange('data_vacina_brucelose', e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                />
+                {errors.data_vacina_brucelose && <p className="text-red-500 text-xs mt-1">{errors.data_vacina_brucelose}</p>}
               </div>
             </div>
           </div>

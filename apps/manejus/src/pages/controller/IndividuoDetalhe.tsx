@@ -24,6 +24,7 @@ import {
   type IndividuoResumo,
   type PartoIndividuo,
 } from '../../hooks/useIndividuoDetalhe'
+import { dispositivosIdentificacao } from '../../utils/individualValidation'
 import { calcularEvolucaoPeso, calcularIdade, escalaPeso, gmdPeriodo, type PesagemEvolucao } from '../../utils/individuoPesagens'
 import {
   montarDadosBaixa,
@@ -55,6 +56,7 @@ const ROTULO_EVENTO: Record<TipoEventoLinhaDoTempo, { rotulo: string; classe: st
   parto_adotiva: { rotulo: 'Mãe adotiva', classe: 'bg-pink-500/10 text-pink-800 dark:text-pink-200' },
   morte: { rotulo: 'Morte', classe: 'bg-red-500/10 text-red-800 dark:text-red-200' },
   reprodutivo: { rotulo: 'Reprodução', classe: 'bg-green-500/10 text-green-800 dark:text-green-200' },
+  identificacao: { rotulo: 'Identificação', classe: 'bg-cyan-500/10 text-cyan-800 dark:text-cyan-200' },
 }
 
 const th = 'px-3 py-2 text-left text-xs font-semibold text-content-muted uppercase tracking-wider'
@@ -452,6 +454,14 @@ export function IndividuoDetalhe() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <DetailField label="Inserção na rastreabilidade" value={formatDate(ind!.data_insercao_rastreabilidade)} />
                     <DetailField label="Liberação SISBOV" value={formatDate(ind!.data_liberacao_sisbov)} />
+                    <DetailField label="Código SISBOV" value={formatValue(ind!.codigo_sisbov)} />
+                    <DetailField label="Código PNIB" value={formatValue(ind!.codigo_pnib)} />
+                    <DetailField
+                      label="Dispositivo"
+                      value={formatValue(dispositivosIdentificacao.find((d) => d.value === ind!.dispositivo_tipo)?.label ?? ind!.dispositivo_tipo)}
+                    />
+                    <DetailField label="Data da identificação" value={formatDate(ind!.data_identificacao)} />
+                    <DetailField label="Vacina de brucelose" value={formatDate(ind!.data_vacina_brucelose)} />
                   </div>
                 </DetailSection>
 

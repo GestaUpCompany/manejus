@@ -36,6 +36,11 @@ interface IndividuoForm {
   setor_atual?: string
   data_insercao_rastreabilidade?: string
   data_liberacao_sisbov?: string
+  codigo_sisbov?: string
+  codigo_pnib?: string
+  dispositivo_tipo?: string
+  data_identificacao?: string
+  data_vacina_brucelose?: string
 }
 
 // Espelham o CHECK de categoria e o trigger trg_individuos_validar_sexo_categoria (20260916270000_caderneta_pesagem.sql)
@@ -67,6 +72,28 @@ export const categoriasFemea = [
 export const categoriasTodas = [...categoriasMacho, ...categoriasFemea]
 
 export const sexos = ['Macho', 'Fêmea']
+
+// Dispositivos de identificação aceitos pelo banco (individuos_dispositivo_tipo_check)
+export const dispositivosIdentificacao = [
+  { value: 'brinco', label: 'Brinco visual' },
+  { value: 'brinco_eletronico', label: 'Brinco eletrônico' },
+  { value: 'botton', label: 'Botton' },
+  { value: 'bolus', label: 'Bolus ruminal' },
+  { value: 'outro', label: 'Outro' },
+]
+
+/**
+ * Código SISBOV (IN MAPA 51/2018): 15 dígitos numéricos; os 3 primeiros são o código do Brasil (076).
+ * Devolve a mensagem de erro, ou null quando vazio ou válido.
+ */
+export function validarCodigoSisbov(valor?: string | null): string | null {
+  const v = (valor ?? '').trim()
+  if (!v) return null
+  if (!/^\d+$/.test(v)) return 'O código SISBOV tem apenas números.'
+  if (v.length !== 15) return 'O código SISBOV tem 15 dígitos.'
+  if (!v.startsWith('076')) return 'O código SISBOV começa com 076 (código do Brasil).'
+  return null
+}
 
 export const statusList = [
   'Vivo',
@@ -221,6 +248,19 @@ export function validateIndividuo(form: IndividuoForm, opcoes: OpcoesValidacaoIn
     hoje.setHours(0, 0, 0, 0)
     if (liberacao > hoje) {
       errors.data_liberacao_sisbov = 'A data não pode ser futura.'
+    }
+  }
+
+  const erroSisbov = validarCodigoSisbov(form.codigo_sisbov)
+  if (erroSisbov) errors.codigo_sisbov = erroSisbov
+
+  for (const campo of ['data_identificacao', 'data_vacina_brucelose'] as const) {
+    const valor = form[campo]
+    if (valor) {
+      const data = new Date(valor)
+      const hoje = new Date()
+      hoje.setHours(0, 0, 0, 0)
+      if (data > hoje) errors[campo] = 'A data não pode ser futura.'
     }
   }
 

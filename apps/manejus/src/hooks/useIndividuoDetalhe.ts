@@ -46,6 +46,11 @@ export interface IndividuoDetalhe {
   peso_meta_kg?: number | string | null
   data_insercao_rastreabilidade?: string | null
   data_liberacao_sisbov?: string | null
+  codigo_sisbov?: string | null
+  codigo_pnib?: string | null
+  dispositivo_tipo?: string | null
+  data_identificacao?: string | null
+  data_vacina_brucelose?: string | null
   data_saida?: string | null
   motivo_saida?: string | null
   destino_saida?: string | null
@@ -253,6 +258,7 @@ export type TipoEventoLinhaDoTempo =
   | 'parto_adotiva'
   | 'morte'
   | 'reprodutivo'
+  | 'identificacao'
 
 export interface EventoLinhaDoTempo {
   data: string

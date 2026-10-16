@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  validarCodigoSisbov,
   calculateCompletenessScore,
   categoriasFemea,
   categoriasMacho,
@@ -108,5 +109,20 @@ describe('completude', () => {
     const score = calculateCompletenessScore({ ...formValido, peso_nascimento_kg: '' })
     expect(score).toBeLessThan(100)
     expect(getSyncStatusFromScore(score)).toBe('manual_incompleto')
+  })
+})
+
+describe('validarCodigoSisbov', () => {
+  it('vazio é válido (campo opcional)', () => {
+    expect(validarCodigoSisbov('')).toBeNull()
+    expect(validarCodigoSisbov(undefined)).toBeNull()
+  })
+  it('aceita 15 dígitos com prefixo 076, ignorando espaços nas pontas', () => {
+    expect(validarCodigoSisbov(' 076123456789012 ')).toBeNull()
+  })
+  it('recusa letras, tamanho errado e prefixo diferente de 076', () => {
+    expect(validarCodigoSisbov('07612345678901A')).toMatch(/apenas números/)
+    expect(validarCodigoSisbov('0761234')).toMatch(/15 dígitos/)
+    expect(validarCodigoSisbov('105123456789012')).toMatch(/076/)
   })
 })
