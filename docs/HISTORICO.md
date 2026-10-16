@@ -2384,3 +2384,8 @@ Implementado em 2026-10-13. `lote_categorias.idade` (meses) é a idade na data-b
 - Migration `20261016260000_notificar_pendencias_reprodutivas` (rollback em `supabase/rollbacks/`): função `notificar_pendencias_reprodutivas(p_fazenda_id DEFAULT NULL)`, uma notificação-resumo por fazenda e tipo para cada usuário ativo (atualiza a não lida em vez de duplicar); EXECUTE só para service_role; cron `notificar_pendencias_reprodutivas` às segundas 08:30. Peões não recebem.
 - Testada na fazenda de testes (12 notificações geradas). Dados de teste removidos por soft-delete: 12 notificações "Reprodução: ..." e 5 eventos reprodutivos das fêmeas ADOT-BR-C1, ADOT-BR-N1 e novilha 44.
 - Limitação: o resumo por estação não considera partos posteriores à cobertura.
+
+## Sanidade S1 (banco): aplicações sanitárias e carência no catálogo (16/10/2026)
+- Migration `20261016270000_sanidade_aplicacoes` (rollback em `supabase/rollbacks/`): `medicamentos.carencia_abate_dias` e `intervalo_reaplicacao_dias` (opcionais) e tabela `aplicacoes_sanitarias` (por animal ou por lote com `numero_cabecas`; snapshot de produto/carência/intervalo; `liberacao_abate_em` e `proxima_aplicacao_em` derivados por gatilho; data não futura; animal/lote/medicamento da mesma fazenda; RLS padrão e auditoria). Não altera contagem nem peso; o PWA não lê.
+- Testada na fazenda de testes (carência 28 d → liberação 29/10; intervalo 180 d → próxima 30/03/2027; data futura rejeitada). Restaurado: aplicação de teste `b04c511a-f4b5-46d4-8452-c7bf6d9b311a` com soft-delete e carência/intervalo do medicamento de teste zerados.
+- Falta da S1: view `v_historico_sanitario_individuo` (une enfermaria e maternidade), aba Sanidade na ficha, campos novos em Medicamentos.
