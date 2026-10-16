@@ -1,6 +1,102 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@gestaup/supabase'
-import { montarAplicacaoParaGravar, type FormAplicacao, type LinhaHistoricoSanitario, type MedicamentoCatalogo } from '../utils/sanidade'
+import {
+  montarAplicacaoLoteParaGravar,
+  montarAplicacaoParaGravar,
+  type FormAplicacao,
+  type FormAplicacaoLote,
+  type LinhaHistoricoSanitario,
+  type MedicamentoCatalogo,
+} from '../utils/sanidade'
+
+export interface AplicacaoDeLote {
+  id: string
+  data: string
+  tipo: string
+  categoria: string | null
+  numero_cabecas: number | null
+  medicamento_nome: string
+  dose_aplicada: string | null
+  liberacao_abate_em: string | null
+  proxima_aplicacao_em: string | null
+  lote: { nome: string } | null
+}
+
+export interface LoteEmCarencia {
+  lote_id: string
+  categoria: string | null
+  liberacao_abate_em: string
+  medicamento_nome: string
+}
+
+export interface CategoriaDoLote {
+  categoria: string
+  quant_atual: number
+}
+
+/** Categorias ativas do lote com a contagem atual (referência para o número de cabeças da aplicação). */
+export function useCategoriasDoLote(loteId: string | undefined) {
+  return useQuery({
+    queryKey: ['sanidade', 'categorias-do-lote', loteId],
+    enabled: !!loteId,
+    queryFn: async (): Promise<CategoriaDoLote[]> => {
+      const { data, error } = await supabase
+        .from('lote_categorias')
+        .select('categoria, quant_atual')
+        .eq('lote_id', loteId!)
+        .eq('ativo', true)
+        .order('categoria')
+      if (error) throw error
+      return (data ?? []) as CategoriaDoLote[]
+    },
+  })
+}
+
+/** Aplicações feitas em lote (sem animal), das mais recentes. */
+export function useAplicacoesDeLote(fazendaId: string | undefined) {
+  return useQuery({
+    queryKey: ['sanidade', 'aplicacoes-de-lote', fazendaId],
+    enabled: !!fazendaId,
+    queryFn: async (): Promise<AplicacaoDeLote[]> => {
+      const { data, error } = await supabase
+        .from('aplicacoes_sanitarias')
+        .select('id, data, tipo, categoria, numero_cabecas, medicamento_nome, dose_aplicada, liberacao_abate_em, proxima_aplicacao_em, lote:lotes(nome)')
+        .eq('fazenda_id', fazendaId!)
+        .is('individuo_id', null)
+        .not('lote_id', 'is', null)
+        .is('deleted_at', null)
+        .order('data', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(100)
+      if (error) throw error
+      return (data ?? []) as unknown as AplicacaoDeLote[]
+    },
+  })
+}
+
+/** Lotes (e categorias) com carência ainda ativa hoje, pela função do banco. */
+export function useLotesEmCarencia(fazendaId: string | undefined) {
+  return useQuery({
+    queryKey: ['sanidade', 'lotes-em-carencia', fazendaId],
+    enabled: !!fazendaId,
+    queryFn: async (): Promise<LoteEmCarencia[]> => {
+      const { data, error } = await supabase.rpc('lotes_em_carencia', { p_fazenda_id: fazendaId! })
+      if (error) throw error
+      return (data ?? []) as LoteEmCarencia[]
+    },
+  })
+}
+
+export function useLancarAplicacaoLote(fazendaId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (form: FormAplicacaoLote) => {
+      const { error } = await supabase.from('aplicacoes_sanitarias').insert(montarAplicacaoLoteParaGravar(form, fazendaId!))
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sanidade'] }),
+  })
+}
 
 export interface HistoricoSanitarioRow extends LinhaHistoricoSanitario {
   origem_id: string

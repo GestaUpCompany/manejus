@@ -2405,3 +2405,9 @@ Implementado em 2026-10-13. `lote_categorias.idade` (meses) é a idade na data-b
 - Testada na fazenda de testes (lote Teste 2, 13 animais): funções devolveram 13 animais/1 lote em carência e 0 após a liberação; a pesagem com `tipo_manejo = abate` na OS de venda gerou o log. Observação: esse tipo de pesagem já baixa o animal como Abatido (comportamento existente do gatilho de pesagem).
 - Restaurado: pesagem `11111111-bbbb-4bbb-8bbb-000000000001` e aplicação `11111111-aaaa-4aaa-8aaa-000000000001` com soft-delete; log resolvido; animal ADOT-BR-C1 (`e0b2942d-e1fc-469c-a5c7-1306de5b8623`) voltou a Vivo, sem data/motivo/destino de saída e sem peso atual; lote com 13 vivos e nenhuma movimentação criada.
 - Falta da S2: tela de aplicação em lote e indicação de carência no painel (lote/lista), pendências e notificações de sanidade.
+
+## Sanidade S2 (painel): página Manejo Sanitário em lote (16/10/2026)
+- Página `/controller/manejo-sanitario` (menu Gestão da Fazenda > Manejo Sanitário; `pages/controller/ManejoSanitario.tsx`): lança aplicação em um lote (e categoria opcional) com número de cabeças (sugere a contagem atual), produto do catálogo ou digitado, dose, via, carência, intervalo, partida e validade; lista "Lotes em carência" (função `lotes_em_carencia`) e as aplicações em lote recentes, com exclusão por soft-delete. Não altera a contagem do lote.
+- Utilitários `formVazioAplicacaoLote`/`validarAplicacaoLote`/`montarAplicacaoLoteParaGravar` em `utils/sanidade.ts` (com testes) e hooks em `hooks/useSanidade.ts`.
+- Validado no navegador na fazenda de testes (lote Teste 2, 13 cabeças, carência 7 d → libera em 23/10). Restaurado: aplicação de teste "TESTE UI Lote Aftosa" com soft-delete (id `ca46db8c` no SQL abaixo).
+- Pendente da sanidade: página de pendências (doses a vencer, animais em carência) e notificações semanais (migration própria).

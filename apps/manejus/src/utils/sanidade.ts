@@ -171,6 +171,40 @@ export function textoCarencia(c: CarenciaAtiva): string {
   return `Em carência até ${dataBr(c.liberadoEm)} (faltam ${dias}) por ${c.medicamento}. Não destinar a abate ou venda para corte.`
 }
 
+// ---------- Aplicação em lote ----------
+
+export interface FormAplicacaoLote extends FormAplicacao {
+  loteId: string
+  /** '' = todas as categorias do lote */
+  categoria: string
+  /** texto do campo: quantas cabeças receberam */
+  numeroCabecas: string
+}
+
+export function formVazioAplicacaoLote(hoje: string): FormAplicacaoLote {
+  return { ...formVazioAplicacao(hoje), loteId: '', categoria: '', numeroCabecas: '' }
+}
+
+export function validarAplicacaoLote(form: FormAplicacaoLote, hoje: string): string[] {
+  const erros = validarAplicacao(form, hoje)
+  if (form.loteId === '') erros.push('Escolha o lote')
+  const n = inteiro(form.numeroCabecas)
+  if (n === null || Number.isNaN(n) || n < 1) erros.push('Informe quantas cabeças receberam (inteiro, 1 ou mais)')
+  return erros
+}
+
+/** Linha para `aplicacoes_sanitarias` com alvo no lote (sem animal): a contagem do lote não é alterada. */
+export function montarAplicacaoLoteParaGravar(form: FormAplicacaoLote, fazendaId: string) {
+  const { individuo_id: _semAnimal, ...base } = montarAplicacaoParaGravar(form, fazendaId, '')
+  void _semAnimal
+  return {
+    ...base,
+    lote_id: form.loteId,
+    categoria: vazioParaNulo(form.categoria),
+    numero_cabecas: inteiro(form.numeroCabecas),
+  }
+}
+
 export function textoDose(d: DoseAVencer): string {
   if (d.atrasada) return `${d.medicamento}: dose atrasada desde ${dataBr(d.data)}`
   return d.dias === 0 ? `${d.medicamento}: dose prevista para hoje` : `${d.medicamento}: próxima dose em ${dataBr(d.data)}`

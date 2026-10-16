@@ -4,7 +4,10 @@ import {
   carenciaAtiva,
   dosesAVencer,
   formVazioAplicacao,
+  formVazioAplicacaoLote,
+  montarAplicacaoLoteParaGravar,
   montarAplicacaoParaGravar,
+  validarAplicacaoLote,
   textoCarencia,
   textoDose,
   validarAplicacao,
@@ -45,6 +48,25 @@ describe('formulário de aplicação', () => {
     })
     const livre = montarAplicacaoParaGravar({ ...formVazioAplicacao(HOJE), medicamentoNome: 'Caseiro' }, 'faz', 'ind')
     expect(livre).toMatchObject({ medicamento_id: null, carencia_abate_dias: null, intervalo_reaplicacao_dias: null })
+  })
+})
+
+describe('aplicação em lote', () => {
+  const base = { ...formVazioAplicacaoLote(HOJE), medicamentoNome: 'Aftosa', loteId: 'L1', numeroCabecas: '80' }
+
+  it('valida lote e número de cabeças além dos campos comuns', () => {
+    expect(validarAplicacaoLote(base, HOJE)).toEqual([])
+    expect(validarAplicacaoLote({ ...base, loteId: '' }, HOJE)).toContain('Escolha o lote')
+    expect(validarAplicacaoLote({ ...base, numeroCabecas: '' }, HOJE)).toHaveLength(1)
+    expect(validarAplicacaoLote({ ...base, numeroCabecas: '0' }, HOJE)).toHaveLength(1)
+    expect(validarAplicacaoLote({ ...base, numeroCabecas: '7,5' }, HOJE)).toHaveLength(1)
+  })
+
+  it('monta a linha com o lote, a categoria e as cabeças, sem animal', () => {
+    const l = montarAplicacaoLoteParaGravar({ ...base, categoria: 'Novilha', carenciaDias: '21' }, 'faz')
+    expect(l).toMatchObject({ fazenda_id: 'faz', lote_id: 'L1', categoria: 'Novilha', numero_cabecas: 80, carencia_abate_dias: 21, medicamento_nome: 'Aftosa' })
+    expect('individuo_id' in l).toBe(false)
+    expect(montarAplicacaoLoteParaGravar(base, 'faz').categoria).toBeNull()
   })
 })
 

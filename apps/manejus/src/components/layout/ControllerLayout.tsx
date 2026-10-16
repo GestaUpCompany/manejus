@@ -58,6 +58,7 @@ const menuStructure: MenuItem[] = [
       { label: 'Indivíduos', path: '/controller/individuos' },
       { label: 'Reprodução', path: '/controller/reproducao' },
       { label: 'Estações de Monta', path: '/controller/estacoes-monta' },
+      { label: 'Manejo Sanitário', path: '/controller/manejo-sanitario' },
       { label: 'Cadastros Auxiliares', path: '/controller/cadastros-auxiliares' },
       { label: 'Faixas de Categorias', path: '/controller/faixas-categorias' },
       { label: 'Mapa da Fazenda', path: '/controller/mapa-fazenda' },
