@@ -10,6 +10,12 @@ import {
   type LinhaHistoricoSanitario,
   type MedicamentoCatalogo,
 } from '../utils/sanidade'
+import {
+  montarProgramacaoParaGravar,
+  type FormProgramacao,
+  type PendenciaCalendario,
+  type ProgramacaoSanitaria,
+} from '../utils/calendarioSanitario'
 
 export interface AplicacaoDeLote {
   id: string
@@ -248,5 +254,78 @@ export function useAnimaisEmCarencia(fazendaId: string | undefined) {
         .map((l) => ({ ...l, rotulo: rotulo.get(l.individuo_id) ?? 'Sem identificação' }))
         .sort((a, b) => (a.liberacao_abate_em < b.liberacao_abate_em ? -1 : 1))
     },
+  })
+}
+
+// ---------- Calendário sanitário ----------
+
+/** Programações da fazenda (ativas e inativas), por nome. */
+export function useProgramacoesSanitarias(fazendaId: string | undefined) {
+  return useQuery({
+    queryKey: ['sanidade', 'calendario', 'programacoes', fazendaId],
+    enabled: !!fazendaId,
+    queryFn: async (): Promise<ProgramacaoSanitaria[]> => {
+      const { data, error } = await supabase
+        .from('calendario_sanitario')
+        .select('id, nome, tipo, medicamento_id, produto_nome, categorias, data_base, periodo_meses, antecedencia_dias, prazo_dias, observacao, ativo')
+        .eq('fazenda_id', fazendaId!)
+        .is('deleted_at', null)
+        .order('nome')
+      if (error) throw error
+      return (data ?? []) as ProgramacaoSanitaria[]
+    },
+  })
+}
+
+/** Campanhas esperadas e ainda sem aplicação no lote (função do banco). */
+export function usePendenciasCalendario(fazendaId: string | undefined) {
+  return useQuery({
+    queryKey: ['sanidade', 'calendario', 'pendencias', fazendaId],
+    enabled: !!fazendaId,
+    queryFn: async (): Promise<PendenciaCalendario[]> => {
+      const { data, error } = await supabase.rpc('calendario_sanitario_pendencias', { p_fazenda_id: fazendaId! })
+      if (error) throw error
+      return (data ?? []) as PendenciaCalendario[]
+    },
+  })
+}
+
+export function useSalvarProgramacao(fazendaId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ form, id }: { form: FormProgramacao; id?: string }) => {
+      const linha = montarProgramacaoParaGravar(form, fazendaId!)
+      const { error } = id
+        ? await supabase.from('calendario_sanitario').update(linha).eq('id', id)
+        : await supabase.from('calendario_sanitario').insert(linha)
+      if (error) {
+        // índice único de nome por fazenda
+        if (error.code === '23505') throw new Error('Já existe uma programação com este nome')
+        throw new Error(error.message)
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sanidade', 'calendario'] }),
+  })
+}
+
+export function useAtivarProgramacao() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ativo }: { id: string; ativo: boolean }) => {
+      const { error } = await supabase.from('calendario_sanitario').update({ ativo }).eq('id', id)
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sanidade', 'calendario'] }),
+  })
+}
+
+export function useExcluirProgramacao() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('calendario_sanitario').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sanidade', 'calendario'] }),
   })
 }

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth, getFazendaIdForUser, formatDate, toFarmDateOnly, useLotes } from '@gestaup/shared'
 import { Button, Card, ConfirmModal, EmptyState, Input, PageSkeleton, Select, useToast } from '@gestaup/ui'
+import { CalendarioSanitario } from '../../components/CalendarioSanitario'
+import { FAZENDA_DE_TESTES_ID } from '../../utils/cadernetas'
 import {
   useAnimaisEmCarencia,
   useAplicacoesDeLote,
@@ -104,6 +106,9 @@ export function ManejoSanitario() {
           para saber quais animais, lance a aplicação na aba Sanidade da ficha de cada um.
         </p>
       </div>
+
+      {/* Calendário sanitário ainda em teste: só na fazenda de testes (como as cadernetas novas) */}
+      {fazendaId === FAZENDA_DE_TESTES_ID && <CalendarioSanitario fazendaId={fazendaId} />}
 
       <Card className="p-4 sm:p-6">
         <h2 className="text-lg font-semibold text-content-strong mb-3">Pendências sanitárias</h2>
