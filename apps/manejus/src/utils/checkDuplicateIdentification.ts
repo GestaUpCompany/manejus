@@ -1,4 +1,5 @@
 import { supabase } from '@gestaup/supabase'
+import { escapeLikeTerm } from './postgrestFilter'
 
 export type IdentificationField = 'id_brinco' | 'id_chip' | 'id_manejo'
 
@@ -14,21 +15,22 @@ export async function checkDuplicateIdentification(
     .from('individuos')
     .select('id')
     .eq('fazenda_id', fazendaId)
-    .eq(field, value.trim())
+    .ilike(field, escapeLikeTerm(value.trim()))
     .is('deleted_at', null)
 
   if (excludeId) {
     query = query.neq('id', excludeId)
   }
 
-  const { data, error } = await query.maybeSingle()
+  // limit(1) em vez de maybeSingle(): com 2 ou mais linhas iguais o maybeSingle devolve erro e o check dizia "sem duplicata"
+  const { data, error } = await query.limit(1)
 
   if (error) {
     console.error(`Erro ao verificar duplicidade de ${field}:`, error)
     return false
   }
 
-  return !!data
+  return (data?.length ?? 0) > 0
 }
 
 export function getIdentificationLabel(field: IdentificationField): string {

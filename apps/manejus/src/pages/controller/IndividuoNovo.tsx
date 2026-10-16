@@ -500,10 +500,10 @@ export function IndividuoNovo() {
       if (isEditMode) {
         // Atualizar indivíduo existente
         const dataToUpdate: any = {
-          id_manejo: form.id_manejo,
-          id_brinco: form.id_brinco,
-          id_chip: form.id_chip,
-          id_provisorio_cria: form.id_provisorio_cria,
+          id_manejo: form.id_manejo?.trim(),
+          id_brinco: form.id_brinco?.trim(),
+          id_chip: form.id_chip?.trim(),
+          id_provisorio_cria: form.id_provisorio_cria?.trim(),
           sexo: form.sexo,
           categoria: form.categoria,
           raca: form.raca,
@@ -628,6 +628,10 @@ export function IndividuoNovo() {
           fazenda_id: fazendaId,
           ...form,
           sync_status: syncStatus,
+        }
+
+        for (const chave of ['id_manejo', 'id_brinco', 'id_chip', 'id_provisorio_cria']) {
+          if (typeof dataToInsert[chave] === 'string') dataToInsert[chave] = dataToInsert[chave].trim()
         }
 
         Object.keys(dataToInsert).forEach((key) => {

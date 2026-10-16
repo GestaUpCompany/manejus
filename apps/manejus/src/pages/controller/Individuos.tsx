@@ -6,6 +6,7 @@ import { Button, Card, Input, CardSkeleton, Select, Pagination } from '@gestaup/
 import { getFazendaIdForUser } from '@gestaup/shared'
 import { useLotes, usePastos } from '@gestaup/shared'
 import { categoriasTodas, sexos, statusList, origens } from '../../utils/individualValidation'
+import { escapeLikeTerm, ilikeContainsCondition } from '../../utils/postgrestFilter'
 
 interface Individuo {
   id: string
@@ -181,9 +182,9 @@ export function Individuos() {
       query = query.eq('sync_status', 'automatico_incompleto')
     }
 
-    const term = searchTerm.trim().toLowerCase()
+    const term = searchTerm.trim()
     if (term) {
-      const ilikeTerm = `%${term}%`
+      const ilikeTerm = `%${escapeLikeTerm(term)}%`
       if (filtroTipoIdentificacao === 'brinco') {
         query = query.ilike('id_brinco', ilikeTerm)
       } else if (filtroTipoIdentificacao === 'chip') {
@@ -194,7 +195,7 @@ export function Individuos() {
         query = query.ilike('id_provisorio_cria', ilikeTerm)
       } else {
         query = query.or(
-          `id_brinco.ilike.${ilikeTerm}, id_chip.ilike.${ilikeTerm}, id_manejo.ilike.${ilikeTerm}, id_provisorio_cria.ilike.${ilikeTerm}`
+          ['id_brinco', 'id_chip', 'id_manejo', 'id_provisorio_cria'].map((coluna) => ilikeContainsCondition(coluna, term)).join(',')
         )
       }
     } else if (filtroTipoIdentificacao !== 'todos') {
