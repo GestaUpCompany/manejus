@@ -5,6 +5,7 @@ import { supabase } from '@gestaup/supabase'
 import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '@gestaup/ui'
 import { formatDate } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
+import { AnimalDaMorte } from '../../components/AnimalDaMorte'
 
 interface RegistroMorte {
   id: string
@@ -14,6 +15,7 @@ interface RegistroMorte {
   data: string
   pasto?: string
   lote?: string
+  lote_id?: string | null
   sexo?: string
   raca?: string
   idade?: string
@@ -136,6 +138,7 @@ export function RegistrosMorteDetalhes() {
                   </p>
                 </div>
               )}
+              <AnimalDaMorte morte={registro!} onAlterado={loadRegistro} />
             </DetailSection>
 
             {/* Características */}

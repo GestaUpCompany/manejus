@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@gestaup/supabase'
 import { toFarmDateOnly } from '@gestaup/shared'
+import { categoriasCompativeis } from '../utils/categoriasCompativeis'
 import { resumirAmostraDePeso, type AmostraDePeso } from '../utils/pesoAmostraCategoria'
 
 interface LinhaPeso {
@@ -42,18 +43,10 @@ export function useAmostraDePesoCategoria({ fazendaId, loteId, categoria, quantA
       const linhas = (data ?? []) as LinhaPeso[]
       if (linhas.length === 0) return null
 
-      const canonicaDe = async (nome: string): Promise<string | null> => {
-        const { data: slug, error: erroSlug } = await supabase.rpc('categoria_canonica', { p_categoria: nome })
-        if (erroSlug) throw erroSlug
-        return (slug as string | null) ?? null
-      }
-      const alvo = await canonicaDe(categoria)
-      if (!alvo) return null
-      const distintas = [...new Set(linhas.map((l) => l.categoria).filter((c): c is string => !!c))]
-      const compativeis = new Set<string>()
-      for (const nome of distintas) {
-        if ((await canonicaDe(nome)) === alvo) compativeis.add(nome)
-      }
+      const compativeis = await categoriasCompativeis(
+        categoria,
+        linhas.map((l) => l.categoria).filter((c): c is string => !!c)
+      )
 
       const hoje = toFarmDateOnly(new Date().toISOString()) ?? new Date().toISOString().split('T')[0]
       return resumirAmostraDePeso(

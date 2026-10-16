@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@gestaup/supabase'
+import { categoriasCompativeis } from '../utils/categoriasCompativeis'
 
 export interface AnimalDaMovimentacao {
   id: string
@@ -85,17 +86,10 @@ export function useCandidatosMovimentacao(m: MovimentacaoParaAnimais, ligados: A
       if (error) throw error
       const linhas = (data ?? []) as LinhaIndividuo[]
 
-      const canonicaDe = async (categoria: string): Promise<string | null> => {
-        const { data: slug, error: erroSlug } = await supabase.rpc('categoria_canonica', { p_categoria: categoria })
-        if (erroSlug) throw erroSlug
-        return (slug as string | null) ?? null
-      }
-      const alvo = await canonicaDe(m.categoria!)
-      const distintas = [...new Set(linhas.map((l) => l.categoria).filter((c): c is string => !!c))]
-      const compativeis = new Set<string>()
-      for (const categoria of distintas) {
-        if ((await canonicaDe(categoria)) === alvo) compativeis.add(categoria)
-      }
+      const compativeis = await categoriasCompativeis(
+        m.categoria!,
+        linhas.map((l) => l.categoria).filter((c): c is string => !!c)
+      )
 
       const jaLigados = new Set((ligados ?? []).map((a) => a.id))
       return linhas
