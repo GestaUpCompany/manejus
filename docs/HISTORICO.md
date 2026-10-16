@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Manejo de curral: tabelas e migration de data retroativa aplicadas (16/10/2026)
+
+Desenho aprovado em `docs/PLANO_MANEJO_CURRAL.md` (designação de lote vira pendência; peso só no animal; offline obrigatório). `supabase db push` aplicou `20261016230000_manejo_curral_tabelas` (sessoes_manejo_curral, registros_manejo_curral, pendencias_designacao_lote; só aditiva) e, junto, `20261016220000_movimentacao_data_retroativa` (trigger que ajusta data anterior à criação da categoria e recalcula `quant_atual` em UPDATE), que estava na pasta sem commit e entrou na fila sem revisão; o gestor decidiu mantê-la. RLS do peão conferida na leitura: `caller_has_fazenda_access` cobre `peoes` por e-mail. Falta testar a 220000 na fazenda de testes. Próximo: migration 2 (RPCs `aplicar_manejo_curral`, `confirmar_designacao_lote`, `descartar_designacao_lote`).
+
 ## Indivíduos: baixa manual e exclusão respeitam o agregado do lote (2026-10-15)
 
 Branch `feat/individuos-coexistencia`. Princípio: o agregado (`lote_categorias.quant_atual`, calculado por movimentações) continua sendo a verdade da contagem; o indivíduo é um subconjunto e acompanha o evento agregado, nunca o contrário. Morte (trigger em `registros_morte`) e venda/abate/transferência (OS) já funcionavam assim; a baixa manual e a exclusão no painel eram o único caminho que só alterava `individuos`.
