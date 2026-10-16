@@ -2389,3 +2389,7 @@ Implementado em 2026-10-13. `lote_categorias.idade` (meses) é a idade na data-b
 - Migration `20261016270000_sanidade_aplicacoes` (rollback em `supabase/rollbacks/`): `medicamentos.carencia_abate_dias` e `intervalo_reaplicacao_dias` (opcionais) e tabela `aplicacoes_sanitarias` (por animal ou por lote com `numero_cabecas`; snapshot de produto/carência/intervalo; `liberacao_abate_em` e `proxima_aplicacao_em` derivados por gatilho; data não futura; animal/lote/medicamento da mesma fazenda; RLS padrão e auditoria). Não altera contagem nem peso; o PWA não lê.
 - Testada na fazenda de testes (carência 28 d → liberação 29/10; intervalo 180 d → próxima 30/03/2027; data futura rejeitada). Restaurado: aplicação de teste `b04c511a-f4b5-46d4-8452-c7bf6d9b311a` com soft-delete e carência/intervalo do medicamento de teste zerados.
 - Falta da S1: view `v_historico_sanitario_individuo` (une enfermaria e maternidade), aba Sanidade na ficha, campos novos em Medicamentos.
+
+## Sanidade S1 (banco): view do histórico sanitário por animal (16/10/2026)
+- Migration `20261016280000_view_historico_sanitario_individuo` (rollback em `supabase/rollbacks/`): `v_historico_sanitario_individuo` (security_invoker) une aplicações sanitárias por animal, enfermaria (medicamentos do JSON, só quando array) e maternidade (medicamentos da mãe). Hoje no banco: 4 linhas de enfermaria e 1 de maternidade.
+- Testada com uma aplicação na fazenda de testes (aparece com carência). Restaurado: aplicação `7c88bca5-65c5-4829-b389-f18de5472405` com soft-delete.
