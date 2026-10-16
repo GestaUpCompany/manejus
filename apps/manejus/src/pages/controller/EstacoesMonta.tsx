@@ -1,17 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth, getFazendaIdForUser, formatDate, toFarmDateOnly } from '@gestaup/shared'
 import { Button, Card, ConfirmModal, EmptyState, Input, Modal, PageSkeleton, Table, Thead, Tbody, Tr, Th, Td, useToast } from '@gestaup/ui'
-import { useEstacoesMonta, useExcluirEstacao, useSalvarEstacao, type EstacaoMonta } from '../../hooks/useReproducao'
-import { validarEstacao, type FormEstacao } from '../../utils/reproducao'
+import { useEstacoesMonta, useEventosParaResumo, useExcluirEstacao, useSalvarEstacao, type EstacaoMonta } from '../../hooks/useReproducao'
+import { resumirEstacoes, validarEstacao, type FormEstacao } from '../../utils/reproducao'
 
 const FORM_VAZIO: FormEstacao = { nome: '', dataInicio: '', dataFim: '', observacao: '' }
 
 export function EstacoesMonta() {
   const { user } = useAuth()
   const toast = useToast()
+  const navigate = useNavigate()
   const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
   const [carregandoFazenda, setCarregandoFazenda] = useState(true)
   const estacoes = useEstacoesMonta(fazendaId)
+  const eventosResumo = useEventosParaResumo(fazendaId)
+  const resumos = useMemo(
+    () => new Map(resumirEstacoes(eventosResumo.data ?? [], (estacoes.data ?? []).map((e) => e.id)).map((r) => [r.estacaoId, r])),
+    [eventosResumo.data, estacoes.data]
+  )
   const salvar = useSalvarEstacao(fazendaId)
   const excluir = useExcluirEstacao()
 
@@ -80,7 +87,12 @@ export function EstacoesMonta() {
             Períodos de cobertura e inseminação da fazenda. Escolha a estação ao lançar o evento reprodutivo na ficha da fêmea.
           </p>
         </div>
-        <Button onClick={novo}>Nova estação</Button>
+        <span className="flex gap-2">
+          <Button variant="secondary" onClick={() => navigate('/controller/reproducao/diagnostico-em-grupo')}>
+            Diagnóstico em grupo
+          </Button>
+          <Button onClick={novo}>Nova estação</Button>
+        </span>
       </div>
 
       {(estacoes.data?.length ?? 0) === 0 ? (
@@ -93,7 +105,11 @@ export function EstacoesMonta() {
                 <Th>Nome</Th>
                 <Th>Início</Th>
                 <Th>Fim</Th>
-                <Th>Observação</Th>
+                <Th>Cobertas</Th>
+                <Th>Prenhes</Th>
+                <Th>Vazias</Th>
+                <Th>Sem diagnóstico</Th>
+                <Th>Taxa de prenhez</Th>
                 <Th> </Th>
               </Tr>
             </Thead>
@@ -103,7 +119,19 @@ export function EstacoesMonta() {
                   <Td>{e.nome}</Td>
                   <Td>{formatDate(e.data_inicio)}</Td>
                   <Td>{formatDate(e.data_fim)}</Td>
-                  <Td>{e.observacao || '-'}</Td>
+                  {(() => {
+                    const r = resumos.get(e.id)
+                    const taxa = r?.taxaPrenhezSobreDiagnosticadas
+                    return (
+                      <>
+                        <Td>{r?.cobertas ?? 0}</Td>
+                        <Td>{r?.prenhes ?? 0}</Td>
+                        <Td>{r?.vazias ?? 0}</Td>
+                        <Td>{r?.semDiagnostico ?? 0}</Td>
+                        <Td>{taxa != null ? `${taxa.toLocaleString('pt-BR')}%` : '-'}</Td>
+                      </>
+                    )
+                  })()}
                   <Td>
                     <span className="flex gap-3 text-sm">
                       <button className="text-primary hover:underline" onClick={() => editar(e)}>

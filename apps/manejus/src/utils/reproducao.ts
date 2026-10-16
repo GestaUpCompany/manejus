@@ -118,6 +118,128 @@ export function validarEstacao(f: FormEstacao): string[] {
   return erros
 }
 
+// ---------- Diagnóstico em grupo ----------
+
+export interface LinhaDiagnosticoGrupo {
+  individuoId: string
+  /** '' = não diagnosticada agora (a linha é ignorada) */
+  resultado: '' | ResultadoDiagnostico
+  idadeGestacaoDias: string
+  /** cobertura mais recente da fêmea (status derivado), usada como referência do diagnóstico */
+  coberturaId: string | null
+  coberturaData: string | null
+}
+
+export interface DadosComunsDiagnostico {
+  data: string
+  metodo: '' | MetodoDiagnostico
+  observacao: string
+}
+
+/** Erros do lançamento em grupo, por fêmea (id) e gerais. Só valida as linhas com resultado. */
+export function validarDiagnosticoEmGrupo(
+  linhas: LinhaDiagnosticoGrupo[],
+  comuns: DadosComunsDiagnostico,
+  hoje: string
+): { gerais: string[]; porFemea: Record<string, string> } {
+  const gerais: string[] = []
+  const porFemea: Record<string, string> = {}
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(comuns.data)) gerais.push('Informe a data do diagnóstico')
+  else if (comuns.data > hoje) gerais.push('A data do diagnóstico não pode ser futura')
+  const feitas = linhas.filter((l) => l.resultado !== '')
+  if (feitas.length === 0) gerais.push('Marque o resultado de ao menos uma fêmea')
+  for (const l of feitas) {
+    if (l.resultado === 'Prenha' && l.idadeGestacaoDias.trim() !== '') {
+      const n = Number(l.idadeGestacaoDias)
+      if (!Number.isInteger(n) || n < 0 || n > 300) porFemea[l.individuoId] = 'Idade da gestação de 0 a 300 dias'
+    }
+    if (l.coberturaData && comuns.data && l.coberturaData > comuns.data) {
+      porFemea[l.individuoId] = 'A cobertura é posterior à data do diagnóstico'
+    }
+  }
+  return { gerais, porFemea }
+}
+
+/** Linhas para `eventos_reprodutivos` (um diagnóstico por fêmea marcada), prontas para um único insert em lote. */
+export function montarDiagnosticosEmGrupo(linhas: LinhaDiagnosticoGrupo[], comuns: DadosComunsDiagnostico, fazendaId: string) {
+  return linhas
+    .filter((l) => l.resultado !== '')
+    .map((l) => ({
+      fazenda_id: fazendaId,
+      individuo_id: l.individuoId,
+      tipo: 'Diagnóstico de gestação' as const,
+      data: comuns.data,
+      metodo_diagnostico: comuns.metodo === '' ? null : comuns.metodo,
+      resultado: l.resultado,
+      idade_gestacao_dias: l.resultado === 'Prenha' && l.idadeGestacaoDias.trim() !== '' ? Number(l.idadeGestacaoDias) : null,
+      evento_cobertura_id: l.coberturaId,
+      observacao: comuns.observacao.trim() === '' ? null : comuns.observacao.trim(),
+    }))
+}
+
+// ---------- Resumo por estação de monta ----------
+
+export interface EventoParaResumo {
+  individuo_id: string
+  tipo: TipoEventoReprodutivo
+  data: string
+  estacao_id: string | null
+  resultado: ResultadoDiagnostico | null
+}
+
+export interface ResumoEstacao {
+  estacaoId: string
+  cobertas: number
+  prenhes: number
+  vazias: number
+  inconclusivas: number
+  semDiagnostico: number
+  /** prenhes / cobertas (0 a 100) ou null sem cobertas */
+  taxaPrenhezSobreCobertas: number | null
+  /** prenhes / diagnosticadas com resultado conclusivo ou null */
+  taxaPrenhezSobreDiagnosticadas: number | null
+}
+
+/**
+ * Para cada estação: as fêmeas cobertas/inseminadas nela e o resultado do diagnóstico mais recente feito depois da última
+ * cobertura da fêmea na estação. Fêmea com diagnóstico "Inconclusivo" não entra na taxa sobre diagnosticadas.
+ */
+export function resumirEstacoes(eventos: EventoParaResumo[], estacaoIds: string[]): ResumoEstacao[] {
+  return estacaoIds.map((estacaoId) => {
+    const ultimaCobertura = new Map<string, string>()
+    for (const e of eventos) {
+      if (e.estacao_id !== estacaoId || (e.tipo !== 'Cobertura' && e.tipo !== 'Inseminação')) continue
+      const atual = ultimaCobertura.get(e.individuo_id)
+      if (!atual || e.data > atual) ultimaCobertura.set(e.individuo_id, e.data)
+    }
+    let prenhes = 0
+    let vazias = 0
+    let inconclusivas = 0
+    let semDiagnostico = 0
+    for (const [individuoId, dataCob] of ultimaCobertura) {
+      const diag = eventos
+        .filter((e) => e.individuo_id === individuoId && e.tipo === 'Diagnóstico de gestação' && e.data >= dataCob)
+        .sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0))[0]
+      if (!diag) semDiagnostico += 1
+      else if (diag.resultado === 'Prenha') prenhes += 1
+      else if (diag.resultado === 'Vazia') vazias += 1
+      else inconclusivas += 1
+    }
+    const cobertas = ultimaCobertura.size
+    const conclusivas = prenhes + vazias
+    return {
+      estacaoId,
+      cobertas,
+      prenhes,
+      vazias,
+      inconclusivas,
+      semDiagnostico,
+      taxaPrenhezSobreCobertas: cobertas > 0 ? Math.round((prenhes / cobertas) * 1000) / 10 : null,
+      taxaPrenhezSobreDiagnosticadas: conclusivas > 0 ? Math.round((prenhes / conclusivas) * 1000) / 10 : null,
+    }
+  })
+}
+
 export const CLASSE_STATUS_REPRODUTIVO: Record<StatusReprodutivo, string> = {
   Prenha: 'bg-green-500/10 text-green-800 dark:text-green-200',
   Coberta: 'bg-blue-500/10 text-blue-800 dark:text-blue-200',

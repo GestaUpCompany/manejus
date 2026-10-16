@@ -1,6 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@gestaup/supabase'
-import { montarEventoParaGravar, type FormEstacao, type FormEventoReprodutivo, type StatusReprodutivo, type TipoEventoReprodutivo } from '../utils/reproducao'
+import {
+  montarDiagnosticosEmGrupo,
+  montarEventoParaGravar,
+  type DadosComunsDiagnostico,
+  type EventoParaResumo,
+  type FormEstacao,
+  type FormEventoReprodutivo,
+  type LinhaDiagnosticoGrupo,
+  type StatusReprodutivo,
+  type TipoEventoReprodutivo,
+} from '../utils/reproducao'
 
 export interface StatusReprodutivoRow {
   individuo_id: string
@@ -149,5 +159,76 @@ export function useExcluirEstacao() {
       if (error) throw new Error(error.message)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reproducao'] }),
+  })
+}
+
+export interface FemeaDoLote {
+  individuo_id: string
+  id_brinco: string | null
+  id_chip: string | null
+  id_manejo: string | null
+  categoria: string | null
+  status_reprodutivo: StatusReprodutivo
+  ultima_cobertura_id: string | null
+  ultima_cobertura_data: string | null
+  dias_desde_cobertura: number | null
+  previsao_parto: string | null
+}
+
+/** Fêmeas vivas de um lote com o status reprodutivo derivado (base do diagnóstico em grupo). */
+export function useFemeasDoLote(fazendaId: string | undefined, loteId: string | undefined) {
+  return useQuery({
+    queryKey: ['reproducao', 'femeas-do-lote', fazendaId, loteId],
+    enabled: !!fazendaId && !!loteId,
+    queryFn: async (): Promise<FemeaDoLote[]> => {
+      const { data, error } = await supabase
+        .from('v_status_reprodutivo')
+        .select('individuo_id, id_brinco, id_chip, id_manejo, categoria, status_reprodutivo, ultima_cobertura_id, ultima_cobertura_data, dias_desde_cobertura, previsao_parto')
+        .eq('fazenda_id', fazendaId!)
+        .eq('lote_atual', loteId!)
+        .order('id_brinco', { ascending: true })
+        .limit(2000)
+      if (error) throw error
+      return (data ?? []) as FemeaDoLote[]
+    },
+  })
+}
+
+/** Grava os diagnósticos de várias fêmeas num único insert (tudo ou nada). */
+export function useDiagnosticoEmGrupo(fazendaId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ linhas, comuns }: { linhas: LinhaDiagnosticoGrupo[]; comuns: DadosComunsDiagnostico }): Promise<number> => {
+      const registros = montarDiagnosticosEmGrupo(linhas, comuns, fazendaId!)
+      const { error } = await supabase.from('eventos_reprodutivos').insert(registros)
+      if (error) throw new Error(error.message)
+      return registros.length
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reproducao'] }),
+  })
+}
+
+/** Eventos da fazenda para o resumo por estação (paginado pelo limite de 1000 linhas do PostgREST). */
+export function useEventosParaResumo(fazendaId: string | undefined) {
+  return useQuery({
+    queryKey: ['reproducao', 'eventos-resumo', fazendaId],
+    enabled: !!fazendaId,
+    queryFn: async (): Promise<EventoParaResumo[]> => {
+      const todos: EventoParaResumo[] = []
+      for (let inicio = 0; ; inicio += 1000) {
+        const { data, error } = await supabase
+          .from('eventos_reprodutivos')
+          .select('id, individuo_id, tipo, data, estacao_id, resultado')
+          .eq('fazenda_id', fazendaId!)
+          .is('deleted_at', null)
+          .order('id', { ascending: true })
+          .range(inicio, inicio + 999)
+        if (error) throw error
+        const pagina = (data ?? []) as unknown as EventoParaResumo[]
+        todos.push(...pagina)
+        if (pagina.length < 1000) break
+      }
+      return todos
+    },
   })
 }

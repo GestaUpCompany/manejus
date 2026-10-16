@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { camposDoTipo, formVazioEvento, montarEventoParaGravar, pendenciasDaFemea, textoPrevisaoParto, validarEstacao, validarEvento } from './reproducao'
+import {
+  camposDoTipo,
+  formVazioEvento,
+  montarDiagnosticosEmGrupo,
+  montarEventoParaGravar,
+  pendenciasDaFemea,
+  resumirEstacoes,
+  textoPrevisaoParto,
+  validarDiagnosticoEmGrupo,
+  validarEstacao,
+  validarEvento,
+  type EventoParaResumo,
+  type LinhaDiagnosticoGrupo,
+} from './reproducao'
 
 const HOJE = '2026-10-16'
 const form = (over = {}) => ({ ...formVazioEvento(HOJE), ...over })
@@ -100,5 +113,66 @@ describe('validarEstacao', () => {
     expect(validarEstacao({ ...ok, nome: '  ' })).toEqual(['Informe o nome da estação'])
     expect(validarEstacao({ ...ok, dataInicio: '', dataFim: '' })).toEqual(['Informe a data de início', 'Informe a data de fim'])
     expect(validarEstacao({ ...ok, dataFim: '2026-10-01' })).toEqual(['A data de fim não pode ser anterior à de início'])
+  })
+})
+
+describe('diagnóstico em grupo', () => {
+  const linha = (id: string, over: Partial<LinhaDiagnosticoGrupo> = {}): LinhaDiagnosticoGrupo => ({
+    individuoId: id, resultado: '', idadeGestacaoDias: '', coberturaId: null, coberturaData: null, ...over,
+  })
+  const comuns = { data: HOJE, metodo: 'Ultrassom' as const, observacao: ' lote 3 ' }
+
+  it('monta só as fêmeas marcadas, com a cobertura de referência e a idade só para prenha', () => {
+    const r = montarDiagnosticosEmGrupo(
+      [linha('a', { resultado: 'Prenha', idadeGestacaoDias: '45', coberturaId: 'c1' }), linha('b'), linha('c', { resultado: 'Vazia', idadeGestacaoDias: '45' })],
+      comuns,
+      'faz'
+    )
+    expect(r).toHaveLength(2)
+    expect(r[0]).toMatchObject({ individuo_id: 'a', resultado: 'Prenha', idade_gestacao_dias: 45, evento_cobertura_id: 'c1', metodo_diagnostico: 'Ultrassom', observacao: 'lote 3', tipo: 'Diagnóstico de gestação' })
+    expect(r[1]).toMatchObject({ individuo_id: 'c', resultado: 'Vazia', idade_gestacao_dias: null })
+  })
+
+  it('valida data, ao menos uma fêmea, idade e cobertura posterior', () => {
+    expect(validarDiagnosticoEmGrupo([linha('a')], comuns, HOJE).gerais).toContain('Marque o resultado de ao menos uma fêmea')
+    expect(validarDiagnosticoEmGrupo([linha('a', { resultado: 'Vazia' })], { ...comuns, data: '2026-10-20' }, HOJE).gerais).toContain('A data do diagnóstico não pode ser futura')
+    const v = validarDiagnosticoEmGrupo(
+      [linha('a', { resultado: 'Prenha', idadeGestacaoDias: '400' }), linha('b', { resultado: 'Vazia', coberturaData: '2026-10-20' }), linha('c', { resultado: 'Vazia' })],
+      comuns,
+      HOJE
+    )
+    expect(v.gerais).toEqual([])
+    expect(Object.keys(v.porFemea).sort()).toEqual(['a', 'b'])
+  })
+})
+
+describe('resumirEstacoes', () => {
+  const ev = (individuo_id: string, tipo: EventoParaResumo['tipo'], data: string, estacao_id: string | null, resultado: EventoParaResumo['resultado'] = null): EventoParaResumo => ({ individuo_id, tipo, data, estacao_id, resultado })
+
+  it('conta cobertas, prenhes, vazias, inconclusivas e sem diagnóstico, com as taxas', () => {
+    const eventos = [
+      ev('a', 'Cobertura', '2026-10-01', 'E1'), ev('a', 'Diagnóstico de gestação', '2026-12-01', null, 'Prenha'),
+      ev('b', 'Inseminação', '2026-10-02', 'E1'), ev('b', 'Diagnóstico de gestação', '2026-12-01', null, 'Vazia'),
+      ev('c', 'Cobertura', '2026-10-03', 'E1'), ev('c', 'Diagnóstico de gestação', '2026-12-01', null, 'Inconclusivo'),
+      ev('d', 'Cobertura', '2026-10-04', 'E1'),
+      ev('e', 'Cobertura', '2026-10-05', 'E2'),
+    ]
+    const [r1, r2] = resumirEstacoes(eventos, ['E1', 'E2'])
+    expect(r1).toMatchObject({ cobertas: 4, prenhes: 1, vazias: 1, inconclusivas: 1, semDiagnostico: 1, taxaPrenhezSobreCobertas: 25, taxaPrenhezSobreDiagnosticadas: 50 })
+    expect(r2).toMatchObject({ cobertas: 1, semDiagnostico: 1, taxaPrenhezSobreDiagnosticadas: null })
+  })
+
+  it('usa o diagnóstico mais recente depois da última cobertura e ignora o anterior a ela', () => {
+    const eventos = [
+      ev('a', 'Cobertura', '2026-01-10', 'E1'), ev('a', 'Diagnóstico de gestação', '2026-03-10', null, 'Vazia'),
+      ev('a', 'Cobertura', '2026-04-01', 'E1'), ev('a', 'Diagnóstico de gestação', '2026-06-01', null, 'Prenha'),
+      ev('b', 'Cobertura', '2026-05-01', 'E1'), ev('b', 'Diagnóstico de gestação', '2026-03-01', null, 'Prenha'),
+    ]
+    const [r] = resumirEstacoes(eventos, ['E1'])
+    expect(r).toMatchObject({ cobertas: 2, prenhes: 1, semDiagnostico: 1 })
+  })
+
+  it('estação sem coberturas devolve zeros e taxas nulas', () => {
+    expect(resumirEstacoes([], ['E9'])[0]).toMatchObject({ cobertas: 0, taxaPrenhezSobreCobertas: null, taxaPrenhezSobreDiagnosticadas: null })
   })
 })

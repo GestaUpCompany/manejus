@@ -148,6 +148,7 @@ const Individuos = laz(() => import('./pages/controller/Individuos'), 'Individuo
 const IndividuoNovo = laz(() => import('./pages/controller/IndividuoNovo'), 'IndividuoNovo')
 const ConciliacaoIndividuos = laz(() => import('./pages/controller/ConciliacaoIndividuos'), 'ConciliacaoIndividuos')
 const EstacoesMonta = laz(() => import('./pages/controller/EstacoesMonta'), 'EstacoesMonta')
+const DiagnosticoEmGrupo = laz(() => import('./pages/controller/DiagnosticoEmGrupo'), 'DiagnosticoEmGrupo')
 const IdentificarLote = laz(() => import('./pages/controller/IdentificarLote'), 'IdentificarLote')
 const IndividuoDetalhe = laz(() => import('./pages/controller/IndividuoDetalhe'), 'IndividuoDetalhe')
 const FaixasCategorias = laz(() => import('./pages/controller/FaixasCategorias'), 'FaixasCategorias')
@@ -1403,6 +1404,16 @@ function App() {
             }
           />
 
+          <Route
+            path="/controller/reproducao/diagnostico-em-grupo"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <DiagnosticoEmGrupo />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
           <Route
             path="/controller/estacoes-monta"
             element={
