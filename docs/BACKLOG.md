@@ -189,3 +189,10 @@ Disparador: quando mencionar "tela de versões", "histórico de versões do cron
 - `transferir_lote_entre_fazendas` deve copiar `idade_data_ref` junto com `idade` (hoje a cópia reinicia a data-base).
 - Validar `data_pesagem` absurda (ex.: `0001-01-01`, `0026-09-29`) na origem (painel/PWA) e no trigger `trg_lote_categorias_idade_ref`.
 - Cron duplicado: jobs `update-peso-vivo-daily` (04:00 UTC) e `update-dados-lotes` (03:00 UTC) chamam `update_dados_lotes()`; manter só um.
+
+## Indivíduos: excluir parto não desfaz mãe e cria (levantado em 16/10/2026)
+
+- Todos os gatilhos de `registros_maternidade` são AFTER INSERT; ao excluir um parto (`deleted_at`) a mãe e a cria criadas por ele seguem Vivas. Caso real: Fazenda Marcon, 28 partos excluídos em 27/08 deixaram 56 indivíduos Vivos no Lote 123 (hoje marcados como localização incerta).
+- Proposta: estorno no mesmo padrão da morte (`trg_registros_morte_baixa_individuo`), só para indivíduos criados pelo próprio parto e sem outro evento; e tratar o agregado do bezerro (`update_quant_atual_maternidade` já conta o nascimento).
+- Decidir com o gestor o destino dos 56 órfãos da Marcon (excluir só no cadastro, sem evento agregado, exige autorização escopada) e o das 34 vacas da Chibiu cadastradas à mão (agregado de vaca nas maternidades com `quant_inicial` 5 e 2 e sem movimentação).
+- Investigar os excessos de 1 a 2 bezerros na Chibata (LOTE 11) e no Olho D'Água (Lote 5).
