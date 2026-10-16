@@ -927,3 +927,25 @@ export const ORDENS_SERVICO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'nome_usuario', header: 'Usuário' }
   ]
 }
+
+export const REPRODUCAO_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'v_status_reprodutivo',
+  sheetName: 'Reprodução',
+  columns: [
+    { source: 'id_brinco', header: 'Brinco' },
+    { source: 'id_manejo', header: 'Manejo' },
+    { source: 'id_chip', header: 'Chip' },
+    { source: 'categoria', header: 'Categoria' },
+    { source: 'lote_nome', header: 'Lote' },
+    { source: 'status_reprodutivo', header: 'Status reprodutivo' },
+    { source: 'ultimo_parto', header: 'Último parto', format: 'date' },
+    { source: 'dias_desde_ultimo_parto', header: 'Dias desde o parto' },
+    { source: 'intervalo_entre_partos_dias', header: 'Intervalo entre partos (dias)' },
+    { source: 'ultima_cobertura_data', header: 'Última cobertura', format: 'date' },
+    { source: 'ultima_cobertura_touro', header: 'Touro' },
+    { source: 'ultimo_diagnostico_data', header: 'Último diagnóstico', format: 'date' },
+    { source: 'ultimo_diagnostico_resultado', header: 'Resultado' },
+    { source: 'previsao_parto', header: 'Previsão de parto', format: 'date' },
+    { source: 'previsao_confirmada', header: 'Previsão confirmada', transform: (value: any) => (value ? 'Sim' : 'Não') },
+  ],
+}

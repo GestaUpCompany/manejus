@@ -8,6 +8,7 @@ import {
   type FormEstacao,
   type FormEventoReprodutivo,
   type LinhaDiagnosticoGrupo,
+  type StatusFemeaFazenda,
   type StatusReprodutivo,
   type TipoEventoReprodutivo,
 } from '../utils/reproducao'
@@ -229,6 +230,32 @@ export function useEventosParaResumo(fazendaId: string | undefined) {
         if (pagina.length < 1000) break
       }
       return todos
+    },
+  })
+}
+
+/** Status reprodutivo de todas as fêmeas vivas da fazenda (pendências e relatório), paginado em 1000 linhas. */
+export function useStatusReprodutivoDaFazenda(fazendaId: string | undefined) {
+  return useQuery({
+    queryKey: ['reproducao', 'status-fazenda', fazendaId],
+    enabled: !!fazendaId,
+    queryFn: async (): Promise<StatusFemeaFazenda[]> => {
+      const todas: StatusFemeaFazenda[] = []
+      for (let inicio = 0; ; inicio += 1000) {
+        const { data, error } = await supabase
+          .from('v_status_reprodutivo')
+          .select(
+            'individuo_id, id_brinco, id_chip, id_manejo, categoria, lote_atual, status_reprodutivo, ultimo_parto, intervalo_entre_partos_dias, dias_desde_ultimo_parto, ultima_cobertura_data, ultima_cobertura_touro, dias_desde_cobertura, ultimo_diagnostico_data, ultimo_diagnostico_resultado, previsao_parto, previsao_confirmada'
+          )
+          .eq('fazenda_id', fazendaId!)
+          .order('individuo_id', { ascending: true })
+          .range(inicio, inicio + 999)
+        if (error) throw error
+        const pagina = (data ?? []) as StatusFemeaFazenda[]
+        todas.push(...pagina)
+        if (pagina.length < 1000) break
+      }
+      return todas
     },
   })
 }

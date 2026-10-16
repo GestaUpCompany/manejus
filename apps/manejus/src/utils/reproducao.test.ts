@@ -10,8 +10,11 @@ import {
   validarDiagnosticoEmGrupo,
   validarEstacao,
   validarEvento,
+  pendenciasDaFazenda,
+  resumirReproducaoDaFazenda,
   type EventoParaResumo,
   type LinhaDiagnosticoGrupo,
+  type StatusFemeaFazenda,
 } from './reproducao'
 
 const HOJE = '2026-10-16'
@@ -174,5 +177,45 @@ describe('resumirEstacoes', () => {
 
   it('estação sem coberturas devolve zeros e taxas nulas', () => {
     expect(resumirEstacoes([], ['E9'])[0]).toMatchObject({ cobertas: 0, taxaPrenhezSobreCobertas: null, taxaPrenhezSobreDiagnosticadas: null })
+  })
+})
+
+describe('pendências e relatório da fazenda', () => {
+  const femea = (id: string, over: Partial<StatusFemeaFazenda> = {}): StatusFemeaFazenda => ({
+    individuo_id: id, id_brinco: id, id_chip: null, id_manejo: null, categoria: 'Vaca', lote_atual: null,
+    status_reprodutivo: 'Sem registro', ultimo_parto: null, intervalo_entre_partos_dias: null, dias_desde_ultimo_parto: null,
+    ultima_cobertura_data: null, ultima_cobertura_touro: null, dias_desde_cobertura: null, ultimo_diagnostico_data: null,
+    ultimo_diagnostico_resultado: null, previsao_parto: null, previsao_confirmada: false, ...over,
+  })
+
+  it('junta as pendências de todas as fêmeas, por tipo e da mais urgente para a menos', () => {
+    const r = pendenciasDaFazenda(
+      [
+        femea('a', { status_reprodutivo: 'Coberta', dias_desde_cobertura: 70, previsao_parto: '2027-06-01', ultima_cobertura_data: '2026-08-07' }),
+        femea('b', { status_reprodutivo: 'Prenha', previsao_parto: '2026-11-10' }),
+        femea('c', { status_reprodutivo: 'Prenha', previsao_parto: '2026-10-01' }),
+        femea('d', { status_reprodutivo: 'Prenha', previsao_parto: '2026-10-25' }),
+        femea('e'),
+      ],
+      HOJE
+    )
+    expect(r.map((p) => `${p.tipo}:${p.femea.individuo_id}`)).toEqual(['parto_atrasado:c', 'parto_proximo:d', 'parto_proximo:b', 'sem_diagnostico:a'])
+  })
+
+  it('resume status, intervalo médio entre partos e dias em aberto', () => {
+    const r = resumirReproducaoDaFazenda([
+      femea('a', { status_reprodutivo: 'Prenha' }),
+      femea('b', { status_reprodutivo: 'Parida', dias_desde_ultimo_parto: 40, intervalo_entre_partos_dias: 380 }),
+      femea('c', { status_reprodutivo: 'Vazia', dias_desde_ultimo_parto: 100, intervalo_entre_partos_dias: 400 }),
+      femea('d', { status_reprodutivo: 'Coberta', dias_desde_ultimo_parto: 90 }),
+      femea('e'),
+    ])
+    expect(r.totalFemeas).toBe(5)
+    expect(r.porStatus).toEqual({ Prenha: 1, Coberta: 1, Vazia: 1, Parida: 1, 'Sem registro': 1 })
+    expect(r).toMatchObject({ intervaloMedioEntrePartosDias: 390, femeasComIntervalo: 2, diasEmAbertoMedio: 70, femeasEmAberto: 2 })
+  })
+
+  it('sem dados devolve médias nulas', () => {
+    expect(resumirReproducaoDaFazenda([])).toMatchObject({ totalFemeas: 0, intervaloMedioEntrePartosDias: null, diasEmAbertoMedio: null })
   })
 })

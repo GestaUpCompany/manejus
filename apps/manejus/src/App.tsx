@@ -148,6 +148,7 @@ const Individuos = laz(() => import('./pages/controller/Individuos'), 'Individuo
 const IndividuoNovo = laz(() => import('./pages/controller/IndividuoNovo'), 'IndividuoNovo')
 const ConciliacaoIndividuos = laz(() => import('./pages/controller/ConciliacaoIndividuos'), 'ConciliacaoIndividuos')
 const EstacoesMonta = laz(() => import('./pages/controller/EstacoesMonta'), 'EstacoesMonta')
+const ReproducaoFazenda = laz(() => import('./pages/controller/ReproducaoFazenda'), 'ReproducaoFazenda')
 const DiagnosticoEmGrupo = laz(() => import('./pages/controller/DiagnosticoEmGrupo'), 'DiagnosticoEmGrupo')
 const IdentificarLote = laz(() => import('./pages/controller/IdentificarLote'), 'IdentificarLote')
 const IndividuoDetalhe = laz(() => import('./pages/controller/IndividuoDetalhe'), 'IndividuoDetalhe')
@@ -1404,6 +1405,16 @@ function App() {
             }
           />
 
+          <Route
+            path="/controller/reproducao"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <ReproducaoFazenda />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
           <Route
             path="/controller/reproducao/diagnostico-em-grupo"
             element={

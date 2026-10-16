@@ -240,6 +240,83 @@ export function resumirEstacoes(eventos: EventoParaResumo[], estacaoIds: string[
   })
 }
 
+// ---------- Pendências e relatório da fazenda ----------
+
+export interface StatusFemeaFazenda {
+  individuo_id: string
+  id_brinco: string | null
+  id_chip: string | null
+  id_manejo: string | null
+  categoria: string | null
+  lote_atual: string | null
+  status_reprodutivo: StatusReprodutivo
+  ultimo_parto: string | null
+  intervalo_entre_partos_dias: number | null
+  dias_desde_ultimo_parto: number | null
+  ultima_cobertura_data: string | null
+  ultima_cobertura_touro: string | null
+  dias_desde_cobertura: number | null
+  ultimo_diagnostico_data: string | null
+  ultimo_diagnostico_resultado: string | null
+  previsao_parto: string | null
+  previsao_confirmada: boolean
+}
+
+export const ROTULO_PENDENCIA: Record<PendenciaReprodutiva['tipo'], string> = {
+  parto_atrasado: 'Parto atrasado',
+  parto_proximo: 'Parto nos próximos 30 dias',
+  sem_diagnostico: 'Sem diagnóstico após a cobertura',
+  vazia_ha_muito_tempo: 'Vazia há muito tempo',
+}
+
+export const ORDEM_PENDENCIA: PendenciaReprodutiva['tipo'][] = ['parto_atrasado', 'parto_proximo', 'sem_diagnostico', 'vazia_ha_muito_tempo']
+
+export interface PendenciaDaFazenda extends PendenciaReprodutiva {
+  femea: StatusFemeaFazenda
+}
+
+/** Pendências de todas as fêmeas, agrupáveis por tipo; dentro do tipo, as mais urgentes primeiro. */
+export function pendenciasDaFazenda(femeas: StatusFemeaFazenda[], hoje: string): PendenciaDaFazenda[] {
+  const out: PendenciaDaFazenda[] = []
+  for (const femea of femeas) {
+    for (const p of pendenciasDaFemea(femea, hoje)) out.push({ ...p, femea })
+  }
+  const chave = (p: PendenciaDaFazenda) => p.femea.previsao_parto ?? p.femea.ultima_cobertura_data ?? ''
+  return out.sort(
+    (a, b) => ORDEM_PENDENCIA.indexOf(a.tipo) - ORDEM_PENDENCIA.indexOf(b.tipo) || (chave(a) < chave(b) ? -1 : chave(a) > chave(b) ? 1 : 0)
+  )
+}
+
+export interface ResumoReprodutivo {
+  totalFemeas: number
+  porStatus: Record<StatusReprodutivo, number>
+  /** média do intervalo entre partos das fêmeas com 2 ou mais partos; null sem dados */
+  intervaloMedioEntrePartosDias: number | null
+  femeasComIntervalo: number
+  /** média dos dias desde o último parto das fêmeas Parida ou Vazia (ainda não cobertas/prenhes) */
+  diasEmAbertoMedio: number | null
+  femeasEmAberto: number
+}
+
+const media = (valores: number[]): number | null => (valores.length === 0 ? null : Math.round((valores.reduce((a, b) => a + b, 0) / valores.length) * 10) / 10)
+
+export function resumirReproducaoDaFazenda(femeas: StatusFemeaFazenda[]): ResumoReprodutivo {
+  const porStatus: Record<StatusReprodutivo, number> = { Prenha: 0, Coberta: 0, Vazia: 0, Parida: 0, 'Sem registro': 0 }
+  for (const f of femeas) porStatus[f.status_reprodutivo] += 1
+  const intervalos = femeas.map((f) => f.intervalo_entre_partos_dias).filter((n): n is number => typeof n === 'number')
+  const aberto = femeas
+    .filter((f) => (f.status_reprodutivo === 'Parida' || f.status_reprodutivo === 'Vazia') && typeof f.dias_desde_ultimo_parto === 'number')
+    .map((f) => f.dias_desde_ultimo_parto as number)
+  return {
+    totalFemeas: femeas.length,
+    porStatus,
+    intervaloMedioEntrePartosDias: media(intervalos),
+    femeasComIntervalo: intervalos.length,
+    diasEmAbertoMedio: media(aberto),
+    femeasEmAberto: aberto.length,
+  }
+}
+
 export const CLASSE_STATUS_REPRODUTIVO: Record<StatusReprodutivo, string> = {
   Prenha: 'bg-green-500/10 text-green-800 dark:text-green-200',
   Coberta: 'bg-blue-500/10 text-blue-800 dark:text-blue-200',
