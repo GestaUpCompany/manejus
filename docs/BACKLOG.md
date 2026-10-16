@@ -199,3 +199,9 @@ Disparador: quando mencionar "tela de versões", "histórico de versões do cron
 - Decidir com o gestor o destino dos 56 órfãos da Marcon (excluir só no cadastro, sem evento agregado, exige autorização escopada) e o das 34 vacas da Chibiu cadastradas à mão (agregado de vaca nas maternidades com `quant_inicial` 5 e 2 e sem movimentação).
 - Investigar os excessos de 1 a 2 bezerros na Chibata (LOTE 11) e no Olho D'Água (Lote 5).
 - **Decisão do gestor em 16/10/2026: adiar tudo isto** (conserto do gatilho, limpeza dos 56 órfãos da Marcon, análise da Chibiu, Chibata e Olho D'Água) e seguir com o plano. Os 111 animais ficam marcados como localização incerta, sem efeito no agregado, até a decisão; reversão em `backup.individuos_incerteza_20261016`. Disparador: ao retomar maternidade, partos excluídos ou divergências de conciliação, ler esta seção.
+
+## Fase 4 no PWA e candidatas de mercado (levantado em 2026-10-16)
+
+Detalhe, fontes e ordem em `docs/PLANO_INDIVIDUOS_FASE4_SANIDADE_REPRODUCAO.md` (seção 10). Resumo: **P1** Morte com `AnimalIdentifier`; **P2** caderneta de Sanidade no PWA; **P3** caderneta de Reprodução (exige migration com `local_id` em `eventos_reprodutivos` e conferência do gatilho com registros fora de ordem). Candidatas de mercado: **C1** calendário sanitário (programação por categoria/data, vacinas obrigatórias), **C2** protocolo de IATF (D0/D8/D10, taxa de prenhez por protocolo, touro, sêmen e inseminador), **C3** tratamento/vacina na sessão de curral, **C4** bastão RFID (definir o equipamento). Atenção: RLS das tabelas de reprodução/sanidade deixa o peão escrever pela API; resumo por estação ignora partos posteriores à cobertura.
+
+**Disparadores**: "calendário sanitário", "IATF", "protocolo de IATF", "caderneta de sanidade", "caderneta de reprodução", "RFID".

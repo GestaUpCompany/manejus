@@ -173,3 +173,58 @@ Cada migration: arquivo em `supabase/migrations/`, rollback em `supabase/rollbac
 ## 9. Fora de escopo desta fase
 
 Sanidade (adiada), baixa de estoque de medicamento, custo por animal, caderneta de reprodução no PWA, importação de planilha reprodutiva, integração com sistemas oficiais de defesa sanitária.
+
+
+## 10. Atualização de 16/10/2026: estado real e Fase 4 no PWA (com checagem de mercado)
+
+### 10.1 Estado em 16/10/2026
+- **Painel:** Reprodução (4a, 4b, 4c com alertas) e Sanidade (S1, S2, pendências e alertas) implementadas e na staging. Registro em `docs/HISTORICO.md`.
+- **PWA:** a Enfermaria **já envia** `individuo_id` (usa `AnimalIdentifier`; `syncService.ts`), a pendência de 08/10 ficou velha. A Morte vincula o animal por texto (`individuoVivoPorIdentificacao`, brinco/chip digitados) e envia `individuoId` se achar, mas não usa o `AnimalIdentifier`.
+
+### 10.2 Checagem de mercado (16/10/2026)
+Fonte: páginas dos próprios fornecedores (material de divulgação, funcionalidades a confirmar em demonstração) e material técnico da Embrapa. Não houve comparação independente.
+
+| Tema | O que o mercado faz | Onde estamos |
+|---|---|---|
+| **Calendário sanitário** | Ganadero: calendário de vacinação por animal e por lote, tipos de vacina personalizáveis e lembretes. SoftPec: protocolos por espécie/categoria e lembrete da próxima dose, alerta de vacina próxima do vencimento. MultSoft: campanhas sazonais e cronogramas de vermifugação. VSM Agro: prazo ideal de vacinação e alerta de brucelose pendente. Leigado: lembretes diários. Esteio: calendário e relatórios sanitários. | **Lacuna.** Só calculamos a próxima dose depois da primeira aplicação (intervalo do catálogo). Não há programação por categoria/data nem campanha recorrente (aftosa, brucelose em bezerras). |
+| **Protocolo de IATF** | Controle IATF calcula D8, D10 e a IA a partir do D0, registra touro e diagnóstico e gera relatório de taxa de prenhez por lote. Prodap Views (segundo a Apecuária de Precisão): taxa de prenhez por sêmen, inseminador e protocolo. Embrapa (Pantanal de MS, 2006/2007): taxa de prenhez varia com touro e tipo de sêmen (sexado × convencional). Cronograma clássico D0 (implante de P4 + estradiol), D8 (retirada, prostaglandina, eCG), D10 (IA); 45 a 55% por tentativa. | **Lacuna.** Lançamos só o evento final (cobertura/inseminação). Sem protocolo (D0/D8/D10), sem lote de protocolo e sem taxa por touro, sêmen, inseminador ou protocolo (temos touro, partida do sêmen e técnico como texto, então o dado existe). |
+| **Sessão de manejo no curral** | Herdwatch (leitor EID e balança Bluetooth), HerdX (processamento "express" ou detalhado), AgriEID (offline com sincronização), Cattlytics (peso e tratamento por RFID, offline), CattleMax (modelos de protocolo repetível). Mercado individual-first: a mesma passada costuma gravar peso, tratamento e vacina. | **Alinhado no offline e na sessão.** Diferente de propósito: o Manejo de Curral só identifica e designa (peso só no animal, lote vira pendência), porque o agregado é a verdade. Falta o bastão RFID e gravar tratamento/vacina na mesma passada. |
+
+Conclusão: o núcleo está alinhado; as lacunas que pesam são **calendário sanitário** e **protocolo de IATF**.
+
+### 10.3 Fase 4 no PWA (ordem proposta)
+**P1. Morte com `AnimalIdentifier`** (pequena): trocar os campos soltos de brinco/chip pelo seletor, manter "brinco/chip ou o motivo de não ter". Sync não muda. Teste: morte com e sem animal na fazenda de testes.
+
+**P2. Caderneta de Sanidade** (banco pronto: `aplicacoes_sanitarias`, `local_id` único, `origem = 'pwa'`):
+- tela e lista; alvo animal (`AnimalIdentifier`) ou lote + categoria + cabeças; produto do catálogo ou digitado; dose, via, partida, validade e carência;
+- store no IndexedDB (bump de versão), entrada no `syncService` (`'sanidade': 'aplicacoes_sanitarias'`), ordem na fila, `SyncErrorModal`;
+- cache: o catálogo de medicamentos precisa trazer `carencia_abate_dias` e `intervalo_reaplicacao_dias`; para avisar carência offline, guardar as aplicações recentes ou o resultado de `animais_em_carencia`;
+- botão e imagem, rota, `validation.ts`, `shareUtils.ts`, `SuccessModal`, lista de cadernetas permitidas por funcionário (PWA e painel `CADERNETAS`).
+- Carência só avisa, nunca bloqueia.
+
+**P3. Caderneta de Reprodução**:
+- **Migration antes:** `eventos_reprodutivos` não tem `local_id`. Adicionar coluna e índice único completo (índice parcial dá 42P10).
+- Conferir o gatilho de validação com registros fora de ordem (diagnóstico chegando antes da cobertura).
+- Cache offline das fêmeas do lote com status (`v_status_reprodutivo`) e das estações de monta.
+- Telas: cobertura/inseminação, diagnóstico de gestação em grupo (a mais útil no curral) e aborto; mesmos pontos de estrutura da P2.
+
+### 10.4 Novas candidatas (a priorizar com o responsável)
+**C1. Calendário sanitário (painel + alerta):**
+- tabela de programação por fazenda: produto, categoria alvo, regra de data (data fixa anual, idade do animal ou intervalo), janela de aviso;
+- gera pendências por lote/categoria, também para quem ainda não lançou a primeira aplicação; entra na página Manejo Sanitário e nas notificações semanais;
+- vacinas obrigatórias (aftosa, brucelose em bezerras) como modelos prontos editáveis por fazenda. As regras e janelas oficiais devem ser confirmadas com o órgão estadual antes de embutir datas.
+
+**C2. Protocolo de IATF:**
+- tabela de protocolo (nome, passos com dia, produto e dose) e lote de protocolo (fêmeas, D0, responsável); os passos D8/D10 viram tarefas com data calculada;
+- a IA registra um evento de `Inseminação` com touro, partida do sêmen e técnico (já existentes);
+- relatório de taxa de prenhez por protocolo, touro, sêmen e inseminador, sobre `eventos_reprodutivos`;
+- decidir antes: dados fixos do protocolo no código ou editáveis; quem executa os passos (veterinário externo ou peão).
+
+**C3. Sessão de curral com tratamento/vacina:** gravar, na mesma sessão do Manejo de Curral, uma aplicação sanitária por linha ou para o grupo. Não afeta contagem nem peso do lote, então cabe na regra do agregado. Depende da P2.
+
+**C4. Bastão RFID:** decidir qual bastão e balança vocês usam (Bluetooth ou serial) antes de qualquer desenho.
+
+### 10.5 Pontos de atenção levantados na revisão
+- A RLS de `aplicacoes_sanitarias`, `eventos_reprodutivos` e `estacoes_monta` deixa o peão escrever pela API, igual às demais tabelas; avaliar uma migration que restrinja a escrita a quem não é peão.
+- O resumo por estação de monta ignora os partos posteriores à cobertura; contar o parto como prenhez confirmada.
+- Carência de lote também marca animal que entrou no lote depois da aplicação (lado conservador).
