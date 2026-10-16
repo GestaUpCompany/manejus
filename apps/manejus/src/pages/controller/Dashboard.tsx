@@ -4,7 +4,7 @@ import { Card, Button, ErrorState, PageSkeleton } from '@gestaup/ui'
 import { CADERNETA_IMAGES, CADERNETA_TITLES } from '../../types/images'
 import { useFazenda, useDashboardStats, useGadoStats, useRecentActivities, useFormulacoesBackfillAlert, useRebanhoFaixaEtaria } from '../../hooks/useDashboardQueries'
 import type { RebanhoFaixaEtariaItem } from '../../hooks/useDashboardQueries'
-import { CADERNETA_GRUPOS } from '../../utils/cadernetas'
+import { gruposDaFazenda } from '../../utils/cadernetas'
 
 function StatCard({
   title,
@@ -253,7 +253,7 @@ export function ControllerDashboard() {
     ),
   }
 
-  const cadernetaGrupos = CADERNETA_GRUPOS.map((grupo) => ({
+  const cadernetaGrupos = gruposDaFazenda(fazenda.id).map((grupo) => ({
     ...grupo,
     itens: grupo.itens.map((item) => ({
       key: item.id,

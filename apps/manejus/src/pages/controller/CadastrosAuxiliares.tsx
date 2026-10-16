@@ -6,7 +6,7 @@ import { useKeyboardShortcuts } from '@gestaup/shared'
 import { updateFazenda } from '@gestaup/shared'
 import type { ExpedienteDias, ExpedienteDia } from '@gestaup/shared'
 import { hashPin } from '@gestaup/shared'
-import { CADERNETAS } from '../../utils/cadernetas'
+import { CADERNETAS, cadernetasDaFazenda } from '../../utils/cadernetas'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import type * as XLSXType from 'xlsx'
 
@@ -443,6 +443,8 @@ export function CadastrosAuxiliares() {
   const [funcionarioErrors, setFuncionarioErrors] = useState<Record<string, string>>({})
   const [mostrarApenasComAcesso, setMostrarApenasComAcesso] = useState(false)
   const [fazendaId, setFazendaId] = useState<string | null>(null)
+  // Cadernetas em teste (manejo de curral, sanidade) só entram nas permissões da fazenda de testes
+  const cadernetasDisponiveis = useMemo(() => cadernetasDaFazenda(fazendaId), [fazendaId])
   const [controleAcessoHabilitado, setControleAcessoHabilitado] = useState(false)
   const [controleAcessoLoading, setControleAcessoLoading] = useState(false)
   const [expedienteHabilitado, setExpedienteHabilitado] = useState(false)
@@ -1874,14 +1876,14 @@ export function CadastrosAuxiliares() {
                                 setFuncionarioRbac({
                                   ...funcionarioRbac,
                                   cadernetas_permitidas:
-                                    funcionarioRbac.cadernetas_permitidas.length === CADERNETAS.length
+                                    funcionarioRbac.cadernetas_permitidas.length === cadernetasDisponiveis.length
                                       ? []
-                                      : CADERNETAS.map((c) => c.id),
+                                      : cadernetasDisponiveis.map((c) => c.id),
                                 })
                               }
                               className="text-xs text-primary dark:text-primary-light hover:underline"
                             >
-                              {funcionarioRbac.cadernetas_permitidas.length === CADERNETAS.length
+                              {funcionarioRbac.cadernetas_permitidas.length === cadernetasDisponiveis.length
                                 ? 'Limpar seleção'
                                 : 'Selecionar todas'}
                             </button>
@@ -1890,7 +1892,7 @@ export function CadastrosAuxiliares() {
                             <p className="text-xs text-red-500 mb-2">{funcionarioErrors.cadernetas}</p>
                           )}
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            {CADERNETAS.map((caderneta) => (
+                            {cadernetasDisponiveis.map((caderneta) => (
                               <label
                                 key={caderneta.id}
                                 className="flex items-center gap-2 p-2 border border-border-base rounded-lg cursor-pointer hover:bg-surface-2"
@@ -2092,7 +2094,7 @@ export function CadastrosAuxiliares() {
                     </div>
                     {Array.isArray(item.cadernetas_permitidas) && item.cadernetas_permitidas.length > 0 && (() => {
                       const total = item.cadernetas_permitidas.length
-                      const conhecidas = CADERNETAS.length
+                      const conhecidas = cadernetasDisponiveis.length
                       const todas = total >= conhecidas || total >= conhecidas * 0.9
                       if (todas) {
                         return (

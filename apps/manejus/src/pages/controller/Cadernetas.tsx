@@ -1,17 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, Button, useToast } from '@gestaup/ui'
 import { CADERNETA_IMAGES, CADERNETA_TITLES, CADERNETA_DESCRIPTIONS } from '../../types/images'
 import { useAuth } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import { exportAllCadernetas } from '../../utils/exportAllCadernetas'
-import { CADERNETA_GRUPOS } from '../../utils/cadernetas'
+import { gruposDaFazenda } from '../../utils/cadernetas'
 
 export function Cadernetas() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const toast = useToast()
   const [exporting, setExporting] = useState(false)
+  const [fazendaIdAtual, setFazendaIdAtual] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user) return
+    getFazendaIdForUser(user.id).then((id) => setFazendaIdAtual(id ?? null)).catch(() => setFazendaIdAtual(null))
+  }, [user])
+
+  // Cadernetas em teste só aparecem na fazenda de testes
+  const grupos = useMemo(() => gruposDaFazenda(fazendaIdAtual), [fazendaIdAtual])
 
   const handleExportAll = async () => {
     if (!user || exporting) return
@@ -45,7 +54,7 @@ export function Cadernetas() {
         </Button>
       </div>
 
-      {CADERNETA_GRUPOS.map((grupo) => (
+      {grupos.map((grupo) => (
         <div key={grupo.nome}>
           <h3
             className="text-sm font-semibold uppercase tracking-wide mb-3"

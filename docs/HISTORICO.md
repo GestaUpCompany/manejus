@@ -2439,3 +2439,7 @@ Implementado em 2026-10-13. `lote_categorias.idade` (meses) é a idade na data-b
 ## Sanidade na lista de cadernetas do painel (16/10/2026)
 - `utils/cadernetas.ts` e `types/images.ts`: entrada `sanidade` (grupo Gado & Pastagens, abre `/controller/manejo-sanitario`) para liberar a caderneta de Sanidade do PWA por funcionário. Imagem `public/images/cadernetas/sanidade.png` é cópia provisória da Enfermaria.
 - Como no manejo de curral: só funcionários reais ganham essa permissão depois que o painel novo estiver no ar.
+
+## Cadernetas novas só na fazenda de testes (painel) (16/10/2026)
+- `utils/cadernetas.ts`: `CADERNETAS_EM_TESTE` (`manejo-curral`, `sanidade`), `FAZENDA_DE_TESTES_ID`, `cadernetaVisivelNaFazenda`, `cadernetasDaFazenda` e `gruposDaFazenda` (teste em `cadernetasEmTeste.test.ts`). Aplicado na página Cadernetas, nos grupos do Dashboard e na lista de permissões por funcionário em Cadastros Auxiliares (inclui o "Selecionar todas" e o texto "todas"). Enquanto a fazenda ainda não é conhecida, as cadernetas em teste ficam ocultas. Espelha a regra do PWA (`utils/constants.ts`).
+- Fora do alcance: a página Manejo Sanitário e a de sessões de manejo de curral continuam acessíveis por URL direta (não vazam dados de outra fazenda: a RLS filtra). Para liberar para todas: esvaziar `CADERNETAS_EM_TESTE` nos dois repositórios.

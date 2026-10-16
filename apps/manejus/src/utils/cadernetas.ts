@@ -145,3 +145,24 @@ export const CADERNETAS: CadernetaOption[] = CADERNETA_GRUPOS.flatMap((grupo) =>
 export const CHECKLIST_ITENS = [
   { id: 'auditoria-5s', path: '/controller/checklists/auditoria-5s' },
 ] as const
+
+/** Fazenda de testes (Gesta'Up): única que enxerga as cadernetas ainda em teste. */
+export const FAZENDA_DE_TESTES_ID = 'd649c65e-16ab-4b77-a84b-df937aa41cc3'
+
+/** Cadernetas novas, liberadas só para a fazenda de testes até serem validadas no campo (espelha o PWA). */
+export const CADERNETAS_EM_TESTE: readonly string[] = ['manejo-curral', 'sanidade']
+
+/** Caderneta em teste só aparece na fazenda de testes; enquanto a fazenda não é conhecida, fica oculta. */
+export function cadernetaVisivelNaFazenda(cadernetaId: string, fazendaId: string | null | undefined): boolean {
+  return !CADERNETAS_EM_TESTE.includes(cadernetaId) || fazendaId === FAZENDA_DE_TESTES_ID
+}
+
+export function cadernetasDaFazenda(fazendaId: string | null | undefined): CadernetaOption[] {
+  return CADERNETAS.filter((c) => cadernetaVisivelNaFazenda(c.id, fazendaId))
+}
+
+export function gruposDaFazenda(fazendaId: string | null | undefined): CadernetaGrupo[] {
+  return CADERNETA_GRUPOS.map((g) => ({ ...g, itens: g.itens.filter((i) => cadernetaVisivelNaFazenda(i.id, fazendaId)) })).filter(
+    (g) => g.itens.length > 0
+  )
+}
