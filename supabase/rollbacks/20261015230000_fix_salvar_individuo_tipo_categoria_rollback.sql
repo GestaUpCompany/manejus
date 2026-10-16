@@ -1,0 +1,1 @@
+-- Rollback de 20261015230000: a correção é só de tipo; para voltar, aplique o corpo de 20261015220000 (que falha ao mover de lote). Prefira o rollback de 20261015220000 (DROP).

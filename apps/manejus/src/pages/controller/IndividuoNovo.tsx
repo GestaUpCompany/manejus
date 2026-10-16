@@ -10,7 +10,6 @@ import {
   categoriasMacho,
   categoriasFemea,
   origens,
-  toNumber,
 } from '../../utils/individualValidation'
 import {
   checkDuplicateIdentification,
@@ -18,7 +17,6 @@ import {
   type IdentificationField,
 } from '../../utils/checkDuplicateIdentification'
 import { getFazendaIdForUser } from '@gestaup/shared'
-import { montarMovimentacoesIndividuo, mudouLocal } from '../../utils/movimentacaoIndividuo'
 import { useLotes } from '@gestaup/shared'
 
 interface SelectOption {
@@ -74,7 +72,9 @@ export function IndividuoNovo() {
   const toast = useToast()
   const [form, setForm] = useState(INITIAL_FORM)
   const [statusOriginal, setStatusOriginal] = useState<string | undefined>(undefined)
-  const [pesoOriginal, setPesoOriginal] = useState('')
+  const [dataMovimentacao, setDataMovimentacao] = useState(
+    () => toFarmDateOnly(new Date().toISOString()) ?? new Date().toISOString().split('T')[0]
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string; onClose: () => void }>({
@@ -228,7 +228,6 @@ export function IndividuoNovo() {
         setLoteOriginal(individuo.lote_atual || null)
         setCategoriaOriginal(individuo.categoria || null)
         setStatusOriginal(individuo.status || 'Vivo')
-        setPesoOriginal(String(individuo.peso_atual_kg ?? ''))
         setForm({
           id_manejo: individuo.id_manejo || '',
           id_brinco: individuo.id_brinco || '',
@@ -458,287 +457,55 @@ export function IndividuoNovo() {
     await executeSubmit()
   }
 
-  const registrarMovimentacaoIndividuo = async (params: {
-    individuoId: string
-    origem: { loteId: string | null | undefined; categoria: string | null | undefined }
-    destino: { loteId: string | null | undefined; categoria: string | null | undefined }
-    contexto: 'realocacao' | 'cadastro'
-  }) => {
-    const { destino } = params
-    let pesoMedioDestinoKg: number | null = null
-    if (destino.loteId && destino.categoria) {
-      const { data: cat } = await supabase
-        .from('lote_categorias')
-        .select('peso_vivo_atual_kg_cab')
-        .eq('lote_id', destino.loteId)
-        .ilike('categoria', destino.categoria)
-        .eq('ativo', true)
-        .maybeSingle()
-      pesoMedioDestinoKg = cat?.peso_vivo_atual_kg_cab != null ? Number(cat.peso_vivo_atual_kg_cab) : null
-    }
-
-    const pesoInformado = form.peso_atual_kg ? toNumber(form.peso_atual_kg) : null
-    const linhas = montarMovimentacoesIndividuo({
-      fazendaId: fazendaId!,
-      individuoId: params.individuoId,
-      identificacao: form.id_brinco || form.id_chip || form.id_manejo || form.id_provisorio_cria || 'Indivíduo',
-      origem: params.origem,
-      destino: params.destino,
-      data: toFarmDateOnly(new Date().toISOString()) ?? new Date().toISOString().split('T')[0],
-      pesoKg: pesoInformado !== null && Number.isFinite(pesoInformado) ? pesoInformado : null,
-      pesoMedioDestinoKg,
-      contexto: params.contexto,
-    })
-
-    // Em ordem: a Saída precisa existir antes da Entrada para os contadores refletirem a sequência
-    for (const linha of linhas) {
-      const { error } = await supabase.from('registros_movimentacao').insert(linha)
-      if (error) throw error
-    }
-  }
-
+  // Salva numa única transação (RPC): indivíduo, herança nutricional e Saída/Entrada agregadas.
   const executeSubmit = async () => {
     setSubmitting(true)
 
     try {
+      const camposNumericos = [
+        'peso_nascimento_kg',
+        'peso_atual_kg',
+        'pv_entrada_kg',
+        'preco_entrada_reais_kg',
+        'preco_entrada_reais_arroba',
+        'preco_entrada_reais_cabeca',
+        'preco_arroba_boi_gordo',
+        'agio_desagio',
+        'gmd_kg_cab_dia',
+        'peso_meta_kg',
+        'peso_desmama_kg',
+      ]
+      const dados: Record<string, unknown> = { ...form, sync_status: syncStatus }
+      for (const chave of ['id_manejo', 'id_brinco', 'id_chip', 'id_provisorio_cria']) {
+        if (typeof dados[chave] === 'string') dados[chave] = (dados[chave] as string).trim()
+      }
+      for (const campo of camposNumericos) {
+        const valor = dados[campo]
+        dados[campo] = valor === '' || valor == null ? null : Number(String(valor).replace(',', '.'))
+      }
+      Object.keys(dados).forEach((chave) => {
+        if (dados[chave] === '') dados[chave] = null
+      })
+
+      const { data, error } = await supabase.rpc('salvar_individuo', {
+        p_fazenda_id: fazendaId,
+        p_individuo_id: isEditMode ? editId : null,
+        p_dados: dados,
+        p_data_movimentacao: dataMovimentacao || null,
+      })
+      if (error) throw new Error(error.message)
+      const resposta = data as { success: boolean; error?: string } | null
+      if (!resposta?.success) throw new Error(resposta?.error || 'Não foi possível salvar o indivíduo.')
+
       if (isEditMode) {
-        // Atualizar indivíduo existente
-        const dataToUpdate: any = {
-          id_manejo: form.id_manejo?.trim(),
-          id_brinco: form.id_brinco?.trim(),
-          id_chip: form.id_chip?.trim(),
-          id_provisorio_cria: form.id_provisorio_cria?.trim(),
-          sexo: form.sexo,
-          categoria: form.categoria,
-          raca: form.raca,
-          data_nascimento: form.data_nascimento,
-          peso_nascimento_kg: form.peso_nascimento_kg ? Number(String(form.peso_nascimento_kg).replace(',', '.')) : null,
-          peso_atual_kg: form.peso_atual_kg ? Number(String(form.peso_atual_kg).replace(',', '.')) : null,
-          // Peso digitado à mão vira origem 'manual'; sem mudança, preserva a origem (pesagem/estimado)
-          ...(form.peso_atual_kg && String(form.peso_atual_kg) !== pesoOriginal
-            ? { peso_atual_origem: 'manual', peso_atual_data: toFarmDateOnly(new Date().toISOString()) }
-            : {}),
-          status: form.status,
-          origem: form.origem,
-          data_entrada_fazenda: form.data_entrada_fazenda,
-          pv_entrada_kg: form.pv_entrada_kg ? Number(String(form.pv_entrada_kg).replace(',', '.')) : null,
-          preco_entrada_reais_kg: form.preco_entrada_reais_kg ? Number(String(form.preco_entrada_reais_kg).replace(',', '.')) : null,
-          preco_entrada_reais_arroba: form.preco_entrada_reais_arroba ? Number(String(form.preco_entrada_reais_arroba).replace(',', '.')) : null,
-          preco_entrada_reais_cabeca: form.preco_entrada_reais_cabeca ? Number(String(form.preco_entrada_reais_cabeca).replace(',', '.')) : null,
-          preco_arroba_boi_gordo: form.preco_arroba_boi_gordo ? Number(String(form.preco_arroba_boi_gordo).replace(',', '.')) : null,
-          agio_desagio: form.agio_desagio ? Number(String(form.agio_desagio).replace(',', '.')) : null,
-          data_formacao_lote: form.data_formacao_lote,
-          lote_atual: form.lote_atual,
-          protocolo_sanitario: form.protocolo_sanitario,
-          fornecedor: form.fornecedor,
-          propriedade_origem: form.propriedade_origem,
-          propriedade_atual: form.propriedade_atual,
-          pai: form.pai,
-          mae: form.mae,
-          estrategia_nutricional_tipo: form.estrategia_nutricional_tipo,
-          estrategia_nutricional_id: form.estrategia_nutricional_id,
-          estrategia_nutricional_nome: form.estrategia_nutricional_nome,
-          gmd_kg_cab_dia: form.gmd_kg_cab_dia ? Number(String(form.gmd_kg_cab_dia).replace(',', '.')) : null,
-          peso_meta_kg: form.peso_meta_kg ? Number(String(form.peso_meta_kg).replace(',', '.')) : null,
-          data_desmama: form.data_desmama,
-          peso_desmama_kg: form.peso_desmama_kg ? Number(String(form.peso_desmama_kg).replace(',', '.')) : null,
-          pasto_atual: form.pasto_atual,
-          setor_atual: form.setor_atual,
-          data_insercao_rastreabilidade: form.data_insercao_rastreabilidade,
-          data_liberacao_sisbov: form.data_liberacao_sisbov,
-          updated_at: new Date().toISOString()
-        }
-
-        // Converter strings vazias para null para campos opcionais (datas, selects, textos)
-        Object.keys(dataToUpdate).forEach((key) => {
-          if (dataToUpdate[key] === '') {
-            dataToUpdate[key] = null
-          }
-        })
-
-        const { error } = await supabase
-          .from('individuos')
-          .update(dataToUpdate)
-          .eq('id', editId)
-          .eq('fazenda_id', fazendaId)
-
-        if (error) {
-          console.error('Erro ao atualizar indivíduo:', error)
-          toast.error('Erro ao atualizar indivíduo: ' + error.message)
-          setSubmitting(false)
-          return
-        }
-
-        // Atualizar dados nutricionais herdados se houver lote/categoria
-        if (form.lote_atual && form.categoria) {
-          try {
-            const { data: categoriaData } = await supabase
-              .from('lote_categorias')
-              .select('estrategia_nutricional, gmd, peso_vivo_meta_kg_cab, formulacao_id')
-              .eq('lote_id', form.lote_atual)
-              .eq('categoria', form.categoria)
-              .eq('ativo', true)
-              .maybeSingle()
-
-            if (categoriaData) {
-              let estrategiaMapeada = 'Ração'
-              if (categoriaData.estrategia_nutricional) {
-                if (categoriaData.estrategia_nutricional.includes('Proteico') || categoriaData.estrategia_nutricional.includes('Proteinado')) {
-                  estrategiaMapeada = 'Proteico-Energético'
-                } else if (categoriaData.estrategia_nutricional.includes('Ração')) {
-                  estrategiaMapeada = 'Ração'
-                }
-              }
-
-              await supabase
-                .from('individuos')
-                .update({
-                  estrategia_nutricional_tipo: estrategiaMapeada,
-                  estrategia_nutricional_nome: categoriaData.estrategia_nutricional,
-                  gmd_kg_cab_dia: categoriaData.gmd ? parseFloat(categoriaData.gmd.replace(',', '.')) : null,
-                  peso_meta_kg: categoriaData.peso_vivo_meta_kg_cab,
-                  estrategia_nutricional_id: categoriaData.formulacao_id
-                })
-                .eq('id', editId)
-            }
-          } catch (nutriError) {
-            console.error('Erro ao atualizar dados nutricionais:', nutriError)
-          }
-        }
-
-        // Registrar a movimentação quando o lote ou a categoria mudou. O trigger do banco recalcula quant_atual.
-        if (mudouLocal({ loteId: loteOriginal, categoria: categoriaOriginal }, { loteId: form.lote_atual, categoria: form.categoria })) {
-          try {
-            await registrarMovimentacaoIndividuo({
-              individuoId: editId!,
-              origem: { loteId: loteOriginal, categoria: categoriaOriginal },
-              destino: { loteId: form.lote_atual, categoria: form.categoria },
-              contexto: 'realocacao',
-            })
-          } catch (movError) {
-            console.error('Erro ao registrar realocação de lote:', movError)
-            toast.error('Indivíduo salvo, mas não foi possível registrar a movimentação de lote.')
-          }
-        }
-
-        // Atualizar lote/categoria original para futuras movimentações dentro desta edição
         setLoteOriginal(form.lote_atual)
         setCategoriaOriginal(form.categoria)
-
-        openSuccessModal(
-          'Sucesso!',
-          'Indivíduo atualizado com sucesso.',
-          () => navigate('/controller/individuos')
-        )
-      } else {
-        // Criar novo indivíduo
-        const dataToInsert: any = {
-          fazenda_id: fazendaId,
-          ...form,
-          sync_status: syncStatus,
-        }
-
-        for (const chave of ['id_manejo', 'id_brinco', 'id_chip', 'id_provisorio_cria']) {
-          if (typeof dataToInsert[chave] === 'string') dataToInsert[chave] = dataToInsert[chave].trim()
-        }
-
-        Object.keys(dataToInsert).forEach((key) => {
-          if (dataToInsert[key] === '') {
-            dataToInsert[key] = null
-          }
-        })
-
-        const numericFields = [
-          'peso_nascimento_kg',
-          'peso_atual_kg',
-          'pv_entrada_kg',
-          'preco_entrada_reais_kg',
-          'preco_entrada_reais_arroba',
-          'preco_entrada_reais_cabeca',
-          'preco_arroba_boi_gordo',
-          'agio_desagio',
-          'gmd_kg_cab_dia',
-          'peso_meta_kg',
-          'peso_desmama_kg',
-        ]
-
-        numericFields.forEach((field) => {
-          if (dataToInsert[field]) {
-            dataToInsert[field] = Number(String(dataToInsert[field]).replace(',', '.'))
-          }
-        })
-
-        if (dataToInsert.peso_atual_kg) {
-          dataToInsert.peso_atual_origem = 'manual'
-          dataToInsert.peso_atual_data = toFarmDateOnly(new Date().toISOString())
-        }
-
-        const { data, error } = await supabase.from('individuos').insert(dataToInsert).select('id').single()
-
-        if (error) {
-          console.error('Erro ao criar indivíduo:', error)
-          toast.error('Erro ao criar indivíduo: ' + error.message)
-          setSubmitting(false)
-          return
-        }
-
-        // Registrar no histórico do lote, atualizar quantidade e herdar dados nutricionais
-        if (form.lote_atual && form.categoria) {
-          try {
-            // Buscar dados nutricionais da categoria do lote
-            const { data: categoriaData } = await supabase
-              .from('lote_categorias')
-              .select('estrategia_nutricional, gmd, peso_vivo_meta_kg_cab, formulacao_id')
-              .eq('lote_id', form.lote_atual)
-              .eq('categoria', form.categoria)
-              .eq('ativo', true)
-              .maybeSingle()
-
-            // Atualizar indivíduo com dados nutricionais herdados
-            if (categoriaData) {
-              // Mapear estratégia nutricional para valores compatíveis
-              let estrategiaMapeada = 'Ração'; // valor padrão
-              if (categoriaData.estrategia_nutricional) {
-                if (categoriaData.estrategia_nutricional.includes('Proteico') || categoriaData.estrategia_nutricional.includes('Proteinado')) {
-                  estrategiaMapeada = 'Proteico-Energético';
-                } else if (categoriaData.estrategia_nutricional.includes('Ração')) {
-                  estrategiaMapeada = 'Ração';
-                }
-              }
-
-              await supabase
-                .from('individuos')
-                .update({
-                  estrategia_nutricional_tipo: estrategiaMapeada,
-                  estrategia_nutricional_nome: categoriaData.estrategia_nutricional,
-                  gmd_kg_cab_dia: categoriaData.gmd ? parseFloat(categoriaData.gmd.replace(',', '.')) : null,
-                  peso_meta_kg: categoriaData.peso_vivo_meta_kg_cab,
-                  estrategia_nutricional_id: categoriaData.formulacao_id
-                })
-                .eq('id', data.id)
-            }
-
-            // Registrar a entrada no lote (unificado em registros_movimentacao). O trigger do banco recalcula quant_atual.
-            await registrarMovimentacaoIndividuo({
-              individuoId: data.id,
-              origem: { loteId: null, categoria: null },
-              destino: { loteId: form.lote_atual, categoria: form.categoria },
-              contexto: 'cadastro',
-            })
-
-          } catch (histError) {
-            console.error('Erro ao registrar histórico do lote:', histError)
-            // Não falhar a criação do indivíduo se o histórico falhar, mas avisar
-            toast.error('Indivíduo criado, mas não foi possível registrar a entrada no lote.')
-          }
-        }
-
-        openSuccessModal(
-          'Sucesso!',
-          'Indivíduo criado com sucesso.',
-          () => navigate('/controller/individuos')
-        )
       }
+      openSuccessModal(
+        'Sucesso!',
+        isEditMode ? 'Indivíduo atualizado com sucesso.' : 'Indivíduo criado com sucesso.',
+        () => navigate('/controller/individuos')
+      )
     } catch (error) {
       console.error('Erro ao salvar indivíduo:', error)
       toast.error('Erro ao salvar indivíduo: ' + (error as Error).message)
@@ -747,7 +514,6 @@ export function IndividuoNovo() {
     }
   }
 
-  
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -1103,6 +869,19 @@ export function IndividuoNovo() {
                   ))}
                 </select>
               </div>
+              {form.lote_atual && (!isEditMode || form.lote_atual !== loteOriginal || form.categoria !== categoriaOriginal) && (
+                <div>
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Data da movimentação</label>
+                  <input
+                    type="date"
+                    value={dataMovimentacao}
+                    max={toFarmDateOnly(new Date().toISOString()) ?? undefined}
+                    onChange={(e) => setDataMovimentacao(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface-1 text-content-strong border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
+                  <p className="text-xs text-content-muted mt-1">Data em que o animal entrou no lote (afeta a contagem do lote).</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Pasto atual</label>
                 <div className="text-sm text-content-strong min-h-[42px] flex items-center px-3 py-2 border border-surface-3 rounded-lg bg-surface-2">

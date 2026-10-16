@@ -1,0 +1,1 @@
+-- Rollback de 20261015240000: correção de tipo; reverter = DROP da função (ver rollback de 20261015220000).
