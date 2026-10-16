@@ -243,6 +243,45 @@ export function useIndividuoDetalhe(id: string | undefined) {
   return { individuo, referencias, pesagens, movimentacoes, descendentes, partos }
 }
 
+export type TipoEventoLinhaDoTempo =
+  | 'cadastro'
+  | 'pesagem'
+  | 'movimentacao'
+  | 'movimentacao_grupo'
+  | 'parto_mae'
+  | 'nascimento'
+  | 'parto_adotiva'
+  | 'morte'
+  | 'reprodutivo'
+
+export interface EventoLinhaDoTempo {
+  data: string
+  tipo: TipoEventoLinhaDoTempo
+  titulo: string
+  detalhe: string | null
+  origem_tabela: string
+  origem_id: string
+}
+
+/** Tudo o que aconteceu com o animal, mais recente primeiro (view vw_individuo_linha_do_tempo). */
+export function useLinhaDoTempoIndividuo(id: string | undefined, habilitado: boolean) {
+  return useQuery({
+    // começa com ['individuo', id] para ser invalidada junto com as demais ações da ficha
+    queryKey: ['individuo', id, 'linha-do-tempo'],
+    enabled: !!id && habilitado,
+    queryFn: async (): Promise<EventoLinhaDoTempo[]> => {
+      const { data, error } = await supabase
+        .from('vw_individuo_linha_do_tempo')
+        .select('data, tipo, titulo, detalhe, origem_tabela, origem_id')
+        .eq('individuo_id', id!)
+        .order('data', { ascending: false })
+        .limit(500)
+      if (error) throw error
+      return (data ?? []) as EventoLinhaDoTempo[]
+    },
+  })
+}
+
 interface RespostaRpcIndividuo {
   success: boolean
   error?: string

@@ -19,6 +19,8 @@ import {
   rotuloIndividuo,
   useIndividuoAcoes,
   useIndividuoDetalhe,
+  useLinhaDoTempoIndividuo,
+  type TipoEventoLinhaDoTempo,
   type IndividuoResumo,
   type PartoIndividuo,
 } from '../../hooks/useIndividuoDetalhe'
@@ -32,15 +34,28 @@ import {
   validarBaixa,
 } from '../../utils/baixaIndividuo'
 
-type Aba = 'resumo' | 'pesagens' | 'movimentacoes' | 'genealogia' | 'maternidade'
+type Aba = 'resumo' | 'linha-do-tempo' | 'pesagens' | 'movimentacoes' | 'genealogia' | 'maternidade'
 
 const ABAS: { id: Aba; label: string }[] = [
   { id: 'resumo', label: 'Resumo' },
+  { id: 'linha-do-tempo', label: 'Linha do tempo' },
   { id: 'pesagens', label: 'Pesagens' },
   { id: 'movimentacoes', label: 'Movimentações' },
   { id: 'genealogia', label: 'Genealogia' },
   { id: 'maternidade', label: 'Maternidade' },
 ]
+
+const ROTULO_EVENTO: Record<TipoEventoLinhaDoTempo, { rotulo: string; classe: string }> = {
+  cadastro: { rotulo: 'Cadastro', classe: 'bg-surface-2 text-content-strong' },
+  pesagem: { rotulo: 'Pesagem', classe: 'bg-blue-500/10 text-blue-800 dark:text-blue-200' },
+  movimentacao: { rotulo: 'Movimentação', classe: 'bg-purple-500/10 text-purple-800 dark:text-purple-200' },
+  movimentacao_grupo: { rotulo: 'Mov. em grupo', classe: 'bg-purple-500/10 text-purple-800 dark:text-purple-200' },
+  parto_mae: { rotulo: 'Parto', classe: 'bg-pink-500/10 text-pink-800 dark:text-pink-200' },
+  nascimento: { rotulo: 'Nascimento', classe: 'bg-pink-500/10 text-pink-800 dark:text-pink-200' },
+  parto_adotiva: { rotulo: 'Mãe adotiva', classe: 'bg-pink-500/10 text-pink-800 dark:text-pink-200' },
+  morte: { rotulo: 'Morte', classe: 'bg-red-500/10 text-red-800 dark:text-red-200' },
+  reprodutivo: { rotulo: 'Reprodução', classe: 'bg-green-500/10 text-green-800 dark:text-green-200' },
+}
 
 const th = 'px-3 py-2 text-left text-xs font-semibold text-content-muted uppercase tracking-wider'
 const td = 'px-3 py-2 text-sm text-content'
@@ -198,6 +213,7 @@ export function IndividuoDetalhe() {
   const [searchParams, setSearchParams] = useSearchParams()
   const abaParam = searchParams.get('aba') as Aba | null
   const aba: Aba = ABAS.some((a) => a.id === abaParam) ? (abaParam as Aba) : 'resumo'
+  const linhaDoTempo = useLinhaDoTempoIndividuo(id, aba === 'linha-do-tempo')
 
   const { individuo, referencias, pesagens, movimentacoes, descendentes, partos } = useIndividuoDetalhe(id)
   const ind = individuo.data
@@ -456,6 +472,36 @@ export function IndividuoDetalhe() {
                   </div>
                 </DetailSection>
               </div>
+            </Card>
+          )}
+
+          {aba === 'linha-do-tempo' && (
+            <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
+              {linhaDoTempo.isLoading ? (
+                <p className="text-content-muted">Carregando linha do tempo...</p>
+              ) : linhaDoTempo.error ? (
+                <p className="text-red-500">Não foi possível carregar a linha do tempo.</p>
+              ) : (linhaDoTempo.data?.length ?? 0) === 0 ? (
+                <EmptyState title="Nenhum evento registrado para este animal" />
+              ) : (
+                <ol className="space-y-3">
+                  {linhaDoTempo.data!.map((e) => {
+                    const t = ROTULO_EVENTO[e.tipo] ?? { rotulo: e.tipo, classe: 'bg-surface-2 text-content-strong' }
+                    return (
+                      <li key={`${e.origem_tabela}-${e.origem_id}-${e.tipo}`} className="flex gap-3">
+                        <div className="w-28 shrink-0 text-sm text-content-muted">{formatDate(e.data)}</div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${t.classe}`}>{t.rotulo}</span>
+                            <span className="text-sm font-medium text-content-strong">{e.titulo}</span>
+                          </div>
+                          {e.detalhe && <p className="text-sm text-content-muted mt-0.5">{e.detalhe}</p>}
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ol>
+              )}
             </Card>
           )}
 
