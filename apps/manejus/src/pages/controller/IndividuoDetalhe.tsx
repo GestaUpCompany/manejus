@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { formatDate, formatDateTime, toFarmDateOnly } from '@gestaup/shared'
+import { formatDate, formatDateTime, toFarmDateOnly, useLotes } from '@gestaup/shared'
 import {
   Button,
   Card,
@@ -201,8 +201,9 @@ export function IndividuoDetalhe() {
 
   const { individuo, referencias, pesagens, movimentacoes, descendentes, partos } = useIndividuoDetalhe(id)
   const ind = individuo.data
-  const { alterarStatus, excluir } = useIndividuoAcoes(ind)
+  const { alterarStatus, excluir, confirmarLocalizacao } = useIndividuoAcoes(ind)
   const ref = referencias.data
+  const { data: lotesFazenda = [] } = useLotes(ind?.fazenda_id)
 
   const [modalStatus, setModalStatus] = useState(false)
   const [novoStatus, setNovoStatus] = useState('')
@@ -211,6 +212,8 @@ export function IndividuoDetalhe() {
   const [destinoSaida, setDestinoSaida] = useState('')
   const [errosBaixa, setErrosBaixa] = useState<Record<string, string>>({})
   const [modalExcluir, setModalExcluir] = useState(false)
+  const [modalLocalizacao, setModalLocalizacao] = useState(false)
+  const [loteConfirmacao, setLoteConfirmacao] = useState('')
 
   const evolucao = useMemo(() => calcularEvolucaoPeso(pesagens.data || []), [pesagens.data])
   const gmdMedio = gmdPeriodo(evolucao)
@@ -239,6 +242,18 @@ export function IndividuoDetalhe() {
     } catch (error) {
       console.error('Erro ao alterar status:', error)
       toast.error((error as { message?: string })?.message || 'Não foi possível alterar o status.')
+    }
+  }
+
+  const confirmarLocalizacaoNoLote = async () => {
+    if (!loteConfirmacao) return
+    try {
+      await confirmarLocalizacao.mutateAsync(loteConfirmacao)
+      toast.success('Localização confirmada.')
+      setModalLocalizacao(false)
+    } catch (error) {
+      console.error('Erro ao confirmar localização:', error)
+      toast.error((error as { message?: string })?.message || 'Não foi possível confirmar a localização.')
     }
   }
 
@@ -290,6 +305,17 @@ export function IndividuoDetalhe() {
             >
               Dar baixa / alterar status
             </Button>
+            {ind.localizacao_incerta_desde && ind.status === 'Vivo' && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setLoteConfirmacao(ind.lote_atual ?? '')
+                  setModalLocalizacao(true)
+                }}
+              >
+                Confirmar localização
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => setModalExcluir(true)}>
               Excluir
             </Button>
@@ -305,6 +331,9 @@ export function IndividuoDetalhe() {
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone={statusTone(ind!.status)}>{ind!.status}</Badge>
               {completudeBadge(ind!.sync_status)}
+              {ind!.localizacao_incerta_desde && ind!.status === 'Vivo' && (
+                <Badge tone="amarelo">Localização incerta desde {formatDate(ind!.localizacao_incerta_desde)}</Badge>
+              )}
               <span className="text-sm text-content-muted">
                 {ind!.categoria} • {ind!.sexo} • {ind!.raca}
               </span>
@@ -682,6 +711,30 @@ export function IndividuoDetalhe() {
             </Button>
             <Button onClick={confirmarStatus} disabled={alterarStatus.isPending || !novoStatus}>
               Salvar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={modalLocalizacao} onClose={() => setModalLocalizacao(false)} title="Confirmar localização" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-content-muted">
+            Este animal estava num lote que teve movimentação por contagem, então não se sabe se ele continua lá. Informe em
+            qual lote ele está agora. Isso não altera a quantidade de cabeças de nenhum lote.
+          </p>
+          <Select
+            label="Lote atual do animal"
+            value={loteConfirmacao}
+            onChange={setLoteConfirmacao}
+            options={lotesFazenda.filter((l) => l.ativo || l.id === ind?.lote_atual).map((l) => ({ value: l.id, label: l.nome }))}
+            placeholder="Selecione"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setModalLocalizacao(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmarLocalizacaoNoLote} disabled={confirmarLocalizacao.isPending || !loteConfirmacao}>
+              Confirmar
             </Button>
           </div>
         </div>

@@ -26,6 +26,7 @@ interface Individuo {
   sync_status?: string
   lote_atual?: string
   pasto_atual?: string
+  localizacao_incerta_desde?: string
   created_at: string
   updated_at: string
 }
@@ -71,6 +72,7 @@ export function Individuos() {
   const [filtroPasto, setFiltroPasto] = useState('')
   const [filtroIncompletos, setFiltroIncompletos] = useState(false)
   const [filtroAutomaticos, setFiltroAutomaticos] = useState(false)
+  const [filtroIncerta, setFiltroIncerta] = useState(false)
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(getStoredPerPage)
   const [totalCount, setTotalCount] = useState(0)
@@ -102,6 +104,7 @@ export function Individuos() {
     filtroPasto,
     filtroIncompletos,
     filtroAutomaticos,
+    filtroIncerta,
   ])
 
   useEffect(() => {
@@ -119,6 +122,7 @@ export function Individuos() {
     filtroPasto,
     filtroIncompletos,
     filtroAutomaticos,
+    filtroIncerta,
     perPage,
   ])
 
@@ -181,6 +185,8 @@ export function Individuos() {
     } else if (filtroAutomaticos) {
       query = query.eq('sync_status', 'automatico_incompleto')
     }
+
+    if (filtroIncerta) query = query.not('localizacao_incerta_desde', 'is', null)
 
     const term = searchTerm.trim()
     if (term) {
@@ -318,6 +324,16 @@ export function Individuos() {
     }
   }
 
+  const getLocalizacaoBadge = (desde?: string) =>
+    desde ? (
+      <span
+        className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-800 dark:text-amber-200"
+        title="Não se sabe se o animal continua neste lote (movimentação por contagem)"
+      >
+        incerta desde {formatDate(desde)}
+      </span>
+    ) : null
+
   const handlePerPageChange = (value: string) => {
     const newPerPage = Number(value)
     setPerPage(newPerPage)
@@ -338,6 +354,7 @@ export function Individuos() {
     setFiltroPasto('')
     setFiltroIncompletos(false)
     setFiltroAutomaticos(false)
+    setFiltroIncerta(false)
   }
 
   const temFiltros =
@@ -352,7 +369,8 @@ export function Individuos() {
     filtroLote ||
     filtroPasto ||
     filtroIncompletos ||
-    filtroAutomaticos
+    filtroAutomaticos ||
+    filtroIncerta
 
   if (loading) {
     return (
@@ -444,6 +462,17 @@ export function Individuos() {
             }`}
           >
             Criados automaticamente
+          </button>
+          <button
+            onClick={() => setFiltroIncerta(!filtroIncerta)}
+            title="Animais identificados cuja localização não foi confirmada após uma movimentação por contagem"
+            className={`h-10 px-3 rounded-lg text-sm font-medium transition-colors ${
+              filtroIncerta
+                ? 'bg-amber-500/10 text-amber-800 dark:text-amber-200 border border-amber-500/30'
+                : 'bg-surface-1 border border-border-base text-content hover:bg-surface-2'
+            }`}
+          >
+            Localização incerta
           </button>
           {temFiltros && (
             <Button onClick={limparFiltros} variant="secondary" size="sm">
@@ -589,6 +618,7 @@ export function Individuos() {
                 </div>
                 <div>
                   <span className="text-content-faint">Lote:</span> {getNomeLote(ind.lote_atual)}
+                  {getLocalizacaoBadge(ind.localizacao_incerta_desde)}
                 </div>
                 <div>
                   <span className="text-content-faint">Pasto:</span> {getNomePasto(ind.pasto_atual)}
@@ -687,7 +717,10 @@ export function Individuos() {
                         {formatDate(ind.data_nascimento)}
                       </td>
                       <td className="px-4 py-3 text-sm text-content">{ind.status}</td>
-                      <td className="px-4 py-3 text-sm text-content">{getNomeLote(ind.lote_atual)}</td>
+                      <td className="px-4 py-3 text-sm text-content">
+                        {getNomeLote(ind.lote_atual)}
+                        {getLocalizacaoBadge(ind.localizacao_incerta_desde)}
+                      </td>
                       <td className="px-4 py-3 text-sm text-content">{getNomePasto(ind.pasto_atual)}</td>
                       <td className="px-4 py-3">{getCompletudeBadge(ind.sync_status)}</td>
                       <td className="px-4 py-3">

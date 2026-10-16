@@ -10,6 +10,7 @@ import { RevisarNovoLoteModal } from '../../components/lotes/RevisarNovoLoteModa
 import { CorrigirPesoModal } from '../../components/lotes/CorrigirPesoModal'
 import { ImportarLotesModal } from '../../components/lotes/ImportarLotesModal'
 import { LoteCard } from '../../components/lotes/LoteCard'
+import { useIdentificadosPorLote } from '../../hooks/useIdentificadosPorLote'
 import { LoteFilters } from '../../components/lotes/LoteFilters'
 import { useKeyboardShortcuts } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
@@ -133,6 +134,7 @@ export function Lotes() {
   const [searchTerm, setSearchTerm] = useState('')
   const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
   const { data: pastosData = [] } = usePastos(fazendaId)
+  const { data: identificadosPorLote = {} } = useIdentificadosPorLote(fazendaId)
   const { data: curraisData = [] } = useCurrais(fazendaId)
   const pastos = useMemo(() => pastosData.filter(p => p.ativo), [pastosData])
   const currais = useMemo(() => curraisData.filter(c => c.ativo), [curraisData])
@@ -3731,6 +3733,7 @@ export function Lotes() {
               key={lote.id}
               lote={lote}
               ocupacao={ocupacaoPorLote[lote.id]}
+              identificacao={identificadosPorLote[lote.id]}
               onEdit={onEdit}
               onToggleActive={onToggleActive}
               onDelete={onDelete}

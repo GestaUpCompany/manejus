@@ -47,6 +47,7 @@ export interface IndividuoDetalhe {
   data_saida?: string | null
   motivo_saida?: string | null
   destino_saida?: string | null
+  localizacao_incerta_desde?: string | null
   created_at: string
   updated_at: string
 }
@@ -292,5 +293,22 @@ export function useIndividuoAcoes(individuo: IndividuoDetalhe | null | undefined
     onSuccess: invalidar,
   })
 
-  return { alterarStatus, excluir }
+  // Informa onde um animal de localização incerta está. Não gera movimentação agregada: o agregado já mudou.
+  const confirmarLocalizacao = useMutation({
+    mutationFn: async (loteId: string) => {
+      if (!individuo) throw new Error('Indivíduo não carregado')
+      const { data, error } = await supabase.rpc('confirmar_localizacao_individuos', {
+        p_fazenda_id: individuo.fazenda_id,
+        p_lote_id: loteId,
+        p_individuo_ids: [individuo.id],
+      })
+      exigirSucesso(data, error, 'Não foi possível confirmar a localização.')
+      if (((data as { atualizados?: number } | null)?.atualizados ?? 0) === 0) {
+        throw new Error('Só animais com localização incerta podem mudar de lote aqui. Para mover um animal confirmado, registre a movimentação.')
+      }
+    },
+    onSuccess: invalidar,
+  })
+
+  return { alterarStatus, excluir, confirmarLocalizacao }
 }

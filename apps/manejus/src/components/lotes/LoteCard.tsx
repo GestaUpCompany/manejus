@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { CardItem, Button } from '@gestaup/ui'
 import { usaCurral } from '../../utils/lotes'
+import type { IdentificacaoLote } from '../../hooks/useIdentificadosPorLote'
 
 interface LoteCategoria {
   categoria: string
@@ -27,12 +28,13 @@ interface LoteCardProps {
     categorias?: LoteCategoria[]
   }
   ocupacao?: OcupacaoInfo
+  identificacao?: IdentificacaoLote
   onEdit: (lote: any) => void
   onToggleActive: (lote: any) => void
   onDelete: (id: string, nome: string) => void
 }
 
-function LoteCardComponent({ lote, ocupacao, onEdit, onToggleActive, onDelete }: LoteCardProps) {
+function LoteCardComponent({ lote, ocupacao, identificacao, onEdit, onToggleActive, onDelete }: LoteCardProps) {
   const total = lote.categorias?.reduce((sum, cat) => sum + (cat.quant_atual ?? cat.quant_inicial ?? 0), 0) || lote.n_cabecas || 0
   // lotes.qtd_bezerros é legado: bezerros ao pé são categorias próprias.
   const bezerrosAoPe = lote.categorias?.reduce((sum, cat) => {
@@ -54,6 +56,19 @@ function LoteCardComponent({ lote, ocupacao, onEdit, onToggleActive, onDelete }:
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lote.sistema_producao === 'TIP' ? 'bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-200' : usaCurral(lote.sistema_producao) ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200' : 'bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-200'}`}>
               {lote.sistema_producao === 'TIP' ? 'TIP' : usaCurral(lote.sistema_producao) ? 'Confinamento' : 'Pasto'}
             </span>
+          </p>
+        )}
+        {identificacao && identificacao.identificados > 0 && (
+          <p className="text-sm text-content-muted">
+            <span className="font-medium">Identificados:</span> {identificacao.identificados}
+            {identificacao.incertos > 0 && (
+              <span
+                className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200"
+                title="Animais identificados cuja localização não foi confirmada após uma movimentação por contagem"
+              >
+                {identificacao.incertos} com localização incerta
+              </span>
+            )}
           </p>
         )}
         {lote.peso_vivo_atual_kg_cab && (
