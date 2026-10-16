@@ -1,0 +1,1 @@
+-- Rollback de 20261016190000: correção de texto; ver o rollback de 20261016170000 (DROP).

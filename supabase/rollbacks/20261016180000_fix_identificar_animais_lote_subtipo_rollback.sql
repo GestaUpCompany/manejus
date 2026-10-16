@@ -1,0 +1,1 @@
+-- Rollback de 20261016180000: correção de corpo; para desfazer a função, ver o rollback de 20261016170000 (DROP).

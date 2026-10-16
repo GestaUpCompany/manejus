@@ -421,6 +421,9 @@ export function Individuos() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => navigate('/controller/individuos/identificar')} className="h-10">
+            Identificar lote
+          </Button>
           <Button variant="secondary" onClick={() => navigate('/controller/individuos/conciliacao')} className="h-10">
             Conciliação
           </Button>
