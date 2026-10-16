@@ -420,9 +420,14 @@ export function Individuos() {
             {totalCount} indivíduo{totalCount !== 1 ? 's' : ''} no total
           </p>
         </div>
-        <Button onClick={() => navigate('/controller/individuos/novo')} className="h-10">
-          Novo Indivíduo
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => navigate('/controller/individuos/conciliacao')} className="h-10">
+            Conciliação
+          </Button>
+          <Button onClick={() => navigate('/controller/individuos/novo')} className="h-10">
+            Novo Indivíduo
+          </Button>
+        </div>
       </div>
 
       {/* Search and quick filters */}
