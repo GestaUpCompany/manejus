@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Menu "Controle Individual" no painel (2026-10-16)
+
+As telas da camada individual saíram de "Gestão da Fazenda" e ganharam um grupo próprio no sidebar (`ControllerLayout.tsx`, seção Operação, logo abaixo de Gestão da Fazenda): **Indivíduos**, **Identificar Lote**, **Conciliação**, **Reprodução**, **Diagnóstico em Grupo**, **Estações de Monta** e **Manejo Sanitário**. "Gestão da Fazenda" ficou com Lotes, Cadastros Auxiliares, Faixas de Categorias e Mapa da Fazenda. Só mudou a organização do menu: rotas, páginas e permissões são as mesmas. A command palette (Ctrl+K) lê a mesma estrutura, então os itens aparecem lá sob "Operação · Controle Individual". `routePrefetch.ts` ganhou as rotas novas (Identificar Lote, Conciliação, Reprodução, Diagnóstico em Grupo, Estações de Monta, Manejo Sanitário). O submenu abre sozinho na rota ativa (a regra existente compara o caminho exato, então em `/controller/individuos/<id>` o grupo não abre sozinho, como já acontecia). Testado na fazenda de testes: grupo visível, destaque e as 7 rotas navegam certo.
+
 ## Sanidade C3: tratamento/vacina na sessão de manejo de curral (2026-10-16)
 
 Migration `20261016350000_manejo_curral_tratamento` (rollback em `supabase/rollbacks/`). Só colunas novas (nulas ou com padrão): o PWA antigo segue válido e sem tratamento. Não altera contagem, peso nem movimentação.
