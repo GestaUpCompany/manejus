@@ -24,11 +24,9 @@ Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar 
 **Como corrigir**: continuar a Fase B de isolamento (lotes 2a catálogos, 2b estrutura da fazenda, 2c pessoas, 3 fábrica/históricos, 4 varredura final) no padrão `is_admin_user() OR caller_has_fazenda_access(fazenda_id)`, `TO authenticated`, `REVOKE ALL FROM anon`. Atenção ao PWA: o peão lê/escreve várias dessas tabelas por `auth.uid()`; policy restritiva demais gera selects vazios em campo sem erro (conferir `syncService.ts` e o papel `peao` antes de cada lote).
 **Disparadores**: "policy true", "isolamento por fazenda", "RLS aberta", "Fase B", `rotinas`, `plano_categoria_personalizacao`.
 
-## Sanidade dos indivíduos (desenho pronto, adiada em 2026-10-08)
+## Sanidade dos indivíduos: o que falta (painel implementado em 2026-10-16)
 
-**Decisão**: o responsável pulou a sanidade da Fase 4 de Indivíduos; a Reprodução vem primeiro. **Desenho completo e preservado** em `docs/PLANO_INDIVIDUOS_FASE4_SANIDADE_REPRODUCAO.md` (modelo `aplicacoes_sanitarias` por animal ou lote, colunas de carência e intervalo em `medicamentos`, view do histórico unificado, aba Sanidade na ficha, manejo em lote, alerta `CARENCIA_ATIVA` na OS de abate, sub-fases S1 e S2).
-
-**Fatos de 08/10/2026 que valem para quando retomar**: catálogo `medicamentos` com 143 itens e sem carência/validade; só 15 registros em `registros_enfermaria` no banco todo (4 com `individuo_id`), com `medicamentos` e `diagnosticos` em JSON; só 9 medicamentos do tipo Vacina, em 1 fazenda; 5 fazendas sem nenhum indivíduo cadastrado (por isso o alvo da aplicação precisa aceitar lote com `numero_cabecas`).
+**Feito no painel (16/10/2026, ver `docs/HISTORICO.md`)**: aplicações por animal e por lote, carência no catálogo, histórico unificado, aba Sanidade na ficha, página Manejo Sanitário (pendências), funções de carência, aviso `CARENCIA_ATIVA` na pesagem de OS de venda e alertas semanais. **Falta**: caderneta de sanidade no PWA, baixa de estoque de medicamento, custo por animal e indicação de carência nas listas de Lotes e Indivíduos.
 
 **Dependência**: a ficha sanitária só fica completa quando o PWA enviar `individuo_id` na Enfermaria (1 linha em `syncService.ts` do PWA) e a Morte passar a usar `AnimalIdentifier`. Ambos também adiados.
 
