@@ -1,7 +1,5 @@
 {
-  "git": {
-    "ignoreCommand": "git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- . ../../packages ../../pnpm-lock.yaml ../../pnpm-workspace.yaml"
-  },
+  "ignoreCommand": "git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- . ../../packages ../../pnpm-lock.yaml ../../pnpm-workspace.yaml",
   "rewrites": [
     {
       "source": "/:path*",
