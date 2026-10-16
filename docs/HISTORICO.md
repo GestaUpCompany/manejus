@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Manejo de curral: migration 3 e PWA ligado ponta a ponta (16/10/2026)
+
+O envio do PWA falhou com 42P10: o `upsert onConflict=local_id` não aceita índice parcial. Migration `20261016250000_manejo_curral_local_id_unico` troca os índices por únicos simples em `local_id` (padrão de registros_morte). Reenvio testado no preview, fazenda de testes: sessão offline fica `pending` e na fila, ao voltar a rede sobe, a RPC aplica (1 aplicado, 1 pendência), brinco 22 -> PWA-T1, agregado intacto (122/55). Restaurado: pendência descartada, brinco 22 de volta, sessão excluída.
+
 ## Manejo de curral: tabelas e migration de data retroativa aplicadas (16/10/2026)
 
 Desenho aprovado em `docs/PLANO_MANEJO_CURRAL.md` (designação de lote vira pendência; peso só no animal; offline obrigatório). `supabase db push` aplicou `20261016230000_manejo_curral_tabelas` (sessoes_manejo_curral, registros_manejo_curral, pendencias_designacao_lote; só aditiva) e, junto, `20261016220000_movimentacao_data_retroativa` (trigger que ajusta data anterior à criação da categoria e recalcula `quant_atual` em UPDATE), que estava na pasta sem commit e entrou na fila sem revisão; o gestor decidiu mantê-la. RLS do peão conferida na leitura: `caller_has_fazenda_access` cobre `peoes` por e-mail. Nota: o arquivo local da 220000 e o rollback sumiram do disco (aplicada no banco); foram recriados a partir de `supabase_migrations.schema_migrations`, sem comentários extras além do aviso no topo.
