@@ -898,6 +898,17 @@ export function IndividuoNovo() {
                   <p className="text-xs text-content-muted mt-1">Data em que o animal entrou no lote (afeta a contagem do lote).</p>
                 </div>
               )}
+              {!isEditMode && form.lote_atual && (
+                <div className="md:col-span-2 lg:col-span-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-content flex flex-wrap items-center justify-between gap-3">
+                  <p className="max-w-3xl">
+                    Cadastrar o animal por aqui <strong>soma 1 cabeça</strong> ao lote (registra uma Entrada). Se este animal já está entre as
+                    cabeças contadas do lote, use <strong>Identificar lote</strong>: ele cadastra os animais sem alterar a contagem.
+                  </p>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/controller/individuos/identificar')}>
+                    Identificar lote
+                  </Button>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">Pasto atual</label>
                 <div className="text-sm text-content-strong min-h-[42px] flex items-center px-3 py-2 border border-surface-3 rounded-lg bg-surface-2">

@@ -34,6 +34,8 @@ import {
   statusBaixaManual,
   validarBaixa,
 } from '../../utils/baixaIndividuo'
+import { useDietaDoLote } from '../../hooks/useDietaDoLote'
+import { dietaAtual, dietasAnteriores, eventosDeDietaDoLote } from '../../utils/dietaDoLote'
 
 type Aba = 'resumo' | 'linha-do-tempo' | 'pesagens' | 'movimentacoes' | 'genealogia' | 'maternidade'
 
@@ -219,6 +221,31 @@ export function IndividuoDetalhe() {
 
   const { individuo, referencias, pesagens, movimentacoes, descendentes, partos } = useIndividuoDetalhe(id)
   const ind = individuo.data
+  const dietaDoLote = useDietaDoLote({
+    fazendaId: individuo.data?.fazenda_id,
+    loteId: individuo.data?.lote_atual,
+    categoria: individuo.data?.categoria,
+    habilitado: aba === 'resumo' || aba === 'linha-do-tempo',
+  })
+  const hojeFazenda = toFarmDateOnly(new Date().toISOString()) ?? new Date().toISOString().split('T')[0]
+  const planosDoLote = useMemo(() => dietaDoLote.data ?? [], [dietaDoLote.data])
+  const dietaVigente = useMemo(() => dietaAtual(planosDoLote, hojeFazenda), [planosDoLote, hojeFazenda])
+  const dietasEncerradas = useMemo(() => dietasAnteriores(planosDoLote, hojeFazenda).slice(0, 5), [planosDoLote, hojeFazenda])
+  // Linha do tempo: eventos do animal + mudanças de dieta do lote desde a última vez que ele entrou no lote atual
+  const itensLinhaDoTempo = useMemo(() => {
+    const eventos = linhaDoTempo.data ?? []
+    const entradas = eventos
+      .filter((e) => ['cadastro', 'movimentacao', 'movimentacao_grupo', 'nascimento'].includes(e.tipo))
+      .map((e) => e.data.slice(0, 10))
+      .sort()
+    const desde = entradas.length > 0 ? entradas[entradas.length - 1] : null
+    const ate = individuo.data?.data_saida?.slice(0, 10) ?? hojeFazenda
+    const doLote = eventosDeDietaDoLote(planosDoLote, desde, ate)
+    return [
+      ...eventos.map((e) => ({ chave: `${e.origem_tabela}-${e.origem_id}-${e.tipo}`, data: e.data, tipo: e.tipo as string, titulo: e.titulo, detalhe: e.detalhe, doLote: false })),
+      ...doLote.map((e, i) => ({ chave: `lote-dieta-${i}-${e.data}`, data: e.data, tipo: 'lote_dieta', titulo: e.titulo, detalhe: e.detalhe, doLote: true })),
+    ].sort((a, b) => b.data.localeCompare(a.data))
+  }, [linhaDoTempo.data, planosDoLote, individuo.data?.data_saida, hojeFazenda])
   const { alterarStatus, excluir, confirmarLocalizacao } = useIndividuoAcoes(ind)
   const ref = referencias.data
   const { data: lotesFazenda = [] } = useLotes(ind?.fazenda_id)
@@ -237,7 +264,6 @@ export function IndividuoDetalhe() {
   const gmdMedio = gmdPeriodo(evolucao)
   const idade = calcularIdade(ind?.data_nascimento)
 
-  const hojeFazenda = toFarmDateOnly(new Date().toISOString()) ?? new Date().toISOString().split('T')[0]
 
   const abrirIndividuo = (outroId: string) => navigate(`/controller/individuos/${outroId}`)
   const voltar = () => navigate('/controller/individuos')
@@ -442,7 +468,43 @@ export function IndividuoDetalhe() {
                   </div>
                 </DetailSection>
 
-                <DetailSection title="Nutrição (herdada do lote)">
+                <DetailSection title="Dieta do lote">
+                  <p className="text-xs text-content-muted mb-3">
+                    Esta é a dieta do lote em que o animal está, não uma medição individual: todos os animais do lote seguem o mesmo plano.
+                  </p>
+                  {dietaDoLote.isLoading ? (
+                    <p className="text-sm text-content-muted">Carregando...</p>
+                  ) : dietaVigente ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <DetailField label="Plano atual" value={formatValue(dietaVigente.nome)} />
+                      <DetailField label="Formulação" value={formatValue(dietaVigente.formulacao)} />
+                      <DetailField label="Desde" value={formatDate(dietaVigente.data_inicio)} />
+                      <DetailField
+                        label="GMD planejado"
+                        value={dietaVigente.gmd_planejado ? `${Number(dietaVigente.gmd_planejado).toLocaleString('pt-BR')} kg/dia` : '-'}
+                      />
+                      <DetailField label="Peso meta" value={kg(dietaVigente.peso_meta_kg)} />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-content-muted">
+                      {ind!.lote_atual ? 'O lote do animal não tem plano nutricional em vigor.' : 'O animal não está em um lote.'}
+                    </p>
+                  )}
+                  {dietasEncerradas.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-content-muted uppercase tracking-wider mb-1">Dietas anteriores do lote</p>
+                      <ul className="text-sm text-content space-y-0.5">
+                        {dietasEncerradas.map((p) => (
+                          <li key={p.id}>
+                            {formatValue(p.nome ?? p.formulacao)} · {formatDate(p.data_inicio)} a {formatDate(p.data_fim)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </DetailSection>
+
+                <DetailSection title="Nutrição registrada no cadastro">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <DetailField label="Estratégia" value={formatValue(ind!.estrategia_nutricional_nome)} />
                     <DetailField label="GMD meta" value={ind!.gmd_kg_cab_dia ? `${Number(ind!.gmd_kg_cab_dia).toLocaleString('pt-BR')} kg/dia` : '-'} />
@@ -491,14 +553,16 @@ export function IndividuoDetalhe() {
                 <p className="text-content-muted">Carregando linha do tempo...</p>
               ) : linhaDoTempo.error ? (
                 <p className="text-red-500">Não foi possível carregar a linha do tempo.</p>
-              ) : (linhaDoTempo.data?.length ?? 0) === 0 ? (
+              ) : itensLinhaDoTempo.length === 0 ? (
                 <EmptyState title="Nenhum evento registrado para este animal" />
               ) : (
                 <ol className="space-y-3">
-                  {linhaDoTempo.data!.map((e) => {
-                    const t = ROTULO_EVENTO[e.tipo] ?? { rotulo: e.tipo, classe: 'bg-surface-2 text-content-strong' }
+                  {itensLinhaDoTempo.map((e) => {
+                    const t = e.doLote
+                      ? { rotulo: 'Do lote', classe: 'bg-amber-500/10 text-amber-800 dark:text-amber-200' }
+                      : (ROTULO_EVENTO[e.tipo as TipoEventoLinhaDoTempo] ?? { rotulo: e.tipo, classe: 'bg-surface-2 text-content-strong' })
                     return (
-                      <li key={`${e.origem_tabela}-${e.origem_id}-${e.tipo}`} className="flex gap-3">
+                      <li key={e.chave} className="flex gap-3">
                         <div className="w-28 shrink-0 text-sm text-content-muted">{formatDate(e.data)}</div>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
