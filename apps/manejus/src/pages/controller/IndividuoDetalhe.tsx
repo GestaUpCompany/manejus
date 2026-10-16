@@ -23,8 +23,14 @@ import {
   type PartoIndividuo,
 } from '../../hooks/useIndividuoDetalhe'
 import { calcularEvolucaoPeso, calcularIdade, escalaPeso, gmdPeriodo, type PesagemEvolucao } from '../../utils/individuoPesagens'
-import { statusEditaveis } from '../../utils/individualValidation'
-import { montarDadosBaixa, motivoPadrao, motivosSaida, validarBaixa } from '../../utils/baixaIndividuo'
+import {
+  montarDadosBaixa,
+  motivoPadrao,
+  motivosSaida,
+  statusBaixadosPorOutroFluxo,
+  statusBaixaManual,
+  validarBaixa,
+} from '../../utils/baixaIndividuo'
 
 type Aba = 'resumo' | 'pesagens' | 'movimentacoes' | 'genealogia' | 'maternidade'
 
@@ -232,7 +238,7 @@ export function IndividuoDetalhe() {
       setModalStatus(false)
     } catch (error) {
       console.error('Erro ao alterar status:', error)
-      toast.error('Não foi possível alterar o status.')
+      toast.error((error as { message?: string })?.message || 'Não foi possível alterar o status.')
     }
   }
 
@@ -243,7 +249,7 @@ export function IndividuoDetalhe() {
       navigate('/controller/individuos')
     } catch (error) {
       console.error('Erro ao excluir indivíduo:', error)
-      toast.error('Não foi possível excluir o indivíduo.')
+      toast.error((error as { message?: string })?.message || 'Não foi possível excluir o indivíduo.')
       setModalExcluir(false)
     }
   }
@@ -264,8 +270,16 @@ export function IndividuoDetalhe() {
             <Button onClick={() => navigate(`/controller/individuos/novo?edit=${ind.id}`)}>Editar</Button>
             <Button
               variant="secondary"
+              disabled={statusBaixadosPorOutroFluxo.includes(ind.status)}
+              title={
+                statusBaixadosPorOutroFluxo.includes(ind.status)
+                  ? ind.status === 'Morto'
+                    ? 'Baixado por morte: altere pela Caderneta de Morte.'
+                    : 'Baixado por Ordem de Serviço: estorne a OS para alterar.'
+                  : undefined
+              }
               onClick={() => {
-                const status = statusEditaveis.includes(ind.status) ? ind.status : 'Vivo'
+                const status = statusBaixaManual.includes(ind.status) ? ind.status : 'Vivo'
                 setNovoStatus(status)
                 setDataSaida(ind.data_saida ?? hojeFazenda)
                 setMotivoSaida(ind.motivo_saida && motivosSaida.includes(ind.motivo_saida) ? ind.motivo_saida : motivoPadrao(status))
@@ -632,7 +646,7 @@ export function IndividuoDetalhe() {
             label="Novo status"
             value={novoStatus}
             onChange={trocarStatusNoModal}
-            options={statusEditaveis.map((s) => ({ value: s, label: s }))}
+            options={statusBaixaManual.map((s) => ({ value: s, label: s }))}
             placeholder="Selecione"
           />
           {errosBaixa.status && <p className="text-red-500 text-xs">{errosBaixa.status}</p>}
@@ -660,7 +674,7 @@ export function IndividuoDetalhe() {
             </>
           )}
           <p className="text-xs text-content-muted">
-            Registra o status, a data, o motivo e o destino do indivíduo. Não gera movimentação de saída nem muda a quantidade do lote. Para vendas, abates e transferências em lote use a Ordem de Serviço. Morte é registrada pela Caderneta de Morte.
+            Registra o status, a data, o motivo e o destino do indivíduo e dá baixa de 1 cabeça na categoria do lote dele. Voltar a Vivo estorna essa baixa. Vendas, abates e transferências são registrados pela Ordem de Serviço; morte, pela Caderneta de Morte.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setModalStatus(false)}>
@@ -678,9 +692,7 @@ export function IndividuoDetalhe() {
         onClose={() => setModalExcluir(false)}
         onConfirm={confirmarExclusao}
         title="Excluir indivíduo"
-        message={`Excluir ${ind ? rotuloIndividuo(ind) : 'este indivíduo'}?\nO registro sai das listagens, mas o histórico de pesagens e movimentações é mantido.${
-          ind?.lote_atual ? '\nAtenção: o animal está em um lote e a exclusão não gera movimentação de saída.' : ''
-        }`}
+        message={`Excluir ${ind ? rotuloIndividuo(ind) : 'este indivíduo'}?\nO registro sai das listagens e o histórico de pesagens é mantido. As movimentações de entrada/saída geradas por este animal (cadastro, realocação, baixa manual) são estornadas e a quantidade do lote é recalculada. Animais que já estavam contados no lote continuam contados.`}
         confirmText="Excluir"
       />
         </>

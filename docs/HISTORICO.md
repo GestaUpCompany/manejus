@@ -1,5 +1,16 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Indivíduos: baixa manual e exclusão respeitam o agregado do lote (2026-10-15)
+
+Branch `feat/individuos-coexistencia`. Princípio: o agregado (`lote_categorias.quant_atual`, calculado por movimentações) continua sendo a verdade da contagem; o indivíduo é um subconjunto e acompanha o evento agregado, nunca o contrário. Morte (trigger em `registros_morte`) e venda/abate/transferência (OS) já funcionavam assim; a baixa manual e a exclusão no painel eram o único caminho que só alterava `individuos`.
+
+- **Migrations** `20261015150000_individuo_baixa_e_exclusao_com_agregado` e `20261015160000_fix_excluir_individuo_sem_delete_total` (rollbacks em `supabase/rollbacks/`). A segunda corrige a primeira: `DELETE` sem `WHERE` em tabela temporária é bloqueado pelo banco, e a exclusão falhava sempre.
+- **`baixar_individuo(p_fazenda_id, p_individuo_id, p_status, p_data_saida, p_motivo_saida, p_destino_saida)`**: aceita só `Vivo` e `Doado`. Doação grava Saída agregada `Doação`; Descarte/Outro gravam `Saída` (tipo_saida NULL), marcadas com `causa_observacao 'Baixa manual: ...'` e `individuo_id`. Voltar a Vivo estorna (soft-delete) a Saída; baixar de novo estorna a anterior e grava a nova. Recusa Abatido/Venda Vivo/Transferido (só pela OS) e Morto (só pela Caderneta de Morte). Falha com erro claro se a categoria não existir ativa no lote, se estiver com 0 cabeças ou se a data for anterior à criação da categoria.
+- **`excluir_individuo(p_fazenda_id, p_individuo_id)`**: soft-delete do animal e estorno das movimentações do próprio animal (`individuo_id`, 1 cabeça, sem OS) com recálculo do `quant_atual`. Bloqueia se houver morte ou OS vinculada. Animais que já estavam contados no lote sem movimentação própria continuam contados.
+- **Painel:** `useIndividuoAcoes` chama as RPCs e mostra a mensagem do servidor; modal de baixa só com Vivo/Doado e motivos Doação/Descarte/Outro (`utils/baixaIndividuo.ts`); botão de baixa desabilitado para animal baixado por OS ou morte.
+- **Testado** na fazenda de testes (`d649c65e-…`) com o login de controller: baixa 122→121, estorno →122, cadastro →123, exclusão →122.
+- **Pendências conhecidas:** o formulário de edição (`IndividuoNovo.tsx`) ainda permite trocar o status para Abatido/Venda Vivo/Transferido sem tocar no agregado; Descarte fica com status `Doado` porque o CHECK de `individuos.status` não tem `Descartado`; o plano completo de coexistência agregado × indivíduo (modo de identificação por lote, conciliação, ponte evento→animais, SISBOV/PNIB) ainda não foi implementado.
+
 ## Relatório Zootécnico: ordem por local e colunas configuráveis; Lotes: filtro Sequestro e busca em Pasto/Curral (2026-10-15)
 
 Só front (`apps/manejus`), sem migration.

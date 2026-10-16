@@ -1,11 +1,17 @@
-/** Motivos de saída oferecidos no painel. "Morte" fica de fora: só pela Caderneta de Morte. */
-export const motivosSaida = ['Venda', 'Abate', 'Doação', 'Transferência', 'Descarte', 'Outro']
+/**
+ * Baixa manual no painel. Gera a Saída agregada do lote (RPC baixar_individuo).
+ * Venda, abate e transferência não entram aqui: a Ordem de Serviço já baixa o lote. Morte: Caderneta de Morte.
+ */
+export const motivosSaida = ['Doação', 'Descarte', 'Outro']
+
+/** Status que a baixa manual aceita. Os demais são gravados por OS ou pela Caderneta de Morte. */
+export const statusBaixaManual = ['Vivo', 'Doado']
+
+/** Status que só mudam estornando a OS ou a morte que os gerou. */
+export const statusBaixadosPorOutroFluxo = ['Abatido', 'Venda Vivo', 'Transferido', 'Morto']
 
 const motivoPadraoPorStatus: Record<string, string> = {
-  'Venda Vivo': 'Venda',
-  Abatido: 'Abate',
   Doado: 'Doação',
-  Transferido: 'Transferência',
 }
 
 export function motivoPadrao(status: string): string {
@@ -33,6 +39,17 @@ export function validarBaixa(form: BaixaForm, hojeFazenda: string): Record<strin
     errors.status = 'Selecione o status.'
     return errors
   }
+  if (statusBaixadosPorOutroFluxo.includes(form.status)) {
+    errors.status =
+      form.status === 'Morto'
+        ? 'Morte é registrada pela Caderneta de Morte.'
+        : 'Venda, abate e transferência são registrados pela Ordem de Serviço.'
+    return errors
+  }
+  if (!statusBaixaManual.includes(form.status)) {
+    errors.status = 'Status inválido.'
+    return errors
+  }
   if (form.status === 'Vivo') return errors
   if (!form.dataSaida) errors.dataSaida = 'Informe a data da saída.'
   else if (form.dataSaida > hojeFazenda) errors.dataSaida = 'A data da saída não pode ser futura.'
@@ -41,7 +58,7 @@ export function validarBaixa(form: BaixaForm, hojeFazenda: string): Record<strin
   return errors
 }
 
-/** Monta o que vai para o banco. Vivo limpa os dados de saída. */
+/** Monta o que vai para a RPC. Vivo limpa os dados de saída. */
 export function montarDadosBaixa(form: BaixaForm): DadosBaixa {
   if (form.status === 'Vivo') {
     return { status: 'Vivo', data_saida: null, motivo_saida: null, destino_saida: null }

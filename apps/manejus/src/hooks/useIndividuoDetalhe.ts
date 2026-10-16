@@ -240,20 +240,42 @@ export function useIndividuoDetalhe(id: string | undefined) {
   return { individuo, referencias, pesagens, movimentacoes, descendentes, partos }
 }
 
-/** Ações do detalhe. Sempre filtram pela fazenda do animal para não escapar do escopo. */
+interface RespostaRpcIndividuo {
+  success: boolean
+  error?: string
+}
+
+/** Lê o retorno {success, error} das RPCs de indivíduo e lança o erro de negócio com a mensagem do servidor. */
+function exigirSucesso(data: unknown, error: { message?: string } | null, fallback: string) {
+  if (error) throw new Error(error.message || fallback)
+  const resposta = data as RespostaRpcIndividuo | null
+  if (!resposta?.success) throw new Error(resposta?.error || fallback)
+}
+
+/**
+ * Ações do detalhe. Baixa e exclusão passam por RPC transacional: além do indivíduo, gravam/estornam a
+ * Saída agregada do lote (quant_atual), o que um UPDATE direto em `individuos` nunca fez.
+ */
 export function useIndividuoAcoes(individuo: IndividuoDetalhe | null | undefined) {
   const queryClient = useQueryClient()
-  const invalidar = () => queryClient.invalidateQueries({ queryKey: ['individuo', individuo?.id] })
+  const invalidar = () => {
+    queryClient.invalidateQueries({ queryKey: ['individuo', individuo?.id] })
+    // lotes e categorias mostram quant_atual, que a baixa/exclusão altera
+    queryClient.invalidateQueries({ queryKey: ['lotes'] })
+  }
 
   const alterarStatus = useMutation({
     mutationFn: async (dados: DadosBaixa) => {
       if (!individuo) throw new Error('Indivíduo não carregado')
-      const { error } = await supabase
-        .from('individuos')
-        .update(dados)
-        .eq('id', individuo.id)
-        .eq('fazenda_id', individuo.fazenda_id)
-      if (error) throw error
+      const { data, error } = await supabase.rpc('baixar_individuo', {
+        p_fazenda_id: individuo.fazenda_id,
+        p_individuo_id: individuo.id,
+        p_status: dados.status,
+        p_data_saida: dados.data_saida,
+        p_motivo_saida: dados.motivo_saida,
+        p_destino_saida: dados.destino_saida,
+      })
+      exigirSucesso(data, error, 'Não foi possível alterar o status.')
     },
     onSuccess: invalidar,
   })
@@ -261,12 +283,11 @@ export function useIndividuoAcoes(individuo: IndividuoDetalhe | null | undefined
   const excluir = useMutation({
     mutationFn: async () => {
       if (!individuo) throw new Error('Indivíduo não carregado')
-      const { error } = await supabase
-        .from('individuos')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', individuo.id)
-        .eq('fazenda_id', individuo.fazenda_id)
-      if (error) throw error
+      const { data, error } = await supabase.rpc('excluir_individuo', {
+        p_fazenda_id: individuo.fazenda_id,
+        p_individuo_id: individuo.id,
+      })
+      exigirSucesso(data, error, 'Não foi possível excluir o indivíduo.')
     },
     onSuccess: invalidar,
   })

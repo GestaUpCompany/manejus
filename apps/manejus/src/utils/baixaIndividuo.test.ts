@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { montarDadosBaixa, motivoPadrao, motivosSaida, validarBaixa } from './baixaIndividuo'
 
 const hoje = '2026-10-08'
-const base = { status: 'Abatido', dataSaida: '2026-10-01', motivoSaida: 'Abate', destinoSaida: ' Frigorífico X ' }
+const base = { status: 'Doado', dataSaida: '2026-10-01', motivoSaida: 'Doação', destinoSaida: ' Vizinho X ' }
 
 describe('validarBaixa', () => {
   it('aceita uma baixa completa', () => {
@@ -20,9 +20,25 @@ describe('validarBaixa', () => {
     expect(errors.motivoSaida).toBeDefined()
   })
 
-  it('rejeita motivo fora da lista e Morte', () => {
-    expect(validarBaixa({ ...base, motivoSaida: 'Morte' }, hoje).motivoSaida).toBeDefined()
-    expect(validarBaixa({ ...base, motivoSaida: 'qualquer' }, hoje).motivoSaida).toBeDefined()
+  it('rejeita motivo fora da lista, inclusive Morte, Venda e Abate', () => {
+    for (const motivo of ['Morte', 'Venda', 'Abate', 'Transferência', 'qualquer']) {
+      expect(validarBaixa({ ...base, motivoSaida: motivo }, hoje).motivoSaida).toBeDefined()
+    }
+  })
+
+  it('aceita Descarte e Outro', () => {
+    expect(validarBaixa({ ...base, motivoSaida: 'Descarte' }, hoje)).toEqual({})
+    expect(validarBaixa({ ...base, motivoSaida: 'Outro' }, hoje)).toEqual({})
+  })
+
+  it('bloqueia venda, abate e transferência e aponta a OS', () => {
+    for (const status of ['Abatido', 'Venda Vivo', 'Transferido']) {
+      expect(validarBaixa({ ...base, status }, hoje).status).toMatch(/Ordem de Serviço/)
+    }
+  })
+
+  it('bloqueia Morto e aponta a Caderneta de Morte', () => {
+    expect(validarBaixa({ ...base, status: 'Morto' }, hoje).status).toMatch(/Caderneta de Morte/)
   })
 
   it('voltar a Vivo não exige nada', () => {
@@ -37,10 +53,10 @@ describe('validarBaixa', () => {
 describe('montarDadosBaixa', () => {
   it('grava os dados da saída e apara o destino', () => {
     expect(montarDadosBaixa(base)).toEqual({
-      status: 'Abatido',
+      status: 'Doado',
       data_saida: '2026-10-01',
-      motivo_saida: 'Abate',
-      destino_saida: 'Frigorífico X',
+      motivo_saida: 'Doação',
+      destino_saida: 'Vizinho X',
     })
   })
 
@@ -59,10 +75,8 @@ describe('montarDadosBaixa', () => {
 })
 
 describe('motivoPadrao', () => {
-  it('sugere um motivo coerente com o status e sempre da lista', () => {
-    for (const status of ['Venda Vivo', 'Abatido', 'Doado', 'Transferido']) {
-      expect(motivosSaida).toContain(motivoPadrao(status))
-    }
+  it('sugere um motivo da lista para Doado e nada para Vivo', () => {
+    expect(motivosSaida).toContain(motivoPadrao('Doado'))
     expect(motivoPadrao('Vivo')).toBe('')
   })
 })
