@@ -126,6 +126,8 @@ const RegistrosLeituraCochoDetalhes = laz(() => import('./pages/controller/Regis
 const TratoConfinamento = laz(() => import('./pages/controller/TratoConfinamento'), 'TratoConfinamento')
 const TratoConfinamentoDetalhes = laz(() => import('./pages/controller/TratoConfinamentoDetalhes'), 'TratoConfinamentoDetalhes')
 const RegistrosPesagem = laz(() => import('./pages/controller/RegistrosPesagem'), 'RegistrosPesagem')
+const RegistrosManejoCurral = laz(() => import('./pages/controller/RegistrosManejoCurral'), 'RegistrosManejoCurral')
+const RegistrosManejoCurralDetalhes = laz(() => import('./pages/controller/RegistrosManejoCurralDetalhes'), 'RegistrosManejoCurralDetalhes')
 const RegistrosPesagemDetalhes = laz(() => import('./pages/controller/RegistrosPesagemDetalhes'), 'RegistrosPesagemDetalhes')
 const ComunicadoVenda = laz(() => import('./pages/controller/ComunicadoVenda'), 'ComunicadoVenda')
 const ComunicadoCompra = laz(() => import('./pages/controller/ComunicadoCompra'), 'ComunicadoCompra')
@@ -1295,6 +1297,26 @@ function App() {
               <ControllerRoute>
                 <ControllerLayout>
                   <TratoConfinamentoDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/manejo-curral"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <RegistrosManejoCurral />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/manejo-curral/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <RegistrosManejoCurralDetalhes />
                 </ControllerLayout>
               </ControllerRoute>
             }

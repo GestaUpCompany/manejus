@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Manejo de curral: lista de sessões no painel (16/10/2026)
+
+Nova caderneta no painel, grupo Gado & Pastagens (`/controller/cadernetas/manejo-curral`): lista as sessões (data, responsável, nº de animais, situação com aplicados, conflitos, aguardando e trocas de lote a confirmar; filtros por texto e data) e a página de detalhes por sessão (`.../manejo-curral/:id`) com as linhas: animal (link para a ficha), identificação nova, motivo, lote de destino, peso, situação (com a mensagem de conflito) e situação da troca de lote, com atalho para a Conciliação. Substitui a entrada "só campo" da lista de RBAC (agora vem do grupo). Imagem copiada para `public/images/cadernetas/manejo-curral.png` e registrada em `types/images.ts`. Arquivos: `RegistrosManejoCurral.tsx`, `RegistrosManejoCurralDetalhes.tsx`, `utils/sessoesManejoCurral.ts` (+ teste). Validado no navegador na fazenda de testes (sessão com 1 aplicado, 1 conflito e 1 troca de lote), dados restaurados.
+
 ## Manejo de curral: fila "Designações de lote" no painel (16/10/2026)
 
 Na Conciliação de indivíduos, nova seção lista as pendências abertas de `pendencias_designacao_lote` agrupadas por lote de origem, destino e categoria, com os animais, e dois botões por grupo: Confirmar mudança (RPC `confirmar_designacao_lote`, com confirmação do gestor, gera a movimentação Entrevero e liga os animais) e Descartar (RPC `descartar_designacao_lote`). Arquivos: `utils/designacoesLote.ts` (+ teste), `hooks/useDesignacoesLote.ts`, `pages/controller/ConciliacaoIndividuos.tsx`. A consulta com joins foi validada na fazenda de testes (pendência criada pelo `aplicar`, lida e descartada). RBAC: `manejo-curral` entra em `CADERNETAS` como caderneta só de campo. Ainda sem lista de sessões de manejo no painel.
