@@ -3810,6 +3810,9 @@ export function Lotes() {
           gmd={corrigirPesoCat.gmd ?? null}
           dataAjusteAtual={corrigirPesoCat.data_ajuste_peso ?? null}
           usuarioId={user?.id}
+          fazendaId={editingLote.fazenda_id}
+          loteId={editingLote.id}
+          quantAtual={corrigirPesoCat.quant_atual ?? null}
           onCorrigido={async () => {
             setCorrigirPesoCat(null)
             if (editingLote) {

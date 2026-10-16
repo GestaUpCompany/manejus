@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Modal } from '@gestaup/ui'
 import { Button, NumericInput, Input, useToast } from '@gestaup/ui'
 import { supabase } from '@gestaup/supabase'
+import { useAmostraDePesoCategoria } from '../../hooks/useAmostraDePesoCategoria'
 
 interface Props {
   isOpen: boolean
@@ -12,6 +13,10 @@ interface Props {
   gmd: string | null
   dataAjusteAtual: string | null
   usuarioId: string | undefined
+  /** opcionais: habilitam a sugestão a partir das pesagens individuais */
+  fazendaId?: string
+  loteId?: string
+  quantAtual?: number | null
   onCorrigido: () => void
 }
 
@@ -24,6 +29,9 @@ export function CorrigirPesoModal({
   gmd,
   dataAjusteAtual,
   usuarioId,
+  fazendaId,
+  loteId,
+  quantAtual,
   onCorrigido,
 }: Props) {
   const toast = useToast()
@@ -41,6 +49,14 @@ export function CorrigirPesoModal({
       setDataPesagem(today)
     }
   }, [isOpen])
+
+  const amostra = useAmostraDePesoCategoria({ fazendaId, loteId, categoria: categoriaNome, quantAtual, habilitado: isOpen }).data ?? null
+  const usarAmostra = () => {
+    if (!amostra) return
+    setPesoNovo(amostra.media.toFixed(2).replace('.', ','))
+    setDataPesagem(amostra.dataReferencia)
+    setMotivo(`Média de ${amostra.animais} pesagem(ns) individual(is)`)
+  }
 
   const pesoNovoNum = pesoNovo ? parseFloat(pesoNovo.replace(',', '.')) : null
   const pesoProjNum = pesoProjetadoAtual ?? null
@@ -90,6 +106,25 @@ export function CorrigirPesoModal({
             </div>
           )}
         </div>
+
+        {amostra && (
+          <div className="rounded-lg bg-surface-2 border border-border-base px-3 py-2 space-y-1">
+            <div className="text-xs text-gray-500">Pesagens individuais recentes</div>
+            <div className="text-sm text-gray-800">
+              Média de <strong>{amostra.media.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</strong> em{' '}
+              {amostra.animais} animal(is)
+              {amostra.cobertura != null ? ` (${Math.round(amostra.cobertura * 100)}% do lote)` : ''}, pesados de{' '}
+              {new Date(amostra.dataMaisAntiga + 'T00:00:00').toLocaleDateString('pt-BR')} a{' '}
+              {new Date(amostra.dataReferencia + 'T00:00:00').toLocaleDateString('pt-BR')}.
+            </div>
+            {amostra.cobertura != null && amostra.cobertura < 0.1 && (
+              <div className="text-xs text-yellow-700">Amostra pequena: pode não representar o lote todo.</div>
+            )}
+            <Button type="button" variant="secondary" onClick={usarAmostra}>
+              Usar esta média
+            </Button>
+          </div>
+        )}
 
         {/* Peso real medido (obrigatório) */}
         <div>
