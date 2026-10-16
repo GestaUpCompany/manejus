@@ -2409,5 +2409,5 @@ Implementado em 2026-10-13. `lote_categorias.idade` (meses) é a idade na data-b
 ## Sanidade S2 (painel): página Manejo Sanitário em lote (16/10/2026)
 - Página `/controller/manejo-sanitario` (menu Gestão da Fazenda > Manejo Sanitário; `pages/controller/ManejoSanitario.tsx`): lança aplicação em um lote (e categoria opcional) com número de cabeças (sugere a contagem atual), produto do catálogo ou digitado, dose, via, carência, intervalo, partida e validade; lista "Lotes em carência" (função `lotes_em_carencia`) e as aplicações em lote recentes, com exclusão por soft-delete. Não altera a contagem do lote.
 - Utilitários `formVazioAplicacaoLote`/`validarAplicacaoLote`/`montarAplicacaoLoteParaGravar` em `utils/sanidade.ts` (com testes) e hooks em `hooks/useSanidade.ts`.
-- Validado no navegador na fazenda de testes (lote Teste 2, 13 cabeças, carência 7 d → libera em 23/10). Restaurado: aplicação de teste "TESTE UI Lote Aftosa" com soft-delete (id `ca46db8c` no SQL abaixo).
+- Validado no navegador na fazenda de testes (lote Teste 2, 13 cabeças, carência 7 d → libera em 23/10). Restaurado: aplicação de teste "TESTE UI Lote Aftosa" com soft-delete (id `4c4a346d-3b18-4fc0-9b5b-ab17fd1d9c37`).
 - Pendente da sanidade: página de pendências (doses a vencer, animais em carência) e notificações semanais (migration própria).
