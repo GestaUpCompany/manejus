@@ -17,6 +17,7 @@ export type CadernetaImage =
   | 'manutencao-maquinas'
   | 'problemas'
   | 'pesagem'
+  | 'manejo-curral'
   | 'leitura-cocho'
   | 'trato-confinamento'
   | 'fabrica-confinamento'
@@ -49,6 +50,7 @@ export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   'manutencao-maquinas': '/images/manutencao-maquinas.png',
   problemas: '/images/problemas.png',
   pesagem: '/images/cadernetas/pesagem.png',
+  'manejo-curral': '/images/cadernetas/manejo-curral.png',
   'leitura-cocho': '/images/cadernetas/leitura-cocho.png',
   'trato-confinamento': '/images/cadernetas/trato-confinamento.png',
   'fabrica-confinamento': '/images/cadernetas/fabrica-confinamento.png',
@@ -82,6 +84,7 @@ export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
   'manutencao-maquinas': 'Manutenção de Máquinas',
   problemas: 'Problemas',
   pesagem: 'Pesagem',
+  'manejo-curral': 'Manejo de Curral',
   'leitura-cocho': 'Leitura de Cocho',
   'trato-confinamento': 'Trato Confinamento',
   'fabrica-confinamento': 'Carregamento Vagão',
@@ -115,6 +118,7 @@ export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
   'manutencao-maquinas': 'Registros de manutenção de máquinas',
   problemas: 'Registros de problemas',
   pesagem: 'Registros de pesagem de animais',
+  'manejo-curral': 'Sessões de manejo de curral: identificação e lote de destino dos animais',
   'leitura-cocho': 'Registros de leitura de cocho',
   'trato-confinamento': 'Registros de oferta de trato',
   'fabrica-confinamento': 'Registros de carregamento do vagão',

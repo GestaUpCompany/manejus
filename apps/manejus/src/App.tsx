@@ -126,6 +126,8 @@ const RegistrosLeituraCochoDetalhes = laz(() => import('./pages/controller/Regis
 const TratoConfinamento = laz(() => import('./pages/controller/TratoConfinamento'), 'TratoConfinamento')
 const TratoConfinamentoDetalhes = laz(() => import('./pages/controller/TratoConfinamentoDetalhes'), 'TratoConfinamentoDetalhes')
 const RegistrosPesagem = laz(() => import('./pages/controller/RegistrosPesagem'), 'RegistrosPesagem')
+const RegistrosManejoCurral = laz(() => import('./pages/controller/RegistrosManejoCurral'), 'RegistrosManejoCurral')
+const RegistrosManejoCurralDetalhes = laz(() => import('./pages/controller/RegistrosManejoCurralDetalhes'), 'RegistrosManejoCurralDetalhes')
 const RegistrosPesagemDetalhes = laz(() => import('./pages/controller/RegistrosPesagemDetalhes'), 'RegistrosPesagemDetalhes')
 const ComunicadoVenda = laz(() => import('./pages/controller/ComunicadoVenda'), 'ComunicadoVenda')
 const ComunicadoCompra = laz(() => import('./pages/controller/ComunicadoCompra'), 'ComunicadoCompra')
@@ -145,6 +147,10 @@ const TratamentosMaternidade = laz(() => import('./pages/controller/TratamentosM
 const Individuos = laz(() => import('./pages/controller/Individuos'), 'Individuos')
 const IndividuoNovo = laz(() => import('./pages/controller/IndividuoNovo'), 'IndividuoNovo')
 const ConciliacaoIndividuos = laz(() => import('./pages/controller/ConciliacaoIndividuos'), 'ConciliacaoIndividuos')
+const EstacoesMonta = laz(() => import('./pages/controller/EstacoesMonta'), 'EstacoesMonta')
+const ManejoSanitario = laz(() => import('./pages/controller/ManejoSanitario'), 'ManejoSanitario')
+const ReproducaoFazenda = laz(() => import('./pages/controller/ReproducaoFazenda'), 'ReproducaoFazenda')
+const DiagnosticoEmGrupo = laz(() => import('./pages/controller/DiagnosticoEmGrupo'), 'DiagnosticoEmGrupo')
 const IdentificarLote = laz(() => import('./pages/controller/IdentificarLote'), 'IdentificarLote')
 const IndividuoDetalhe = laz(() => import('./pages/controller/IndividuoDetalhe'), 'IndividuoDetalhe')
 const FaixasCategorias = laz(() => import('./pages/controller/FaixasCategorias'), 'FaixasCategorias')
@@ -1300,6 +1306,26 @@ function App() {
             }
           />
           <Route
+            path="/controller/cadernetas/manejo-curral"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <RegistrosManejoCurral />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/cadernetas/manejo-curral/:id"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <RegistrosManejoCurralDetalhes />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
             path="/controller/cadernetas/pesagem"
             element={
               <ControllerRoute>
@@ -1380,6 +1406,46 @@ function App() {
             }
           />
 
+          <Route
+            path="/controller/reproducao"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <ReproducaoFazenda />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/reproducao/diagnostico-em-grupo"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <DiagnosticoEmGrupo />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/manejo-sanitario"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <ManejoSanitario />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/estacoes-monta"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <EstacoesMonta />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
           <Route
             path="/controller/individuos"
             element={

@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, formatDate } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
-import { Button, Card, Input, CardSkeleton, Select, Pagination } from '@gestaup/ui'
+import { Button, Card, Input, CardSkeleton, Select, Pagination, useToast } from '@gestaup/ui'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import { useLotes, usePastos } from '@gestaup/shared'
 import { categoriasTodas, sexos, statusList, origens } from '../../utils/individualValidation'
 import { escapeLikeTerm, ilikeContainsCondition } from '../../utils/postgrestFilter'
+import { planejarConfirmacao } from '../../utils/confirmacaoLocalizacao'
+import { useConfirmarLocalizacaoEmMassa } from '../../hooks/useConfirmarLocalizacaoEmMassa'
 
 interface Individuo {
   id: string
@@ -56,7 +58,9 @@ function getStoredPerPage(): number {
 export function Individuos() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [individuos, setIndividuos] = useState<Individuo[]>([])
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
   const [racas, setRacas] = useState<Raca[]>([])
   const [loading, setLoading] = useState(true)
@@ -212,6 +216,40 @@ export function Individuos() {
     }
 
     return query
+  }
+
+  // A seleção vale só para a página e os filtros atuais
+  useEffect(() => {
+    setSelecionados(new Set())
+  }, [individuos])
+
+  const confirmarEmMassa = useConfirmarLocalizacaoEmMassa(fazendaId)
+  const incertosDaPagina = individuos.filter((i) => !!i.localizacao_incerta_desde)
+  const alternarSelecao = (id: string) =>
+    setSelecionados((atual) => {
+      const novo = new Set(atual)
+      if (novo.has(id)) novo.delete(id)
+      else novo.add(id)
+      return novo
+    })
+  const todosIncertosSelecionados = incertosDaPagina.length > 0 && incertosDaPagina.every((i) => selecionados.has(i.id))
+  const alternarTodosIncertos = () =>
+    setSelecionados(todosIncertosSelecionados ? new Set() : new Set(incertosDaPagina.map((i) => i.id)))
+
+  const confirmarSelecionados = async () => {
+    const plano = planejarConfirmacao(individuos.filter((i) => selecionados.has(i.id)))
+    if (plano.grupos.length === 0) {
+      toast.error('Nenhum dos animais selecionados está com localização incerta e lote definido.')
+      return
+    }
+    try {
+      const r = await confirmarEmMassa.mutateAsync(plano.grupos)
+      toast.success(`${r.atualizados} animal(is) com localização confirmada no lote em que constam.`)
+      setSelecionados(new Set())
+      await loadData()
+    } catch (error) {
+      toast.error((error as Error).message || 'Não foi possível confirmar a localização.')
+    }
   }
 
   const loadData = async () => {
@@ -582,6 +620,23 @@ export function Individuos() {
         </div>
       </div>
 
+      {selecionados.size > 0 && fazendaId && (
+        <div className="sticky top-2 z-10 rounded-lg border border-accent/40 bg-surface-1 shadow-md p-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-content">
+            <strong className="text-content-strong">{selecionados.size}</strong> animal(is) selecionado(s). Confirmar que continuam no
+            lote em que constam tira a marca de localização incerta; não altera a contagem do lote.
+          </p>
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setSelecionados(new Set())}>
+              Limpar seleção
+            </Button>
+            <Button size="sm" onClick={confirmarSelecionados} disabled={confirmarEmMassa.isPending}>
+              {confirmarEmMassa.isPending ? 'Confirmando...' : 'Confirmar localização'}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile cards */}
       <div className="md:hidden space-y-4">
         {individuos.length === 0 ? (
@@ -607,7 +662,19 @@ export function Individuos() {
                     {ind.categoria} • {ind.sexo}
                   </p>
                 </div>
-                {getCompletudeBadge(ind.sync_status)}
+                <div className="flex items-center gap-3">
+                  {ind.localizacao_incerta_desde && fazendaId && (
+                    <input
+                      type="checkbox"
+                      aria-label="Selecionar para confirmar localização"
+                      className="h-5 w-5"
+                      checked={selecionados.has(ind.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => alternarSelecao(ind.id)}
+                    />
+                  )}
+                  {getCompletudeBadge(ind.sync_status)}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm text-content-muted mb-3">
                 <div>
@@ -657,6 +724,17 @@ export function Individuos() {
           <table className="w-full">
             <thead className="bg-surface-2 border-b-2 border-border-base">
               <tr>
+                <th className="px-4 py-3 w-10">
+                  {fazendaId && incertosDaPagina.length > 0 && (
+                    <input
+                      type="checkbox"
+                      aria-label="Selecionar todos os animais com localização incerta desta página"
+                      title="Selecionar os animais com localização incerta desta página"
+                      checked={todosIncertosSelecionados}
+                      onChange={alternarTodosIncertos}
+                    />
+                  )}
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider">
                   Identificação
                 </th>
@@ -692,7 +770,7 @@ export function Individuos() {
             <tbody className="divide-y divide-border-base">
               {individuos.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-content-muted">
+                  <td colSpan={11} className="px-4 py-8 text-center text-content-muted">
                     Nenhum indivíduo encontrado
                   </td>
                 </tr>
@@ -705,6 +783,16 @@ export function Individuos() {
                       className="hover:bg-surface-2 transition-colors cursor-pointer"
                       onClick={() => navigate(`/controller/individuos/${ind.id}`)}
                     >
+                      <td className="px-4 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                        {ind.localizacao_incerta_desde && fazendaId && (
+                          <input
+                            type="checkbox"
+                            aria-label="Selecionar para confirmar localização"
+                            checked={selecionados.has(ind.id)}
+                            onChange={() => alternarSelecao(ind.id)}
+                          />
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         {identificacao ? (
                           <div className="font-medium text-content-strong">

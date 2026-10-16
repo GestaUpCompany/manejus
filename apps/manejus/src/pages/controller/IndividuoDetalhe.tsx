@@ -35,9 +35,11 @@ import {
   validarBaixa,
 } from '../../utils/baixaIndividuo'
 import { useDietaDoLote } from '../../hooks/useDietaDoLote'
+import { ReproducaoDoAnimal } from '../../components/ReproducaoDoAnimal'
+import { SanidadeDoAnimal } from '../../components/SanidadeDoAnimal'
 import { dietaAtual, dietasAnteriores, eventosDeDietaDoLote } from '../../utils/dietaDoLote'
 
-type Aba = 'resumo' | 'linha-do-tempo' | 'pesagens' | 'movimentacoes' | 'genealogia' | 'maternidade'
+type Aba = 'resumo' | 'linha-do-tempo' | 'pesagens' | 'movimentacoes' | 'genealogia' | 'maternidade' | 'reproducao' | 'sanidade'
 
 const ABAS: { id: Aba; label: string }[] = [
   { id: 'resumo', label: 'Resumo' },
@@ -46,6 +48,8 @@ const ABAS: { id: Aba; label: string }[] = [
   { id: 'movimentacoes', label: 'Movimentações' },
   { id: 'genealogia', label: 'Genealogia' },
   { id: 'maternidade', label: 'Maternidade' },
+  { id: 'reproducao', label: 'Reprodução' },
+  { id: 'sanidade', label: 'Sanidade' },
 ]
 
 const ROTULO_EVENTO: Record<TipoEventoLinhaDoTempo, { rotulo: string; classe: string }> = {
@@ -395,7 +399,7 @@ export function IndividuoDetalhe() {
 
           {/* Abas */}
           <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-border-base">
-            {ABAS.map((a) => (
+            {ABAS.filter((a) => a.id !== 'reproducao' || ind?.sexo === 'Fêmea').map((a) => (
               <button
                 key={a.id}
                 role="tab"
@@ -734,6 +738,18 @@ export function IndividuoDetalhe() {
                   )}
                 </DetailSection>
               </div>
+            </Card>
+          )}
+
+          {aba === 'reproducao' && ind && (
+            <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
+              <ReproducaoDoAnimal individuoId={ind.id} fazendaId={ind.fazenda_id} sexo={ind.sexo} hoje={hojeFazenda} />
+            </Card>
+          )}
+
+          {aba === 'sanidade' && ind && (
+            <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
+              <SanidadeDoAnimal individuoId={ind.id} fazendaId={ind.fazenda_id} hoje={hojeFazenda} />
             </Card>
           )}
 
