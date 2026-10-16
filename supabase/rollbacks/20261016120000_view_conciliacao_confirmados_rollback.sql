@@ -1,0 +1,1 @@
+-- Rollback de 20261016120000: reaplicar a definição de vw_lote_categoria_identificacao de 20261016110000 (sem a coluna confirmados; DROP VIEW antes).
