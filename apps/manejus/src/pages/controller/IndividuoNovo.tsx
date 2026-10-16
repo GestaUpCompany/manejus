@@ -73,6 +73,7 @@ export function IndividuoNovo() {
   const { user } = useAuth()
   const toast = useToast()
   const [form, setForm] = useState(INITIAL_FORM)
+  const [statusOriginal, setStatusOriginal] = useState<string | undefined>(undefined)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string; onClose: () => void }>({
@@ -225,6 +226,7 @@ export function IndividuoNovo() {
       if (individuo) {
         setLoteOriginal(individuo.lote_atual || null)
         setCategoriaOriginal(individuo.categoria || null)
+        setStatusOriginal(individuo.status || 'Vivo')
         setForm({
           id_manejo: individuo.id_manejo || '',
           id_brinco: individuo.id_brinco || '',
@@ -399,7 +401,7 @@ export function IndividuoNovo() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const validationErrors = validateIndividuo(form)
+    const validationErrors = validateIndividuo(form, { statusOriginal })
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       return

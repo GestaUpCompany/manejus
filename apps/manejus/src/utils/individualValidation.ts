@@ -90,7 +90,12 @@ export function toNumber(value: number | string): number {
   return Number(value.replace(',', '.'))
 }
 
-export function validateIndividuo(form: IndividuoForm): Record<string, string> {
+export interface OpcoesValidacaoIndividuo {
+  /** Status gravado no banco ao abrir a edição. Morto só é aceito se o animal já estava Morto. */
+  statusOriginal?: string
+}
+
+export function validateIndividuo(form: IndividuoForm, opcoes: OpcoesValidacaoIndividuo = {}): Record<string, string> {
   const errors: Record<string, string> = {}
 
   const temIdentificacao =
@@ -144,7 +149,8 @@ export function validateIndividuo(form: IndividuoForm): Record<string, string> {
 
   if (!form.status) {
     errors.status = 'Selecione o status.'
-  } else if (form.status === 'Morto') {
+  } else if (form.status === 'Morto' && opcoes.statusOriginal !== 'Morto') {
+    // Bloqueia a TRANSIÇÃO para Morto. Um animal já Morto (baixado pela Caderneta de Morte) continua editável.
     errors.status = 'O status Morto deve ser registrado exclusivamente pela Caderneta de Morte.'
   }
 

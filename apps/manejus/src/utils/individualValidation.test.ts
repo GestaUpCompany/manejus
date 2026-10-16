@@ -47,8 +47,13 @@ describe('validateIndividuo', () => {
     expect(validateIndividuo({ ...formValido, sexo: 'Fêmea', categoria: 'Touro' }).categoria).toBeDefined()
   })
 
-  it('bloqueia status Morto', () => {
+  it('bloqueia a transição para Morto (criação ou animal que estava Vivo)', () => {
     expect(validateIndividuo({ ...formValido, status: 'Morto' }).status).toBeDefined()
+    expect(validateIndividuo({ ...formValido, status: 'Morto' }, { statusOriginal: 'Vivo' }).status).toBeDefined()
+  })
+
+  it('permite editar outros campos de um animal que já estava Morto', () => {
+    expect(validateIndividuo({ ...formValido, status: 'Morto' }, { statusOriginal: 'Morto' }).status).toBeUndefined()
   })
 
   it('rejeita data de nascimento futura', () => {
