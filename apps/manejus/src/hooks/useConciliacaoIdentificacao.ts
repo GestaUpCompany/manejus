@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@gestaup/supabase'
 import type { LinhaConciliacao } from '../utils/conciliacaoIdentificacao'
 
@@ -65,5 +65,49 @@ export function useIndividuosSemCategoria(fazendaId: string | undefined) {
       )
       return linhas.map((l) => ({ ...l, identificacao: rotulos.get(l.individuo_id) ?? 'Sem identificação' }))
     },
+  })
+}
+
+export type ModoIdentificacao = 'agregado' | 'parcial' | 'individual'
+
+export interface LoteModo {
+  id: string
+  nome: string
+  modo_identificacao: ModoIdentificacao
+}
+
+/** Modo de identificação dos lotes ativos da fazenda. */
+export function useModosIdentificacao(fazendaId: string | undefined) {
+  return useQuery({
+    queryKey: ['lotes', 'modos-identificacao', fazendaId],
+    enabled: !!fazendaId,
+    queryFn: async (): Promise<LoteModo[]> => {
+      const { data, error } = await supabase
+        .from('lotes')
+        .select('id, nome, modo_identificacao')
+        .eq('fazenda_id', fazendaId!)
+        .eq('ativo', true)
+        .order('nome', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as LoteModo[]
+    },
+  })
+}
+
+/** Define o modo; o banco recusa 'individual' enquanto houver animal sem identificação/confirmação no lote. */
+export function useDefinirModoIdentificacao(fazendaId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ loteId, modo }: { loteId: string; modo: ModoIdentificacao }) => {
+      const { data, error } = await supabase.rpc('definir_modo_identificacao', {
+        p_fazenda_id: fazendaId!,
+        p_lote_id: loteId,
+        p_modo: modo,
+      })
+      if (error) throw new Error(error.message)
+      const resposta = data as { success: boolean; error?: string } | null
+      if (!resposta?.success) throw new Error(resposta?.error || 'Não foi possível definir o modo.')
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['lotes'] }),
   })
 }

@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, getFazendaIdForUser, useLotes } from '@gestaup/shared'
-import { Button, Card, CardSkeleton, EmptyState, ErrorState } from '@gestaup/ui'
-import { useConciliacaoLotes, useIndividuosSemCategoria } from '../../hooks/useConciliacaoIdentificacao'
+import { Button, Card, CardSkeleton, EmptyState, ErrorState, Select, useToast } from '@gestaup/ui'
+import {
+  useConciliacaoLotes,
+  useDefinirModoIdentificacao,
+  useIndividuosSemCategoria,
+  useModosIdentificacao,
+  type ModoIdentificacao,
+} from '../../hooks/useConciliacaoIdentificacao'
 import {
   filtrarConciliacao,
   resumirConciliacao,
@@ -50,8 +56,15 @@ function Resumo({ titulo, valor, destaque }: { titulo: string; valor: number; de
   )
 }
 
+const MODOS: { value: ModoIdentificacao; label: string }[] = [
+  { value: 'agregado', label: 'Agregado (só contagem)' },
+  { value: 'parcial', label: 'Parcial (alguns identificados)' },
+  { value: 'individual', label: 'Individual (todos identificados)' },
+]
+
 export function ConciliacaoIndividuos() {
   const { user } = useAuth()
+  const toast = useToast()
   const navigate = useNavigate()
   const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
   const [semFazenda, setSemFazenda] = useState(false)
@@ -73,11 +86,28 @@ export function ConciliacaoIndividuos() {
   const conciliacao = useConciliacaoLotes(fazendaId)
   const semCategoria = useIndividuosSemCategoria(fazendaId)
   const { data: lotes = [] } = useLotes(fazendaId)
+  const modos = useModosIdentificacao(fazendaId)
+  const definirModo = useDefinirModoIdentificacao(fazendaId)
   const nomeLote = useMemo(() => new Map(lotes.map((l) => [l.id, l.nome])), [lotes])
 
   const linhas = useMemo(() => conciliacao.data ?? [], [conciliacao.data])
   const resumo = useMemo(() => resumirConciliacao(linhas), [linhas])
   const visiveis = useMemo(() => filtrarConciliacao(linhas, filtro), [linhas, filtro])
+  // Lotes que já têm identificados ou um modo diferente de 'agregado'
+  const lotesComIdentificados = useMemo(() => new Set(linhas.map((l) => l.lote_id)), [linhas])
+  const lotesModo = useMemo(
+    () => (modos.data ?? []).filter((l) => l.modo_identificacao !== 'agregado' || lotesComIdentificados.has(l.id)),
+    [modos.data, lotesComIdentificados]
+  )
+
+  const alterarModo = async (loteId: string, modo: string) => {
+    try {
+      await definirModo.mutateAsync({ loteId, modo: modo as ModoIdentificacao })
+      toast.success('Modo de identificação atualizado.')
+    } catch (error) {
+      toast.error((error as Error).message || 'Não foi possível definir o modo.')
+    }
+  }
 
   if (semFazenda) {
     return <EmptyState title="Selecione uma fazenda" description="A conciliação é feita por fazenda." />
@@ -175,6 +205,33 @@ export function ConciliacaoIndividuos() {
             </Card>
           )}
         </>
+      )}
+
+      {lotesModo.length > 0 && (
+        <Card className="p-4 space-y-3">
+          <div>
+            <h3 className="text-lg font-semibold text-content-strong">Modo de identificação dos lotes</h3>
+            <p className="text-sm text-content-muted">
+              Um lote só pode ser <strong>individual</strong> quando todos os animais de cada categoria estão identificados e com a
+              localização confirmada. O modo é um registro de intenção: a contagem continua sendo a do lote.
+            </p>
+          </div>
+          <ul className="divide-y divide-border-base">
+            {lotesModo.map((l) => (
+              <li key={l.id} className="py-2 flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm font-medium text-content-strong">{l.nome}</span>
+                <div className="w-full sm:w-72">
+                  <Select
+                    label=""
+                    value={l.modo_identificacao}
+                    onChange={(valor) => alterarModo(l.id, valor)}
+                    options={MODOS}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
 
       {(semCategoria.data?.length ?? 0) > 0 && (
