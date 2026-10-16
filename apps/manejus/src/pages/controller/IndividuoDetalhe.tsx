@@ -339,7 +339,10 @@ export function IndividuoDetalhe() {
               </span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-              <DetailField label="Peso atual" value={kg(ind!.peso_atual_kg)} />
+              <DetailField
+                label={ind!.peso_atual_origem === 'estimado' ? 'Peso atual (estimado)' : 'Peso atual'}
+                value={kg(ind!.peso_atual_kg)}
+              />
               <DetailField label="Idade" value={idade ? `${idade.meses} meses (${idade.dias} dias)` : '-'} />
               <DetailField label="Lote" value={formatValue(ref?.lote)} />
               <DetailField label="Pasto" value={formatValue(ref?.pasto)} />

@@ -18,6 +18,8 @@ export interface IndividuoDetalhe {
   data_nascimento?: string | null
   peso_nascimento_kg?: number | string | null
   peso_atual_kg?: number | string | null
+  peso_atual_origem?: string | null
+  peso_atual_data?: string | null
   data_desmama?: string | null
   peso_desmama_kg?: number | string | null
   data_entrada_fazenda?: string | null

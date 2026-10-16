@@ -74,6 +74,7 @@ export function IndividuoNovo() {
   const toast = useToast()
   const [form, setForm] = useState(INITIAL_FORM)
   const [statusOriginal, setStatusOriginal] = useState<string | undefined>(undefined)
+  const [pesoOriginal, setPesoOriginal] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string; onClose: () => void }>({
@@ -227,6 +228,7 @@ export function IndividuoNovo() {
         setLoteOriginal(individuo.lote_atual || null)
         setCategoriaOriginal(individuo.categoria || null)
         setStatusOriginal(individuo.status || 'Vivo')
+        setPesoOriginal(String(individuo.peso_atual_kg ?? ''))
         setForm({
           id_manejo: individuo.id_manejo || '',
           id_brinco: individuo.id_brinco || '',
@@ -512,6 +514,10 @@ export function IndividuoNovo() {
           data_nascimento: form.data_nascimento,
           peso_nascimento_kg: form.peso_nascimento_kg ? Number(String(form.peso_nascimento_kg).replace(',', '.')) : null,
           peso_atual_kg: form.peso_atual_kg ? Number(String(form.peso_atual_kg).replace(',', '.')) : null,
+          // Peso digitado à mão vira origem 'manual'; sem mudança, preserva a origem (pesagem/estimado)
+          ...(form.peso_atual_kg && String(form.peso_atual_kg) !== pesoOriginal
+            ? { peso_atual_origem: 'manual', peso_atual_data: toFarmDateOnly(new Date().toISOString()) }
+            : {}),
           status: form.status,
           origem: form.origem,
           data_entrada_fazenda: form.data_entrada_fazenda,
@@ -661,6 +667,11 @@ export function IndividuoNovo() {
             dataToInsert[field] = Number(String(dataToInsert[field]).replace(',', '.'))
           }
         })
+
+        if (dataToInsert.peso_atual_kg) {
+          dataToInsert.peso_atual_origem = 'manual'
+          dataToInsert.peso_atual_data = toFarmDateOnly(new Date().toISOString())
+        }
 
         const { data, error } = await supabase.from('individuos').insert(dataToInsert).select('id').single()
 
