@@ -168,3 +168,11 @@ export function gruposDaFazenda(fazendaId: string | null | undefined): Caderneta
     (g) => g.itens.length > 0
   )
 }
+
+/**
+ * Menu "Controle Individual" do sidebar (Indivíduos, Reprodução, Sanidade...): em teste, só a fazenda de testes vê.
+ * Fazenda desconhecida (ainda carregando) = oculto.
+ */
+export function menuControleIndividualVisivel(fazendaId: string | null | undefined): boolean {
+  return fazendaId === FAZENDA_DE_TESTES_ID
+}

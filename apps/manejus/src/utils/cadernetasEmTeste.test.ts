@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CADERNETAS, CADERNETAS_EM_TESTE, FAZENDA_DE_TESTES_ID, cadernetaVisivelNaFazenda, cadernetasDaFazenda, gruposDaFazenda } from './cadernetas'
+import { CADERNETAS, CADERNETAS_EM_TESTE, FAZENDA_DE_TESTES_ID, cadernetaVisivelNaFazenda, cadernetasDaFazenda, gruposDaFazenda, menuControleIndividualVisivel } from './cadernetas'
 
 describe('cadernetas em teste (painel)', () => {
   it('só aparecem na fazenda de testes e ficam ocultas enquanto a fazenda é desconhecida', () => {
@@ -20,5 +20,14 @@ describe('cadernetas em teste (painel)', () => {
     const itens = gruposDaFazenda('outra').flatMap((g) => g.itens.map((i) => i.id))
     expect(itens).not.toContain('sanidade')
     expect(gruposDaFazenda(FAZENDA_DE_TESTES_ID).flatMap((g) => g.itens.map((i) => i.id))).toContain('sanidade')
+  })
+})
+
+describe('menu Controle Individual (painel)', () => {
+  it('só a fazenda de testes vê; outra fazenda ou fazenda desconhecida não', () => {
+    expect(menuControleIndividualVisivel(FAZENDA_DE_TESTES_ID)).toBe(true)
+    expect(menuControleIndividualVisivel('outra')).toBe(false)
+    expect(menuControleIndividualVisivel(null)).toBe(false)
+    expect(menuControleIndividualVisivel(undefined)).toBe(false)
   })
 })

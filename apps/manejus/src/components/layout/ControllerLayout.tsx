@@ -12,6 +12,7 @@ import { useKeyboardShortcuts } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import { ImpersonationBar } from '../ImpersonationBar'
 import { prefetchRoute } from '../../utils/routePrefetch'
+import { menuControleIndividualVisivel } from '../../utils/cadernetas'
 
 interface ControllerLayoutProps {
   children: ReactNode
@@ -61,7 +62,8 @@ const menuStructure: MenuItem[] = [
     ],
   },
   {
-    // Camada individual sobre o agregado do lote: animais, reprodução e sanidade
+    // Camada individual sobre o agregado do lote: animais, reprodução e sanidade. Em teste: só a fazenda de testes vê
+    // este grupo (ver visibleMenuStructure).
     label: 'Controle Individual',
     section: 'operacao',
     icon: (
@@ -341,6 +343,10 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
 
   const visibleMenuStructure = useMemo(() => {
     let structure = menuStructure
+    // Controle Individual ainda em teste: fica oculto enquanto a fazenda é desconhecida ou não é a de testes
+    if (!menuControleIndividualVisivel(fazenda?.id)) {
+      structure = structure.filter((menu) => menu.label !== 'Controle Individual')
+    }
     if (!fazenda?.acesso_confinamento) {
       structure = structure.filter((menu) => menu.label !== 'Confinamento e TIP')
     }
@@ -349,7 +355,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
       structure = [...structure, menuItemAssistenteIA]
     }
     return structure
-  }, [fazenda?.acesso_confinamento, iaAtiva])
+  }, [fazenda?.id, fazenda?.acesso_confinamento, iaAtiva])
 
   // Lista achatada de destinos para a command palette.
   const commandItems: CommandItem[] = useMemo(() => {
