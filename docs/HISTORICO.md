@@ -2435,3 +2435,7 @@ Implementado em 2026-10-13. `lote_categorias.idade` (meses) é a idade na data-b
 ## Vercel: ignoreCommand não falha mais quando o SHA anterior não está no clone (16/10/2026)
 - Sintoma: deploy do manejus falhou com `Command failed with exit code 128: git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA...}` e `fatal: bad object 958a4c6e...`. O clone da Vercel é raso e não tinha o commit do deploy anterior; o `git diff` sai com 128, e a Vercel só aceita 0 (pula) ou 1 (builda): qualquer outro código derruba o deploy. A nota de 2026-10 que dizia "o diff falha e o build roda" estava errada para esse caso.
 - Correção: `|| exit 1` no fim do `ignoreCommand` de `apps/manejus`, `apps/vision` e `apps/farmplan` (qualquer erro do git vira "builda"). Simulado: SHA inexistente → 1; sem mudanças → 0; com mudanças em manejus → 1.
+
+## Sanidade na lista de cadernetas do painel (16/10/2026)
+- `utils/cadernetas.ts` e `types/images.ts`: entrada `sanidade` (grupo Gado & Pastagens, abre `/controller/manejo-sanitario`) para liberar a caderneta de Sanidade do PWA por funcionário. Imagem `public/images/cadernetas/sanidade.png` é cópia provisória da Enfermaria.
+- Como no manejo de curral: só funcionários reais ganham essa permissão depois que o painel novo estiver no ar.
