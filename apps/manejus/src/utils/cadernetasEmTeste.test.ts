@@ -15,6 +15,7 @@ describe('cadernetas em teste (painel)', () => {
     const ids = (l: { id: string }[]) => l.map((c) => c.id)
     expect(ids(cadernetasDaFazenda('outra'))).not.toContain('sanidade')
     expect(ids(cadernetasDaFazenda('outra'))).not.toContain('manejo-curral')
+    expect(ids(cadernetasDaFazenda('outra'))).not.toContain('reproducao')
     expect(cadernetasDaFazenda(FAZENDA_DE_TESTES_ID)).toHaveLength(CADERNETAS.length)
     const itens = gruposDaFazenda('outra').flatMap((g) => g.itens.map((i) => i.id))
     expect(itens).not.toContain('sanidade')

@@ -19,6 +19,7 @@ export type CadernetaImage =
   | 'pesagem'
   | 'manejo-curral'
   | 'sanidade'
+  | 'reproducao'
   | 'leitura-cocho'
   | 'trato-confinamento'
   | 'fabrica-confinamento'
@@ -53,6 +54,7 @@ export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   pesagem: '/images/cadernetas/pesagem.png',
   'manejo-curral': '/images/cadernetas/manejo-curral.png',
   sanidade: '/images/cadernetas/sanidade.png',
+  reproducao: '/images/cadernetas/reproducao.png',
   'leitura-cocho': '/images/cadernetas/leitura-cocho.png',
   'trato-confinamento': '/images/cadernetas/trato-confinamento.png',
   'fabrica-confinamento': '/images/cadernetas/fabrica-confinamento.png',
@@ -88,6 +90,7 @@ export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
   pesagem: 'Pesagem',
   'manejo-curral': 'Manejo de Curral',
   sanidade: 'Sanidade',
+  reproducao: 'Reprodução',
   'leitura-cocho': 'Leitura de Cocho',
   'trato-confinamento': 'Trato Confinamento',
   'fabrica-confinamento': 'Carregamento Vagão',
@@ -123,6 +126,7 @@ export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
   pesagem: 'Registros de pesagem de animais',
   'manejo-curral': 'Sessões de manejo de curral: identificação e lote de destino dos animais',
   sanidade: 'Aplicações sanitárias por animal ou por lote, com carência e próxima dose',
+  reproducao: 'Cobertura, inseminação, diagnóstico de gestação e aborto de fêmeas, em sessão',
   'leitura-cocho': 'Registros de leitura de cocho',
   'trato-confinamento': 'Registros de oferta de trato',
   'fabrica-confinamento': 'Registros de carregamento do vagão',

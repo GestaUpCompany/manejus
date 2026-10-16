@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Fase 4 no PWA, P3: eventos_reprodutivos aceita envio idempotente do PWA (2026-10-16)
+
+Migration `20261016310000_eventos_reprodutivos_local_id` (rollback em `supabase/rollbacks/`): `eventos_reprodutivos.local_id text` com índice único completo (índice parcial dá 42P10 no upsert) e `origem text NOT NULL DEFAULT 'painel'` (`painel|pwa`). Só colunas novas; painel e PWA antigo seguem válidos. O gatilho `trg_eventos_reprodutivos_validar` não depende da ordem de chegada (só olha fêmea, fazenda, data, touro, estação e a cobertura referenciada; o PWA não envia `evento_cobertura_id`).
+- **Painel:** caderneta `reproducao` na lista de cadernetas (`utils/cadernetas.ts`, aponta para `/controller/reproducao`), no grupo Gado, na permissão por funcionário e em `CADERNETAS_EM_TESTE` (só fazenda de testes, junto de `manejo-curral` e `sanidade`); `types/images.ts` com imagem provisória (cópia da de sanidade).
+- Teste: reenvio com o mesmo `local_id` (`ON CONFLICT (local_id) DO NOTHING`) não cria linha. Detalhes da tela no HISTORICO do PWA.
+- **Aberto:** `v_status_reprodutivo` mostra "Sem registro" para fêmea parida com diagnóstico Inconclusivo e sem cobertura (o ramo do inconclusivo ignora o marco de parto/aborto); corrigir com `CREATE OR REPLACE VIEW` (migration própria, a pedir ok).
+
 ## Entrada retroativa não contada no lote destino: correção manual (2026-10-16)
 
 Fazenda `a53d7375-15c8-44fe-98d8-90e9f8423c65`, "Lote 4 Bez 0926". A movimentação `registros_movimentacao` `49a3415a-b1a4-48e6-b283-621ab19387ec` (Entrada, 89 Bezerro, 215 kg) foi lançada com data 25/09, anterior ao `created_at` (09/10) da `lote_categorias` `4e88cd79-b3e5-4f25-b1ce-984cdf636aaa`. Causa: `calculate_quant_atual` só soma movimentações com `data >= lote_categorias.created_at`, e o trigger `update_quant_atual_movimentacao` só dispara em INSERT (editar a data depois não recalcula, nem pondera o peso).

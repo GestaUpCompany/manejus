@@ -47,6 +47,7 @@ export const CADERNETA_GRUPOS: CadernetaGrupo[] = [
       { id: 'pesagem', path: '/controller/cadernetas/pesagem' },
       { id: 'manejo-curral', path: '/controller/cadernetas/manejo-curral' },
       { id: 'sanidade', path: '/controller/manejo-sanitario' },
+      { id: 'reproducao', path: '/controller/reproducao' },
       { id: 'recebimento-compra', path: '/controller/cadernetas/recebimento-compra' },
     ],
   },
@@ -127,6 +128,7 @@ const CADERNETA_LABELS: Record<string, string> = {
   pesagem: 'Pesagem',
   'manejo-curral': 'Manejo de Curral',
   sanidade: 'Sanidade',
+  reproducao: 'Reprodução',
   'comunicado-venda': 'Comunicado de Venda',
   'comunicado-compra': 'Comunicado de Compra',
   'comunicado-transferencia': 'Comunicado de Transferência',
@@ -150,7 +152,7 @@ export const CHECKLIST_ITENS = [
 export const FAZENDA_DE_TESTES_ID = 'd649c65e-16ab-4b77-a84b-df937aa41cc3'
 
 /** Cadernetas novas, liberadas só para a fazenda de testes até serem validadas no campo (espelha o PWA). */
-export const CADERNETAS_EM_TESTE: readonly string[] = ['manejo-curral', 'sanidade']
+export const CADERNETAS_EM_TESTE: readonly string[] = ['manejo-curral', 'sanidade', 'reproducao']
 
 /** Caderneta em teste só aparece na fazenda de testes; enquanto a fazenda não é conhecida, fica oculta. */
 export function cadernetaVisivelNaFazenda(cadernetaId: string, fazendaId: string | null | undefined): boolean {
