@@ -1,5 +1,14 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Sanidade C3: tratamento/vacina na sessão de manejo de curral (2026-10-16)
+
+Migration `20261016350000_manejo_curral_tratamento` (rollback em `supabase/rollbacks/`). Só colunas novas (nulas ou com padrão): o PWA antigo segue válido e sem tratamento. Não altera contagem, peso nem movimentação.
+- **Colunas:** `sessoes_manejo_curral.tratamento_*` (tipo, medicamento_id, produto_nome, principio_ativo, dose, via, lote_produto, validade, carencia_dias, intervalo_dias, diagnostico; produto preenchido = sessão com tratamento) e `registros_manejo_curral.sem_tratamento` (padrão false) + `aplicacao_id`.
+- **`aplicar_manejo_curral`:** o resto da função é idêntico; para cada linha aplicada com animal e sem `sem_tratamento` grava **uma aplicação sanitária** (data da sessão, `origem = 'pwa'`, `local_id = 'curral:<id da linha>'`, `ON CONFLICT (local_id)`, idempotente). A decisão é no servidor porque só ele sabe qual animal cada linha é (inclusive os cadastrados na própria sessão). Falha ao gravar o tratamento não desfaz a identificação: a linha fica `aplicado` com o aviso em `erro`. O retorno ganha `tratamentos` e `tratamentos_falhas`. A carência e a próxima dose saem do gatilho de `aplicacoes_sanitarias`.
+- **Painel:** detalhe da sessão (`RegistrosManejoCurralDetalhes.tsx`) mostra o bloco "Tratamento da sessão" e a coluna Tratamento (Recebeu / Não recebeu).
+- **Teste (fazenda de testes, PWA no navegador):** sessão com 3 animais e vacina (dose 2 ml, carência 21, reaplicar 180), a MAE-N1 marcada "Não recebeu", salva offline e sincronizada: 3 linhas `aplicado`, 2 aplicações (carência até 06/11/2026, próxima 14/04/2027, responsável da sessão), os 2 animais em `animais_em_carencia`; reprocessar o mesmo `local_id` não duplica. Validação de validade vencida testada na tela. Tudo revertido por soft-delete (sessão `234ea391-baba-4563-aebc-1f4017d700f0`, 3 linhas, 2 aplicações).
+- **Não testado ao vivo:** o ramo de falha do tratamento dentro da RPC (só revisão de código); a caderneta de Manejo de Curral continua só na fazenda de testes.
+
 ## Sanidade C1: calendário sanitário (2026-10-16)
 
 Programação de campanhas por fazenda e pendências calculadas (migrations `20261016330000_calendario_sanitario` e `20261016340000_notificar_calendario_sanitario`, rollbacks em `supabase/rollbacks/`). Só avisa: não altera aplicações, contagem, peso nem movimentação.

@@ -26,6 +26,7 @@ interface LinhaDetalhe {
   categoria: string | null
   raca: string | null
   observacao: string | null
+  sem_tratamento: boolean
   status_processamento: StatusLinhaManejo
   erro: string | null
   lote: { nome: string } | null
@@ -39,6 +40,15 @@ interface SessaoDetalhe {
   observacao: string | null
   iniciada_em: string | null
   finalizada_em: string | null
+  tratamento_tipo: string | null
+  tratamento_produto_nome: string | null
+  tratamento_dose: string | null
+  tratamento_via: string | null
+  tratamento_lote_produto: string | null
+  tratamento_validade: string | null
+  tratamento_carencia_dias: number | null
+  tratamento_intervalo_dias: number | null
+  tratamento_diagnostico: string | null
   linhas: LinhaDetalhe[]
 }
 
@@ -67,7 +77,7 @@ export function RegistrosManejoCurralDetalhes() {
       const { data, error } = await supabase
         .from('sessoes_manejo_curral')
         .select(
-          'id, data, responsavel, observacao, iniciada_em, finalizada_em, linhas:registros_manejo_curral(id, ordem, individuo_id, identificador_lido, id_provisorio_anterior, id_brinco_novo, id_chip_novo, id_manejo_novo, motivo_troca, peso_kg, sexo, categoria, raca, observacao, status_processamento, erro, lote:lotes(nome), pendencias:pendencias_designacao_lote(status))'
+          'id, data, responsavel, observacao, iniciada_em, finalizada_em, tratamento_tipo, tratamento_produto_nome, tratamento_dose, tratamento_via, tratamento_lote_produto, tratamento_validade, tratamento_carencia_dias, tratamento_intervalo_dias, tratamento_diagnostico, linhas:registros_manejo_curral(id, sem_tratamento, ordem, individuo_id, identificador_lido, id_provisorio_anterior, id_brinco_novo, id_chip_novo, id_manejo_novo, motivo_troca, peso_kg, sexo, categoria, raca, observacao, status_processamento, erro, lote:lotes(nome), pendencias:pendencias_designacao_lote(status))'
         )
         .eq('id', id)
         .eq('fazenda_id', fazendaId)
@@ -86,6 +96,7 @@ export function RegistrosManejoCurralDetalhes() {
   }, [id, user])
 
   const resumo = sessao ? resumirSessaoManejo(sessao.linhas) : null
+  const comTratamento = !!sessao?.tratamento_produto_nome
 
   return (
     <DetailLayout
@@ -119,6 +130,25 @@ export function RegistrosManejoCurralDetalhes() {
               )}
             </DetailSection>
 
+            {comTratamento && (
+              <DetailSection title="Tratamento da sessão">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <DetailField label="Tipo" value={formatValue(sessao!.tratamento_tipo)} />
+                  <DetailField label="Produto" value={sessao!.tratamento_produto_nome ?? '-'} />
+                  <DetailField label="Dose" value={formatValue(sessao!.tratamento_dose)} />
+                  <DetailField label="Via" value={formatValue(sessao!.tratamento_via)} />
+                  <DetailField label="Partida" value={formatValue(sessao!.tratamento_lote_produto)} />
+                  <DetailField label="Validade" value={sessao!.tratamento_validade ? formatDate(sessao!.tratamento_validade) : '-'} />
+                  <DetailField label="Carência (dias)" value={formatValue(sessao!.tratamento_carencia_dias)} />
+                  <DetailField label="Reaplicar em (dias)" value={formatValue(sessao!.tratamento_intervalo_dias)} />
+                </div>
+                {sessao!.tratamento_diagnostico && <DetailField label="Diagnóstico" value={sessao!.tratamento_diagnostico} />}
+                <p className="text-xs text-content-muted mt-2">
+                  {sessao!.linhas.filter((l) => !l.sem_tratamento).length} de {sessao!.linhas.length} animais receberam; cada um virou uma aplicação sanitária na ficha do animal.
+                </p>
+              </DetailSection>
+            )}
+
             <DetailSection title="Animais da sessão" highlighted>
               <div className="overflow-x-auto">
                 <Table>
@@ -132,6 +162,7 @@ export function RegistrosManejoCurralDetalhes() {
                       <Th>Peso (kg)</Th>
                       <Th>Situação</Th>
                       <Th>Troca de lote</Th>
+                      {comTratamento && <Th>Tratamento</Th>}
                     </Tr>
                   </Thead>
                   <Tbody>
@@ -162,6 +193,7 @@ export function RegistrosManejoCurralDetalhes() {
                           {l.erro && <div className="text-xs text-red-700 mt-1">{l.erro}</div>}
                         </Td>
                         <Td>{l.pendencias && l.pendencias.length > 0 ? ROTULO_DESIGNACAO[l.pendencias[l.pendencias.length - 1].status] : '-'}</Td>
+                        {comTratamento && <Td>{l.sem_tratamento ? 'Não recebeu' : 'Recebeu'}</Td>}
                       </Tr>
                     ))}
                   </Tbody>
