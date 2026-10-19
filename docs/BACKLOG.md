@@ -2,6 +2,11 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
+## Planos nutricionais: o que o alinhamento de 2026-10-19 não cobriu
+
+- **Editar o plano vigente** no modal do lote (período e peso meta do plano) só altera `planos_nutricionais`; não propaga para a personalização das categorias, para `lote_categorias.peso_vivo_meta_kg_cab` nem para o snapshot de entrada. Para ficar igual ao card de categoria e à atribuição em massa, chamar `_aplicar_personalizacao_categoria` nas categorias sem personalização própria (ou avisar que a edição vale só para as próximas ativações).
+- **Dados antigos**: em consulta de leitura (todas as fazendas) havia 110 de 414 personalizações vigentes com `peso_inicio_kg_cab` nulo, e planos migrados antes de 2026-10-19 podem ter personalização ativa órfã, destino sem snapshot de entrada e meta de categoria divergente. A correção de dados exige autorização escopada por fazenda; o código novo não cria mais esses casos.
+
 ## Contagem do lote: corte por created_at mistura data do fato com snapshot (2026-10-16)
 
 `calculate_quant_atual`/`calculate_quant_em` usam `quant_inicial` mais um corte `data >= lote_categorias.created_at`. Hoje a data retroativa é contornada ajustando `data` para now() (`data_informada` guarda a original). Desenho mais robusto: livro-razão, com saldo inicial como lançamento e contagem por lançamentos, sem corte temporal. Invasivo (afeta `calculate_quant_em`, recategorização com `quant_base`, relatórios por período); avaliar em separado. Também pendente: ação explícita de "corrigir entrada" no painel que reponderee o peso.
