@@ -2,10 +2,14 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
-## Planos nutricionais: o que o alinhamento de 2026-10-19 não cobriu
+## Planos nutricionais: pendências depois da edição com histórico (2026-10-19)
 
-- **Editar o plano vigente** no modal do lote (período e peso meta do plano) só altera `planos_nutricionais`; não propaga para a personalização das categorias, para `lote_categorias.peso_vivo_meta_kg_cab` nem para o snapshot de entrada. Para ficar igual ao card de categoria e à atribuição em massa, chamar `_aplicar_personalizacao_categoria` nas categorias sem personalização própria (ou avisar que a edição vale só para as próximas ativações).
-- **Dados antigos**: em consulta de leitura (todas as fazendas) havia 110 de 414 personalizações vigentes com `peso_inicio_kg_cab` nulo, e planos migrados antes de 2026-10-19 podem ter personalização ativa órfã, destino sem snapshot de entrada e meta de categoria divergente. A correção de dados exige autorização escopada por fazenda; o código novo não cria mais esses casos.
+- **`data_meta_projetada` e `dias_restantes_meta`** não são recalculadas por nenhum fluxo de plano nem pelo cron atual (`update_dados_lotes` só lê o campo); só o formulário do lote recalcula. Depois de editar a meta, a "Data meta" do relatório zootécnico fica velha (no Teste 2 aparece 14/09/2026 com meta 720 definida em 19/10).
+- **`individuos.peso_meta_kg`** é cópia por animal. O trigger `propagar_estrategia_nutricional_para_individuos` usa `NEW.lote_categoria_id`, nulo nos planos por lote, então não faz nada; a cópia só muda quando o formulário do lote é salvo (`syncIndividuosNutricional`).
+- **Sem limite plausível para peso meta** na RPC e no formulário: um erro de digitação (700720 kg) é aceito. Considerar validar contra o peso atual da categoria (ex.: meta entre peso atual e um teto).
+- **Histórico de Planos agrupa por plano, não por categoria**: em lote com mais de uma categoria o card mistura rótulo e números de categorias diferentes (visto em "Teste 3", boi gordo e garrote).
+- **Dados antigos**: em consulta de leitura (todas as fazendas) havia 110 de 414 personalizações vigentes com `peso_inicio_kg_cab` nulo, e planos migrados antes de 2026-10-19 podem ter personalização ativa órfã, destino sem snapshot de entrada, meta de categoria divergente e flags de notificação herdadas do plano anterior. A correção de dados exige autorização escopada por fazenda; o código novo não cria mais esses casos.
+- Exibir o histórico de edições (`planos_nutricionais_edicoes`) na interface não foi pedido; hoje só há leitura por SQL.
 
 ## Contagem do lote: corte por created_at mistura data do fato com snapshot (2026-10-16)
 
