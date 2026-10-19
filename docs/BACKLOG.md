@@ -28,7 +28,7 @@ Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar 
 
 **Feito no painel (16/10/2026, ver `docs/HISTORICO.md`)**: aplicações por animal e por lote, carência no catálogo, histórico unificado, aba Sanidade na ficha, página Manejo Sanitário (pendências), funções de carência, aviso `CARENCIA_ATIVA` na pesagem de OS de venda e alertas semanais. **Falta**: caderneta de sanidade no PWA, baixa de estoque de medicamento, custo por animal e indicação de carência nas listas de Lotes e Indivíduos.
 
-**Dependência**: a ficha sanitária só fica completa quando o PWA enviar `individuo_id` na Enfermaria (1 linha em `syncService.ts` do PWA) e a Morte passar a usar `AnimalIdentifier`. Ambos também adiados.
+**Dependência (resolvida, conferida em 19/10/2026)**: o PWA já envia `individuo_id` na Enfermaria (commit `0af960f`, 09/10, já em master e no staging-repo) e a Morte usa o vínculo desde `b03772f`. No banco, 3 de 15 registros de enfermaria têm `individuo_id` e nenhum registro de outubro com identificação ficou sem vínculo.
 
 **Disparadores**: "sanidade", "vacina", "carência", "aplicação sanitária", `aplicacoes_sanitarias`, `CARENCIA_ATIVA`.
 

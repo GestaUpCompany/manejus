@@ -1,5 +1,9 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Fase 0 do plano de indivíduos, Enfermaria: individuo_id já enviado pelo PWA (2026-10-19)
+
+Item "PWA enviar `individuo_id` na Enfermaria" conferido e **já estava feito**: `EnfermariaPage.tsx` usa `AnimalIdentifier` e guarda `individuoId` (commit `0af960f`, 09/10/2026, presente em master e em `staging-repo/main`), e `syncService.ts` grava `individuo_id` em `registros_enfermaria`. Nada a implementar; a nota de dependência do BACKLOG estava desatualizada e foi corrigida. Leitura no banco: 15 registros de enfermaria ativos, 3 com `individuo_id` (o primeiro em 10/09), 0 registros de outubro com brinco, chip ou manejo e sem vínculo.
+
 ## Fase 0 do plano de indivíduos, Maternidade: vínculos preservados no reenvio, gêmeos e 2ª mãe adotiva (2026-10-19)
 
 - **Cria duplicada: não encontrada.** O PWA atual cria a cria com id próprio e o gatilho `create_individual_from_maternidade` sai cedo quando o registro traz `individuo_id_cria`; o reenvio do parto (upsert por `local_id`) é UPDATE e não dispara os gatilhos de INSERT. Os pares repetidos achados são partos digitados duas vezes (fazenda `99af0828`, maio) e dados de teste.
