@@ -2,11 +2,12 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
-## Planos nutricionais: pendências depois da edição com histórico (2026-10-19)
+## Planos nutricionais: pendências depois do limite de meta, data da meta e meta dos indivíduos (2026-10-19)
 
-- **`data_meta_projetada` e `dias_restantes_meta`** não são recalculadas por nenhum fluxo de plano nem pelo cron atual (`update_dados_lotes` só lê o campo); só o formulário do lote recalcula. Depois de editar a meta, a "Data meta" do relatório zootécnico fica velha (no Teste 2 aparece 14/09/2026 com meta 720 definida em 19/10).
-- **`individuos.peso_meta_kg`** é cópia por animal. O trigger `propagar_estrategia_nutricional_para_individuos` usa `NEW.lote_categoria_id`, nulo nos planos por lote, então não faz nada; a cópia só muda quando o formulário do lote é salvo (`syncIndividuosNutricional`).
-- **Sem limite plausível para peso meta** na RPC e no formulário: um erro de digitação (700720 kg) é aceito. Considerar validar contra o peso atual da categoria (ex.: meta entre peso atual e um teto).
+- **Backfill da data da meta**: o trigger só recalcula quando meta, GMD ou peso atual mudam. Categorias com GMD e peso evoluindo se corrigem sozinhas na próxima passada do cron (o peso muda todo dia). Ficam velhas as sem GMD: em consulta de leitura (todas as fazendas) há 8 categorias ativas com `data_meta_projetada` preenchida e GMD nulo ou zero, que pela regra "sem GMD, sem data" deveriam estar nulas. Corrigir por fazenda exige autorização escopada.
+- **Indivíduos e plano por lote**: o trigger legado `atualizar_estrategia_nutricional_individuo` só enxerga planos por categoria (modelo antigo). Para planos por lote ele zera `estrategia_nutricional_*` e `gmd_kg_cab_dia` do animal; só o `peso_meta_kg` foi religado (à meta da categoria). Decidir se o GMD e a estratégia do animal devem vir do plano do lote. Os animais que já existem só recebem a meta quando a meta da categoria muda; não houve backfill (nenhum dos 496 indivíduos tinha meta).
+- **Limite de meta só nas tabelas de plano**: `lote_categorias.peso_vivo_meta_kg_cab` (formulário do lote) não tem o teto de 1.500 kg.
+- **Dado anômalo**: existe categoria com `peso_vivo_atual_kg_cab` de 27.719 kg (provável erro de digitação, em alguma fazenda). O recálculo da data da meta e o limite de meta dependem do peso atual; vale um limite também no peso atual.
 - **Histórico de Planos agrupa por plano, não por categoria**: em lote com mais de uma categoria o card mistura rótulo e números de categorias diferentes (visto em "Teste 3", boi gordo e garrote).
 - **Dados antigos**: em consulta de leitura (todas as fazendas) havia 110 de 414 personalizações vigentes com `peso_inicio_kg_cab` nulo, e planos migrados antes de 2026-10-19 podem ter personalização ativa órfã, destino sem snapshot de entrada, meta de categoria divergente e flags de notificação herdadas do plano anterior. A correção de dados exige autorização escopada por fazenda; o código novo não cria mais esses casos.
 - Exibir o histórico de edições (`planos_nutricionais_edicoes`) na interface não foi pedido; hoje só há leitura por SQL.
