@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcularEvolucaoPeso, calcularIdade, escalaPeso, gmdPeriodo } from './individuoPesagens'
+import { calcularEvolucaoPeso, calcularIdade, escalaPeso, gmdPeriodo, pesoAjustado205 } from './individuoPesagens'
 
 describe('calcularEvolucaoPeso', () => {
   it('ordena por data e calcula ganho e GMD entre pesagens', () => {
@@ -88,5 +88,38 @@ describe('escalaPeso', () => {
     expect(e.min).toBeGreaterThanOrEqual(0)
     expect(e.marcas.length).toBeGreaterThan(1)
     expect(e.max).toBeGreaterThanOrEqual(30)
+  })
+})
+
+describe('pesoAjustado205', () => {
+  const pesagem = (data: string, pesoKg: number) => ({ id: data, data, pesoKg, dias: null, ganhoKg: null, gmdKgDia: null })
+
+  it('estima o peso aos 205 dias pela pesagem na janela', () => {
+    // nasceu em 01/01 com 30 kg; aos 200 dias pesou 230 kg: GMD (230-30)/200 = 1,0 kg/dia, P205 = 30 + 205 = 235
+    const r = pesoAjustado205(30, '2026-01-01', [pesagem('2026-07-20T12:00:00Z', 230)])
+    expect(r?.pesagem.idadeDias).toBe(200)
+    expect(r?.gmdNascimentoKgDia).toBeCloseTo(1, 5)
+    expect(r?.pesoKg).toBeCloseTo(235, 5)
+  })
+
+  it('escolhe a pesagem mais perto dos 205 dias', () => {
+    const r = pesoAjustado205(30, '2026-01-01', [
+      pesagem('2026-05-02T12:00:00Z', 150), // 121 dias
+      pesagem('2026-07-25T12:00:00Z', 240), // 205 dias
+      pesagem('2026-10-20T12:00:00Z', 330), // 292 dias
+    ])
+    expect(r?.pesagem.idadeDias).toBe(205)
+  })
+
+  it('ignora pesagem fora da janela de 120 a 300 dias', () => {
+    expect(pesoAjustado205(30, '2026-01-01', [pesagem('2026-03-01T12:00:00Z', 90)])).toBeNull()
+    expect(pesoAjustado205(30, '2026-01-01', [pesagem('2026-12-01T12:00:00Z', 400)])).toBeNull()
+  })
+
+  it('devolve null sem peso ou data de nascimento, ou com peso da pesagem não maior que o do nascimento', () => {
+    expect(pesoAjustado205(null, '2026-01-01', [pesagem('2026-07-20T12:00:00Z', 230)])).toBeNull()
+    expect(pesoAjustado205(30, null, [pesagem('2026-07-20T12:00:00Z', 230)])).toBeNull()
+    expect(pesoAjustado205(30, '2026-01-01', [pesagem('2026-07-20T12:00:00Z', 30)])).toBeNull()
+    expect(pesoAjustado205(30, '2026-01-01', [])).toBeNull()
   })
 })

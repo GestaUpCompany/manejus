@@ -63,6 +63,45 @@ export function calcularIdade(dataNascimento: string | null | undefined, hoje: D
   return { dias, meses }
 }
 
+/** Janela de idade (dias) em que uma pesagem serve para estimar o peso aos 205 dias */
+export const P205_IDADE_MIN_DIAS = 120
+export const P205_IDADE_MAX_DIAS = 300
+
+export interface PesoAjustado205 {
+  /** Peso estimado aos 205 dias (kg) */
+  pesoKg: number
+  /** Ganho médio diário do nascimento até a pesagem usada (kg/dia) */
+  gmdNascimentoKgDia: number
+  /** Pesagem usada no cálculo */
+  pesagem: { data: string; pesoKg: number; idadeDias: number }
+}
+
+/**
+ * Peso ajustado aos 205 dias (P205): peso ao nascer + (peso da pesagem - peso ao nascer) / idade na pesagem × 205.
+ * Usa a pesagem feita entre 120 e 300 dias de vida que fica mais perto dos 205 dias. É a fórmula simples, sem os
+ * fatores de correção por sexo e idade da mãe (não há tabela de referência cadastrada). Null se faltar data ou peso
+ * ao nascer, se nenhuma pesagem cair na janela ou se o peso da pesagem não for maior que o do nascimento.
+ */
+export function pesoAjustado205(
+  pesoNascimentoKg: number | string | null | undefined,
+  dataNascimento: string | null | undefined,
+  pesagens: PesagemEvolucao[]
+): PesoAjustado205 | null {
+  const pn = Number(pesoNascimentoKg)
+  if (!dataNascimento || !Number.isFinite(pn) || pn <= 0) return null
+  const nascimento = dataNascimento.slice(0, 10)
+
+  const candidatas = pesagens
+    .map((p) => ({ data: p.data, pesoKg: p.pesoKg, idadeDias: diasEntre(nascimento, p.data.slice(0, 10)) }))
+    .filter((p) => p.idadeDias >= P205_IDADE_MIN_DIAS && p.idadeDias <= P205_IDADE_MAX_DIAS && p.pesoKg > pn)
+    .sort((a, b) => Math.abs(a.idadeDias - 205) - Math.abs(b.idadeDias - 205))
+
+  const escolhida = candidatas[0]
+  if (!escolhida) return null
+  const gmd = (escolhida.pesoKg - pn) / escolhida.idadeDias
+  return { pesoKg: pn + gmd * 205, gmdNascimentoKgDia: gmd, pesagem: escolhida }
+}
+
 /** Escala com marcas redondas (1, 2, 5 × 10^n) cobrindo [min, max]. */
 export function escalaPeso(min: number, max: number, marcasAlvo = 4): { min: number; max: number; marcas: number[] } {
   const amplitude = Math.max(max - min, 1)

@@ -25,7 +25,7 @@ import {
   type PartoIndividuo,
 } from '../../hooks/useIndividuoDetalhe'
 import { dispositivosIdentificacao } from '../../utils/individualValidation'
-import { calcularEvolucaoPeso, calcularIdade, escalaPeso, gmdPeriodo, type PesagemEvolucao } from '../../utils/individuoPesagens'
+import { calcularEvolucaoPeso, calcularIdade, escalaPeso, gmdPeriodo, pesoAjustado205, type PesagemEvolucao } from '../../utils/individuoPesagens'
 import {
   montarDadosBaixa,
   motivoPadrao,
@@ -266,6 +266,7 @@ export function IndividuoDetalhe() {
 
   const evolucao = useMemo(() => calcularEvolucaoPeso(pesagens.data || []), [pesagens.data])
   const gmdMedio = gmdPeriodo(evolucao)
+  const p205 = useMemo(() => pesoAjustado205(ind?.peso_nascimento_kg, ind?.data_nascimento, evolucao), [ind?.peso_nascimento_kg, ind?.data_nascimento, evolucao])
   const idade = calcularIdade(ind?.data_nascimento)
 
 
@@ -599,6 +600,16 @@ export function IndividuoDetalhe() {
                     <DetailField label="Ganho total" value={evolucao.length > 1 ? `${sinal(evolucao[evolucao.length - 1].pesoKg - evolucao[0].pesoKg, 1)} kg` : '-'} />
                     <DetailField label="GMD médio" value={gmdMedio !== null ? `${sinal(gmdMedio, 3)} kg/dia` : '-'} />
                   </div>
+                  {p205 && (
+                    <div className="rounded-xl bg-surface-2 p-3 text-sm text-content">
+                      <p>
+                        <strong className="text-content-strong">P205 (peso aos 205 dias):</strong> {kg(p205.pesoKg)} · GMD do nascimento à pesagem {sinal(p205.gmdNascimentoKgDia, 3)} kg/dia
+                      </p>
+                      <p className="text-xs text-content-muted mt-1">
+                        Calculado com o peso ao nascer e a pesagem de {formatDate(p205.pesagem.data)} ({p205.pesagem.idadeDias} dias de vida, {kg(p205.pesagem.pesoKg)}). Fórmula simples, sem correção por sexo e idade da mãe.
+                      </p>
+                    </div>
+                  )}
                   <GraficoPeso pontos={evolucao} />
                   <div className="overflow-x-auto">
                     <table className="w-full">
