@@ -5,6 +5,7 @@ import { supabase } from '@gestaup/supabase'
 import { Button, Card, Input, CardSkeleton, CardItem, ConfirmModal, useToast } from '@gestaup/ui'
 import { useKeyboardShortcuts } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
+import { contarCabecasPorDieta, type CabecasPorDieta } from '../../utils/cabecasPorDieta'
 
 function fmt(n: number, digits = 2): string {
   return n.toFixed(digits).replace('.', ',')
@@ -169,6 +170,8 @@ export function Formulacoes() {
   const [saveWarning, setSaveWarning] = useState<{
     categoriasRemovidas: { categoria: string; lotes: { nome: string; categorias: string[] }[] }[]
   } | null>(null)
+  // Cabeças que recebem a formulação aberta como dieta ativa (null = carregando ou erro)
+  const [cabecasDieta, setCabecasDieta] = useState<(CabecasPorDieta & { formulacaoId: string }) | null>(null)
 
   useEffect(() => {
     loadFormulacoes()
@@ -544,6 +547,7 @@ export function Formulacoes() {
       setSelectedInsumos([])
       setCategoriasGmd([])
       setBlockedCategorias({})
+      setCabecasDieta(null)
       setSaveWarning(null)
       setShowForm(false)
       setEditingFormulacao(null)
@@ -554,13 +558,57 @@ export function Formulacoes() {
 
   const handleNewForm = () => {
     loadInsumos()
+    setCabecasDieta(null)
     setBlockedCategorias({})
     setSaveWarning(null)
     setShowForm(true)
   }
 
+  // Dieta ativa = plano nutricional vigente (ativo, sem data_fim); creep fica em lote_categorias.formulacao_id.
+  // Mesma regra do card do lote em Lotes.tsx (lotes.formulacao_id é desnormalizado e não é fonte).
+  const loadCabecasDieta = async (dieta: Dieta) => {
+    setCabecasDieta(null)
+    if (dieta.e_premix || !user) return
+    const fazendaId = await getFazendaIdForUser(user.id)
+    if (!fazendaId) return
+
+    const [{ data: planos, error: planosError }, { data: cats, error: catsError }] = await Promise.all([
+      supabase
+        .from('planos_nutricionais')
+        .select('lote_id, lote_categoria_id, formulacao_id')
+        .eq('fazenda_id', fazendaId)
+        .eq('ativo', true)
+        .is('data_fim', null),
+      supabase
+        .from('lote_categorias')
+        .select('id, lote_id, categoria, quant_atual, formulacao_id, lotes!inner(nome, ativo)')
+        .eq('lotes.fazenda_id', fazendaId)
+        .eq('ativo', true)
+        .is('data_fim', null)
+        .eq('lotes.ativo', true),
+    ])
+    if (planosError || catsError) {
+      console.error('Erro ao contar cabeças da dieta:', planosError || catsError)
+      return
+    }
+
+    const categorias = ((cats || []) as any[]).map(c => ({
+      id: c.id,
+      lote_id: c.lote_id,
+      lote_nome: c.lotes?.nome ?? '',
+      categoria: c.categoria,
+      quant_atual: c.quant_atual,
+      formulacao_id: c.formulacao_id,
+    }))
+    setCabecasDieta({
+      formulacaoId: dieta.id,
+      ...contarCabecasPorDieta(dieta.id, !!dieta.e_creep, planos || [], categorias),
+    })
+  }
+
   const handleEdit = async (dieta: Dieta) => {
     loadInsumos()
+    loadCabecasDieta(dieta)
     setEditingFormulacao(dieta)
     setFormData({
       nome: dieta.nome,
@@ -696,6 +744,7 @@ export function Formulacoes() {
     setSelectedInsumos([])
     setCategoriasGmd([])
     setBlockedCategorias({})
+    setCabecasDieta(null)
     setSaveWarning(null)
     setShowForm(false)
   }
@@ -879,6 +928,33 @@ export function Formulacoes() {
               </svg>
             </button>
           </div>
+          {editingFormulacao && !editingFormulacao.e_premix && (
+            <div className="mb-4 p-3 rounded-lg bg-surface-2 text-sm">
+              {cabecasDieta && cabecasDieta.formulacaoId === editingFormulacao.id ? (
+                cabecasDieta.total > 0 ? (
+                  <>
+                    <p className="text-content-strong">
+                      <span className="font-semibold">Cabeças nesta dieta:</span> {cabecasDieta.total.toLocaleString('pt-BR')}{' '}
+                      <span className="text-content-muted">
+                        em {cabecasDieta.lotes.length} {cabecasDieta.lotes.length === 1 ? 'lote' : 'lotes'}
+                      </span>
+                    </p>
+                    <ul className="mt-1 space-y-0.5 text-xs text-content-muted">
+                      {cabecasDieta.lotes.map(l => (
+                        <li key={l.lote_id}>
+                          {l.nome}: {l.cabecas.toLocaleString('pt-BR')} cab ({l.categorias.map(capitalizeWords).join(', ')})
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="text-content-muted">Nenhuma cabeça recebe esta dieta no momento.</p>
+                )
+              ) : (
+                <p className="text-content-muted">Contando cabeças…</p>
+              )}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Basic info */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

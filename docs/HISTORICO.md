@@ -25,6 +25,12 @@
 
 **Armadilhas técnicas:** os arquivos do painel e do PWA têm quebra de linha CRLF (preservar na edição; usar scripts Python em arquivo no scratchpad, nunca `\n` dentro de heredoc ou aspas do Bash); `execute_sql` com vários comandos só mostra o resultado do último; `calculate_quant_atual(p_lote_id, p_categoria)` é a referência para recalcular `quant_atual` (não alterar a lógica); a limpeza de dados de teste é sempre por soft-delete, com os ids no HISTORICO; no PWA o `getAll` do IndexedDB vem ordenado por id (achar o registro pelo conteúdo); `eventos_reprodutivos.local_id` precisa de índice único completo (parcial dá 42P10 no upsert).
 
+## Formulações: contagem de cabeças por dieta ativa (2026-10-19)
+
+- Ao abrir uma formulação (não premix) em `Formulacoes.tsx`, o formulário mostra "Cabeças nesta dieta: N em X lotes" com a quebra por lote e categorias. Só leitura, sem migration.
+- Dieta ativa = `planos_nutricionais` com `ativo = true` e `data_fim IS NULL`. Plano da categoria tem precedência sobre o plano do lote; bezerro(a) ao pé não herda o plano do lote. Formulação creep conta as categorias ao pé com `lote_categorias.formulacao_id` igual a ela. `lotes.formulacao_id` não é usado (desnormalizado). Só lotes ativos e categorias ativas sem `data_fim`.
+- Regra isolada em `utils/cabecasPorDieta.ts` (teste em `cabecasPorDieta.test.ts`). Fora do escopo: badge de cabeças nos cards da listagem.
+
 ## Relatório de Abastecimento: estoque atual dos tanques (2026-10-19)
 
 - Migration `20261019160000_abastecimento_saldo_tanques` (rollback em `supabase/rollbacks/`): `get_dados_relatorio_abastecimento` passa a devolver `dados.tanques` (nome, tipo, saldo, capacidade, limite, custo médio, valor em estoque, flags `negativo`/`em_alerta`) e `dados.gerado_em`. É posição atual (snapshot), independe do período e dos filtros. Saldo no fim do período foi descartado: o custo médio ponderado não é invertível. A variante `_fazenda` (Infográfico Mensal) herda o campo.
