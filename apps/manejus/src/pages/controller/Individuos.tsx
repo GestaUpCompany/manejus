@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, formatDate } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
-import { Button, Card, Input, CardSkeleton, Select, Pagination, useToast } from '@gestaup/ui'
+import { Button, Card, Input, CardSkeleton, EmptyState, Select, Pagination, useToast } from '@gestaup/ui'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import { useLotes, usePastos } from '@gestaup/shared'
 import { categoriasTodas, sexos, statusList, origens } from '../../utils/individualValidation'
@@ -64,6 +64,7 @@ export function Individuos() {
   const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
   const [racas, setRacas] = useState<Raca[]>([])
   const [loading, setLoading] = useState(true)
+  const [semFazenda, setSemFazenda] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filtroTipoIdentificacao, setFiltroTipoIdentificacao] = useState<'todos' | 'brinco' | 'chip' | 'manejo' | 'provisorio'>('todos')
   const [filtroStatus, setFiltroStatus] = useState('')
@@ -137,25 +138,19 @@ export function Individuos() {
     let isMounted = true
 
     const setupSubscription = async () => {
-      const isAdmin = user.papel === 'admin'
-      let fazendaId: string | null = null
+      // Sempre por fazenda: nunca escuta nem carrega indivíduos de todas as fazendas
+      const fazendaId = await getFazendaIdForUser(user.id)
+      if (!fazendaId || !isMounted) return
 
-      if (!isAdmin) {
-        const _fazendaId = await getFazendaIdForUser(user.id)
-        fazendaId = _fazendaId
-        if (!fazendaId || !isMounted) return
-      }
-
-      const channelName = fazendaId ? `individuos_changes_${fazendaId}` : 'individuos_changes_admin'
       const filterConfig: any = {
         event: '*',
         schema: 'public',
         table: 'individuos',
+        filter: `fazenda_id=eq.${fazendaId}`,
       }
-      if (fazendaId) filterConfig.filter = `fazenda_id=eq.${fazendaId}`
 
       subscription = supabase
-        .channel(channelName)
+        .channel(`individuos_changes_${fazendaId}`)
         .on('postgres_changes', filterConfig, () => {
           if (isMounted) {
             loadDataRef.current()
@@ -256,24 +251,22 @@ export function Individuos() {
     if (!user) return
 
     const requestId = ++requestIdRef.current
-    const isAdmin = user.papel === 'admin'
-    let fazendaId: string | null = null
-
-    if (!isAdmin) {
-      fazendaId = await getFazendaIdForUser(user.id)
-      if (!fazendaId) {
-        setLoading(false)
-        return
-      }
+    // Sempre por fazenda: sem fazenda definida não carrega nada (nunca todas as fazendas de uma vez)
+    const fazendaId = await getFazendaIdForUser(user.id)
+    if (!fazendaId) {
+      setSemFazenda(true)
+      setLoading(false)
+      return
     }
+    setSemFazenda(false)
 
-    setFazendaId(fazendaId || undefined)
+    setFazendaId(fazendaId)
 
     let countQuery: any = supabase
       .from('individuos')
       .select('*', { count: 'exact', head: true })
       .is('deleted_at', null)
-    if (fazendaId) countQuery = countQuery.eq('fazenda_id', fazendaId)
+    countQuery = countQuery.eq('fazenda_id', fazendaId)
     countQuery = buildFilters(countQuery)
 
     let dataQuery: any = supabase
@@ -281,12 +274,12 @@ export function Individuos() {
       .select('*')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
-    if (fazendaId) dataQuery = dataQuery.eq('fazenda_id', fazendaId)
+    dataQuery = dataQuery.eq('fazenda_id', fazendaId)
     dataQuery = buildFilters(dataQuery)
     dataQuery = dataQuery.range(from, to)
 
     let racasQuery = supabase.from('racas').select('id, nome').is('deleted_at', null)
-    if (fazendaId) racasQuery = racasQuery.eq('fazenda_id', fazendaId)
+    racasQuery = racasQuery.eq('fazenda_id', fazendaId)
 
     const [countRes, individuosRes, racasRes] = await Promise.all([
       countQuery,
@@ -424,6 +417,10 @@ export function Individuos() {
         </div>
       </div>
     )
+  }
+
+  if (semFazenda) {
+    return <EmptyState title="Selecione uma fazenda" description="Os indivíduos são listados por fazenda." />
   }
 
   const placeholderBusca =
