@@ -63,7 +63,7 @@ interface FormulacaoCategoriaGmd {
 
 const CATEGORIAS_DISPONIVEIS = [
   'vaca', 'touro', 'boi gordo', 'boi magro', 'garrote',
-  'bezerro', 'bezerra', 'novilha',
+  'bezerro', 'bezerra', 'novilha', 'tropa',
 ]
 
 const CATEGORIAS_CREEP = ['bezerro ao pé', 'bezerra ao pé']
