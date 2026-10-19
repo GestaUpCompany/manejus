@@ -1013,6 +1013,7 @@ export function PlanoNutricionalLoteModal({
                   planoVigenteId={planoVigente?.id}
                   planoPeriodoDias={planoVigente?.periodo_dias}
                   planoPesoMetaKg={planoVigente?.peso_meta_kg}
+                  fazendaId={fazendaId}
                   onSaved={async () => { await loadData(); onPlanChanged?.() }}
                 />
               )
@@ -1236,8 +1237,10 @@ function CategoriaPersonalizacaoCard({
   planoVigenteId,
   planoPeriodoDias,
   planoPesoMetaKg,
+  fazendaId,
   onSaved,
 }: {
+  fazendaId?: string
   categoria: LoteCategoriaInfo
   personalizacao: Personalizacao | null
   planoVigenteId?: string
@@ -1267,24 +1270,19 @@ function CategoriaPersonalizacaoCard({
     normalizeNum(pesoMeta) !== normalizeNum(fallbackPesoMeta)
 
   const handleSave = async () => {
-    if (!planoVigenteId) return
+    if (!planoVigenteId || !fazendaId) return
     setSaving(true)
     try {
-      const data: Record<string, any> = {
-        plano_id: planoVigenteId,
-        lote_categoria_id: categoria.id,
-        ativo: true,
-      }
-      if (periodo) data.periodo_dias = parseInt(periodo)
-      if (pesoMeta) data.peso_meta_kg = parseFloat(pesoMeta.replace(',', '.'))
-
-      if (personalizacao?.id) {
-        const { error } = await supabase.from('plano_categoria_personalizacao').update(data).eq('id', personalizacao.id)
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from('plano_categoria_personalizacao').upsert(data, { onConflict: 'plano_id,lote_categoria_id' })
-        if (error) throw error
-      }
+      // A RPC grava a personalização, a meta em lote_categorias e o snapshot de entrada,
+      // o mesmo efeito da atribuição em massa.
+      const { error } = await supabase.rpc('salvar_personalizacao_categoria', {
+        p_fazenda_id: fazendaId,
+        p_plano_id: planoVigenteId,
+        p_lote_categoria_id: categoria.id,
+        p_periodo_dias: periodo ? parseInt(periodo, 10) : null,
+        p_peso_meta_kg: pesoMeta ? parseFloat(pesoMeta.replace(',', '.')) : null,
+      })
+      if (error) throw error
       await onSaved()
     } catch (error: any) {
       console.error('Erro ao salvar personalização:', error)
