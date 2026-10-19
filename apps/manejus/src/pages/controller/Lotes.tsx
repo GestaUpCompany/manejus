@@ -6,6 +6,7 @@ import { supabase } from '@gestaup/supabase'
 import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, useToast, ErrorState, EmptyState } from '@gestaup/ui'
 import { PlanoNutricionalLoteModal } from '../../components/plano-nutricional/PlanoNutricionalLoteModal'
 import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plano-nutricional/PlanoNutricionalDraftModal'
+import { PlanoNutricionalMassaModal } from '../../components/plano-nutricional/PlanoNutricionalMassaModal'
 import { RevisarNovoLoteModal } from '../../components/lotes/RevisarNovoLoteModal'
 import { CorrigirPesoModal } from '../../components/lotes/CorrigirPesoModal'
 import { ImportarLotesModal } from '../../components/lotes/ImportarLotesModal'
@@ -203,6 +204,11 @@ export function Lotes() {
   const [showInactive, setShowInactive] = useState(false)
   const [filtroLocal, setFiltroLocal] = useState<'todos' | 'pasto' | 'confinamento' | 'sequestro' | 'tip'>('todos')
   const [isPlanoLoteModalOpen, setIsPlanoLoteModalOpen] = useState(false)
+  // Atribuição de dieta em massa: seleção de lotes na grade + modal
+  const [modoSelecao, setModoSelecao] = useState(false)
+  const [lotesSelecionados, setLotesSelecionados] = useState<string[]>([])
+  const [isPlanoMassaOpen, setIsPlanoMassaOpen] = useState(false)
+  const planoMassaAplicadoRef = useRef(false)
   const [avisoEnfermariaFechado, setAvisoEnfermariaFechado] = useState(false)
   const [isPlanoDraftModalOpen, setIsPlanoDraftModalOpen] = useState(false)
   const [selectedDraftCategoriaIndex, setSelectedDraftCategoriaIndex] = useState<number | null>(null)
@@ -2326,6 +2332,10 @@ export function Lotes() {
       lote.sistema_producao === 'Confinamento'
     ), [lotes, showInactive, searchTerm, filtroLocal])
 
+  const toggleLoteSelecionado = useCallback((id: string) => {
+    setLotesSelecionados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }, [])
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -2357,7 +2367,35 @@ export function Lotes() {
           onImport={() => setShowImportModal(true)}
           onExport={onExport}
           exportDisabled={lotes.length === 0}
+          modoSelecao={modoSelecao}
+          onToggleSelecao={() => { setModoSelecao((v) => !v); setLotesSelecionados([]) }}
         />
+      )}
+
+      {!showForm && modoSelecao && (
+        <div className="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-surface-1 p-3 shadow-sm">
+          <p className="text-sm text-content-strong">
+            {lotesSelecionados.length === 0
+              ? 'Marque os lotes que receberão a nova dieta.'
+              : `${lotesSelecionados.length} ${lotesSelecionados.length === 1 ? 'lote selecionado' : 'lotes selecionados'}`}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setLotesSelecionados(lotesFiltrados.filter((l) => l.ativo).map((l) => l.id))}
+            >
+              Selecionar visíveis
+            </Button>
+            <Button
+              size="sm"
+              disabled={lotesSelecionados.length === 0 || !fazendaId}
+              onClick={() => setIsPlanoMassaOpen(true)}
+            >
+              Continuar
+            </Button>
+          </div>
+        </div>
       )}
 
       {showForm && (
@@ -3737,6 +3775,9 @@ export function Lotes() {
               onEdit={onEdit}
               onToggleActive={onToggleActive}
               onDelete={onDelete}
+              modoSelecao={modoSelecao}
+              selecionado={lotesSelecionados.includes(lote.id)}
+              onToggleSelecionado={toggleLoteSelecionado}
             />
           ))}
           {lotesFiltrados.length === 0 && (
@@ -3845,6 +3886,27 @@ export function Lotes() {
               await atualizarFormulacaoVigenteNoForm(editingLote.id)
               await atualizarCategoriasNoForm(editingLote.id)
             }
+          }}
+        />
+      )}
+
+      {fazendaId && (
+        <PlanoNutricionalMassaModal
+          isOpen={isPlanoMassaOpen}
+          onClose={() => {
+            setIsPlanoMassaOpen(false)
+            if (planoMassaAplicadoRef.current) {
+              planoMassaAplicadoRef.current = false
+              setModoSelecao(false)
+              setLotesSelecionados([])
+            }
+          }}
+          fazendaId={fazendaId}
+          loteIds={lotesSelecionados}
+          onApplied={() => {
+            planoMassaAplicadoRef.current = true
+            lotesCacheRef.current = null
+            loadLotes()
           }}
         />
       )}

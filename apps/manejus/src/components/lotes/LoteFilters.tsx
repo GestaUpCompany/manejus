@@ -13,6 +13,8 @@ interface LoteFiltersProps {
   onImport: () => void
   onExport: () => void
   exportDisabled: boolean
+  modoSelecao: boolean
+  onToggleSelecao: () => void
 }
 
 function LoteFiltersComponent({
@@ -27,6 +29,8 @@ function LoteFiltersComponent({
   onImport,
   onExport,
   exportDisabled,
+  modoSelecao,
+  onToggleSelecao,
 }: LoteFiltersProps) {
   return (
     <>
@@ -47,6 +51,14 @@ function LoteFiltersComponent({
             </Button>
             <Button onClick={onExport} disabled={exportDisabled} className="h-10 flex-1 sm:flex-none">
               Exportar Tudo
+            </Button>
+            <Button
+              variant={modoSelecao ? 'secondary' : 'primary'}
+              onClick={onToggleSelecao}
+              disabled={exportDisabled}
+              className="h-10 flex-1 sm:flex-none"
+            >
+              {modoSelecao ? 'Cancelar seleção' : 'Atribuir dieta'}
             </Button>
           </div>
         </div>

@@ -32,9 +32,14 @@ interface LoteCardProps {
   onEdit: (lote: any) => void
   onToggleActive: (lote: any) => void
   onDelete: (id: string, nome: string) => void
+  /** Modo de seleção em massa: o clique no card marca/desmarca em vez de abrir a edição. */
+  modoSelecao?: boolean
+  selecionado?: boolean
+  onToggleSelecionado?: (id: string) => void
 }
 
-function LoteCardComponent({ lote, ocupacao, identificacao, onEdit, onToggleActive, onDelete }: LoteCardProps) {
+function LoteCardComponent({ lote, ocupacao, identificacao, onEdit, onToggleActive, onDelete, modoSelecao = false, selecionado = false, onToggleSelecionado }: LoteCardProps) {
+  const selecionavel = modoSelecao && !!lote.ativo
   const total = lote.categorias?.reduce((sum, cat) => sum + (cat.quant_atual ?? cat.quant_inicial ?? 0), 0) || lote.n_cabecas || 0
   // lotes.qtd_bezerros é legado: bezerros ao pé são categorias próprias.
   const bezerrosAoPe = lote.categorias?.reduce((sum, cat) => {
@@ -47,8 +52,21 @@ function LoteCardComponent({ lote, ocupacao, identificacao, onEdit, onToggleActi
       title={lote.nome}
       subtitle={total > 0 ? `${total} cabeças` : undefined}
       status={lote.ativo ?? undefined}
-      onClick={() => onEdit(lote)}
+      onClick={() => (modoSelecao ? (selecionavel && onToggleSelecionado?.(lote.id)) : onEdit(lote))}
     >
+      {modoSelecao && (
+        <label className={`flex items-center gap-2 mb-2 text-sm ${selecionavel ? 'text-content-strong cursor-pointer' : 'text-content-faint'}`}>
+          <input
+            type="checkbox"
+            checked={selecionavel && selecionado}
+            disabled={!selecionavel}
+            onChange={() => onToggleSelecionado?.(lote.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="h-4 w-4"
+          />
+          {selecionavel ? (selecionado ? 'Selecionado' : 'Selecionar') : 'Lote desativado'}
+        </label>
+      )}
       <div className="space-y-2 mb-4 flex-1">
         {lote.sistema_producao && (
           <p className="text-sm text-content-muted">
