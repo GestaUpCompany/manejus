@@ -1,5 +1,5 @@
 import { supabase } from '@gestaup/supabase'
-import type { DadosPDFRelatorioAbastecimento } from '../../utils/relatorioAbastecimentoPDF'
+import type { DadosPDFRelatorioAbastecimento, TanqueSaldo } from '../../utils/relatorioAbastecimentoPDF'
 import type { DadosPDFBebedouros } from '../../utils/relatorioBebedourosPDF'
 import {
   calcularChecklist,
@@ -150,6 +150,8 @@ async function carregarAbastecimento(
       totalLitros: registros.reduce((soma, item) => soma + item.litros, 0),
       totalRegistros: registros.length,
       detalhesPorMaquina,
+      tanques: (data?.dados?.tanques ?? []) as TanqueSaldo[],
+      geradoEm: data?.dados?.gerado_em ?? '',
     },
   }
 }

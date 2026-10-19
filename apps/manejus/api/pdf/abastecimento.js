@@ -437,6 +437,23 @@ function detailTable2Html(detalhes) {
   return `<table class="oper-table">${header}<tbody>${rows}</tbody></table>`
 }
 
+function tanquesTableHtml(tanques) {
+  const header = `<thead><tr><th>Tanque</th><th>Combustível</th><th>Saldo (L)</th><th>% capacidade</th><th>Custo médio (R$/L)</th><th>Valor em estoque</th><th>Situação</th></tr></thead>`
+  const rows = tanques
+    .map((t) => {
+      const cap = Number(t.capacidade_maxima_l || 0)
+      const pct = cap > 0 ? `${numFmt((Number(t.saldo_atual_l) / cap) * 100, 0)}%` : '—'
+      const situacao = t.negativo ? 'Negativo' : t.em_alerta ? 'Abaixo do limite' : 'OK'
+      const custo = t.custo_medio_l != null ? numFmt(Number(t.custo_medio_l), 2) : '—'
+      return `<tr><td>${escapeHtml(t.nome)}</td><td>${escapeHtml(t.tipo_combustivel)}</td><td class="numeric">${numFmt(Number(t.saldo_atual_l), 1)} L</td><td class="numeric">${pct}</td><td class="numeric">${custo}</td><td class="numeric">R$ ${numFmt(Number(t.valor_estoque), 2)}</td><td>${situacao}</td></tr>`
+    })
+    .join('')
+  const totalSaldo = tanques.reduce((s, t) => s + Number(t.saldo_atual_l), 0)
+  const totalValor = tanques.reduce((s, t) => s + Number(t.valor_estoque), 0)
+  const totalRow = `<tr class="total-row"><td colspan="2">Total</td><td class="numeric">${numFmt(totalSaldo, 1)} L</td><td></td><td></td><td class="numeric">R$ ${numFmt(totalValor, 2)}</td><td></td></tr>`
+  return `<table class="abast-detail-table">${header}<tbody>${rows}${totalRow}</tbody></table>`
+}
+
 function chunkArray(arr, size) {
   if (arr.length <= size) return [arr]
   const chunks = []
@@ -448,6 +465,9 @@ function chunkArray(arr, size) {
 
 export async function renderAbastecimentoHtml(input) {
   const { titulo, fazendaNome, logoGestao, logoFazenda, filtros, porMaquina, porCombustivel, porOperacao, totalLitros, totalRegistros, detalhesPorMaquina } = input
+  const tanques = Array.isArray(input.tanques) ? input.tanques.slice(0, DETAIL_ROWS_PER_PAGE - 1) : []
+  const temEstoque = tanques.length > 0
+  const estoquePages = temEstoque ? 1 : 0
   const brand = { logoGestao, logoFazenda, fazendaNome }
   const period = { dataInicio: filtros.dataInicio, dataFim: filtros.dataFim }
 
@@ -490,7 +510,7 @@ export async function renderAbastecimentoHtml(input) {
       : operMergedCount >= detalhesPorMaquinaFmt.length
         ? []
         : chunkArray(detalhesPorMaquinaFmt.slice(operMergedCount), DETAIL_ROWS_PER_PAGE)
-  const totalPages = 2 + chunks1.length + chunks2.length
+  const totalPages = 2 + estoquePages + chunks1.length + chunks2.length
 
   const chartsData = [
     { canvasId: 'chart-maquina', kind: 'vertical', items: porMaquinaFmt, color: '#0F6437' },
@@ -524,6 +544,17 @@ export async function renderAbastecimentoHtml(input) {
     ${renderFooter({ ...period, page: 2, totalPages })}
   `)
 
+  // Página de estoque atual dos tanques (só quando há tanques cadastrados)
+  const geradoEmTxt = input.geradoEm ? new Date(input.geradoEm).toLocaleString('pt-BR', { timeZone: 'America/Cuiaba' }) : ''
+  const pageEstoque = temEstoque
+    ? pageSection(`
+    ${renderHeader({ ...brand, reportTitle: titulo, section: 'Estoque atual', sectionLabel: 'Tanques' })}
+    <p class="section-kicker">Estoque atual de combustível${geradoEmTxt ? ` · posição em ${escapeHtml(geradoEmTxt)}` : ''} · independe do período</p>
+    <div class="table-block"><h2 class="table-title">Saldo por tanque <span>${tanques.length} tanque(s)</span></h2>${tanquesTableHtml(tanques)}</div>
+    ${renderFooter({ ...period, page: 3, totalPages })}
+  `)
+    : ''
+
   // Bloco "Detalhamento Operacional": usado na página fundida (abaixo da
   // tabela 1) e nas páginas dedicadas. O span mostra a faixa exibida sempre
   // que o chunk não cobre todas as máquinas (mesmo critério do morte).
@@ -551,7 +582,7 @@ export async function renderAbastecimentoHtml(input) {
         <p class="section-kicker">Detalhamento por máquina</p>
         ${content}
         ${operMerged}
-        ${renderFooter({ ...period, page: 3 + chunkIndex, totalPages })}
+        ${renderFooter({ ...period, page: 3 + estoquePages + chunkIndex, totalPages })}
       `)
     })
     .join('')
@@ -569,7 +600,7 @@ export async function renderAbastecimentoHtml(input) {
         ${renderHeader({ ...brand, reportTitle: titulo, section: `Operacional${suffix}`, sectionLabel: 'Tabela' })}
         <p class="section-kicker">Operadores e placas</p>
         ${content}
-        ${renderFooter({ ...period, page: 3 + chunks1.length + chunkIndex, totalPages })}
+        ${renderFooter({ ...period, page: 3 + estoquePages + chunks1.length + chunkIndex, totalPages })}
       `)
     })
     .join('')
@@ -578,7 +609,7 @@ export async function renderAbastecimentoHtml(input) {
   return htmlDocument({
     title: titulo,
     extraCss: ABASTECIMENTO_CSS,
-    body: `${page1}${page2}${detail1Pages}${detail2Pages}`,
+    body: `${page1}${page2}${pageEstoque}${detail1Pages}${detail2Pages}`,
     chartJsScript,
     chartsInit: CHARTS_INIT_JS,
     dataJson: { charts: chartsData },

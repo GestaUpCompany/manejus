@@ -25,6 +25,11 @@
 
 **Armadilhas técnicas:** os arquivos do painel e do PWA têm quebra de linha CRLF (preservar na edição; usar scripts Python em arquivo no scratchpad, nunca `\n` dentro de heredoc ou aspas do Bash); `execute_sql` com vários comandos só mostra o resultado do último; `calculate_quant_atual(p_lote_id, p_categoria)` é a referência para recalcular `quant_atual` (não alterar a lógica); a limpeza de dados de teste é sempre por soft-delete, com os ids no HISTORICO; no PWA o `getAll` do IndexedDB vem ordenado por id (achar o registro pelo conteúdo); `eventos_reprodutivos.local_id` precisa de índice único completo (parcial dá 42P10 no upsert).
 
+## Relatório de Abastecimento: estoque atual dos tanques (2026-10-19)
+
+- Migration `20261019160000_abastecimento_saldo_tanques` (rollback em `supabase/rollbacks/`): `get_dados_relatorio_abastecimento` passa a devolver `dados.tanques` (nome, tipo, saldo, capacidade, limite, custo médio, valor em estoque, flags `negativo`/`em_alerta`) e `dados.gerado_em`. É posição atual (snapshot), independe do período e dos filtros. Saldo no fim do período foi descartado: o custo médio ponderado não é invertível. A variante `_fazenda` (Infográfico Mensal) herda o campo.
+- Painel "Estoque atual de combustível" em `RelatorioPublico.tsx`; página "Estoque atual" no PDF (`api/pdf/abastecimento.js`, só quando há tanques; ajusta `totalPages`); loader do Infográfico (`loaders.ts`) repassa os tanques.
+
 ## Planos nutricionais: limite de meta, data da meta e meta dos indivíduos (2026-10-19)
 
 Migration `20261019150000_meta_limite_data_meta_individuos.sql` (rollback em `supabase/rollbacks/`).

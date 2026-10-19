@@ -32,7 +32,21 @@ export interface FiltrosAtivos {
   operacoes: string[]
 }
 
+export interface TanqueSaldo {
+  nome: string
+  tipo_combustivel: string
+  saldo_atual_l: number
+  capacidade_maxima_l: number | null
+  limite_alerta_l: number | null
+  custo_medio_l: number | null
+  valor_estoque: number
+  negativo: boolean
+  em_alerta: boolean
+}
+
 export interface DadosPDFRelatorioAbastecimento {
+  tanques?: TanqueSaldo[]
+  geradoEm?: string
   titulo: string
   fazendaNome?: string
   fazendaLogoUrl?: string | null

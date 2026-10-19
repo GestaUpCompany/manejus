@@ -35,6 +35,8 @@ export async function gerarRelatorioAbastecimentoPDFPuppeteer(
     totalLitros: dados.totalLitros,
     totalRegistros: dados.totalRegistros,
     detalhesPorMaquina: dados.detalhesPorMaquina,
+    tanques: dados.tanques ?? [],
+    geradoEm: dados.geradoEm ?? '',
   }
 
   const response = await fetch('/api/pdf/abastecimento', {

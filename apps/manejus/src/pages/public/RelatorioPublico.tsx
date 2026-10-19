@@ -5,6 +5,7 @@ import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveCo
 import logoManejus from '/images/manejus360.png'
 import { ordenarPeriodo } from '../../features/relatorioGeral/periodo'
 import { gerarRelatorioAbastecimentoPDFPuppeteer } from '../../utils/relatorioAbastecimentoPDFPuppeteer'
+import type { TanqueSaldo } from '../../utils/relatorioAbastecimentoPDF'
 import { RelatorioConsumoPublico } from './RelatorioConsumoPublico'
 import { RelatorioTratosPublico } from './RelatorioTratosPublico'
 import { RelatorioMortePublico } from './RelatorioMortePublico'
@@ -63,6 +64,8 @@ interface DadosRelatorio {
   maquinas_disponiveis: string[]
   combustiveis_disponiveis: string[]
   operacoes_disponiveis: string[]
+  tanques?: TanqueSaldo[]
+  gerado_em?: string
 }
 
 interface RelatorioInfo {
@@ -473,6 +476,8 @@ export function RelatorioPublico() {
         totalLitros,
         totalRegistros,
         detalhesPorMaquina,
+        tanques: dados.tanques ?? [],
+        geradoEm: dados.gerado_em ?? '',
       })
 
       const url = URL.createObjectURL(blob)
@@ -1209,6 +1214,58 @@ export function RelatorioPublico() {
             </table>
           </div>
         </div>
+
+        {/* Estoque atual de combustível (posição na geração, independe do período) */}
+        {dados && dados.tanques && dados.tanques.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <h2 className="text-sm font-semibold text-gray-900">Estoque atual de combustível</h2>
+            <p className="text-xs text-gray-500 mb-4">
+              Posição em {dados.gerado_em ? new Date(dados.gerado_em).toLocaleString('pt-BR') : 'agora'} · não depende do período selecionado
+            </p>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 px-3 font-medium text-gray-600">Tanque</th>
+                    <th className="text-left py-2 px-3 font-medium text-gray-600">Combustível</th>
+                    <th className="text-right py-2 px-3 font-medium text-gray-600">Saldo (L)</th>
+                    <th className="text-right py-2 px-3 font-medium text-gray-600">% da capacidade</th>
+                    <th className="text-right py-2 px-3 font-medium text-gray-600">Custo médio (R$/L)</th>
+                    <th className="text-right py-2 px-3 font-medium text-gray-600">Valor em estoque</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-600">Situação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dados.tanques.map((t, idx) => {
+                    const cap = Number(t.capacidade_maxima_l ?? 0)
+                    return (
+                      <tr key={idx} className="border-b border-gray-100">
+                        <td className="py-2 px-3 text-gray-900 font-medium">{t.nome}</td>
+                        <td className="py-2 px-3 text-gray-600">{t.tipo_combustivel}</td>
+                        <td className={`py-2 px-3 text-right ${t.negativo ? 'text-red-600 font-semibold' : 'text-gray-900'}`}>{Number(t.saldo_atual_l).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} L</td>
+                        <td className="py-2 px-3 text-right text-gray-500">{cap > 0 ? `${((Number(t.saldo_atual_l) / cap) * 100).toFixed(0)}%` : '—'}</td>
+                        <td className="py-2 px-3 text-right text-gray-700">{t.custo_medio_l != null ? Number(t.custo_medio_l).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}</td>
+                        <td className="py-2 px-3 text-right text-gray-700">{Number(t.valor_estoque).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        <td className="py-2 px-3 text-center text-xs">
+                          {t.negativo ? <span className="text-red-600 font-medium">Negativo</span> : t.em_alerta ? <span className="text-amber-600 font-medium">Abaixo do limite</span> : <span className="text-green-700">OK</span>}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-gray-200 font-semibold">
+                    <td className="py-2 px-3 text-gray-900" colSpan={2}>Total</td>
+                    <td className="py-2 px-3 text-right text-gray-900">{dados.tanques.reduce((s, t) => s + Number(t.saldo_atual_l), 0).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} L</td>
+                    <td colSpan={2}></td>
+                    <td className="py-2 px-3 text-right text-gray-900">{dados.tanques.reduce((s, t) => s + Number(t.valor_estoque), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Painel 2: Detalhamento operacional (colunas 6-7) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
