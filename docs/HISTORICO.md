@@ -40,6 +40,12 @@ Novo card "Consumo MN (kg/cab/dia)" nos KPIs do relatório de consumo, na págin
 - Migration `20261019160000_abastecimento_saldo_tanques` (rollback em `supabase/rollbacks/`): `get_dados_relatorio_abastecimento` passa a devolver `dados.tanques` (nome, tipo, saldo, capacidade, limite, custo médio, valor em estoque, flags `negativo`/`em_alerta`) e `dados.gerado_em`. É posição atual (snapshot), independe do período e dos filtros. Saldo no fim do período foi descartado: o custo médio ponderado não é invertível. A variante `_fazenda` (Infográfico Mensal) herda o campo.
 - Painel "Estoque atual de combustível" em `RelatorioPublico.tsx`; página "Estoque atual" no PDF (`api/pdf/abastecimento.js`, só quando há tanques; ajusta `totalPages`); loader do Infográfico (`loaders.ts`) repassa os tanques.
 
+## Fix: permission denied for function _peso_meta_maximo (2026-10-19)
+
+- Sintoma: no modal "Gestão de Planos do Lote", "Adicionar à Fila" com peso meta falhava com `permission denied for function _peso_meta_maximo`. Causa: a migration `20261019150000` criou a função e a usou nos CHECKs `chk_planos_peso_meta_maximo` e `chk_pcp_peso_meta_maximo` sem `GRANT EXECUTE`; o CHECK roda com o papel de quem grava (`authenticated`).
+- Correção: migration `20261019170000_grant_peso_meta_maximo` (rollback em `supabase/rollbacks/`) com `GRANT EXECUTE ... TO authenticated, service_role`. `anon` fica de fora de propósito. Verificado com `has_function_privilege`.
+- Armadilha: o primeiro push usou `20261019160000`, que já era de `abastecimento_saldo_tanques`; o `db push` falhou com chave duplicada em `schema_migrations` (nada aplicado). Conferir os timestamps existentes antes de nomear uma migration.
+
 ## Planos nutricionais: limite de meta, data da meta e meta dos indivíduos (2026-10-19)
 
 Migration `20261019150000_meta_limite_data_meta_individuos.sql` (rollback em `supabase/rollbacks/`).
