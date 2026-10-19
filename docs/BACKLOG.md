@@ -199,6 +199,7 @@ Disparador: quando mencionar "tela de versões", "histórico de versões do cron
 - Decidir com o gestor o destino dos 56 órfãos da Marcon (excluir só no cadastro, sem evento agregado, exige autorização escopada) e o das 34 vacas da Chibiu cadastradas à mão (agregado de vaca nas maternidades com `quant_inicial` 5 e 2 e sem movimentação).
 - Investigar os excessos de 1 a 2 bezerros na Chibata (LOTE 11) e no Olho D'Água (Lote 5).
 - **Decisão do gestor em 16/10/2026: adiar tudo isto** (conserto do gatilho, limpeza dos 56 órfãos da Marcon, análise da Chibiu, Chibata e Olho D'Água) e seguir com o plano. Os 111 animais ficam marcados como localização incerta, sem efeito no agregado, até a decisão; reversão em `backup.individuos_incerteza_20261016`. Disparador: ao retomar maternidade, partos excluídos ou divergências de conciliação, ler esta seção.
+- **Atualização de 19/10/2026:** os 56 órfãos da Marcon foram excluídos do cadastro (soft-delete, backup `backup.individuos_exclusao_marcon_20261019`); Chibiu, Chibata e Olho D'Água seguem como localização incerta. Faltam o conserto do gatilho (estorno do parto excluído), a decisão sobre as vacas da Chibiu e a causa dos excessos da Chibata e do Olho D'Água. Ver HISTORICO.
 
 ## Fase 4 no PWA e candidatas de mercado (levantado em 2026-10-16)
 
