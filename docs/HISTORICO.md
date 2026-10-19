@@ -25,6 +25,10 @@
 
 **Armadilhas técnicas:** os arquivos do painel e do PWA têm quebra de linha CRLF (preservar na edição; usar scripts Python em arquivo no scratchpad, nunca `\n` dentro de heredoc ou aspas do Bash); `execute_sql` com vários comandos só mostra o resultado do último; `calculate_quant_atual(p_lote_id, p_categoria)` é a referência para recalcular `quant_atual` (não alterar a lógica); a limpeza de dados de teste é sempre por soft-delete, com os ids no HISTORICO; no PWA o `getAll` do IndexedDB vem ordenado por id (achar o registro pelo conteúdo); `eventos_reprodutivos.local_id` precisa de índice único completo (parcial dá 42P10 no upsert).
 
+## Relatório de Consumo: KPI Consumo MN (kg/cab/dia) (2026-10-19)
+
+Novo card "Consumo MN (kg/cab/dia)" nos KPIs do relatório de consumo, na página pública (`RelatorioConsumoPublico.tsx`, grid de 8 colunas) e no PDF (`api/pdf/consumo.js`, que também alimenta o Infográfico Mensal). É a média de `trato_kg_cab_dia`, que já é matéria natural por cabeça (confinamento: `kg_mn_cab_dia`; pasto: kg de cocho / dias / animais). O %PV continua sobre a MS. Sem mudança de RPC nem migration.
+
 ## Formulações: contagem de cabeças por dieta ativa (2026-10-19)
 
 - Ao abrir uma formulação (não premix) em `Formulacoes.tsx`, o formulário mostra "Cabeças nesta dieta: N em X lotes" com a quebra por lote e categorias. Só leitura, sem migration.

@@ -361,7 +361,12 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
         ? dados.reduce((s, d) => s + (d.custo_reais_cab_dia || 0), 0) /
           dados.filter((d) => d.custo_reais_cab_dia != null).length
         : null
-    return { consumoMedio, custoMedio }
+    // trato_kg_cab_dia já é matéria natural (MN) por cabeça; o %PV é que usa a MS.
+    const comMn = dados.filter((d) => d.trato_kg_cab_dia != null)
+    const consumoMnMedio = comMn.length
+      ? comMn.reduce((s, d) => s + d.trato_kg_cab_dia, 0) / comMn.length
+      : null
+    return { consumoMedio, consumoMnMedio, custoMedio }
   }
 
   const exportarPDF = async () => {
@@ -651,7 +656,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
           </div>
         ) : (
           lotesFiltrados.map((lote, index) => {
-            const { consumoMedio, custoMedio } = calcularKPIs(lote)
+            const { consumoMedio, consumoMnMedio, custoMedio } = calcularKPIs(lote)
             const info = lote.info
             const temDados = lote.dados.length > 0
             const temErro = info.erro && info.erro.length > 0
@@ -769,11 +774,12 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                     })}
                   </div>
 
-                  {/* KPIs (Peso Entrada, Consumo %PV, R$/cab/dia, Peso Atual, Período Dieta Atual, Período Total, Data Prevista) */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                  {/* KPIs (Peso Entrada, Consumo %PV, Consumo MN, R$/cab/dia, Peso Atual, Período Dieta Atual, Período Total, Data Prevista) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                     {[
                       { label: 'Peso Entrada (kg)', value: formatarInteiro(info.peso_entrada_kg) },
                       { label: 'Consumo %PV', value: `${formatarNumero(consumoMedio, 2)}%` },
+                      { label: 'Consumo MN (kg/cab/dia)', value: consumoMnMedio != null ? formatarNumero(consumoMnMedio, 2) : '—' },
                       { label: 'R$/cab/dia', value: `R$ ${formatarNumero(custoMedio, 2)}` },
                       { label: 'Peso Atual (kg)', value: formatarNumero(info.peso_atual_kg, 2) },
                       { label: 'Período Dieta Atual', value: formatarInteiro(info.dias) },

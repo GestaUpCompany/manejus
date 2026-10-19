@@ -352,6 +352,13 @@ function consumoMedio(dados) {
   return dados.reduce((s, d) => s + d.consumo_percent_pv, 0) / dados.length
 }
 
+// trato_kg_cab_dia já é matéria natural (MN) por cabeça; o %PV é que usa a MS.
+function consumoMnMedio(dados) {
+  const validos = dados.filter((d) => d.trato_kg_cab_dia != null)
+  if (!validos.length) return null
+  return validos.reduce((s, d) => s + d.trato_kg_cab_dia, 0) / validos.length
+}
+
 function custoMedio(dados) {
   const validos = dados.filter((d) => d.custo_reais_cab_dia != null)
   if (!validos.length) return null
@@ -387,10 +394,12 @@ function pillsHtml(info) {
 
 function kpisHtml(info, dados) {
   const cm = consumoMedio(dados)
+  const cmMn = consumoMnMedio(dados)
   const custo = custoMedio(dados)
   const cards = [
     { value: intFmt(info.peso_entrada_kg), label: 'Peso Entrada (kg)' },
     { value: cm != null ? `${numFmt(cm, 2)}%` : '—', label: 'Consumo %PV' },
+    { value: cmMn != null ? numFmt(cmMn, 2) : '—', label: 'Consumo MN (kg/cab/dia)' },
     { value: custo != null ? `R$ ${numFmt(custo, 2)}` : '—', label: 'R$/cab/dia' },
     { value: numFmt(info.peso_atual_kg, 2), label: 'Peso Atual (kg)' },
     { value: intFmt(info.dias), label: 'Período Dieta Atual' },
