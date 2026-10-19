@@ -433,7 +433,16 @@ export function PlanoNutricionalLoteModal({
 
     try {
       if (editingPlano) {
-        const { error } = await supabase.from('planos_nutricionais').update(data).eq('id', editingPlano.id)
+        // A RPC guarda o estado anterior no histórico e, no plano vigente, leva o novo
+        // período/peso meta às categorias que ainda usavam o valor do plano.
+        const { error } = await supabase.rpc('editar_plano_lote', {
+          p_fazenda_id: fazendaId,
+          p_plano_id: editingPlano.id,
+          p_nome: isVigente ? null : data.nome,
+          p_formulacao_id: isVigente ? null : data.formulacao_id,
+          p_periodo_dias: periodo,
+          p_peso_meta_kg: pesoMeta,
+        })
         if (error) throw error
       } else {
         const maxOrdem = planos.length > 0 ? Math.max(...planos.map((p) => p.ordem)) : -1
