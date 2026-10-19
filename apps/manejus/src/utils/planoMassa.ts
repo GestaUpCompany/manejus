@@ -1,6 +1,9 @@
 // Lógica pura da atribuição de dieta em massa (modal PlanoNutricionalMassaModal).
 // Monta e valida o payload da RPC atribuir_plano_em_massa.
 
+/** Teto plausível de peso meta (kg). Espelha public._peso_meta_maximo() no banco. */
+export const PESO_META_MAXIMO_KG = 1500
+
 export type ModoAtribuicao = 'iniciar' | 'migrar' | 'enfileirar'
 
 export interface CategoriaLinha {
@@ -85,6 +88,7 @@ export function validarLinha(linha: LoteLinha): ValidacaoLinha {
   if (periodo == null || periodo <= 0 || !Number.isInteger(periodo)) erros.push('Período deve ser um número inteiro de dias maior que zero.')
   const pesoMeta = parseNumero(linha.pesoMeta)
   if (pesoMeta == null || pesoMeta <= 0) erros.push('Peso meta deve ser maior que zero.')
+  else if (pesoMeta > PESO_META_MAXIMO_KG) erros.push(`Peso meta acima do máximo permitido (${PESO_META_MAXIMO_KG} kg).`)
 
   if (linha.modo === 'migrar' && !linha.vigenteNome) erros.push('Lote sem plano vigente: não há o que migrar.')
   if (linha.modo === 'iniciar' && linha.vigenteNome) erros.push('Lote já tem plano vigente: escolha migrar ou enfileirar.')
@@ -102,6 +106,7 @@ export function validarLinha(linha: LoteLinha): ValidacaoLinha {
     if (iniciaAgora) {
       if (p == null || p <= 0 || !Number.isInteger(p)) erros.push(`${nome}: período inválido.`)
       if (m == null || m <= 0) erros.push(`${nome}: peso meta inválido.`)
+      else if (m > PESO_META_MAXIMO_KG) erros.push(`${nome}: peso meta acima do máximo permitido (${PESO_META_MAXIMO_KG} kg).`)
       else if (cat.pesoAtual != null && m <= cat.pesoAtual) {
         erros.push(`${nome}: peso meta (${m}) deve ser maior que o peso atual (${cat.pesoAtual}).`)
       }

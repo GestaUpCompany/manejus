@@ -87,6 +87,13 @@ describe('validarLinha', () => {
     expect(validarLinha(l).erros.join()).toMatch(/deve ser maior que o peso atual/)
   })
 
+  it('bloqueia peso meta acima do máximo no lote e na categoria', () => {
+    expect(validarLinha(linha({ pesoMeta: '700720' })).erros.join()).toMatch(/acima do máximo/)
+    const l = linha({ categorias: [cat({ pesoMeta: '1600' })] })
+    expect(validarLinha(l).erros.join()).toMatch(/Novilho: peso meta acima do máximo/)
+    expect(validarLinha(linha({ pesoMeta: '1500', categorias: [cat()] })).erros).toEqual([])
+  })
+
   it('avisa categoria sem GMD e lote em enfermaria', () => {
     const { avisos } = validarLinha(linha({ enfermaria: true, categorias: [cat({ gmd: null })] }))
     expect(avisos.join()).toMatch(/não tem GMD/)

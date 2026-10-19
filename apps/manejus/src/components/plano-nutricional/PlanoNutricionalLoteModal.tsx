@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@gestaup/supabase'
 import { Button, Input, NumericInput, ConfirmModal, Modal } from '@gestaup/ui'
+import { PESO_META_MAXIMO_KG } from '../../utils/planoMassa'
 
 interface PlanoNutricional {
   id: string
@@ -400,7 +401,9 @@ export function PlanoNutricionalLoteModal({
     } else {
       if (!formData.data_final) return 'Data final é obrigatória'
     }
-    if (!formData.peso_meta_kg || Number(formData.peso_meta_kg) <= 0) return 'Peso meta deve ser maior que zero'
+    const pesoMetaNum = parseFloat(String(formData.peso_meta_kg).replace(',', '.'))
+    if (!formData.peso_meta_kg || !(pesoMetaNum > 0)) return 'Peso meta deve ser maior que zero'
+    if (pesoMetaNum > PESO_META_MAXIMO_KG) return `Peso meta acima do máximo permitido (${PESO_META_MAXIMO_KG} kg)`
     return null
   }
 
@@ -1263,6 +1266,7 @@ function CategoriaPersonalizacaoCard({
   const [periodo, setPeriodo] = useState<string>(fallbackPeriodo)
   const [pesoMeta, setPesoMeta] = useState<string>(fallbackPesoMeta)
   const [saving, setSaving] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
 
   useEffect(() => {
     setPeriodo(personalizacao?.periodo_dias?.toString() || planoPeriodoDias?.toString() || '')
@@ -1280,6 +1284,17 @@ function CategoriaPersonalizacaoCard({
 
   const handleSave = async () => {
     if (!planoVigenteId || !fazendaId) return
+    setErro(null)
+    const metaNum = normalizeNum(pesoMeta)
+    const metaMudou = metaNum !== normalizeNum(fallbackPesoMeta)
+    if (metaNum != null && metaNum > PESO_META_MAXIMO_KG) {
+      setErro(`Peso meta acima do máximo permitido (${PESO_META_MAXIMO_KG} kg).`)
+      return
+    }
+    if (metaMudou && metaNum != null && categoria.peso_vivo_atual_kg_cab != null && metaNum <= Number(categoria.peso_vivo_atual_kg_cab)) {
+      setErro(`O peso meta deve ser maior que o peso atual (${Number(categoria.peso_vivo_atual_kg_cab).toFixed(2).replace('.', ',')} kg).`)
+      return
+    }
     setSaving(true)
     try {
       // A RPC grava a personalização, a meta em lote_categorias e o snapshot de entrada,
@@ -1295,6 +1310,7 @@ function CategoriaPersonalizacaoCard({
       await onSaved()
     } catch (error: any) {
       console.error('Erro ao salvar personalização:', error)
+      setErro(error?.message || 'Erro ao salvar personalização')
     } finally {
       setSaving(false)
     }
@@ -1326,6 +1342,7 @@ function CategoriaPersonalizacaoCard({
           ? 'Personalização ativa. Se o período desta categoria terminar antes das outras, ela para de evoluir peso e aguarda o fim das demais.'
           : 'Valores do plano vigente. Edite para personalizar esta categoria. Se o período terminar antes das outras, ela para de evoluir peso e aguarda o fim das demais.'}
       </p>
+      {erro && <p className="text-xs text-red-600 dark:text-red-200 mt-1">{erro}</p>}
       {planoVigenteId && isDirty && (
         <Button size="sm" className="mt-2" onClick={handleSave} disabled={saving}>
           {saving ? 'Salvando...' : 'Salvar Personalização'}
