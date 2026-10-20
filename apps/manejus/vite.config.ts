@@ -18,6 +18,9 @@ import rodeioHandler from './api/pdf/rodeio.js'
 import pastagensHandler from './api/pdf/pastagens.js'
 // @ts-ignore
 import estoqueHandler from './api/pdf/estoque.js'
+// @ts-ignore
+import estoqueCombustivelHandler from './api/pdf/estoqueCombustivel.js'
+import cantinaHandler from './api/pdf/cantina.js'
 import zootecnicoHandler from './api/pdf/zootecnico.js'
 
 function localPdfApi(): Plugin {
@@ -82,6 +85,8 @@ function localPdfApi(): Plugin {
       register('/api/pdf/rodeio', rodeioHandler)
       register('/api/pdf/pastagens', pastagensHandler)
       register('/api/pdf/estoque', estoqueHandler)
+      register('/api/pdf/estoqueCombustivel', estoqueCombustivelHandler)
+      register('/api/pdf/cantina', cantinaHandler)
       register('/api/pdf/zootecnico', zootecnicoHandler)
     },
   }

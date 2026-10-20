@@ -84,8 +84,20 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
   {
     tipo: 'estoque',
     titulo: 'Estoque de Insumos',
-    descricao: 'Posição atual de insumos e formulações: saldo, custo médio e valor em estoque.',
+    descricao: 'Insumos e formulações por período: saldo inicial, entradas, saídas, saldo final, cobertura, itens abaixo do mínimo, valor em estoque, curva ABC e extrato.',
     icone: '📦',
+  },
+  {
+    tipo: 'estoque_combustivel',
+    titulo: 'Estoque de Combustível',
+    descricao: 'Posição por tanque (saldo inicial, entradas, baixas e saldo final), valor em estoque e extrato de movimentações por período.',
+    icone: '🛢️',
+  },
+  {
+    tipo: 'cantina',
+    titulo: 'Cantina',
+    descricao: 'Estoque da cozinha por item (saldo inicial, entradas, baixas e saldo final), refeições servidas, custo por refeição, marmitas e extrato por período.',
+    icone: '🍽️',
   },
 ]
 

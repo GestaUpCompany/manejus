@@ -15,6 +15,8 @@ import { RelatorioClimaPublico } from './RelatorioClimaPublico'
 import { RelatorioRodeioPublico } from './RelatorioRodeioPublico'
 import { RelatorioPastagensPublico } from './RelatorioPastagensPublico'
 import { RelatorioEstoquePublico } from './RelatorioEstoquePublico'
+import { RelatorioEstoqueCombustivelPublico } from './RelatorioEstoqueCombustivelPublico'
+import { RelatorioCantinaPublico } from './RelatorioCantinaPublico'
 
 const CHART_NO_FOCUS_CSS = `
 .recharts-surface {
@@ -252,7 +254,7 @@ export function RelatorioPublico() {
       })
 
       // Se for relatório de consumo, tratos ou morte, o componente filho busca seus próprios dados
-      if (relData.tipo === 'consumo' || relData.tipo === 'tratos' || relData.tipo === 'morte' || relData.tipo === 'atividades' || relData.tipo === 'bebedouros' || relData.tipo === 'clima' || relData.tipo === 'rodeio' || relData.tipo === 'pastagens' || relData.tipo === 'estoque') {
+      if (relData.tipo === 'consumo' || relData.tipo === 'tratos' || relData.tipo === 'morte' || relData.tipo === 'atividades' || relData.tipo === 'bebedouros' || relData.tipo === 'clima' || relData.tipo === 'rodeio' || relData.tipo === 'pastagens' || relData.tipo === 'estoque' || relData.tipo === 'estoque_combustivel' || relData.tipo === 'cantina') {
         setError(null)
         setLoading(false)
         return
@@ -639,6 +641,14 @@ export function RelatorioPublico() {
 
   if (relatorioInfo?.tipo === 'estoque') {
     return <RelatorioEstoquePublico token={token!} relatorioInfo={relatorioInfo} />
+  }
+
+  if (relatorioInfo?.tipo === 'estoque_combustivel') {
+    return <RelatorioEstoqueCombustivelPublico token={token!} relatorioInfo={relatorioInfo} />
+  }
+
+  if (relatorioInfo?.tipo === 'cantina') {
+    return <RelatorioCantinaPublico token={token!} relatorioInfo={relatorioInfo} />
   }
 
   // Componente de popover multi-select

@@ -2,6 +2,24 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
+## Relatório de Cantina: o que ficou de fora (2026-10-20)
+
+- **Consumo por peão / desconto em folha**: não existe modelo para isso (só cozinheiros em texto livre e destinatário da marmita). Exigiria definir o que é a venda e quem registra no PWA.
+- **DDL de `registros_alimentacao` fora do repo** (antiga `registros_cantina`, unificada fora das migrations): colunas `modo`, `preco_unitario`, `itens_detalhe` conferidas só no banco vivo.
+- **Registros antigos sem `itens_detalhe`** nunca geraram baixa; o relatório avisa a contagem, mas o consumo histórico de itens não é recuperável.
+- **Filtro "Data fim" não inclusivo** em `EntradaCantina` (`registro.data <= dataFim`) e `CANTINA_EXPORT_CONFIG` lê `nome_outros`, que não está no tipo.
+- **Infográfico Mensal**: extrato truncado em 250 lançamentos (limite de 4 MB do `/api/pdf/geral`); com 9 seções selecionadas o peso total e a memória da função não foram medidos.
+
+## Relatório de Estoque de Insumos: o que ficou de fora do período (2026-10-20)
+
+- **Consumo por lote/curral/destino**: o ledger `movimentacoes_estoque_suplementos` só guarda `origem` (suplementação, saída de insumos, fábrica). O trato debita a formulação, não o insumo; saber o consumo de insumo por destino exige juntar `registro_origem_id` com os registros de origem e explodir a receita (`formulacao_insumos`, em % de MS, não em kg de MN).
+- **Valor do saldo em data passada**: não há WAC histórico gravado; o relatório valoriza o saldo pelo custo médio ATUAL (as entradas e saídas do período usam o custo do lançamento).
+- **Ordem do replay**: o trigger de saldo usa `created_at` e o relatório usa `(data, created_at)`. Lançamento retroativo faz o saldo reconstruído divergir de `estoque_atual` (campo `divergencia_l`, exibido como aviso). Na fazenda de testes o caso é o insumo "TESTE Ajuste Saldo".
+- **Ledger anterior a 2026-10-01**: teve limpezas manuais (saídas apagadas, ajustes como saldo de abertura); períodos anteriores não são confiáveis.
+- **Duas fontes de custo sem sincronização**: `insumos.preco_ton_mn` (custo teórico da receita) e `custo_unitario` (WAC do estoque). O relatório usa o WAC.
+- **Excel do relatório de estoque** e **alerta de validade** (`entrada_insumos_itens.validade`) não foram feitos; itens com `unidade` diferente de kg usam a unidade do cadastro, mas as quantidades do ledger são tratadas como kg.
+- **Infográfico Mensal**: o extrato vai truncado em 250 lançamentos (limite de 4 MB do `/api/pdf/geral`); o extrato completo está no link público.
+
 ## Planos nutricionais: pendências depois do limite de meta, data da meta e meta dos indivíduos (2026-10-19)
 
 - **Backfill da data da meta**: o trigger só recalcula quando meta, GMD ou peso atual mudam. Categorias com GMD e peso evoluindo se corrigem sozinhas na próxima passada do cron (o peso muda todo dia). Ficam velhas as sem GMD: em consulta de leitura (todas as fazendas) há 8 categorias ativas com `data_meta_projetada` preenchida e GMD nulo ou zero, que pela regra "sem GMD, sem data" deveriam estar nulas. Corrigir por fazenda exige autorização escopada.
