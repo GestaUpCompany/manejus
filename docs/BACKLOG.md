@@ -2,6 +2,14 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
+## Tela Estoque → Cantina: o que ficou de fora (2026-10-20)
+
+- **Editar, excluir ou estornar lançamento manual** (entrada e ajuste do painel): a tela só insere. O tipo `estorno` existe no banco e no recálculo, mas nenhuma tela o usa. Lançamentos vindos do app (`registro_origem_id`) são regerados pelo trigger e devem ser corrigidos nas telas de Entrada/Saída Cantina.
+- **Hardening do banco**: `recalcular_estoque_cantina` continua executável por RPC para `authenticated`/`anon` e `movimentacoes_cantina` não tem `REVOKE TRUNCATE/ALL FROM anon`; o almoxarifado já tem isso em `20261007160000_almoxarifado_seguranca.sql`. Migration separada, pede ok antes do `db push`.
+- **Concorrência**: o recálculo não usa `FOR UPDATE`; dois lançamentos simultâneos no mesmo item podem se atropelar.
+- **Saldo da tela × relatório**: a tela usa o saldo gravado e o relatório o reconstruído por data (diferem só quando há ajuste retroativo).
+- **Cadastros Auxiliares** (aba Itens da Cantina) segue sem mostrar saldo e custo; o botão "Cadastrar itens" da tela só leva à página.
+
 ## Relatório de Cantina: o que ficou de fora (2026-10-20)
 
 - **Consumo por peão / desconto em folha**: não existe modelo para isso (só cozinheiros em texto livre e destinatário da marmita). Exigiria definir o que é a venda e quem registra no PWA.

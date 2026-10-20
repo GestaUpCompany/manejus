@@ -139,6 +139,7 @@ const menuStructure: MenuItem[] = [
       { label: 'Combustível', path: '/controller/estoque-combustivel' },
       { label: 'Suplementação', path: '/controller/estoque-suplementacao' },
       { label: 'Almoxarifado', path: '/controller/estoque-almoxarifado' },
+      { label: 'Cantina', path: '/controller/estoque-cantina' },
       { label: 'Pendências de devolução', path: '/controller/pendencias-almoxarifado' }
     ],
   },

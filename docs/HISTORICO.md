@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Tela Estoque → Cantina no painel (2026-10-20)
+
+- Nova página `/controller/estoque-cantina` (menu Estoque → Cantina), antes o saldo da cantina só aparecia no relatório público. Mostra KPIs (itens controlados, em alerta, valor em estoque, consumo do mês), cards por item com saldo, custo médio, mínimo e valor (selos de saldo negativo, abaixo do mínimo, sem custo e sem controle), busca e filtro por classificação, entrada manual, ajuste de inventário e histórico por item com filtro de período e saldo após cada lançamento.
+- Sem migration: insert direto em `movimentacoes_cantina` (entrada com `origem='painel_entrada'`, custo e fornecedor; ajuste com `origem='painel_ajuste'`, novo saldo absoluto e motivo obrigatório); o trigger `recalcular_estoque_cantina` refaz saldo e custo médio. O ajuste não mexe no custo (o recálculo sobrescreveria).
+- Regras puras em `features/estoqueCantina/logica.ts` (+ `logica.test.ts`, 11 testes): alerta, sem custo, valor (saldo negativo não conta), filtro/ordenação (alertas primeiro), validação dos formulários, replay do saldo do extrato e aviso de divergência entre o saldo reconstruído por data e o gravado (ajuste retroativo).
+- O valor da tela usa o saldo gravado em `itens_cantina`; o do relatório usa o saldo reconstruído por data, então podem diferir quando há divergência (Açúcar na fazenda de testes: R$ 1.797,64 na tela × R$ 1.794,22 no relatório).
+- Testado na fazenda de testes pela interface: entrada no Detergente (12 un a R$ 2,50, que estava sem custo), ajuste do Tomate de −4,4 para 0 kg, histórico com filtro de período e aviso de divergência do Açúcar (−0,8 kg); saldos gravados conferidos por SQL. Esses dois lançamentos ficaram nos dados de teste.
+
 ## Relatório de Cantina (2026-10-20)
 
 - Novo relatório `cantina` (link público `/r/:token`, PDF avulso e seção do Infográfico Mensal). A cantina do sistema é a cozinha da fazenda (catálogo `itens_cantina`, ledger `movimentacoes_cantina`, `registros_alimentacao`), não venda a peão: não existe consumo por peão no banco nem no PWA.
