@@ -7,6 +7,7 @@ import {
   useCopiarModeloIatf,
   useCriarLoteIatf,
   useDescartarFemeaIatf,
+  useDesfazerIaIatf,
   useExcluirProtocoloIatf,
   useLotesProtocoloIatf,
   useMarcarTarefaIatf,
@@ -23,6 +24,10 @@ import {
   CLASSE_SITUACAO_TAREFA,
   ROTULO_SITUACAO_TAREFA,
   TIPOS_PASSO_IATF,
+  avisosReprodutivosIatf,
+  femeasEmOutroLoteIatf,
+  individuosComIa,
+  passosAnterioresPendentes,
   rotuloDia,
   rotuloTipoPasso,
   situacaoTarefa,
@@ -91,7 +96,7 @@ export function ProtocolosIatf() {
         <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Protocolos de IATF</h2>
         <p className="text-sm text-content-muted mt-1 max-w-2xl">
           Cadastre o protocolo (passos em dias a partir do D0), monte um lote com as fêmeas e acompanhe as tarefas. O passo de
-          inseminação grava a IA de todas as fêmeas ativas do lote.
+          inseminação grava a IA das fêmeas escolhidas e só conclui quando todas as ativas do lote foram inseminadas.
         </p>
       </div>
 
@@ -160,7 +165,7 @@ function AbaProtocolos({ fazendaId, protocolos, toast }: { fazendaId: string | u
     setErros(lista)
     if (lista.length > 0) return
     try {
-      await salvar.mutateAsync({ id: editando?.id, form, atuais: editando?.passos })
+      await salvar.mutateAsync({ id: editando?.id, form })
       toast.success(editando ? 'Protocolo atualizado.' : 'Protocolo criado.')
       setAberto(false)
     } catch (error) {
@@ -331,7 +336,15 @@ function AbaLotes({
       ) : (
         lotes.map((l) => <CartaoLote key={l.id} fazendaId={fazendaId} lote={l} hoje={hoje} toast={toast} />)
       )}
-      <ModalNovoLote fazendaId={fazendaId} aberto={novoAberto} onClose={() => setNovoAberto(false)} protocolos={protocolos.filter((p) => p.ativo)} hoje={hoje} toast={toast} />
+      <ModalNovoLote
+        fazendaId={fazendaId}
+        aberto={novoAberto}
+        onClose={() => setNovoAberto(false)}
+        protocolos={protocolos.filter((p) => p.ativo)}
+        lotesEmAndamento={lotes.filter((l) => l.status === 'Em andamento')}
+        hoje={hoje}
+        toast={toast}
+      />
     </div>
   )
 }
@@ -339,7 +352,7 @@ function AbaLotes({
 function CartaoLote({ fazendaId, lote, hoje, toast }: { fazendaId: string | undefined; lote: LoteProtocoloIatf; hoje: string; toast: Toast }) {
   const marcar = useMarcarTarefaIatf(fazendaId)
   const registrarIa = useRegistrarIaIatf(fazendaId)
-  const descartar = useDescartarFemeaIatf()
+  const descartar = useDescartarFemeaIatf(fazendaId)
   const cancelar = useCancelarLoteIatf()
   const [tarefaAcao, setTarefaAcao] = useState<TarefaLoteIatf | null>(null)
   const [dataAcao, setDataAcao] = useState(hoje)
@@ -347,8 +360,18 @@ function CartaoLote({ fazendaId, lote, hoje, toast }: { fazendaId: string | unde
   const [obs, setObs] = useState('')
   const [confirmarCancelar, setConfirmarCancelar] = useState(false)
   const [verFemeas, setVerFemeas] = useState(false)
+  const [femeasIa, setFemeasIa] = useState<string[]>([])
+  // Desfazer IA: de todas as fêmeas (individuoId nulo) ou de uma só
+  const [desfazerIa, setDesfazerIa] = useState<{ individuoId: string | null; rotulo: string | null } | null>(null)
+  const desfazerIaMut = useDesfazerIaIatf(fazendaId)
+  const [avisoPassos, setAvisoPassos] = useState<string | null>(null)
 
-  const ativas = lote.femeas.filter((f) => f.status === 'Ativa').length
+  const femeasAtivas = lote.femeas.filter((f) => f.status === 'Ativa')
+  const ativas = femeasAtivas.length
+  const comIa = useMemo(() => individuosComIa(lote.eventos ?? []), [lote.eventos])
+  const touroDe = (individuoId: string) =>
+    (lote.eventos ?? []).find((e) => e.individuo_id === individuoId && e.tipo === 'Inseminação' && e.deleted_at == null)?.touro_nome ?? null
+  const semIa = femeasAtivas.filter((f) => !comIa.has(f.individuo_id))
   const aberto = lote.status === 'Em andamento'
   // Lote concluído ainda pode ter um passo desfeito (reabre o lote); só o cancelado fica travado
   const podeDesfazer = lote.status !== 'Cancelado'
@@ -358,14 +381,32 @@ function CartaoLote({ fazendaId, lote, hoje, toast }: { fazendaId: string | unde
     setDataAcao(hoje)
     setObs('')
     setIa({ touro: '', semen: '', tecnico: lote.responsavel ?? '', observacao: '' })
+    setFemeasIa(semIa.map((f) => f.individuo_id))
   }
 
-  const confirmarAcao = async () => {
+  const alternarFemeaIa = (individuoId: string) =>
+    setFemeasIa((atual) => (atual.includes(individuoId) ? atual.filter((id) => id !== individuoId) : [...atual, individuoId]))
+
+  const dataAnteriorAoD0 = !!dataAcao && dataAcao < lote.data_d0
+  const anterioresPendentes = tarefaAcao ? passosAnterioresPendentes(lote.tarefas, tarefaAcao.dia) : []
+
+  const confirmarAcao = async (confirmado = false) => {
     if (!tarefaAcao) return
+    if (dataAnteriorAoD0) return
+    // IA com passo anterior do protocolo ainda por fazer: pode ser imprevisto de campo, então só confirma
+    if (tarefaAcao.tipo === 'Inseminacao' && anterioresPendentes.length > 0 && !confirmado) {
+      setAvisoPassos(anterioresPendentes.map((t) => `${rotuloDia(t.dia)} ${t.rotulo}`).join('; '))
+      return
+    }
     try {
       if (tarefaAcao.tipo === 'Inseminacao') {
-        const n = await registrarIa.mutateAsync({ tarefaId: tarefaAcao.id, data: dataAcao, ...ia })
-        toast.success(n > 0 ? `${n} inseminação(ões) registrada(s).` : 'Passo marcado. Nenhuma inseminação nova (já registradas).')
+        const n = await registrarIa.mutateAsync({ tarefaId: tarefaAcao.id, data: dataAcao, ...ia, individuos: femeasIa })
+        const restam = semIa.length - femeasIa.length
+        toast.success(
+          restam > 0
+            ? `${n} inseminação(ões) registrada(s). Faltam ${restam} fêmea(s); registre as demais com o touro correspondente.`
+            : `${n} inseminação(ões) registrada(s).`
+        )
       } else {
         await marcar.mutateAsync({ tarefaId: tarefaAcao.id, feitaEm: dataAcao, observacao: obs, responsavel: lote.responsavel ?? '' })
         toast.success('Passo marcado como feito.')
@@ -376,12 +417,31 @@ function CartaoLote({ fazendaId, lote, hoje, toast }: { fazendaId: string | unde
     }
   }
 
+  const tarefaIa = lote.tarefas.find((t) => t.tipo === 'Inseminacao')
+
   const desmarcar = async (t: TarefaLoteIatf) => {
+    // A IA tem confirmação própria: desfazer remove as inseminações das fêmeas
+    if (t.tipo === 'Inseminacao') {
+      setDesfazerIa({ individuoId: null, rotulo: null })
+      return
+    }
     try {
       await marcar.mutateAsync({ tarefaId: t.id, feitaEm: null })
-      toast.success(t.tipo === 'Inseminacao' ? 'Passo desmarcado. As inseminações já lançadas continuam na ficha das fêmeas.' : 'Marcação desfeita.')
+      toast.success('Marcação desfeita.')
     } catch (error) {
       toast.error((error as Error).message)
+    }
+  }
+
+  const confirmarDesfazerIa = async () => {
+    if (!tarefaIa || !desfazerIa) return
+    try {
+      const n = await desfazerIaMut.mutateAsync({ tarefaId: tarefaIa.id, individuos: desfazerIa.individuoId ? [desfazerIa.individuoId] : undefined })
+      toast.success(`${n} inseminação(ões) removida(s). O passo de IA voltou a ficar pendente.`)
+    } catch (error) {
+      toast.error((error as Error).message)
+    } finally {
+      setDesfazerIa(null)
     }
   }
 
@@ -433,6 +493,11 @@ function CartaoLote({ fazendaId, lote, hoje, toast }: { fazendaId: string | unde
                       {ROTULO_SITUACAO_TAREFA[sit]}
                       {t.feita_em ? ` ${formatDate(t.feita_em)}` : ''}
                     </span>
+                    {t.tipo === 'Inseminacao' && !t.feita_em && comIa.size > 0 && ativas > 0 && (
+                      <span className="ml-2 text-xs text-content-muted">
+                        {ativas - semIa.length} de {ativas} inseminadas
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-sm">
                     {aberto && !t.feita_em && (
@@ -461,12 +526,26 @@ function CartaoLote({ fazendaId, lote, hoje, toast }: { fazendaId: string | unde
                 <span className="font-medium text-content-strong">{rotuloFemea(f.individuo)}</span> {f.individuo?.categoria ?? ''}
                 {f.status === 'Descartada' && <span className="ml-2 text-xs text-amber-700">Descartada{f.motivo_descarte ? `: ${f.motivo_descarte}` : ''}</span>}
               </span>
+              {podeDesfazer && comIa.has(f.individuo_id) && (
+                <button
+                  className="text-content-muted hover:underline"
+                  onClick={() => setDesfazerIa({ individuoId: f.individuo_id, rotulo: rotuloFemea(f.individuo) })}
+                >
+                  Desfazer IA
+                </button>
+              )}
               {aberto && (
                 <button
                   className="text-primary hover:underline"
                   onClick={() =>
                     descartar.mutate(
-                      { id: f.id, descartar: f.status === 'Ativa', motivo: f.status === 'Ativa' ? 'Fora do protocolo' : undefined },
+                      {
+                        id: f.id,
+                        loteId: lote.id,
+                        individuoId: f.individuo_id,
+                        descartar: f.status === 'Ativa',
+                        motivo: f.status === 'Ativa' ? 'Fora do protocolo' : undefined,
+                      },
                       { onError: (e) => toast.error((e as Error).message) }
                     )
                   }
@@ -486,12 +565,35 @@ function CartaoLote({ fazendaId, lote, hoje, toast }: { fazendaId: string | unde
         size="sm"
       >
         <div className="space-y-4">
-          <Input label="Data" type="date" max={hoje} value={dataAcao} onChange={(e) => setDataAcao(e.target.value)} />
+          <Input label="Data" type="date" min={lote.data_d0} max={hoje} value={dataAcao} onChange={(e) => setDataAcao(e.target.value)} />
+          {dataAnteriorAoD0 && <p className="text-sm text-red-600">A data não pode ser anterior ao D0 do lote ({formatDate(lote.data_d0)}).</p>}
           {tarefaAcao?.tipo === 'Inseminacao' ? (
             <>
-              <p className="text-sm text-content-muted">
-                Grava uma Inseminação para cada uma das {ativas} fêmea(s) ativa(s) do lote.
-              </p>
+              <div>
+                <p className="text-sm font-medium text-content-strong">Fêmeas desta inseminação</p>
+                <p className="text-xs text-content-muted mb-2">
+                  O touro e a partida abaixo valem só para as fêmeas marcadas. Para usar outro sêmen, registre as demais em seguida.
+                </p>
+                <ul className="max-h-48 overflow-y-auto divide-y divide-border-base rounded border border-border-base">
+                  {femeasAtivas.map((f) => {
+                    const jaTem = comIa.has(f.individuo_id)
+                    return (
+                      <li key={f.id} className="px-2 py-1.5 text-sm">
+                        <label className={`flex items-center gap-2 ${jaTem ? 'opacity-60' : 'cursor-pointer'}`}>
+                          <input
+                            type="checkbox"
+                            checked={!jaTem && femeasIa.includes(f.individuo_id)}
+                            disabled={jaTem}
+                            onChange={() => alternarFemeaIa(f.individuo_id)}
+                          />
+                          <span className="font-medium text-content-strong">{rotuloFemea(f.individuo)}</span>
+                          {jaTem && <span className="text-xs text-content-muted">IA já registrada{touroDe(f.individuo_id) ? ` (${touroDe(f.individuo_id)})` : ''}</span>}
+                        </label>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
               <Input label="Touro / sêmen (opcional)" value={ia.touro} onChange={(e) => setIa((v) => ({ ...v, touro: e.target.value }))} />
               <Input label="Partida do sêmen (opcional)" value={ia.semen} onChange={(e) => setIa((v) => ({ ...v, semen: e.target.value }))} />
               <Input label="Técnico / inseminador (opcional)" value={ia.tecnico} onChange={(e) => setIa((v) => ({ ...v, tecnico: e.target.value }))} />
@@ -504,12 +606,40 @@ function CartaoLote({ fazendaId, lote, hoje, toast }: { fazendaId: string | unde
             <Button variant="secondary" onClick={() => setTarefaAcao(null)}>
               Cancelar
             </Button>
-            <Button onClick={confirmarAcao} disabled={marcar.isPending || registrarIa.isPending || !dataAcao}>
+            <Button
+              onClick={() => confirmarAcao()}
+              disabled={marcar.isPending || registrarIa.isPending || !dataAcao || dataAnteriorAoD0 || (tarefaAcao?.tipo === 'Inseminacao' && femeasIa.length === 0)}
+            >
               {marcar.isPending || registrarIa.isPending ? 'Gravando...' : 'Confirmar'}
             </Button>
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!avisoPassos}
+        onClose={() => setAvisoPassos(null)}
+        onConfirm={() => {
+          setAvisoPassos(null)
+          void confirmarAcao(true)
+        }}
+        title="Passos anteriores pendentes"
+        message={`Ainda não foram marcados como feitos: ${avisoPassos ?? ''}. Registrar a inseminação mesmo assim?`}
+        confirmText="Registrar mesmo assim"
+      />
+
+      <ConfirmModal
+        isOpen={!!desfazerIa}
+        onClose={() => setDesfazerIa(null)}
+        onConfirm={confirmarDesfazerIa}
+        title="Desfazer inseminação"
+        message={
+          desfazerIa?.individuoId
+            ? `Remover a inseminação de ${desfazerIa.rotulo}? Ela some da ficha da fêmea e o passo de IA volta a ficar pendente; depois é possível registrar de novo.`
+            : `Remover as ${comIa.size} inseminação(ões) deste lote? Elas somem da ficha das fêmeas e o passo de IA volta a ficar pendente; depois é possível registrar de novo. Não é possível se já houver diagnóstico de gestação depois da IA.`
+        }
+        confirmText="Desfazer IA"
+      />
 
       <ConfirmModal
         isOpen={confirmarCancelar}
@@ -537,6 +667,7 @@ function ModalNovoLote({
   aberto,
   onClose,
   protocolos,
+  lotesEmAndamento,
   hoje,
   toast,
 }: {
@@ -544,6 +675,7 @@ function ModalNovoLote({
   aberto: boolean
   onClose: () => void
   protocolos: ProtocoloIatf[]
+  lotesEmAndamento: LoteProtocoloIatf[]
   hoje: string
   toast: Toast
 }) {
@@ -556,23 +688,46 @@ function ModalNovoLote({
   const [loteId, setLoteId] = useState('')
   const [marcadas, setMarcadas] = useState<Record<string, boolean>>({})
   const [erros, setErros] = useState<string[]>([])
+  // Identificação e status reprodutivo das fêmeas já vistas (a seleção pode vir de vários lotes da fazenda)
+  const [infoFemeas, setInfoFemeas] = useState<Record<string, { rotulo: string; status: string }>>({})
+  const [avisoReprodutivo, setAvisoReprodutivo] = useState<string[] | null>(null)
   const femeas = useFemeasDoLote(fazendaId, loteId || undefined)
+
+  useEffect(() => {
+    if (!femeas.data?.length) return
+    setInfoFemeas((atual) => {
+      const novo = { ...atual }
+      for (const f of femeas.data!) novo[f.individuo_id] = { rotulo: rotuloFemea(f), status: f.status_reprodutivo }
+      return novo
+    })
+  }, [femeas.data])
+
+  // Fêmea ativa em outro lote de protocolo em andamento não pode entrar em outro (o banco também recusa)
+  const emOutroLote = useMemo(() => femeasEmOutroLoteIatf(lotesEmAndamento), [lotesEmAndamento])
 
   const protocolo = protocolos.find((p) => p.id === protocoloId)
   const previa = useMemo(() => (protocolo ? protocolo.passos.map((p) => `${rotuloDia(p.dia)} ${somarDias(dataD0 || hoje, p.dia).split('-').reverse().join('/')}`).join(' · ') : ''), [protocolo, dataD0, hoje])
-  const selecionadas = Object.entries(marcadas).filter(([, v]) => v).map(([id]) => id)
+  const selecionadas = Object.entries(marcadas)
+    .filter(([id, v]) => v && !emOutroLote.has(id))
+    .map(([id]) => id)
 
   const alternarTodas = (valor: boolean) =>
     setMarcadas((m) => {
       const novo = { ...m }
-      for (const f of femeas.data ?? []) novo[f.individuo_id] = valor
+      for (const f of femeas.data ?? []) novo[f.individuo_id] = valor && !emOutroLote.has(f.individuo_id)
       return novo
     })
 
-  const gravar = async () => {
+  const gravar = async (confirmado = false) => {
     const lista = validarNovoLote({ protocoloId, nome, dataD0, individuos: selecionadas })
     setErros(lista)
     if (lista.length > 0) return
+    // Fêmea prenha (ou coberta sem diagnóstico) em protocolo de IATF costuma ser engano: avisa antes de criar
+    const alertas = confirmado ? [] : avisosReprodutivosIatf(selecionadas.map((id) => infoFemeas[id]).filter(Boolean))
+    if (alertas.length > 0) {
+      setAvisoReprodutivo(alertas)
+      return
+    }
     try {
       await criar.mutateAsync({ protocoloId, nome: nome.trim(), dataD0, individuos: selecionadas, responsavel })
       toast.success('Lote de protocolo criado com as tarefas.')
@@ -586,6 +741,7 @@ function ModalNovoLote({
   }
 
   return (
+    <>
     <Modal isOpen={aberto} onClose={onClose} title="Novo lote de protocolo" size="lg">
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -619,17 +775,26 @@ function ModalNovoLote({
                   </Button>
                 </div>
                 <ul className="max-h-60 overflow-y-auto divide-y divide-border-base text-sm">
-                  {femeas.data!.map((f) => (
-                    <li key={f.individuo_id} className="py-1.5">
-                      <label className="flex items-center gap-2 text-content">
-                        <input type="checkbox" checked={!!marcadas[f.individuo_id]} onChange={(e) => setMarcadas((m) => ({ ...m, [f.individuo_id]: e.target.checked }))} />
-                        <span className="font-medium text-content-strong">{rotuloFemea(f)}</span>
-                        <span className="text-content-muted">
-                          {f.categoria ?? ''} · {f.status_reprodutivo}
-                        </span>
-                      </label>
-                    </li>
-                  ))}
+                  {femeas.data!.map((f) => {
+                    const outroLote = emOutroLote.get(f.individuo_id)
+                    return (
+                      <li key={f.individuo_id} className="py-1.5">
+                        <label className={`flex items-center gap-2 text-content ${outroLote ? 'opacity-60' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={!outroLote && !!marcadas[f.individuo_id]}
+                            disabled={!!outroLote}
+                            onChange={(e) => setMarcadas((m) => ({ ...m, [f.individuo_id]: e.target.checked }))}
+                          />
+                          <span className="font-medium text-content-strong">{rotuloFemea(f)}</span>
+                          <span className="text-content-muted">
+                            {f.categoria ?? ''} · {f.status_reprodutivo}
+                          </span>
+                          {outroLote && <span className="text-xs text-amber-700">já está no lote "{outroLote}"</span>}
+                        </label>
+                      </li>
+                    )
+                  })}
                 </ul>
               </>
             )}
@@ -641,12 +806,25 @@ function ModalNovoLote({
           <Button variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={gravar} disabled={criar.isPending}>
+          <Button onClick={() => gravar()} disabled={criar.isPending}>
             {criar.isPending ? 'Criando...' : 'Criar lote'}
           </Button>
         </div>
       </div>
     </Modal>
+      {/* Fora do Modal: dentro dele o clique em Cancelar subia pela árvore do React e fechava o formulário também */}
+      <ConfirmModal
+        isOpen={!!avisoReprodutivo}
+        onClose={() => setAvisoReprodutivo(null)}
+        onConfirm={() => {
+          setAvisoReprodutivo(null)
+          void gravar(true)
+        }}
+        title="Fêmeas com status reprodutivo a conferir"
+        message={`${(avisoReprodutivo ?? []).join(' ')} Criar o lote mesmo assim?`}
+        confirmText="Criar mesmo assim"
+      />
+    </>
   )
 }
 

@@ -75,6 +75,42 @@ export function validarProtocolo(form: FormProtocoloIatf): string[] {
   return erros
 }
 
+/** Fêmeas ativas em lotes de protocolo em andamento: individuo_id -> nome do lote (uma fêmea só pode estar em um por vez). */
+export function femeasEmOutroLoteIatf(
+  lotes: { nome: string; status: string; femeas: { individuo_id: string; status: string }[] }[]
+): Map<string, string> {
+  const mapa = new Map<string, string>()
+  for (const l of lotes) {
+    if (l.status !== 'Em andamento') continue
+    for (const f of l.femeas) if (f.status === 'Ativa' && !mapa.has(f.individuo_id)) mapa.set(f.individuo_id, l.nome)
+  }
+  return mapa
+}
+
+/** Passos de dia anterior ao informado que ainda não foram feitos (aviso ao registrar a IA com o protocolo atrasado). */
+export function passosAnterioresPendentes<T extends { dia: number; feita_em: string | null; rotulo: string }>(tarefas: T[], dia: number): T[] {
+  return tarefas.filter((t) => !t.feita_em && t.dia < dia).sort((a, b) => a.dia - b.dia)
+}
+
+/**
+ * Avisos para quem monta um lote de protocolo: fêmea Prenha (diagnóstico positivo vigente) ou Coberta sem diagnóstico
+ * (já foi coberta/inseminada e aguarda resultado). Devolve uma frase por grupo, vazio se não há nada a conferir.
+ */
+export function avisosReprodutivosIatf(femeas: { rotulo: string; status: string }[]): string[] {
+  const lista = (status: string) => femeas.filter((f) => f.status === status).map((f) => f.rotulo)
+  const avisos: string[] = []
+  const prenhas = lista('Prenha')
+  const cobertas = lista('Coberta')
+  if (prenhas.length > 0) avisos.push(`Prenha (diagnóstico positivo): ${prenhas.join(', ')}.`)
+  if (cobertas.length > 0) avisos.push(`Coberta/inseminada sem diagnóstico: ${cobertas.join(', ')}.`)
+  return avisos
+}
+
+/** Fêmeas que já têm Inseminação ativa registrada no lote de protocolo (evento não excluído). */
+export function individuosComIa(eventos: { individuo_id: string; tipo: string; deleted_at: string | null }[]): Set<string> {
+  return new Set(eventos.filter((e) => e.tipo === 'Inseminação' && e.deleted_at == null).map((e) => e.individuo_id))
+}
+
 export interface FormLoteIatf {
   protocoloId: string
   nome: string

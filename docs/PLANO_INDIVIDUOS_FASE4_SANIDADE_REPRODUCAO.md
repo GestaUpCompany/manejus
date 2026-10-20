@@ -214,7 +214,7 @@ Conclusão: o núcleo está alinhado; as lacunas que pesam são **calendário sa
 - gera pendências por lote/categoria, também para quem ainda não lançou a primeira aplicação; entra na página Manejo Sanitário e nas notificações semanais;
 - vacinas obrigatórias (aftosa, brucelose em bezerras) como modelos prontos editáveis por fazenda. As regras e janelas oficiais devem ser confirmadas com o órgão estadual antes de embutir datas.
 
-**C2. Protocolo de IATF** (primeira entrega feita em 20/10/2026, ver HISTORICO; relatório e alertas ainda pendentes):
+**C2. Protocolo de IATF** (feita em 20/10/2026, ver HISTORICO: protocolos, lotes no painel e no PWA, tarefas, IA por grupos de fêmeas, alertas diários, relatório de taxa de prenhez e diagnóstico em grupo por lote; a auditoria do mesmo dia e as correções estão em `docs/RELATORIO_AUDITORIA_IATF.md`; o que ainda falta está no BACKLOG):
 - tabela de protocolo (nome, passos com dia, produto e dose) e lote de protocolo (fêmeas, D0, responsável); os passos D8/D10 viram tarefas com data calculada;
 - a IA registra um evento de `Inseminação` com touro, partida do sêmen e técnico (já existentes);
 - relatório de taxa de prenhez por protocolo, touro, sêmen e inseminador, sobre `eventos_reprodutivos`;

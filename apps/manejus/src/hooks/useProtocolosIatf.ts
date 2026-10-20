@@ -44,6 +44,14 @@ export interface FemeaLoteIatf {
   individuo: { id_brinco: string | null; id_manejo: string | null; id_chip: string | null; categoria: string | null } | null
 }
 
+/** Evento reprodutivo ligado ao lote; serve para saber quais fêmeas já têm a Inseminação registrada. */
+export interface EventoDoLoteIatf {
+  individuo_id: string
+  tipo: string
+  touro_nome: string | null
+  deleted_at: string | null
+}
+
 export interface LoteProtocoloIatf {
   id: string
   nome: string
@@ -53,6 +61,7 @@ export interface LoteProtocoloIatf {
   protocolo: { nome: string } | null
   femeas: FemeaLoteIatf[]
   tarefas: TarefaLoteIatf[]
+  eventos: EventoDoLoteIatf[]
 }
 
 const CHAVE = ['protocolos-iatf'] as const
@@ -85,7 +94,7 @@ export function useLotesProtocoloIatf(fazendaId: string | undefined) {
       const { data, error } = await supabase
         .from('lotes_protocolo_iatf')
         .select(
-          'id, nome, data_d0, status, responsavel, protocolo:protocolos_iatf(nome), femeas:lotes_protocolo_iatf_femeas(id, individuo_id, status, motivo_descarte, individuo:individuos(id_brinco, id_manejo, id_chip, categoria)), tarefas:lotes_protocolo_iatf_tarefas(id, dia, ordem, rotulo, tipo, medicamento_nome, dose, data_prevista, feita_em, feita_por, observacao)'
+          'id, nome, data_d0, status, responsavel, protocolo:protocolos_iatf(nome), femeas:lotes_protocolo_iatf_femeas(id, individuo_id, status, motivo_descarte, individuo:individuos(id_brinco, id_manejo, id_chip, categoria)), tarefas:lotes_protocolo_iatf_tarefas(id, dia, ordem, rotulo, tipo, medicamento_nome, dose, data_prevista, feita_em, feita_por, observacao), eventos:eventos_reprodutivos(individuo_id, tipo, touro_nome, deleted_at)'
         )
         .eq('fazenda_id', fazendaId!)
         .is('deleted_at', null)
@@ -99,56 +108,29 @@ export function useLotesProtocoloIatf(fazendaId: string | undefined) {
   })
 }
 
-const linhaPasso = (p: FormProtocoloIatf['passos'][number], i: number, protocoloId: string, fazendaId: string) => ({
-  protocolo_id: protocoloId,
-  fazenda_id: fazendaId,
+/** Passo do formulário no formato que a RPC salvar_protocolo_iatf espera (a ordem do array vira o campo `ordem`). */
+const passoParaServidor = (p: FormProtocoloIatf['passos'][number]) => ({
   dia: Number(p.dia),
-  ordem: i + 1,
   rotulo: p.rotulo.trim(),
   tipo: p.tipo,
   medicamento_nome: p.medicamentoNome.trim() === '' ? null : p.medicamentoNome.trim(),
   dose: p.dose.trim() === '' ? null : p.dose.trim(),
 })
 
-/** Cria ou edita um protocolo. Na edição os passos são trocados; se a gravação falhar, os antigos são restaurados. */
+/** Cria ou edita um protocolo e troca os passos numa única transação (RPC): se algo falhar, nada muda. */
 export function useSalvarProtocoloIatf(fazendaId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, form, atuais }: { id?: string; form: FormProtocoloIatf; atuais?: PassoProtocolo[] }) => {
-      const base = { nome: form.nome.trim(), descricao: form.descricao.trim() === '' ? null : form.descricao.trim() }
-      let protocoloId = id
-      if (id) {
-        const { error } = await supabase.from('protocolos_iatf').update(base).eq('id', id)
-        if (error) throw new Error(error.message)
-        const { error: delError } = await supabase.from('protocolos_iatf_passos').delete().eq('protocolo_id', id)
-        if (delError) throw new Error(delError.message)
-      } else {
-        const { data, error } = await supabase.from('protocolos_iatf').insert({ ...base, fazenda_id: fazendaId! }).select('id').single()
-        if (error) throw new Error(error.message)
-        protocoloId = (data as { id: string }).id
-      }
-      const { error: passosError } = await supabase
-        .from('protocolos_iatf_passos')
-        .insert(form.passos.map((p, i) => linhaPasso(p, i, protocoloId!, fazendaId!)))
-      if (passosError) {
-        if (id && atuais && atuais.length > 0) {
-          await supabase.from('protocolos_iatf_passos').insert(
-            atuais.map((p) => ({
-              protocolo_id: id,
-              fazenda_id: fazendaId!,
-              dia: p.dia,
-              ordem: p.ordem,
-              rotulo: p.rotulo,
-              tipo: p.tipo,
-              medicamento_nome: p.medicamento_nome,
-              dose: p.dose,
-            }))
-          )
-        } else if (!id) {
-          await supabase.from('protocolos_iatf').delete().eq('id', protocoloId!)
-        }
-        throw new Error(passosError.message)
-      }
+    mutationFn: async ({ id, form }: { id?: string; form: FormProtocoloIatf }): Promise<string> => {
+      const { data, error } = await supabase.rpc('salvar_protocolo_iatf', {
+        p_fazenda_id: fazendaId!,
+        p_protocolo_id: id ?? null,
+        p_nome: form.nome.trim(),
+        p_descricao: form.descricao.trim() === '' ? null : form.descricao.trim(),
+        p_passos: form.passos.map(passoParaServidor),
+      })
+      if (error) throw new Error(error.message)
+      return data as string
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: CHAVE }),
   })
@@ -225,15 +207,27 @@ export function useMarcarTarefaIatf(fazendaId: string | undefined) {
   })
 }
 
-/** Registra a Inseminação das fêmeas ativas do lote e marca o passo de IA. Devolve quantas foram gravadas. */
+/**
+ * Registra a Inseminação das fêmeas escolhidas (touro/sêmen próprios do grupo). Sem `individuos`, vale para todas as ativas
+ * que ainda não têm IA. O passo só é concluído quando todas as ativas do lote têm IA. Devolve quantas foram gravadas.
+ */
 export function useRegistrarIaIatf(fazendaId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (v: { tarefaId: string; data: string; touro: string; semen: string; tecnico: string; observacao: string }) => {
+    mutationFn: async (v: {
+      tarefaId: string
+      data: string
+      touro: string
+      semen: string
+      tecnico: string
+      observacao: string
+      individuos?: string[]
+    }) => {
       const { data, error } = await supabase.rpc('registrar_ia_lote_protocolo', {
         p_fazenda_id: fazendaId!,
         p_tarefa_id: v.tarefaId,
         p_data: v.data,
+        p_individuos: v.individuos ?? null,
         p_touro_nome: v.touro.trim() || null,
         p_semen_partida: v.semen.trim() || null,
         p_tecnico: v.tecnico.trim() || null,
@@ -249,14 +243,48 @@ export function useRegistrarIaIatf(fazendaId: string | undefined) {
   })
 }
 
-export function useDescartarFemeaIatf() {
+/**
+ * Desfaz a Inseminação do lote de protocolo: de todas as fêmeas, ou só das informadas. Exclui as IAs (logicamente), reabre o
+ * passo e devolve quantas foram removidas. O banco recusa se já há diagnóstico de gestação depois da IA.
+ */
+export function useDesfazerIaIatf(fazendaId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, descartar, motivo }: { id: string; descartar: boolean; motivo?: string }) => {
-      const { error } = await supabase
-        .from('lotes_protocolo_iatf_femeas')
-        .update({ status: descartar ? 'Descartada' : 'Ativa', motivo_descarte: descartar ? motivo?.trim() || null : null })
-        .eq('id', id)
+    mutationFn: async (v: { tarefaId: string; individuos?: string[] }) => {
+      const { data, error } = await supabase.rpc('desfazer_ia_lote_protocolo', {
+        p_fazenda_id: fazendaId!,
+        p_tarefa_id: v.tarefaId,
+        p_individuos: v.individuos ?? null,
+      })
+      if (error) throw new Error(error.message)
+      return data as number
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CHAVE })
+      queryClient.invalidateQueries({ queryKey: ['reproducao'] })
+    },
+  })
+}
+
+/**
+ * Descarta a fêmea do lote (RPC: conclui o passo de IA se ela era a última sem IA) ou a reativa (escrita direta, só gestão;
+ * o banco recusa se ela já está ativa em outro lote em andamento).
+ */
+export function useDescartarFemeaIatf(fazendaId: string | undefined) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: { id: string; loteId: string; individuoId: string; descartar: boolean; motivo?: string }) => {
+      if (v.descartar) {
+        const { error } = await supabase.rpc('descartar_femea_lote_protocolo', {
+          p_fazenda_id: fazendaId!,
+          p_lote_id: v.loteId,
+          p_individuo_id: v.individuoId,
+          p_motivo: v.motivo?.trim() || null,
+        })
+        if (error) throw new Error(error.message)
+        return
+      }
+      const { error } = await supabase.from('lotes_protocolo_iatf_femeas').update({ status: 'Ativa', motivo_descarte: null }).eq('id', v.id)
       if (error) throw new Error(error.message)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: CHAVE }),

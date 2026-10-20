@@ -1,0 +1,15 @@
+-- ROLLBACK de 20261020280000_iatf_escrita_so_gestao_peao_so_rpc.sql
+-- NÃO fica em supabase/migrations/ de propósito.
+-- 1) Policies: para cada tabela t em (protocolos_iatf, protocolos_iatf_passos, lotes_protocolo_iatf,
+--    lotes_protocolo_iatf_femeas, lotes_protocolo_iatf_tarefas):
+--      DROP POLICY IF EXISTS t_leitura ON public.t;
+--      DROP POLICY IF EXISTS t_escrita_gestao ON public.t;
+--      CREATE POLICY t_tenant ON public.t FOR ALL TO authenticated
+--        USING (public.is_admin_user() OR public.caller_has_fazenda_access(fazenda_id))
+--        WITH CHECK (public.is_admin_user() OR public.caller_has_fazenda_access(fazenda_id));
+-- 2) Funções (voltar ao estado anterior à migration):
+--    - criar_lote_protocolo_iatf: corpo de 20261020260000_iatf_femea_em_um_lote_por_vez.sql (SECURITY INVOKER)
+--    - marcar_tarefa_protocolo_iatf e registrar_ia_lote_protocolo: corpos de 20261020250000_iatf_recusa_data_antes_do_d0.sql (INVOKER)
+--    - desfazer_ia_lote_protocolo: corpo de 20261020230000_desfazer_ia_lote_protocolo.sql (INVOKER)
+--    - copiar_modelo_protocolo_iatf: corpo de 20261020100000_protocolos_iatf.sql (SECURITY DEFINER)
+SELECT 1;
