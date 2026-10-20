@@ -18,6 +18,7 @@ import {
   type TarefaLoteIatf,
 } from '../../hooks/useProtocolosIatf'
 import { useFemeasDoLote } from '../../hooks/useReproducao'
+import { cadernetaVisivelNaFazenda } from '../../utils/cadernetas'
 import { RelatorioIatf } from './RelatorioIatf'
 import {
   CLASSE_SITUACAO_TAREFA,
@@ -74,6 +75,16 @@ export function ProtocolosIatf() {
   }, [user])
 
   if (carregandoFazenda || protocolos.isLoading || lotes.isLoading) return <PageSkeleton variant="list" />
+
+  // Em teste: só a fazenda de testes usa (a rota ainda abre por URL direta nas outras, então a página também confere)
+  if (!fazendaId || !cadernetaVisivelNaFazenda('protocolo-iatf', fazendaId)) {
+    return (
+      <EmptyState
+        title="Protocolos de IATF em teste"
+        description="Este recurso ainda não está liberado para esta fazenda. Ele é validado primeiro na fazenda de testes."
+      />
+    )
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">

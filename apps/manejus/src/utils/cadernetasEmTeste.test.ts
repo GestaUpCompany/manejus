@@ -23,6 +23,18 @@ describe('cadernetas em teste (painel)', () => {
   })
 })
 
+describe('protocolo de IATF (painel)', () => {
+  it('está em teste: só a fazenda de testes libera (páginas, diagnóstico por lote de protocolo e menu)', () => {
+    expect(CADERNETAS_EM_TESTE).toContain('protocolo-iatf')
+    expect(cadernetaVisivelNaFazenda('protocolo-iatf', FAZENDA_DE_TESTES_ID)).toBe(true)
+    expect(cadernetaVisivelNaFazenda('protocolo-iatf', 'outra')).toBe(false)
+    expect(cadernetaVisivelNaFazenda('protocolo-iatf', null)).toBe(false)
+    expect(cadernetaVisivelNaFazenda('protocolo-iatf', undefined)).toBe(false)
+    expect(cadernetasDaFazenda('outra').map((c) => c.id)).not.toContain('protocolo-iatf')
+    expect(cadernetasDaFazenda(FAZENDA_DE_TESTES_ID).map((c) => c.id)).toContain('protocolo-iatf')
+  })
+})
+
 describe('menu Controle Individual (painel)', () => {
   it('só a fazenda de testes vê; outra fazenda ou fazenda desconhecida não', () => {
     expect(menuControleIndividualVisivel(FAZENDA_DE_TESTES_ID)).toBe(true)

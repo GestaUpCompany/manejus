@@ -34,6 +34,29 @@ Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar 
 **Como corrigir**: continuar a Fase B de isolamento (lotes 2a catálogos, 2b estrutura da fazenda, 2c pessoas, 3 fábrica/históricos, 4 varredura final) no padrão `is_admin_user() OR caller_has_fazenda_access(fazenda_id)`, `TO authenticated`, `REVOKE ALL FROM anon`. Atenção ao PWA: o peão lê/escreve várias dessas tabelas por `auth.uid()`; policy restritiva demais gera selects vazios em campo sem erro (conferir `syncService.ts` e o papel `peao` antes de cada lote).
 **Disparadores**: "policy true", "isolamento por fazenda", "RLS aberta", "Fase B", `rotinas`, `plano_categoria_personalizacao`.
 
+## IATF: o que ficou faltando depois da primeira entrega (2026-10-20)
+
+A primeira entrega (protocolos, lotes no painel e no PWA, tarefas, IA, alertas, relatório de taxa de prenhez e diagnóstico em grupo por lote de protocolo) está pronta e **liberada só para a fazenda de testes** `d649c65e-16ab-4b77-a84b-df937aa41cc3` (painel: `cadernetaVisivelNaFazenda('protocolo-iatf', ...)` na página de Protocolos e no seletor de origem do Diagnóstico em Grupo, mais o menu `menuControleIndividualVisivel`; PWA: caderneta, novo lote e as duas listas). Detalhe e testes em `docs/HISTORICO.md` (seção "Protocolo de IATF") e no HISTORICO do PWA. O que falta:
+
+**Antes de liberar para outras fazendas (decisão do gestor)**
+- **Teste em aparelho físico** com sinal fraco e instável (só foi testado com rede emulada offline no preview) e com o app staging publicado em `staging-repo`.
+- **Gatilho de fazenda cruzada** não foi testado (exigiria dados de outra fazenda). Também não testado: as checagens de "passo ou medicamento de outra fazenda" em `protocolos_iatf_passos`.
+- **RLS de escrita**: as tabelas `protocolos_iatf*`, `lotes_protocolo_iatf*` e `eventos_reprodutivos` deixam o peão escrever pela API (mesmo padrão de reprodução e sanidade). Avaliar restringir a escrita de protocolos e lotes a quem não é peão; o PWA só precisa das RPCs.
+- **Liberar** exige tirar `protocolo-iatf` de `CADERNETAS_EM_TESTE` nos dois repos (e rever as rotas, que ainda abrem por URL direta no painel, embora as páginas se bloqueiem sozinhas).
+- Alerta do `get_advisors`: `copiar_modelo_protocolo_iatf` é `SECURITY DEFINER` chamável por `authenticated` (confere o acesso por dentro, mesmo padrão das outras RPCs). Trocar para `SECURITY INVOKER` zera o aviso, se quiserem.
+- **Cron `notificar_protocolos_iatf` (07:30)** roda na hora do servidor (UTC no Supabase, ou seja, 03:30 em Cuiabá). Ajustar o horário se o gestor quiser o aviso mais tarde.
+
+**Funcionalidades fora da primeira entrega**
+- **Lote de protocolo**: não dá para editar (D0, protocolo, nome) nem excluir pelo painel (só cancelar), nem acrescentar fêmeas depois de criado. O PWA cria o lote sem estação de monta e o painel também não oferece a estação. Corrigir uma IA lançada errada exige excluir os eventos na ficha de cada fêmea e registrar de novo (a RPC não duplica a IA da fêmea que já tem uma ativa no lote).
+- **PWA**: o lote criado no campo só aparece na caderneta de marcar passos depois de sincronizar (precisa de internet duas vezes: enviar e depois baixar). O diagnóstico em grupo por lote de protocolo existe só no painel; a caderneta de Reprodução do PWA não tem essa origem. A tela de marcar passo mostra "Fêmeas no lote" também em passos que não são a IA (cosmético).
+- **Relatório de taxa de prenhez**: sem filtro por período ou estação, sem PDF, e o inseminador e o touro são texto livre (grafias diferentes viram grupos diferentes).
+- **Alertas**: só notificação no painel; sem push nem WhatsApp. Não há alerta de "fêmea sem diagnóstico depois da IA" ligado ao lote de protocolo (existe o de reprodução, geral).
+- **Cache offline do PWA**: o status reprodutivo, as estações e as carências passaram a persistir logo ao buscar, mas muitas outras consultas "lazy" de `cadastroCache.ts` guardam só em memória e podem perder o dado ao recarregar offline (auditar as demais).
+- **Qualidade**: o lint do painel falha por um warning antigo de `react-hooks/exhaustive-deps` em `ControllerLayout.tsx` (já existia). A imagem da caderneta é a definitiva, mas o traço é mais "desenho" que o das outras.
+- **RFID (C4)**: PENDENTE, sem desenho; depende de escolher o bastão e a balança (Bluetooth ou serial).
+
+**Disparadores**: "IATF", "protocolo de IATF", "lote de protocolo", "taxa de prenhez por protocolo", "liberar IATF".
+
 ## Sanidade dos indivíduos: o que falta (painel implementado em 2026-10-16)
 
 **Feito no painel (16/10/2026, ver `docs/HISTORICO.md`)**: aplicações por animal e por lote, carência no catálogo, histórico unificado, aba Sanidade na ficha, página Manejo Sanitário (pendências), funções de carência, aviso `CARENCIA_ATIVA` na pesagem de OS de venda e alertas semanais. **Falta**: caderneta de sanidade no PWA, baixa de estoque de medicamento, custo por animal e indicação de carência nas listas de Lotes e Indivíduos.
