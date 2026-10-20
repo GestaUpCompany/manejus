@@ -253,7 +253,7 @@ export function ControllerDashboard() {
     ),
   }
 
-  const cadernetaGrupos = gruposDaFazenda(fazenda.id).map((grupo) => ({
+  const cadernetaGrupos = gruposDaFazenda(fazenda.id, fazenda.acesso_iatf).map((grupo) => ({
     ...grupo,
     itens: grupo.itens.map((item) => ({
       key: item.id,

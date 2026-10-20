@@ -20,6 +20,7 @@ export type CadernetaImage =
   | 'manejo-curral'
   | 'sanidade'
   | 'reproducao'
+  | 'protocolo-iatf'
   | 'leitura-cocho'
   | 'trato-confinamento'
   | 'fabrica-confinamento'
@@ -55,6 +56,7 @@ export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   'manejo-curral': '/images/cadernetas/manejo-curral.png',
   sanidade: '/images/cadernetas/sanidade.png',
   reproducao: '/images/cadernetas/reproducao.png',
+  'protocolo-iatf': '/images/cadernetas/protocolo-iatf.png',
   'leitura-cocho': '/images/cadernetas/leitura-cocho.png',
   'trato-confinamento': '/images/cadernetas/trato-confinamento.png',
   'fabrica-confinamento': '/images/cadernetas/fabrica-confinamento.png',
@@ -91,6 +93,7 @@ export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
   'manejo-curral': 'Manejo de Curral',
   sanidade: 'Sanidade',
   reproducao: 'Reprodução',
+  'protocolo-iatf': 'Protocolo IATF',
   'leitura-cocho': 'Leitura de Cocho',
   'trato-confinamento': 'Trato Confinamento',
   'fabrica-confinamento': 'Carregamento Vagão',
@@ -127,6 +130,7 @@ export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
   'manejo-curral': 'Sessões de manejo de curral: identificação e lote de destino dos animais',
   sanidade: 'Aplicações sanitárias por animal ou por lote, com carência e próxima dose',
   reproducao: 'Cobertura, inseminação, diagnóstico de gestação e aborto de fêmeas, em sessão',
+  'protocolo-iatf': 'Protocolos de IATF, lotes de protocolo e tarefas por data (D0, D8, D10...)',
   'leitura-cocho': 'Registros de leitura de cocho',
   'trato-confinamento': 'Registros de oferta de trato',
   'fabrica-confinamento': 'Registros de carregamento do vagão',

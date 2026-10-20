@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, Button, useToast } from '@gestaup/ui'
 import { CADERNETA_IMAGES, CADERNETA_TITLES, CADERNETA_DESCRIPTIONS } from '../../types/images'
@@ -6,21 +6,17 @@ import { useAuth } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import { exportAllCadernetas } from '../../utils/exportAllCadernetas'
 import { gruposDaFazenda } from '../../utils/cadernetas'
+import { useAcessosFazenda } from '../../hooks/useAcessosFazenda'
 
 export function Cadernetas() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const toast = useToast()
   const [exporting, setExporting] = useState(false)
-  const [fazendaIdAtual, setFazendaIdAtual] = useState<string | null>(null)
+  const { fazendaId: fazendaIdAtual, acessoIatf } = useAcessosFazenda()
 
-  useEffect(() => {
-    if (!user) return
-    getFazendaIdForUser(user.id).then((id) => setFazendaIdAtual(id ?? null)).catch(() => setFazendaIdAtual(null))
-  }, [user])
-
-  // Cadernetas em teste só aparecem na fazenda de testes
-  const grupos = useMemo(() => gruposDaFazenda(fazendaIdAtual), [fazendaIdAtual])
+  // Cadernetas em teste só aparecem na fazenda de testes; as do IATF, nas fazendas com a flag acesso_iatf
+  const grupos = useMemo(() => gruposDaFazenda(fazendaIdAtual, acessoIatf), [fazendaIdAtual, acessoIatf])
 
   const handleExportAll = async () => {
     if (!user || exporting) return

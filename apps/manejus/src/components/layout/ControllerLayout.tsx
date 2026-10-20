@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect, useRef, useMemo, useTransition } from '
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@gestaup/shared'
 import { useFazenda } from '../../hooks/useDashboardQueries'
+import { menuControleIndividualVisivel } from '../../utils/cadernetas'
 import { Header } from './Header'
 import { FarmSwitcher } from '@gestaup/ui'
 import { Breadcrumbs } from '@gestaup/ui'
@@ -12,7 +13,6 @@ import { useKeyboardShortcuts } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import { ImpersonationBar } from '../ImpersonationBar'
 import { prefetchRoute } from '../../utils/routePrefetch'
-import { menuControleIndividualVisivel } from '../../utils/cadernetas'
 
 interface ControllerLayoutProps {
   children: ReactNode
@@ -33,6 +33,7 @@ const MENU_SECTIONS: { id: string; label: string }[] = [
   { id: 'insumos-estoque', label: 'Insumos & Estoque' },
   { id: 'sistema', label: 'Sistema' },
 ]
+
 
 const menuStructure: MenuItem[] = [
   {
@@ -78,8 +79,22 @@ const menuStructure: MenuItem[] = [
       { label: 'Reprodução', path: '/controller/reproducao' },
       { label: 'Diagnóstico em Grupo', path: '/controller/reproducao/diagnostico-em-grupo' },
       { label: 'Estações de Monta', path: '/controller/estacoes-monta' },
-      { label: 'Protocolos de IATF', path: '/controller/protocolos-iatf' },
       { label: 'Manejo Sanitário', path: '/controller/manejo-sanitario' },
+    ],
+  },
+  {
+    // IATF tem grupo próprio: protocolos, lotes de protocolo e relatório de taxa de prenhez (abas de /controller/protocolos-iatf).
+    // O Diagnóstico em Grupo continua em Controle Individual (serve à reprodução em geral e, no modo "Lote de protocolo", ao IATF).
+    // Liberado por fazenda pela flag acesso_iatf, toggle em Admin > Fazendas (ver visibleMenuStructure).
+    label: 'IATF',
+    section: 'operacao',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+      </svg>
+    ),
+    items: [
+      { label: 'Protocolos de IATF', path: '/controller/protocolos-iatf' },
     ],
   },
   {
@@ -349,6 +364,10 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
     if (!menuControleIndividualVisivel(fazenda?.id)) {
       structure = structure.filter((menu) => menu.label !== 'Controle Individual')
     }
+    // IATF: liberado por fazenda pela flag fazendas.acesso_iatf (toggle em Admin > Fazendas)
+    if (!fazenda?.acesso_iatf) {
+      structure = structure.filter((menu) => menu.label !== 'IATF')
+    }
     if (!fazenda?.acesso_confinamento) {
       structure = structure.filter((menu) => menu.label !== 'Confinamento e TIP')
     }
@@ -357,7 +376,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
       structure = [...structure, menuItemAssistenteIA]
     }
     return structure
-  }, [fazenda?.id, fazenda?.acesso_confinamento, iaAtiva])
+  }, [fazenda?.id, fazenda?.acesso_confinamento, fazenda?.acesso_iatf, iaAtiva])
 
   // Lista achatada de destinos para a command palette.
   const commandItems: CommandItem[] = useMemo(() => {

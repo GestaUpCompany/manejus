@@ -1,5 +1,21 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Flag "Acesso ao IATF" por fazenda e grupo IATF nas cadernetas (2026-10-20)
+
+- A flag vale **só para o IATF**: coluna `fazendas.acesso_iatf boolean NOT NULL DEFAULT false` (criada como `acesso_controle_individual` em `20261020200000` e renomeada em `20261020210000_fazendas_acesso_iatf.sql`, com rollbacks em `supabase/rollbacks/`; `get_fazenda_por_acesso` devolve a coluna). Só a fazenda de testes está ligada; as outras 58 ficam `false`.
+- Admin: checkbox "Acesso ao IATF" em `NovaFazenda.tsx` e `EditarFazenda.tsx`, selo em `DetalhesFazenda.tsx` e o campo em `fazendasService`, no molde do confinamento.
+- O que a flag libera: o grupo **IATF** do sidebar (`ControllerLayout`), o grupo **IATF** (só Protocolo IATF) em Cadernetas e no Dashboard, a caderneta no RBAC (`CadastrosAuxiliares`), o modo "Lote de protocolo" do Diagnóstico em Grupo e a rota `/controller/protocolos-iatf` (novo `IatfRoute`, molde do `ConfinamentoRoute`; sem a flag volta ao dashboard). Hook `useAcessosFazenda`. `protocolo-iatf` ganhou imagem, título e descrição em `types/images.ts` (o card não aparecia em Cadernetas).
+- **Não mudou**: o menu "Controle Individual" do sidebar (Indivíduos, Identificar Lote, Conciliação, Reprodução, Diagnóstico em Grupo, Estações de Monta, Manejo Sanitário), o Calendário Sanitário e as cadernetas Reprodução, Sanidade e Manejo de Curral seguem só na fazenda de testes pela trava por ID (`FAZENDA_DE_TESTES_ID`, `CADERNETAS_EM_TESTE`, `menuControleIndividualVisivel`). As 3 cadernetas ficam num grupo próprio "Controle Individual" nas Cadernetas (antes estavam em Gado & Pastagens, escondidas).
+- RBAC da fazenda de testes: as 4 cadernetas foram acrescentadas à `cadernetas_permitidas` dos 9 funcionários que têm lista (sem isso o PWA com controle de acesso não mostrava os grupos).
+- Testado pela interface (controller da fazenda de testes, localhost): com a flag, sidebar com "Controle Individual" e "IATF", e Cadernetas com os dois grupos; sem a flag, o IATF some (menu, grupo e rota direta volta ao dashboard) e o Controle Individual continua. Não testado: as telas do admin (Nova/Editar/Detalhes Fazenda) pela interface, que exigem login de admin (só typecheck), e o botão do toggle gravando.
+
+## Grupo "IATF" próprio no sidebar do painel (2026-10-20)
+
+- "Protocolos de IATF" saiu de Controle Individual e foi para um grupo novo, **IATF** (`ControllerLayout.tsx`). A página `/controller/protocolos-iatf` concentra as três abas do IATF (Lotes de protocolo, Protocolos e Taxa de prenhez), então o grupo tem um item só.
+- **Ficou em Controle Individual**: Indivíduos, Identificar Lote, Conciliação, Reprodução, Estações de Monta e Manejo Sanitário (reprodução e sanidade em geral) e o **Diagnóstico em Grupo**, que é anterior ao IATF e atende qualquer lote da fazenda; o modo "Lote de protocolo de IATF" dele é uma opção dentro da tela, não uma tela de IATF.
+- O grupo IATF passou depois para a flag por fazenda `acesso_iatf` (entrada acima); o Controle Individual segue só na fazenda de testes.
+- Testado pela interface (fazenda de testes): grupo IATF aparece com "Protocolos de IATF", abre a página e fica ativo na rota; Controle Individual segue com os outros sete itens.
+
 ## Tela Estoque → Cantina no painel (2026-10-20)
 
 - Nova página `/controller/estoque-cantina` (menu Estoque → Cantina), antes o saldo da cantina só aparecia no relatório público. Mostra KPIs (itens controlados, em alerta, valor em estoque, consumo do mês), cards por item com saldo, custo médio, mínimo e valor (selos de saldo negativo, abaixo do mínimo, sem custo e sem controle), busca e filtro por classificação, entrada manual, ajuste de inventário e histórico por item com filtro de período e saldo após cada lançamento.

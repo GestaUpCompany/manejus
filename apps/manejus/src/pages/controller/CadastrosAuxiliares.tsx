@@ -7,6 +7,7 @@ import { updateFazenda } from '@gestaup/shared'
 import type { ExpedienteDias, ExpedienteDia } from '@gestaup/shared'
 import { hashPin } from '@gestaup/shared'
 import { CADERNETAS, cadernetasDaFazenda } from '../../utils/cadernetas'
+import { useAcessosFazenda } from '../../hooks/useAcessosFazenda'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import type * as XLSXType from 'xlsx'
 
@@ -444,7 +445,8 @@ export function CadastrosAuxiliares() {
   const [mostrarApenasComAcesso, setMostrarApenasComAcesso] = useState(false)
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   // Cadernetas em teste (manejo de curral, sanidade) só entram nas permissões da fazenda de testes
-  const cadernetasDisponiveis = useMemo(() => cadernetasDaFazenda(fazendaId), [fazendaId])
+  const { acessoIatf } = useAcessosFazenda()
+  const cadernetasDisponiveis = useMemo(() => cadernetasDaFazenda(fazendaId, acessoIatf), [fazendaId, acessoIatf])
   const [controleAcessoHabilitado, setControleAcessoHabilitado] = useState(false)
   const [controleAcessoLoading, setControleAcessoLoading] = useState(false)
   const [expedienteHabilitado, setExpedienteHabilitado] = useState(false)

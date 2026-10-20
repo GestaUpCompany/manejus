@@ -7,6 +7,7 @@ import { SuperAdminLayout } from './components/layout/SuperAdminLayout'
 import { AdminRoute } from './components/routes/AdminRoute'
 import { ControllerRoute } from './components/routes/ControllerRoute'
 import { ConfinamentoRoute } from './components/routes/ConfinamentoRoute'
+import { IatfRoute } from './components/routes/IatfRoute'
 import { SuperAdminRoute } from './components/routes/SuperAdminRoute'
 import { PageSkeleton } from '@gestaup/ui'
 
@@ -1462,9 +1463,11 @@ function App() {
             path="/controller/protocolos-iatf"
             element={
               <ControllerRoute>
-                <ControllerLayout>
-                  <ProtocolosIatf />
-                </ControllerLayout>
+                <IatfRoute>
+                  <ControllerLayout>
+                    <ProtocolosIatf />
+                  </ControllerLayout>
+                </IatfRoute>
               </ControllerRoute>
             }
           />

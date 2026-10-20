@@ -26,6 +26,7 @@ export function NovaFazenda() {
     email: '',
     ativo: true,
     acesso_confinamento: false,
+    acesso_iatf: false,
     controller_email: '',
     criar_usuario_controller: true,
   })
@@ -95,6 +96,7 @@ export function NovaFazenda() {
       logo_url: logoUrl || undefined,
       ativo: formData.ativo,
       acesso_confinamento: formData.acesso_confinamento,
+      acesso_iatf: formData.acesso_iatf,
       controller_email: controllerEmail,
       controller_nome: `Controller ${formData.nome}`,
       grupo_id: selectedGrupo || undefined,
@@ -338,6 +340,19 @@ export function NovaFazenda() {
                 <div>
                   <span className="block text-sm font-medium text-gray-800">Acesso ao Confinamento</span>
                   <span className="block text-xs text-gray-500">Exibe o menu e telas de confinamento no controller</span>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="acesso_iatf"
+                  checked={formData.acesso_iatf}
+                  onChange={(e) => setFormData(prev => ({ ...prev, acesso_iatf: e.target.checked }))}
+                  className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                <div>
+                  <span className="block text-sm font-medium text-gray-800">Acesso ao IATF</span>
+                  <span className="block text-xs text-gray-500">Libera protocolos de IATF (menu, tarefas e caderneta Protocolo IATF) no controller e no aplicativo</span>
                 </div>
               </label>
             </div>
