@@ -23,7 +23,7 @@ import type { ParametrosRelatorioRodeio } from '../../utils/relatorioRodeioPDFPu
 import type { ParametrosRelatorioPastagens } from '../../utils/relatorioPastagensPDFPuppeteer'
 import { calcularResumoRodeio, type RegistroRodeio } from '../relatorioRodeio/agregacao'
 import { calcularResumoPastagens, normalizarNomesPasto, type OcupacaoPasto, type PastoInfo, type RegistroPastagem } from '../relatorioPastagens/agregacao'
-import type { DadosRelatorioEstoque } from '../relatorioEstoque/agregacao'
+import { classificarABC, type ClasseABC, type DadosRelatorioEstoque } from '../relatorioEstoque/agregacao'
 import { DADOS_ESTOQUE_COMBUSTIVEL_VAZIO, type DadosRelatorioEstoqueCombustivel } from '../relatorioEstoqueCombustivel/agregacao'
 import type { TipoRelatorioGeral } from './catalogo'
 import type { DadosPDFBoletimRebanho } from './boletimRebanho'
@@ -64,7 +64,7 @@ export type PayloadRelatorioGeral =
   | { tipo: 'morte'; dados: ParametrosRelatorioMorte }
   | { tipo: 'rodeio'; dados: ParametrosRelatorioRodeio }
   | { tipo: 'pastagens'; dados: ParametrosRelatorioPastagens }
-  | { tipo: 'estoque'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null } & DadosRelatorioEstoque }
+  | { tipo: 'estoque'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC>; movimentacoes_total: number } & DadosRelatorioEstoque }
   | { tipo: 'estoque_combustivel'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null } & DadosRelatorioEstoqueCombustivel }
   | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
 
@@ -398,10 +398,14 @@ async function carregarPastagens(
   }
 }
 
-// Estoque é snapshot: ignora o período do infográfico e devolve a posição
-// atual. A RPC _fazenda sempre cobre insumos + formulações (sem seletor de
-// escopo, que só existe no link público). dataInicio/dataFim entram no
-// payload apenas para a página "sem registros" do composer exibir o período.
+// Limite do extrato no Infográfico: o /api/pdf/geral aceita 4 MB no total, então
+// o extrato vai truncado (o PDF avisa e o link público tem o extrato completo).
+const MAX_MOVIMENTACOES_ESTOQUE_GERAL = 250
+
+// Estoque usa o período do infográfico: saldo inicial, entradas, saídas e saldo
+// final por item. A RPC _fazenda sempre cobre insumos + formulações (sem seletor
+// de escopo, que só existe no link público). A curva ABC vai calculada, pois o
+// endpoint de PDF não importa as regras do front.
 async function carregarEstoque(
   fazenda: FazendaRelatorio,
   dataInicio: string,
@@ -409,9 +413,12 @@ async function carregarEstoque(
 ): Promise<PayloadRelatorioGeral> {
   const { data, error } = await supabase.rpc('get_dados_relatorio_estoque_fazenda', {
     p_fazenda_id: fazenda.id,
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
   })
   if (error) throw error
   const dados = (data?.dados ?? { escopo: 'todos', itens: [], totais: null }) as DadosRelatorioEstoque
+  const movimentacoes = dados.movimentacoes ?? []
   return {
     tipo: 'estoque',
     dados: {
@@ -420,6 +427,9 @@ async function carregarEstoque(
       fazendaNome: fazenda.nome,
       fazendaLogoUrl: fazenda.logoUrl,
       ...dados,
+      abc: Object.fromEntries(classificarABC(dados.itens ?? [])),
+      movimentacoes: movimentacoes.slice(0, MAX_MOVIMENTACOES_ESTOQUE_GERAL),
+      movimentacoes_total: movimentacoes.length,
     },
   }
 }

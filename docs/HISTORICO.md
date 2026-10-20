@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Estoque de Insumos: período, movimentação, cobertura e qualidade dos dados (2026-10-20)
+
+- Mesmo tipo `estoque` (links e card atuais continuam). Antes era só um snapshot (saldo atual × custo) e no Infográfico Mensal ignorava o período. Agora tem período opcional: saldo inicial, entradas (entrada + produção), saídas (baixa + consumo), ajustes, saldo final, extrato, cobertura em dias, quanto falta para o mínimo, itens sem custo, saldo negativo com quantidade e valor, e curva ABC por grupo (A até 80% do valor, B até 95%).
+- Migration `20261020180000_relatorio_estoque_periodo.sql` (rollback em `supabase/rollbacks/`): `get_dados_relatorio_estoque(p_token, p_data_inicio, p_data_fim)` e `..._fazenda(p_fazenda_id, datas)` (DROP das assinaturas antigas). Sem datas devolve a posição atual (compatível com links antigos; `tem_periodo = false`). Com datas, reconstrói o saldo pelo ledger `movimentacoes_estoque_suplementos` por `(data, created_at)`: entrada/produção somam, baixa/consumo subtraem, ajuste define o saldo absoluto (`quantidade` do ajuste é o saldo, conferido no banco). Fornecedor e NF vêm de `entrada_insumos_itens` → `registros_entrada_insumos`.
+- `divergencia_l` compara o saldo reconstruído com `estoque_atual` quando o período termina hoje. Na fazenda de testes 21 de 22 itens bateram; o "TESTE Ajuste Saldo" diverge em 10.000 kg (ajuste lançado depois com data anterior) e aparece como aviso.
+- Front: `features/relatorioEstoque/agregacao.ts` (ABC, filtros, ordenação, totais por grupo; testes novos em `agregacao.test.ts`), página pública com período, KPIs por aba, busca, filtros, ordenação e extrato, PDF (`api/pdf/estoque.js`) com resumo e atenção, posição em fluxo contínuo, curva ABC e extrato, e loader do Infográfico passando o período (extrato truncado em 250 lançamentos).
+- Testado na fazenda de testes: RPC (com e sem datas), página pública e PDF de 6 páginas conferidos. Não testado pela interface: seção de estoque no Infográfico Mensal, links com escopo `insumos`/`formulacoes`, e o PDF depois do último ajuste de ordem da lista de atenção (conferido só por renderização do HTML com dados de exemplo).
+
 ## Relatório de Estoque de Combustível (2026-10-20)
 
 - Novo relatório `estoque_combustivel` (link público `/r/:token`, PDF avulso e seção do Infográfico Mensal). Por tanque e período: saldo inicial, entradas, baixas, ajustes, saldo final, % da capacidade, custo médio, valor em estoque, mais o extrato das movimentações com o saldo após cada lançamento.
