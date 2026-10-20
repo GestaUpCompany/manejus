@@ -55,7 +55,7 @@ Protocolos editáveis por fazenda, lote de protocolo com tarefas de data calcula
 
 **Não testado (por limite):** gatilho de fazenda cruzada (exigiria outra fazenda, proibido) e aparelho físico.
 
-**Fica de fora (próximos passos):** ~~relatório de taxa de prenhez~~, ~~alertas dos passos~~ e ~~diagnóstico ligado ao lote~~ (feitos acima); criar o lote pelo PWA; imagem definitiva da caderneta (`protocolo-iatf.png` é cópia). Aviso do `get_advisors`: `copiar_modelo_protocolo_iatf` é SECURITY DEFINER chamável por `authenticated` (mesmo padrão das outras RPCs, confere o acesso por dentro).
+**Fica de fora (próximos passos):** ~~relatório de taxa de prenhez~~, ~~alertas dos passos~~, ~~diagnóstico ligado ao lote~~ e ~~criar o lote pelo PWA~~ (feitos; ver o HISTORICO do PWA); imagem definitiva da caderneta (`protocolo-iatf.png` é cópia). Aviso do `get_advisors`: `copiar_modelo_protocolo_iatf` é SECURITY DEFINER chamável por `authenticated` (mesmo padrão das outras RPCs, confere o acesso por dentro).
 
 ## Relatório de Consumo: KPI Consumo MN (kg/cab/dia) (2026-10-19)
 
