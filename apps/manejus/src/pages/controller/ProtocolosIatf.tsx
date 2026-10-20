@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useAuth, getFazendaIdForUser, formatDate, toFarmDateOnly, useLotes } from '@gestaup/shared'
+import { useAuth, getFazendaIdForUser, getFazendaNome, formatDate, toFarmDateOnly, useLotes } from '@gestaup/shared'
 import { Button, Card, ConfirmModal, EmptyState, Input, Modal, PageSkeleton, Select, useToast } from '@gestaup/ui'
 import {
   useAlternarProtocoloIatf,
@@ -18,6 +18,7 @@ import {
   type TarefaLoteIatf,
 } from '../../hooks/useProtocolosIatf'
 import { useFemeasDoLote } from '../../hooks/useReproducao'
+import { RelatorioIatf } from './RelatorioIatf'
 import {
   CLASSE_SITUACAO_TAREFA,
   ROTULO_SITUACAO_TAREFA,
@@ -55,7 +56,8 @@ export function ProtocolosIatf() {
   const toast = useToast()
   const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
   const [carregandoFazenda, setCarregandoFazenda] = useState(true)
-  const [aba, setAba] = useState<'lotes' | 'protocolos'>('lotes')
+  const [fazendaNome, setFazendaNome] = useState<string | null>(null)
+  const [aba, setAba] = useState<'lotes' | 'protocolos' | 'taxa'>('lotes')
   const hoje = toFarmDateOnly(new Date().toISOString()) ?? new Date().toISOString().slice(0, 10)
 
   const protocolos = useProtocolosIatf(fazendaId)
@@ -64,7 +66,10 @@ export function ProtocolosIatf() {
   useEffect(() => {
     if (!user) return
     getFazendaIdForUser(user.id)
-      .then((id) => setFazendaId(id ?? undefined))
+      .then((id) => {
+        setFazendaId(id ?? undefined)
+        if (id) getFazendaNome(id).then(setFazendaNome)
+      })
       .finally(() => setCarregandoFazenda(false))
   }, [user])
 
@@ -87,12 +92,17 @@ export function ProtocolosIatf() {
         <Button variant={aba === 'protocolos' ? 'primary' : 'secondary'} onClick={() => setAba('protocolos')}>
           Protocolos
         </Button>
+        <Button variant={aba === 'taxa' ? 'primary' : 'secondary'} onClick={() => setAba('taxa')}>
+          Taxa de prenhez
+        </Button>
       </div>
 
       {aba === 'lotes' ? (
         <AbaLotes fazendaId={fazendaId} lotes={lotes.data ?? []} protocolos={protocolos.data ?? []} hoje={hoje} toast={toast} />
-      ) : (
+      ) : aba === 'protocolos' ? (
         <AbaProtocolos fazendaId={fazendaId} protocolos={protocolos.data ?? []} toast={toast} />
+      ) : (
+        <RelatorioIatf fazendaId={fazendaId} fazendaNome={fazendaNome} />
       )}
     </div>
   )

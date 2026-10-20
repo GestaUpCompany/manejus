@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@gestaup/supabase'
 import type { FormProtocoloIatf, TipoPassoIatf } from '../utils/protocoloIatf'
+import type { EventoDaFemeaIatf, InseminacaoIatf } from '../utils/relatorioIatf'
 
 export interface PassoProtocolo {
   id: string
@@ -270,5 +271,65 @@ export function useCancelarLoteIatf() {
       if (error) throw new Error(error.message)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: CHAVE }),
+  })
+}
+
+/**
+ * Inseminações ligadas a lotes de protocolo e os eventos das mesmas fêmeas (diagnósticos e coberturas), para a taxa de
+ * prenhez. Só leitura. As fêmeas vão em blocos para não estourar o tamanho da URL.
+ */
+export function useRelatorioIatf(fazendaId: string | undefined) {
+  return useQuery({
+    queryKey: [...CHAVE, 'relatorio', fazendaId],
+    enabled: !!fazendaId,
+    queryFn: async (): Promise<{ inseminacoes: InseminacaoIatf[]; eventos: EventoDaFemeaIatf[] }> => {
+      const inseminacoes: InseminacaoIatf[] = []
+      for (let inicio = 0; ; inicio += 1000) {
+        const { data, error } = await supabase
+          .from('eventos_reprodutivos')
+          .select('id, individuo_id, data, touro_nome, semen_partida, tecnico, protocolo_lote_id, lote:lotes_protocolo_iatf(nome, protocolo:protocolos_iatf(nome))')
+          .eq('fazenda_id', fazendaId!)
+          .eq('tipo', 'Inseminação')
+          .not('protocolo_lote_id', 'is', null)
+          .is('deleted_at', null)
+          .order('id', { ascending: true })
+          .range(inicio, inicio + 999)
+        if (error) throw error
+        const pagina = (data ?? []) as unknown as (Omit<InseminacaoIatf, 'lote_nome' | 'protocolo_nome'> & {
+          lote: { nome: string; protocolo: { nome: string } | null } | null
+        })[]
+        for (const r of pagina) {
+          inseminacoes.push({
+            id: r.id,
+            individuo_id: r.individuo_id,
+            data: r.data,
+            touro_nome: r.touro_nome,
+            semen_partida: r.semen_partida,
+            tecnico: r.tecnico,
+            protocolo_lote_id: r.protocolo_lote_id,
+            lote_nome: r.lote?.nome ?? 'Lote removido',
+            protocolo_nome: r.lote?.protocolo?.nome ?? 'Protocolo removido',
+          })
+        }
+        if (pagina.length < 1000) break
+      }
+
+      const femeas = [...new Set(inseminacoes.map((i) => i.individuo_id))]
+      const eventos: EventoDaFemeaIatf[] = []
+      for (let i = 0; i < femeas.length; i += 150) {
+        const bloco = femeas.slice(i, i + 150)
+        const { data, error } = await supabase
+          .from('eventos_reprodutivos')
+          .select('id, individuo_id, tipo, data, created_at, resultado')
+          .eq('fazenda_id', fazendaId!)
+          .in('individuo_id', bloco)
+          .in('tipo', ['Cobertura', 'Inseminação', 'Diagnóstico de gestação'])
+          .is('deleted_at', null)
+          .limit(5000)
+        if (error) throw error
+        eventos.push(...((data ?? []) as unknown as EventoDaFemeaIatf[]))
+      }
+      return { inseminacoes, eventos }
+    },
   })
 }
