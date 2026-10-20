@@ -340,6 +340,8 @@ function CartaoLote({ fazendaId, lote, hoje, toast }: { fazendaId: string | unde
 
   const ativas = lote.femeas.filter((f) => f.status === 'Ativa').length
   const aberto = lote.status === 'Em andamento'
+  // Lote concluído ainda pode ter um passo desfeito (reabre o lote); só o cancelado fica travado
+  const podeDesfazer = lote.status !== 'Cancelado'
 
   const abrirAcao = (t: TarefaLoteIatf) => {
     setTarefaAcao(t)
@@ -428,7 +430,7 @@ function CartaoLote({ fazendaId, lote, hoje, toast }: { fazendaId: string | unde
                         {t.tipo === 'Inseminacao' ? 'Registrar IA' : 'Marcar feito'}
                       </button>
                     )}
-                    {aberto && t.feita_em && (
+                    {podeDesfazer && t.feita_em && (
                       <button className="text-content-muted hover:underline" onClick={() => desmarcar(t)}>
                         Desfazer
                       </button>
