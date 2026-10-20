@@ -9,6 +9,7 @@ import {
   type ResultadoIdentificacao,
 } from '../../hooks/useIdentificarLote'
 import { parseListaAnimais } from '../../utils/listaAnimaisIdentificacao'
+import { planilhaAnimaisParaTexto } from '../../utils/planilhaAnimaisParaTexto'
 
 const campo =
   'w-full px-3 py-2 bg-surface-1 text-content-strong placeholder-content-faint border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all'
@@ -79,7 +80,12 @@ export function IdentificarLote() {
 
   const aoCarregarArquivo = async (arquivo: File | undefined) => {
     if (!arquivo) return
-    setTexto(await arquivo.text())
+    try {
+      const planilha = /\.xlsx?$/i.test(arquivo.name)
+      setTexto(planilha ? await planilhaAnimaisParaTexto(await arquivo.arrayBuffer()) : await arquivo.text())
+    } catch {
+      toast.error('Não foi possível ler o arquivo. Confira se é uma planilha válida.')
+    }
     limparResultado()
   }
 
@@ -162,7 +168,7 @@ export function IdentificarLote() {
             <label className="block text-sm font-medium text-content">Animais (um por linha)</label>
             <input
               type="file"
-              accept=".csv,.txt,text/csv,text/plain"
+              accept=".csv,.txt,.xlsx,.xls,text/csv,text/plain"
               onChange={(e) => aoCarregarArquivo(e.target.files?.[0])}
               className="text-sm text-content-muted"
             />
@@ -177,7 +183,7 @@ export function IdentificarLote() {
             placeholder={'Só o brinco, um por linha:\n1001\n1002\n\nou brinco;chip;peso (kg):\n1003;982000123456789;310,5\n\nou com cabeçalho: brinco;chip;manejo;sexo;raca;peso;nascimento;sisbov'}
             className={`${campo} font-mono text-sm`}
           />
-          <p className="text-xs text-content-muted mt-1">{animais.length} linha(s) lida(s). O sexo vem da categoria quando ela é de um sexo só.</p>
+          <p className="text-xs text-content-muted mt-1">{animais.length} linha(s) lida(s). Planilha XLSX: só a 1ª aba, cabeçalho na 1ª linha. O sexo vem da categoria quando ela é de um sexo só.</p>
         </div>
 
         <div className="flex flex-wrap gap-3">
