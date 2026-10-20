@@ -14,6 +14,7 @@ const routeImporters: Record<string, () => Promise<unknown>> = {
   '/controller/reproducao': () => import('../pages/controller/ReproducaoFazenda'),
   '/controller/reproducao/diagnostico-em-grupo': () => import('../pages/controller/DiagnosticoEmGrupo'),
   '/controller/estacoes-monta': () => import('../pages/controller/EstacoesMonta'),
+  '/controller/protocolos-iatf': () => import('../pages/controller/ProtocolosIatf'),
   '/controller/manejo-sanitario': () => import('../pages/controller/ManejoSanitario'),
   '/controller/cadastros-auxiliares': () => import('../pages/controller/CadastrosAuxiliares'),
   '/controller/faixas-categorias': () => import('../pages/controller/FaixasCategorias'),

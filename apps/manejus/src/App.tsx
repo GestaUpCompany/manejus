@@ -148,6 +148,7 @@ const Individuos = laz(() => import('./pages/controller/Individuos'), 'Individuo
 const IndividuoNovo = laz(() => import('./pages/controller/IndividuoNovo'), 'IndividuoNovo')
 const ConciliacaoIndividuos = laz(() => import('./pages/controller/ConciliacaoIndividuos'), 'ConciliacaoIndividuos')
 const EstacoesMonta = laz(() => import('./pages/controller/EstacoesMonta'), 'EstacoesMonta')
+const ProtocolosIatf = laz(() => import('./pages/controller/ProtocolosIatf'), 'ProtocolosIatf')
 const ManejoSanitario = laz(() => import('./pages/controller/ManejoSanitario'), 'ManejoSanitario')
 const ReproducaoFazenda = laz(() => import('./pages/controller/ReproducaoFazenda'), 'ReproducaoFazenda')
 const DiagnosticoEmGrupo = laz(() => import('./pages/controller/DiagnosticoEmGrupo'), 'DiagnosticoEmGrupo')
@@ -1442,6 +1443,16 @@ function App() {
               <ControllerRoute>
                 <ControllerLayout>
                   <EstacoesMonta />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/protocolos-iatf"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <ProtocolosIatf />
                 </ControllerLayout>
               </ControllerRoute>
             }

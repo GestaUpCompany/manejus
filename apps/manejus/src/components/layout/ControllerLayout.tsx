@@ -78,6 +78,7 @@ const menuStructure: MenuItem[] = [
       { label: 'Reprodução', path: '/controller/reproducao' },
       { label: 'Diagnóstico em Grupo', path: '/controller/reproducao/diagnostico-em-grupo' },
       { label: 'Estações de Monta', path: '/controller/estacoes-monta' },
+      { label: 'Protocolos de IATF', path: '/controller/protocolos-iatf' },
       { label: 'Manejo Sanitário', path: '/controller/manejo-sanitario' },
     ],
   },
