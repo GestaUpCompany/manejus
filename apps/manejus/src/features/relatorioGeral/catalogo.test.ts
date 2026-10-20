@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { moverRelatorio, RELATORIOS_GERAIS } from './catalogo'
 
 describe('catálogo do relatório geral', () => {
-  it('mantém os oito relatórios na ordem padrão', () => {
+  it('mantém os nove relatórios na ordem padrão', () => {
     expect(RELATORIOS_GERAIS.map((item) => item.id)).toEqual([
       'abastecimento',
       'consumo',
@@ -11,6 +11,7 @@ describe('catálogo do relatório geral', () => {
       'rodeio',
       'pastagens',
       'estoque',
+      'estoque_combustivel',
       'boletim_rebanho',
     ])
   })
@@ -25,6 +26,7 @@ describe('catálogo do relatório geral', () => {
       'rodeio',
       'pastagens',
       'estoque',
+      'estoque_combustivel',
       'boletim_rebanho',
     ])
     expect(moverRelatorio(ids, 'abastecimento', -1)).toBe(ids)

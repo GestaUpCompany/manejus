@@ -87,6 +87,12 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'Posição atual de insumos e formulações: saldo, custo médio e valor em estoque.',
     icone: '📦',
   },
+  {
+    tipo: 'estoque_combustivel',
+    titulo: 'Estoque de Combustível',
+    descricao: 'Posição por tanque (saldo inicial, entradas, baixas e saldo final), valor em estoque e extrato de movimentações por período.',
+    icone: '🛢️',
+  },
 ]
 
 const ESCOPOS_ESTOQUE = [

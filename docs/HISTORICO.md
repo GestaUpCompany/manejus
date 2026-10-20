@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Estoque de Combustível (2026-10-20)
+
+- Novo relatório `estoque_combustivel` (link público `/r/:token`, PDF avulso e seção do Infográfico Mensal). Por tanque e período: saldo inicial, entradas, baixas, ajustes, saldo final, % da capacidade, custo médio, valor em estoque, mais o extrato das movimentações com o saldo após cada lançamento.
+- Migration `20261020170000_relatorio_estoque_combustivel.sql` (rollback em `supabase/rollbacks/`): RPCs `get_dados_relatorio_estoque_combustivel(p_token, p_data_inicio, p_data_fim)` (anon) e `..._fazenda(p_fazenda_id, datas)` (authenticated, token temporário). Saldo reconstruído por `(data, created_at)`: entrada soma, baixa subtrai, ajuste define o saldo absoluto. Sem período, tudo conta como movimento do período (saldo inicial 0).
+- Valor em estoque = `max(0, saldo final) × custo médio ATUAL` do tanque (aproximação em períodos passados). O replay do trigger ordena por `created_at`, não por `data`; com datas retroativas o saldo final do relatório pode divergir de `saldo_atual_l` (na fazenda de testes bateu nos 4 tanques).
+- Código: `features/relatorioEstoqueCombustivel/agregacao.ts` (+ teste), `pages/public/RelatorioEstoqueCombustivelPublico.tsx`, `utils/relatorioEstoqueCombustivelPDFPuppeteer.ts`, `api/pdf/estoqueCombustivel.js`, registro em `RelatorioPublico.tsx`, `Relatorios.tsx`, `vite.config.ts`, `features/relatorioGeral/{catalogo,loaders}.ts` e `api/pdf/_shared/reportRegistry.js`.
+- Testado na fazenda de testes: link gerado pelo painel, página pública e PDF (2 páginas) conferidos. Não testado: seção no Infográfico Mensal pela interface, período sem movimentações e muitos tanques/lançamentos (paginação).
+
 ## Identificar lote: importação XLSX (2026-10-20)
 
 - `IdentificarLote.tsx` aceita `.xlsx`/`.xls` além de CSV/TXT. `utils/planilhaAnimaisParaTexto.ts` converte a 1ª aba (cabeçalho na 1ª linha) no texto `;` lido por `parseListaAnimais`, que segue como único parser e mantém a validação da RPC `identificar_animais_lote`. Valores crus: chip de 15 dígitos não vira notação científica, decimal com vírgula, data AAAA-MM-DD. Sem migration; teste em `planilhaAnimaisParaTexto.test.ts`. Não testado pela interface com arquivo real.

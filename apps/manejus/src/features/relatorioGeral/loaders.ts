@@ -24,6 +24,7 @@ import type { ParametrosRelatorioPastagens } from '../../utils/relatorioPastagen
 import { calcularResumoRodeio, type RegistroRodeio } from '../relatorioRodeio/agregacao'
 import { calcularResumoPastagens, normalizarNomesPasto, type OcupacaoPasto, type PastoInfo, type RegistroPastagem } from '../relatorioPastagens/agregacao'
 import type { DadosRelatorioEstoque } from '../relatorioEstoque/agregacao'
+import { DADOS_ESTOQUE_COMBUSTIVEL_VAZIO, type DadosRelatorioEstoqueCombustivel } from '../relatorioEstoqueCombustivel/agregacao'
 import type { TipoRelatorioGeral } from './catalogo'
 import type { DadosPDFBoletimRebanho } from './boletimRebanho'
 
@@ -64,6 +65,7 @@ export type PayloadRelatorioGeral =
   | { tipo: 'rodeio'; dados: ParametrosRelatorioRodeio }
   | { tipo: 'pastagens'; dados: ParametrosRelatorioPastagens }
   | { tipo: 'estoque'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null } & DadosRelatorioEstoque }
+  | { tipo: 'estoque_combustivel'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null } & DadosRelatorioEstoqueCombustivel }
   | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
 
 const PRECOS_KG_DEFAULT: Record<string, number> = {
@@ -422,6 +424,32 @@ async function carregarEstoque(
   }
 }
 
+// Estoque de combustível usa o período do infográfico: saldo inicial/final e
+// extrato dos lançamentos entre dataInicio e dataFim (inclusivos).
+async function carregarEstoqueCombustivel(
+  fazenda: FazendaRelatorio,
+  dataInicio: string,
+  dataFim: string,
+): Promise<PayloadRelatorioGeral> {
+  const { data, error } = await supabase.rpc('get_dados_relatorio_estoque_combustivel_fazenda', {
+    p_fazenda_id: fazenda.id,
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
+  })
+  if (error) throw error
+  const dados = (data?.dados ?? DADOS_ESTOQUE_COMBUSTIVEL_VAZIO) as DadosRelatorioEstoqueCombustivel
+  return {
+    tipo: 'estoque_combustivel',
+    dados: {
+      dataInicio,
+      dataFim,
+      fazendaNome: fazenda.nome,
+      fazendaLogoUrl: fazenda.logoUrl,
+      ...dados,
+    },
+  }
+}
+
 export interface OpcoesCarregamentoRelatorios {
   boletim?: DadosPDFBoletimRebanho
 }
@@ -451,6 +479,7 @@ const LOADERS: Record<TipoRelatorioGeral, (fazenda: FazendaRelatorio, dataInicio
   rodeio: carregarRodeio,
   pastagens: carregarPastagens,
   estoque: carregarEstoque,
+  estoque_combustivel: carregarEstoqueCombustivel,
   boletim_rebanho: carregarBoletim,
 }
 
