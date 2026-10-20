@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, getFazendaIdForUser, formatDate, toFarmDateOnly, useLotes } from '@gestaup/shared'
 import { Button, Card, EmptyState, Input, PageSkeleton, Select, useToast } from '@gestaup/ui'
-import { useDiagnosticoEmGrupo, useFemeasDoLote, type FemeaDoLote } from '../../hooks/useReproducao'
+import { useDiagnosticoEmGrupo, useFemeasDoLote, useFemeasDoLoteProtocolo, type FemeaDoLote } from '../../hooks/useReproducao'
+import { useLotesProtocoloIatf } from '../../hooks/useProtocolosIatf'
 import {
   CLASSE_STATUS_REPRODUTIVO,
   validarDiagnosticoEmGrupo,
@@ -28,13 +29,19 @@ export function DiagnosticoEmGrupo() {
   const [fazendaId, setFazendaId] = useState<string | undefined>(undefined)
   const [carregando, setCarregando] = useState(true)
   const { data: lotes = [] } = useLotes(fazendaId)
+  const [origem, setOrigem] = useState<'fazenda' | 'protocolo'>('fazenda')
   const [loteId, setLoteId] = useState('')
+  const [loteProtocoloId, setLoteProtocoloId] = useState('')
+  const lotesProtocolo = useLotesProtocoloIatf(fazendaId)
   const [somenteCobertas, setSomenteCobertas] = useState(true)
   const [comuns, setComuns] = useState<DadosComunsDiagnostico>({ data: '', metodo: '', observacao: '' })
   const [estado, setEstado] = useState<Record<string, EstadoLinha>>({})
   const [erros, setErros] = useState<{ gerais: string[]; porFemea: Record<string, string> }>({ gerais: [], porFemea: {} })
 
-  const femeas = useFemeasDoLote(fazendaId, loteId || undefined)
+  const femeasFazenda = useFemeasDoLote(fazendaId, origem === 'fazenda' ? loteId || undefined : undefined)
+  const femeasProtocolo = useFemeasDoLoteProtocolo(fazendaId, origem === 'protocolo' ? loteProtocoloId || undefined : undefined)
+  const femeas = origem === 'fazenda' ? femeasFazenda : femeasProtocolo
+  const selecionado = origem === 'fazenda' ? loteId : loteProtocoloId
   const gravar = useDiagnosticoEmGrupo(fazendaId)
 
   useEffect(() => {
@@ -82,7 +89,7 @@ export function DiagnosticoEmGrupo() {
     setErros(v)
     if (v.gerais.length > 0 || Object.keys(v.porFemea).length > 0) return
     try {
-      const n = await gravar.mutateAsync({ linhas, comuns })
+      const n = await gravar.mutateAsync({ linhas, comuns, protocoloLoteId: origem === 'protocolo' ? loteProtocoloId : null })
       toast.success(`${n} diagnóstico(s) registrado(s).`)
       setEstado({})
     } catch (error) {
@@ -108,17 +115,48 @@ export function DiagnosticoEmGrupo() {
       </div>
 
       <Card className="p-4 space-y-4" disableHover>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
           <Select
-            label="Lote"
-            value={loteId}
+            label="Fêmeas de"
+            value={origem}
             onChange={(v) => {
-              setLoteId(v)
+              setOrigem(v as 'fazenda' | 'protocolo')
               setEstado({})
               setErros({ gerais: [], porFemea: {} })
             }}
-            options={[{ value: '', label: 'Selecione...' }, ...lotes.map((l) => ({ value: l.id, label: l.nome }))]}
+            options={[
+              { value: 'fazenda', label: 'Lote da fazenda' },
+              { value: 'protocolo', label: 'Lote de protocolo de IATF' },
+            ]}
           />
+          {origem === 'fazenda' ? (
+            <Select
+              label="Lote"
+              value={loteId}
+              onChange={(v) => {
+                setLoteId(v)
+                setEstado({})
+                setErros({ gerais: [], porFemea: {} })
+              }}
+              options={[{ value: '', label: 'Selecione...' }, ...lotes.map((l) => ({ value: l.id, label: l.nome }))]}
+            />
+          ) : (
+            <Select
+              label="Lote de protocolo"
+              value={loteProtocoloId}
+              onChange={(v) => {
+                setLoteProtocoloId(v)
+                setEstado({})
+                setErros({ gerais: [], porFemea: {} })
+              }}
+              options={[
+                { value: '', label: 'Selecione...' },
+                ...(lotesProtocolo.data ?? [])
+                  .filter((l) => l.status !== 'Cancelado')
+                  .map((l) => ({ value: l.id, label: `${l.nome} (D0 ${formatDate(l.data_d0)})` })),
+              ]}
+            />
+          )}
           <Input label="Data do diagnóstico" type="date" max={hoje} value={comuns.data} onChange={(e) => setComuns((c) => ({ ...c, data: e.target.value }))} />
           <Select
             label="Método (opcional)"
@@ -135,8 +173,11 @@ export function DiagnosticoEmGrupo() {
         </div>
       </Card>
 
-      {!loteId ? (
-        <EmptyState title="Selecione um lote" description="As fêmeas vivas do lote aparecem aqui com o status reprodutivo." />
+      {!selecionado ? (
+        <EmptyState
+          title={origem === 'fazenda' ? 'Selecione um lote' : 'Selecione um lote de protocolo'}
+          description={origem === 'fazenda' ? 'As fêmeas vivas do lote aparecem aqui com o status reprodutivo.' : 'As fêmeas ativas do protocolo aparecem aqui com o status reprodutivo. Os diagnósticos gravados ficam ligados ao lote de protocolo.'}
+        />
       ) : femeas.isLoading ? (
         <PageSkeleton variant="list" />
       ) : (femeas.data?.length ?? 0) === 0 ? (

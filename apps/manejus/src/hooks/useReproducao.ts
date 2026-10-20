@@ -195,12 +195,49 @@ export function useFemeasDoLote(fazendaId: string | undefined, loteId: string | 
   })
 }
 
+/**
+ * Fêmeas ativas de um lote de protocolo de IATF com o status reprodutivo derivado (base do diagnóstico em grupo por protocolo).
+ * Busca as ativas do lote e depois a view só para elas.
+ */
+export function useFemeasDoLoteProtocolo(fazendaId: string | undefined, loteProtocoloId: string | undefined) {
+  return useQuery({
+    queryKey: ['reproducao', 'femeas-do-lote-protocolo', fazendaId, loteProtocoloId],
+    enabled: !!fazendaId && !!loteProtocoloId,
+    queryFn: async (): Promise<FemeaDoLote[]> => {
+      const { data: ativas, error: e1 } = await supabase
+        .from('lotes_protocolo_iatf_femeas')
+        .select('individuo_id')
+        .eq('lote_protocolo_id', loteProtocoloId!)
+        .eq('status', 'Ativa')
+      if (e1) throw e1
+      const ids = ((ativas ?? []) as { individuo_id: string }[]).map((a) => a.individuo_id)
+      if (ids.length === 0) return []
+      const { data, error } = await supabase
+        .from('v_status_reprodutivo')
+        .select('individuo_id, id_brinco, id_chip, id_manejo, categoria, status_reprodutivo, ultima_cobertura_id, ultima_cobertura_data, dias_desde_cobertura, previsao_parto')
+        .eq('fazenda_id', fazendaId!)
+        .in('individuo_id', ids)
+        .order('id_brinco', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as FemeaDoLote[]
+    },
+  })
+}
+
 /** Grava os diagnósticos de várias fêmeas num único insert (tudo ou nada). */
 export function useDiagnosticoEmGrupo(fazendaId: string | undefined) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ linhas, comuns }: { linhas: LinhaDiagnosticoGrupo[]; comuns: DadosComunsDiagnostico }): Promise<number> => {
-      const registros = montarDiagnosticosEmGrupo(linhas, comuns, fazendaId!)
+    mutationFn: async ({
+      linhas,
+      comuns,
+      protocoloLoteId,
+    }: {
+      linhas: LinhaDiagnosticoGrupo[]
+      comuns: DadosComunsDiagnostico
+      protocoloLoteId?: string | null
+    }): Promise<number> => {
+      const registros = montarDiagnosticosEmGrupo(linhas, comuns, fazendaId!, protocoloLoteId)
       const { error } = await supabase.from('eventos_reprodutivos').insert(registros)
       if (error) throw new Error(error.message)
       return registros.length

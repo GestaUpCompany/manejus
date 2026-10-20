@@ -161,7 +161,12 @@ export function validarDiagnosticoEmGrupo(
 }
 
 /** Linhas para `eventos_reprodutivos` (um diagnóstico por fêmea marcada), prontas para um único insert em lote. */
-export function montarDiagnosticosEmGrupo(linhas: LinhaDiagnosticoGrupo[], comuns: DadosComunsDiagnostico, fazendaId: string) {
+export function montarDiagnosticosEmGrupo(
+  linhas: LinhaDiagnosticoGrupo[],
+  comuns: DadosComunsDiagnostico,
+  fazendaId: string,
+  protocoloLoteId?: string | null
+) {
   return linhas
     .filter((l) => l.resultado !== '')
     .map((l) => ({
@@ -174,6 +179,8 @@ export function montarDiagnosticosEmGrupo(linhas: LinhaDiagnosticoGrupo[], comun
       idade_gestacao_dias: l.resultado === 'Prenha' && l.idadeGestacaoDias.trim() !== '' ? Number(l.idadeGestacaoDias) : null,
       evento_cobertura_id: l.coberturaId,
       observacao: comuns.observacao.trim() === '' ? null : comuns.observacao.trim(),
+      // Diagnóstico lançado a partir de um lote de protocolo de IATF carrega o elo (o banco confere que a fêmea é do lote)
+      ...(protocoloLoteId ? { protocolo_lote_id: protocoloLoteId } : {}),
     }))
 }
 

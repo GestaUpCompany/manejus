@@ -136,6 +136,13 @@ describe('diagnóstico em grupo', () => {
     expect(r[1]).toMatchObject({ individuo_id: 'c', resultado: 'Vazia', idade_gestacao_dias: null })
   })
 
+  it('só inclui protocolo_lote_id quando o diagnóstico vem de um lote de protocolo', () => {
+    const linhas = [linha('a', { resultado: 'Prenha' })]
+    expect(montarDiagnosticosEmGrupo(linhas, comuns, 'faz')[0]).not.toHaveProperty('protocolo_lote_id')
+    expect(montarDiagnosticosEmGrupo(linhas, comuns, 'faz', null)[0]).not.toHaveProperty('protocolo_lote_id')
+    expect(montarDiagnosticosEmGrupo(linhas, comuns, 'faz', 'lp1')[0]).toMatchObject({ protocolo_lote_id: 'lp1' })
+  })
+
   it('valida data, ao menos uma fêmea, idade e cobertura posterior', () => {
     expect(validarDiagnosticoEmGrupo([linha('a')], comuns, HOJE).gerais).toContain('Marque o resultado de ao menos uma fêmea')
     expect(validarDiagnosticoEmGrupo([linha('a', { resultado: 'Vazia' })], { ...comuns, data: '2026-10-20' }, HOJE).gerais).toContain('A data do diagnóstico não pode ser futura')
