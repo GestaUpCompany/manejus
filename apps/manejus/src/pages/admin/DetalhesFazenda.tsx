@@ -276,6 +276,14 @@ export function DetalhesFazenda() {
               {fazenda.acesso_confinamento ? 'Ativo' : 'Inativo'}
             </span>
           </div>
+          <div>
+            <p className="text-sm text-gray-500">IATF</p>
+            <span className={`px-3 py-1 rounded-full text-sm ${
+              fazenda.acesso_iatf ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+            }`}>
+              {fazenda.acesso_iatf ? 'Ativo' : 'Inativo'}
+            </span>
+          </div>
         </div>
       </Card>
 

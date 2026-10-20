@@ -52,6 +52,7 @@ export interface Fazenda {
   ativo: boolean
   controle_acesso_habilitado: boolean
   acesso_confinamento: boolean
+  acesso_iatf: boolean
   expediente_habilitado?: boolean
   expediente_timezone?: string
   expediente_dias?: ExpedienteDias | null
@@ -152,6 +153,7 @@ export interface CreateFazendaWithControllerParams {
   logo_url?: string
   ativo: boolean
   acesso_confinamento: boolean
+  acesso_iatf: boolean
   controller_email: string
   controller_nome?: string
   grupo_id?: string
@@ -180,6 +182,7 @@ export async function createFazendaWithController(
     ativo: params.ativo,
     controle_acesso_habilitado: false,
     acesso_confinamento: params.acesso_confinamento,
+    acesso_iatf: params.acesso_iatf,
     grupo_id: params.grupo_id,
   })
 

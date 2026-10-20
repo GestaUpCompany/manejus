@@ -4,7 +4,7 @@ import { useAuth, getFazendaIdForUser, formatDate, toFarmDateOnly, useLotes } fr
 import { Button, Card, EmptyState, Input, PageSkeleton, Select, useToast } from '@gestaup/ui'
 import { useDiagnosticoEmGrupo, useFemeasDoLote, useFemeasDoLoteProtocolo, type FemeaDoLote } from '../../hooks/useReproducao'
 import { useLotesProtocoloIatf } from '../../hooks/useProtocolosIatf'
-import { cadernetaVisivelNaFazenda } from '../../utils/cadernetas'
+import { useAcessosFazenda } from '../../hooks/useAcessosFazenda'
 import {
   CLASSE_STATUS_REPRODUTIVO,
   validarDiagnosticoEmGrupo,
@@ -33,8 +33,9 @@ export function DiagnosticoEmGrupo() {
   const [origem, setOrigem] = useState<'fazenda' | 'protocolo'>('fazenda')
   const [loteId, setLoteId] = useState('')
   const [loteProtocoloId, setLoteProtocoloId] = useState('')
-  // Diagnóstico por lote de protocolo: em teste, só aparece na fazenda de testes (nas outras fica só o lote da fazenda)
-  const protocoloLiberado = !!fazendaId && cadernetaVisivelNaFazenda('protocolo-iatf', fazendaId)
+  // Diagnóstico por lote de protocolo: só com o acesso ao IATF (sem ele fica só o lote da fazenda)
+  const { acessoIatf } = useAcessosFazenda()
+  const protocoloLiberado = !!fazendaId && acessoIatf === true
   const lotesProtocolo = useLotesProtocoloIatf(protocoloLiberado ? fazendaId : undefined)
   const [somenteCobertas, setSomenteCobertas] = useState(true)
   const [comuns, setComuns] = useState<DadosComunsDiagnostico>({ data: '', metodo: '', observacao: '' })

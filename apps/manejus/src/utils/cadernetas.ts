@@ -45,12 +45,24 @@ export const CADERNETA_GRUPOS: CadernetaGrupo[] = [
       { id: 'enfermaria', path: '/controller/cadernetas/enfermaria' },
       { id: 'maternidade', path: '/controller/cadernetas/maternidade' },
       { id: 'pesagem', path: '/controller/cadernetas/pesagem' },
+      { id: 'recebimento-compra', path: '/controller/cadernetas/recebimento-compra' },
+    ],
+  },
+  {
+    // Em teste: só a fazenda de testes vê (ver cadernetaVisivelNaFazenda).
+    nome: 'Controle Individual',
+    cor: '#AD1457',
+    itens: [
       { id: 'manejo-curral', path: '/controller/cadernetas/manejo-curral' },
       { id: 'sanidade', path: '/controller/manejo-sanitario' },
       { id: 'reproducao', path: '/controller/reproducao' },
-      { id: 'protocolo-iatf', path: '/controller/protocolos-iatf' },
-      { id: 'recebimento-compra', path: '/controller/cadernetas/recebimento-compra' },
     ],
+  },
+  {
+    // Liberado por fazenda (fazendas.acesso_iatf, toggle no admin): ver cadernetaVisivel.
+    nome: 'IATF',
+    cor: '#C2185B',
+    itens: [{ id: 'protocolo-iatf', path: '/controller/protocolos-iatf' }],
   },
   {
     nome: 'Comercial',
@@ -154,26 +166,36 @@ export const CHECKLIST_ITENS = [
 export const FAZENDA_DE_TESTES_ID = 'd649c65e-16ab-4b77-a84b-df937aa41cc3'
 
 /** Cadernetas novas, liberadas só para a fazenda de testes até serem validadas no campo (espelha o PWA). */
-export const CADERNETAS_EM_TESTE: readonly string[] = ['manejo-curral', 'sanidade', 'reproducao', 'protocolo-iatf']
+export const CADERNETAS_EM_TESTE: readonly string[] = ['manejo-curral', 'sanidade', 'reproducao']
 
-/** Caderneta em teste só aparece na fazenda de testes; enquanto a fazenda não é conhecida, fica oculta. */
-export function cadernetaVisivelNaFazenda(cadernetaId: string, fazendaId: string | null | undefined): boolean {
+/**
+ * Cadernetas do IATF: liberadas por fazenda pela flag fazendas.acesso_iatf (toggle em Admin > Fazendas),
+ * no mesmo molde de acesso_confinamento.
+ */
+export const CADERNETAS_IATF: readonly string[] = ['protocolo-iatf']
+
+/**
+ * Caderneta em teste só aparece na fazenda de testes; a do IATF só com a flag da fazenda; as demais valem para todas.
+ * Enquanto a fazenda não é conhecida, ficam ocultas.
+ */
+export function cadernetaVisivel(cadernetaId: string, fazendaId: string | null | undefined, acessoIatf: boolean | null | undefined): boolean {
+  if (CADERNETAS_IATF.includes(cadernetaId)) return acessoIatf === true
   return !CADERNETAS_EM_TESTE.includes(cadernetaId) || fazendaId === FAZENDA_DE_TESTES_ID
 }
 
-export function cadernetasDaFazenda(fazendaId: string | null | undefined): CadernetaOption[] {
-  return CADERNETAS.filter((c) => cadernetaVisivelNaFazenda(c.id, fazendaId))
+export function cadernetasDaFazenda(fazendaId: string | null | undefined, acessoIatf: boolean | null | undefined): CadernetaOption[] {
+  return CADERNETAS.filter((c) => cadernetaVisivel(c.id, fazendaId, acessoIatf))
 }
 
-export function gruposDaFazenda(fazendaId: string | null | undefined): CadernetaGrupo[] {
-  return CADERNETA_GRUPOS.map((g) => ({ ...g, itens: g.itens.filter((i) => cadernetaVisivelNaFazenda(i.id, fazendaId)) })).filter(
+export function gruposDaFazenda(fazendaId: string | null | undefined, acessoIatf: boolean | null | undefined): CadernetaGrupo[] {
+  return CADERNETA_GRUPOS.map((g) => ({ ...g, itens: g.itens.filter((i) => cadernetaVisivel(i.id, fazendaId, acessoIatf)) })).filter(
     (g) => g.itens.length > 0
   )
 }
 
 /**
  * Menu "Controle Individual" do sidebar (Indivíduos, Reprodução, Sanidade...): em teste, só a fazenda de testes vê.
- * Fazenda desconhecida (ainda carregando) = oculto.
+ * O menu "IATF" usa a flag acesso_iatf. Fazenda desconhecida (ainda carregando) = oculto.
  */
 export function menuControleIndividualVisivel(fazendaId: string | null | undefined): boolean {
   return fazendaId === FAZENDA_DE_TESTES_ID

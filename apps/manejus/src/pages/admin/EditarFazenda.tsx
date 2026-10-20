@@ -27,6 +27,7 @@ export function EditarFazenda() {
     logo_url: '',
     ativo: true,
     acesso_confinamento: false,
+    acesso_iatf: false,
   })
 
   const [errors, setErrors] = useState({
@@ -59,6 +60,7 @@ export function EditarFazenda() {
         logo_url: fazenda.logo_url || '',
         ativo: fazenda.ativo,
         acesso_confinamento: fazenda.acesso_confinamento,
+        acesso_iatf: fazenda.acesso_iatf ?? false,
       })
       setSelectedGrupo(fazenda.grupo_id || '')
       setLogoPreview(fazenda.logo_url || '')
@@ -122,6 +124,7 @@ export function EditarFazenda() {
       logo_url: logoUrl || undefined,
       ativo: formData.ativo,
       acesso_confinamento: formData.acesso_confinamento,
+      acesso_iatf: formData.acesso_iatf,
       grupo_id: selectedGrupo || null,
     })
 
@@ -304,6 +307,19 @@ export function EditarFazenda() {
                 <div>
                   <span className="block text-sm font-medium text-gray-800">Acesso ao Confinamento</span>
                   <span className="block text-xs text-gray-500">Exibe o menu e telas de confinamento no controller</span>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="acesso_iatf"
+                  checked={formData.acesso_iatf}
+                  onChange={(e) => setFormData(prev => ({ ...prev, acesso_iatf: e.target.checked }))}
+                  className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                <div>
+                  <span className="block text-sm font-medium text-gray-800">Acesso ao IATF</span>
+                  <span className="block text-xs text-gray-500">Libera protocolos de IATF (menu, tarefas e caderneta Protocolo IATF) no controller e no aplicativo</span>
                 </div>
               </label>
             </div>
