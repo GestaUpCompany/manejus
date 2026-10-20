@@ -2,6 +2,14 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
+## Relatório de Cantina: o que ficou de fora (2026-10-20)
+
+- **Consumo por peão / desconto em folha**: não existe modelo para isso (só cozinheiros em texto livre e destinatário da marmita). Exigiria definir o que é a venda e quem registra no PWA.
+- **DDL de `registros_alimentacao` fora do repo** (antiga `registros_cantina`, unificada fora das migrations): colunas `modo`, `preco_unitario`, `itens_detalhe` conferidas só no banco vivo.
+- **Registros antigos sem `itens_detalhe`** nunca geraram baixa; o relatório avisa a contagem, mas o consumo histórico de itens não é recuperável.
+- **Filtro "Data fim" não inclusivo** em `EntradaCantina` (`registro.data <= dataFim`) e `CANTINA_EXPORT_CONFIG` lê `nome_outros`, que não está no tipo.
+- **Infográfico Mensal**: extrato truncado em 250 lançamentos (limite de 4 MB do `/api/pdf/geral`); com 9 seções selecionadas o peso total e a memória da função não foram medidos.
+
 ## Relatório de Estoque de Insumos: o que ficou de fora do período (2026-10-20)
 
 - **Consumo por lote/curral/destino**: o ledger `movimentacoes_estoque_suplementos` só guarda `origem` (suplementação, saída de insumos, fábrica). O trato debita a formulação, não o insumo; saber o consumo de insumo por destino exige juntar `registro_origem_id` com os registros de origem e explodir a receita (`formulacao_insumos`, em % de MS, não em kg de MN).

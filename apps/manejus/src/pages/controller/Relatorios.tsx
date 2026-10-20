@@ -93,6 +93,12 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'Posição por tanque (saldo inicial, entradas, baixas e saldo final), valor em estoque e extrato de movimentações por período.',
     icone: '🛢️',
   },
+  {
+    tipo: 'cantina',
+    titulo: 'Cantina',
+    descricao: 'Estoque da cozinha por item (saldo inicial, entradas, baixas e saldo final), refeições servidas, custo por refeição, marmitas e extrato por período.',
+    icone: '🍽️',
+  },
 ]
 
 const ESCOPOS_ESTOQUE = [
