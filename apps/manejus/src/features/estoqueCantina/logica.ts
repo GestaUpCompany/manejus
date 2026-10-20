@@ -1,0 +1,194 @@
+// Regras puras da tela Estoque → Cantina (pages/controller/EstoqueCantina.tsx).
+// O saldo e o custo médio de itens_cantina são recalculados pelo trigger do
+// banco (recalcular_estoque_cantina) a cada lançamento em movimentacoes_cantina:
+// entrada soma e refaz o custo médio ponderado, baixa e estorno subtraem, ajuste
+// define o saldo absoluto. A tela só valida o formulário e insere o lançamento.
+
+export interface ItemEstoqueCantina {
+  id: string
+  nome: string
+  classificacao: string
+  unidade_medida: string
+  estoque_atual: number
+  estoque_minimo: number
+  custo_unitario: number
+  custo_total_estoque: number
+  controla_estoque: boolean
+}
+
+export type TipoMovimentoCantina = 'entrada' | 'baixa' | 'ajuste' | 'estorno'
+
+export interface MovimentoCantina {
+  id: string
+  item_id: string
+  tipo_movimentacao: TipoMovimentoCantina
+  quantidade: number
+  custo_unitario: number | null
+  valor_total: number | null
+  data: string
+  origem: string | null
+  fornecedor: string | null
+  observacao: string | null
+  unidade: string | null
+  registro_origem_id: string | null
+  created_at: string
+}
+
+export interface MovimentoComSaldo extends MovimentoCantina {
+  variacao: number
+  saldo_apos: number
+}
+
+export const ROTULO_TIPO: Record<TipoMovimentoCantina, string> = {
+  entrada: 'Entrada',
+  baixa: 'Baixa',
+  ajuste: 'Ajuste',
+  estorno: 'Estorno',
+}
+
+export const ROTULO_ORIGEM: Record<string, string> = {
+  painel_entrada: 'Entrada manual',
+  painel_ajuste: 'Ajuste manual',
+  pwa_entrada: 'Entrada no aplicativo',
+  pwa_cantina: 'Saída no aplicativo',
+  estoque_inicial: 'Estoque inicial',
+}
+
+const num = (v: unknown) => Number(v) || 0
+
+// Saldo negativo ou no mínimo/abaixo; só itens com controle de estoque.
+export function emAlerta(item: Pick<ItemEstoqueCantina, 'controla_estoque' | 'estoque_atual' | 'estoque_minimo'>): boolean {
+  if (!item.controla_estoque) return false
+  const saldo = num(item.estoque_atual)
+  const minimo = num(item.estoque_minimo)
+  return saldo < 0 || (minimo > 0 && saldo <= minimo)
+}
+
+// Item que recebe ou gasta sem ter custo: o valor em estoque sai R$ 0,00.
+export function semCusto(item: Pick<ItemEstoqueCantina, 'controla_estoque' | 'estoque_atual' | 'custo_unitario'>): boolean {
+  return item.controla_estoque && num(item.custo_unitario) <= 0 && num(item.estoque_atual) > 0
+}
+
+// Valor do item: saldo negativo é sinal de saneamento, não ativo negativo.
+export function valorDoItem(item: Pick<ItemEstoqueCantina, 'estoque_atual' | 'custo_unitario'>): number {
+  return Math.max(0, num(item.estoque_atual)) * num(item.custo_unitario)
+}
+
+export interface TotaisTela {
+  controlados: number
+  em_alerta: number
+  sem_custo: number
+  valor_total: number
+}
+
+export function totaisDaTela(itens: ItemEstoqueCantina[]): TotaisTela {
+  const controlados = itens.filter((i) => i.controla_estoque)
+  return {
+    controlados: controlados.length,
+    em_alerta: controlados.filter(emAlerta).length,
+    sem_custo: controlados.filter(semCusto).length,
+    valor_total: controlados.reduce((s, i) => s + valorDoItem(i), 0),
+  }
+}
+
+function semAcento(texto: string): string {
+  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
+// Busca por nome (sem acento) e classificação; alertas primeiro, depois ordem alfabética.
+export function filtrarEOrdenar(itens: ItemEstoqueCantina[], busca: string, classificacao: string): ItemEstoqueCantina[] {
+  const termo = semAcento(busca.trim())
+  return itens
+    .filter((i) => (!classificacao || i.classificacao === classificacao) && (!termo || semAcento(i.nome).includes(termo)))
+    .sort((a, b) => Number(emAlerta(b)) - Number(emAlerta(a)) || a.nome.localeCompare(b.nome, 'pt-BR'))
+}
+
+export function sinalMovimento(m: Pick<MovimentoCantina, 'tipo_movimentacao' | 'quantidade'>): { sinal: '+' | '−' | '='; qtd: number } {
+  const qtd = num(m.quantidade)
+  if (m.tipo_movimentacao === 'ajuste') return { sinal: '=', qtd }
+  if (m.tipo_movimentacao === 'entrada') return { sinal: '+', qtd }
+  return { sinal: '−', qtd }
+}
+
+// Replay do ledger em ordem (data, created_at, id), igual ao relatório de Cantina.
+// O trigger do banco recalcula por created_at: lançamento retroativo faz o saldo
+// reconstruído divergir do gravado (ver divergenciaDeSaldo).
+export function movimentosComSaldo(movimentos: MovimentoCantina[]): MovimentoComSaldo[] {
+  const ordenados = [...movimentos].sort(
+    (a, b) => a.data.localeCompare(b.data) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id),
+  )
+  let saldo = 0
+  return ordenados.map((m) => {
+    const { sinal, qtd } = sinalMovimento(m)
+    const variacao = sinal === '=' ? qtd - saldo : sinal === '+' ? qtd : -qtd
+    saldo += variacao
+    return { ...m, variacao, saldo_apos: saldo }
+  })
+}
+
+// Diferença entre o saldo reconstruído por data e o saldo gravado no item; nulo quando bate.
+export function divergenciaDeSaldo(comSaldo: MovimentoComSaldo[], estoqueAtual: number): number | null {
+  const reconstruido = comSaldo.length ? comSaldo[comSaldo.length - 1].saldo_apos : 0
+  const diff = Math.round((reconstruido - num(estoqueAtual)) * 1000) / 1000
+  return Math.abs(diff) > 0.0005 ? diff : null
+}
+
+// Movimento gerado por registro do aplicativo é regerado pelo trigger: não se edita aqui.
+export function movimentoEditavel(m: Pick<MovimentoCantina, 'registro_origem_id'>): boolean {
+  return !m.registro_origem_id
+}
+
+// Soma das baixas com data a partir do primeiro dia do mês (YYYY-MM-DD).
+export function consumoDoMes(movimentos: Array<Pick<MovimentoCantina, 'tipo_movimentacao' | 'data' | 'quantidade' | 'custo_unitario' | 'valor_total'>>, inicioDoMes: string): number {
+  return movimentos
+    .filter((m) => (m.tipo_movimentacao === 'baixa' || m.tipo_movimentacao === 'estorno') && m.data >= inicioDoMes)
+    .reduce((s, m) => {
+      const valor = m.valor_total ?? num(m.quantidade) * num(m.custo_unitario)
+      return s + (m.tipo_movimentacao === 'estorno' ? -valor : valor)
+    }, 0)
+}
+
+export interface FormEntrada {
+  itemId: string
+  quantidade: string
+  custo: string
+  fornecedor: string
+  observacao: string
+  data: string
+}
+
+export interface FormAjuste {
+  itemId: string
+  saldo: string
+  observacao: string
+  data: string
+}
+
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/
+
+function numeroValido(texto: string): number | null {
+  if (texto.trim() === '') return null
+  const n = Number(texto.replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
+export type ResultadoValidacao<T> = { ok: true; valores: T } | { ok: false; erro: string }
+
+export function validarEntrada(form: FormEntrada): ResultadoValidacao<{ quantidade: number; custo: number }> {
+  if (!form.itemId) return { ok: false, erro: 'Selecione o item.' }
+  const quantidade = numeroValido(form.quantidade)
+  if (quantidade == null || quantidade <= 0) return { ok: false, erro: 'Informe uma quantidade maior que zero.' }
+  const custo = numeroValido(form.custo)
+  if (custo == null || custo <= 0) return { ok: false, erro: 'Informe o custo unitário (maior que zero).' }
+  if (!DATA_ISO.test(form.data)) return { ok: false, erro: 'Informe a data da entrada.' }
+  return { ok: true, valores: { quantidade, custo } }
+}
+
+export function validarAjuste(form: FormAjuste): ResultadoValidacao<{ saldo: number }> {
+  if (!form.itemId) return { ok: false, erro: 'Selecione o item.' }
+  const saldo = numeroValido(form.saldo)
+  if (saldo == null || saldo < 0) return { ok: false, erro: 'Informe o novo saldo (zero ou maior).' }
+  if (!form.observacao.trim()) return { ok: false, erro: 'Informe o motivo do ajuste.' }
+  if (!DATA_ISO.test(form.data)) return { ok: false, erro: 'Informe a data do ajuste.' }
+  return { ok: true, valores: { saldo } }
+}
