@@ -109,14 +109,6 @@ export function SuplementacaoDetalhes() {
 
   const canDelete = user && (user.papel === 'admin' || user.papel === 'super_admin' || user.papel === 'controller')
 
-  const FAZENDAS_HABILITADAS = [
-    'f8be22c5-12e9-4bda-a813-fae8cb3d47ec', // Guanabara
-    'f5d64d63-838e-42cc-9fe3-60f3ea7bb692', // Brilhante
-    'd54abd92-5783-407a-8adb-15c31388ebc4', // Doce Ilusão
-    'd3965505-74d5-4af7-9858-f773d2e8aab3' // Chibata
-  ]
-  const featureHabilitada = fazendaId ? FAZENDAS_HABILITADAS.includes(fazendaId) : false
-
   const handleEditFormulacao = async () => {
     if (!registro?.formulacao || !user) return
 
@@ -425,12 +417,10 @@ export function SuplementacaoDetalhes() {
 
   const actions = (
     <>
-      {featureHabilitada && (
-        <Button variant="primary" onClick={handleStartEdit} className="text-sm">
-          Editar
-        </Button>
-      )}
-      {featureHabilitada && canDelete && (
+      <Button variant="primary" onClick={handleStartEdit} className="text-sm">
+        Editar
+      </Button>
+      {canDelete && (
         <Button
           variant="danger"
           onClick={() => setIsDeleteConfirmOpen(true)}
