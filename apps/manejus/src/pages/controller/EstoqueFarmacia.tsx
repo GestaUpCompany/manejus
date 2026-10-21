@@ -222,7 +222,7 @@ export function EstoqueFarmacia() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => navigate('/controller/cadastros-auxiliares')}>Cadastrar medicamentos</Button>
-          <Button variant="secondary" onClick={() => navigate('/controller/farmacia')}>Registros da Farmácia</Button>
+          <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/farmacia')}>Registros da Farmácia</Button>
           <Button variant="secondary" onClick={() => abrirModal('ajuste')}>Ajuste</Button>
           <Button onClick={() => abrirModal('entrada')}>Registrar Entrada</Button>
         </div>

@@ -579,7 +579,7 @@ function App() {
             }
           />
           <Route
-            path="/controller/farmacia"
+            path="/controller/cadernetas/farmacia"
             element={
               <ControllerRoute>
                 <ControllerLayout>
