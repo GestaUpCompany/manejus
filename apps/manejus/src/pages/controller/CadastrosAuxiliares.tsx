@@ -260,6 +260,7 @@ const tabs: TabConfig[] = [
     table: 'medicamentos',
     fields: [
       { name: 'nome_comercial', label: 'Nome Comercial', required: true, placeholder: 'Nome do medicamento' },
+      { name: 'sku', label: 'SKU (código interno, opcional)', placeholder: 'Ex: MED-001' },
       { name: 'principio_ativo', label: 'Princípio Ativo', required: true, placeholder: 'Princípio ativo' },
       { name: 'tipo', label: 'Tipo', required: true, options: [
         { label: 'Antibiótico', value: 'Antibiotico' },
@@ -870,7 +871,9 @@ export function CadastrosAuxiliares() {
 
     if (error) {
       console.error(`Erro ao salvar ${tab.label}:`, error)
-      toast.error('Erro ao salvar. Verifique se já não existe um registro com este nome.')
+      toast.error(error.code === '23505' && String(error.message).includes('sku')
+        ? 'Já existe um registro com este SKU nesta fazenda.'
+        : 'Erro ao salvar. Verifique se já não existe um registro com este nome.')
     } else {
       setFuncionarioErrors({})
       setTabStates((prev) => ({

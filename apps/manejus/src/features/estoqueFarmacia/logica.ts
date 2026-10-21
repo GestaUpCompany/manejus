@@ -7,6 +7,7 @@
 export interface ItemEstoqueFarmacia {
   id: string
   nome_comercial: string
+  sku?: string | null
   tipo: string
   unidade: string
   estoque_atual: number
@@ -119,11 +120,11 @@ function semAcento(texto: string): string {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 }
 
-// Busca por nome_comercial (sem acento) e tipo; alertas primeiro, depois ordem alfabética.
+// Busca por nome_comercial ou SKU (sem acento) e tipo; alertas primeiro, depois ordem alfabética.
 export function filtrarEOrdenar(itens: ItemEstoqueFarmacia[], busca: string, tipo: string): ItemEstoqueFarmacia[] {
   const termo = semAcento(busca.trim())
   return itens
-    .filter((i) => (!tipo || i.tipo === tipo) && (!termo || semAcento(i.nome_comercial).includes(termo)))
+    .filter((i) => (!tipo || i.tipo === tipo) && (!termo || semAcento(i.nome_comercial).includes(termo) || semAcento(i.sku ?? '').includes(termo)))
     .sort((a, b) => Number(emAlerta(b)) - Number(emAlerta(a)) || a.nome_comercial.localeCompare(b.nome_comercial, 'pt-BR'))
 }
 

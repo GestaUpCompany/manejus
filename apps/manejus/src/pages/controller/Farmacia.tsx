@@ -19,7 +19,7 @@ interface RegistroFarmacia {
   observacao: string | null
   nome_usuario: string | null
   created_at: string
-  medicamentos: { nome_comercial: string; tipo: string } | null
+  medicamentos: { nome_comercial: string; tipo: string; sku: string | null } | null
 }
 
 const dataBR = (iso: string) => iso.split('-').reverse().join('/')
@@ -50,7 +50,7 @@ export function Farmacia({ modo }: { modo: 'entrada' | 'saida' }) {
       getFazendaNome(fazendaId).then(setFazendaNome)
       const { data, error } = await supabase
         .from('movimentacoes_farmacia')
-        .select('id,data,tipo_movimentacao,quantidade,unidade,custo_unitario,origem,fornecedor,nota_fiscal,lote_produto,validade,observacao,nome_usuario,created_at,medicamentos(nome_comercial,tipo)')
+        .select('id,data,tipo_movimentacao,quantidade,unidade,custo_unitario,origem,fornecedor,nota_fiscal,lote_produto,validade,observacao,nome_usuario,created_at,medicamentos(nome_comercial,tipo,sku)')
         .eq('fazenda_id', fazendaId)
         .in('tipo_movimentacao', TIPOS_POR_MODO[modo])
         .is('deleted_at', null)
@@ -66,7 +66,7 @@ export function Farmacia({ modo }: { modo: 'entrada' | 'saida' }) {
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     return registros.filter((r) => {
-      const texto = [r.medicamentos?.nome_comercial, r.fornecedor, r.nota_fiscal, r.lote_produto, r.observacao, r.nome_usuario].filter(Boolean).join(' ').toLowerCase()
+      const texto = [r.medicamentos?.nome_comercial, r.medicamentos?.sku, r.fornecedor, r.nota_fiscal, r.lote_produto, r.observacao, r.nome_usuario].filter(Boolean).join(' ').toLowerCase()
       return (!termo || texto.includes(termo)) && (!tipo || r.tipo_movimentacao === tipo) && (!dataInicio || r.data >= dataInicio) && (!dataFim || r.data <= dataFim)
     })
   }, [registros, busca, tipo, dataInicio, dataFim])
@@ -84,7 +84,7 @@ export function Farmacia({ modo }: { modo: 'entrada' | 'saida' }) {
 
       <FilterToolbar onClear={() => { setBusca(''); setTipo(''); setDataInicio(''); setDataFim('') }}>
         <FilterField label="Buscar" className="sm:col-span-2">
-          <SearchInput value={busca} onChange={setBusca} placeholder="Medicamento, fornecedor, lote, nota..." className="text-sm" />
+          <SearchInput value={busca} onChange={setBusca} placeholder="Medicamento, SKU, fornecedor, lote, nota..." className="text-sm" />
         </FilterField>
         <FilterField label="Tipo">
           <Select value={tipo} onChange={setTipo} placeholder="Todos" options={TIPOS_POR_MODO[modo].map((value) => ({ value, label: ROTULO_TIPO[value] }))} />
@@ -123,7 +123,7 @@ export function Farmacia({ modo }: { modo: 'entrada' | 'saida' }) {
                   <Tr key={r.id}>
                     <Td>{dataBR(r.data)}</Td>
                     <Td>{ROTULO_TIPO[r.tipo_movimentacao] ?? r.tipo_movimentacao}</Td>
-                    <Td>{r.medicamentos?.nome_comercial ?? '-'}</Td>
+                    <Td>{r.medicamentos?.nome_comercial ?? '-'}{r.medicamentos?.sku && <span className="block text-xs text-content-muted">SKU {r.medicamentos.sku}</span>}</Td>
                     <Td className={sinal === '−' ? 'text-red-600' : ''}>{sinal} {numero(qtd)} {r.unidade ?? ''}</Td>
                     <Td>{[r.lote_produto, r.validade ? dataBR(r.validade) : null].filter(Boolean).join(' · ') || '-'}</Td>
                     <Td>{[r.fornecedor, r.nota_fiscal].filter(Boolean).join(' · ') || '-'}</Td>

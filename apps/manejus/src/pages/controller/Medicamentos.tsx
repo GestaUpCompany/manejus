@@ -24,6 +24,7 @@ interface Medicamento {
   tipo: string
   nome_comercial: string
   principio_ativo: string
+  sku?: string | null
   dose_recomendada?: string
   carencia_abate_dias?: number | null
   intervalo_reaplicacao_dias?: number | null
@@ -44,8 +45,10 @@ export function Medicamentos() {
     dose_recomendada: '',
     carencia_abate_dias: '',
     intervalo_reaplicacao_dias: '',
+    sku: '',
   })
   const [submitting, setSubmitting] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
   const [showInactive, setShowInactive] = useState(false)
   const [tiposDisponiveis, setTiposDisponiveis] = useState<string[]>(tiposComuns)
 
@@ -117,6 +120,7 @@ export function Medicamentos() {
       tipo: formData.tipo,
       nome_comercial: formData.nome_comercial,
       principio_ativo: formData.principio_ativo,
+      sku: formData.sku.trim() || null,
       dose_recomendada: formData.dose_recomendada,
       carencia_abate_dias: formData.carencia_abate_dias.trim() === '' ? null : Number(formData.carencia_abate_dias),
       intervalo_reaplicacao_dias:
@@ -138,7 +142,11 @@ export function Medicamentos() {
 
     if (error) {
       console.error('Erro ao salvar medicamento:', error)
+      setErro(error.code === '23505' && String(error.message).includes('sku')
+        ? 'Já existe um medicamento com este SKU nesta fazenda.'
+        : 'Não foi possível salvar o medicamento.')
     } else {
+      setErro(null)
       setFormData({
         tipo: '',
         nome_comercial: '',
@@ -146,6 +154,7 @@ export function Medicamentos() {
         dose_recomendada: '',
         carencia_abate_dias: '',
         intervalo_reaplicacao_dias: '',
+        sku: '',
       })
       setShowForm(false)
       setEditingMedicamento(null)
@@ -161,6 +170,7 @@ export function Medicamentos() {
       tipo: medicamento.tipo,
       nome_comercial: medicamento.nome_comercial,
       principio_ativo: medicamento.principio_ativo,
+      sku: medicamento.sku || '',
       dose_recomendada: medicamento.dose_recomendada || '',
       carencia_abate_dias: medicamento.carencia_abate_dias != null ? String(medicamento.carencia_abate_dias) : '',
       intervalo_reaplicacao_dias:
@@ -170,6 +180,7 @@ export function Medicamentos() {
   }
 
   const handleCancel = () => {
+    setErro(null)
     setEditingMedicamento(null)
     setFormData({
       tipo: '',
@@ -178,6 +189,7 @@ export function Medicamentos() {
       dose_recomendada: '',
       carencia_abate_dias: '',
       intervalo_reaplicacao_dias: '',
+      sku: '',
     })
     setShowForm(false)
   }
@@ -198,7 +210,8 @@ export function Medicamentos() {
   const filteredMedicamentos = medicamentos.filter((medicamento) =>
     (showInactive || medicamento.ativo) &&
     (medicamento.nome_comercial.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    medicamento.tipo.toLowerCase().includes(searchTerm.toLowerCase()))
+    medicamento.tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (medicamento.sku || '').toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   if (loading) {
@@ -285,6 +298,16 @@ export function Medicamentos() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium text-content mb-1">SKU (código interno)</label>
+              <Input
+                type="text"
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                placeholder="Ex: MED-001 (opcional, único na fazenda)"
+                className="border-border-base focus:border-accent"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-content mb-1">
                 Princípio Ativo <span className="text-red-500">*</span>
               </label>
@@ -334,6 +357,7 @@ export function Medicamentos() {
                 className="border-border-base focus:border-accent"
               />
             </div>
+            {erro && <p className="text-sm text-red-600">{erro}</p>}
             <div className="flex gap-2 items-center">
               <Button type="submit" disabled={submitting}>
                 {submitting ? 'Salvando...' : 'Salvar'}
@@ -361,6 +385,7 @@ export function Medicamentos() {
               status={medicamento.ativo}
               onClick={() => handleEdit(medicamento)}
             >
+              {medicamento.sku && <p className="text-sm text-content-muted mb-2">SKU: {medicamento.sku}</p>}
               <p className="text-sm text-content-muted mb-2">Princípio Ativo: {medicamento.principio_ativo}</p>
               {medicamento.dose_recomendada && (
                 <p className="text-sm text-content-muted mb-2">Dose: {medicamento.dose_recomendada}</p>

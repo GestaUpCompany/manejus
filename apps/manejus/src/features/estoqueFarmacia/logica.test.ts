@@ -161,3 +161,16 @@ describe('baixa da Enfermaria (conversão de dose)', () => {
     expect(validarConteudo('abc').ok).toBe(false)
   })
 })
+
+describe('busca por SKU', () => {
+  it('acha o medicamento pelo SKU, sem diferenciar maiúsculas', () => {
+    const itens = [
+      item({ nome_comercial: 'Draxxin 100', sku: 'MED-001' }),
+      item({ nome_comercial: 'Exceller', sku: 'med-002' }),
+      item({ nome_comercial: 'Penicilina', sku: null }),
+    ]
+    expect(filtrarEOrdenar(itens, 'med-001', '').map((i) => i.nome_comercial)).toEqual(['Draxxin 100'])
+    expect(filtrarEOrdenar(itens, 'MED-002', '').map((i) => i.nome_comercial)).toEqual(['Exceller'])
+    expect(filtrarEOrdenar(itens, 'med', '')).toHaveLength(2)
+  })
+})
