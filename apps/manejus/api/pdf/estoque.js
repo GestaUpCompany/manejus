@@ -357,27 +357,35 @@ export async function renderEstoqueHtml(input) {
     ? `${resumo.variacaoPct >= 0 ? '+' : ''}${moneyFmt(resumo.variacaoPct)}% vs início (aprox.)`
     : ''
   const subReposicao = `${contagem.ruptura} ${pl(contagem.ruptura, 'item a repor', 'itens a repor')}${resumo.programarValor > 0 ? ` · +${reais(resumo.programarValor)} a programar` : ''}`
+  // Os cartões dizem do que estão falando: insumos, formulações ou itens (quando o escopo mistura os dois).
+  const [substantivo, substantivoPl] = input.escopo === 'insumos' ? ['insumo', 'insumos'] : input.escopo === 'formulacoes' ? ['formulação', 'formulações'] : ['item', 'itens']
+  const qtd = (n) => `${n} ${pl(n, substantivo, substantivoPl)}`
+  // KPI zerado não aparece; a grade se ajusta ao número de cartões que sobram.
+  const grade = (cartoes) => {
+    const html = cartoes.filter(([valor]) => Math.abs(valor) > 0).map(([, card]) => card)
+    return html.length ? `<div class="kpi-grid" style="grid-template-columns:repeat(${html.length},1fr)">${html.join('')}</div>` : ''
+  }
   const kpisHtml = comPeriodo
-    ? `<div class="kpi-grid">
-        ${kpi(reais(resumo.valorEstoque), 'Valor em estoque', variacao)}
-        ${kpi(reais(resumo.consumoValor ?? 0), 'Consumo no período', resumo.consumoDiaValor != null ? `${reais(resumo.consumoDiaValor)} por dia${resumo.giro != null ? ` · giro ${moneyFmt(resumo.giro)}×` : ''}` : '')}
-        ${kpi(reais(resumo.reposicaoValor), 'Reposição estimada', subReposicao, contagem.ruptura > 0 ? 'red' : 'green')}
-        ${kpi(reais(capital.parado), 'Capital parado', `${pct(resumo.pctParado)} do valor em estoque`, capital.parado > 0 ? 'gold' : 'green')}
-      </div>`
-    : `<div class="kpi-grid">
-        ${kpi(reais(resumo.valorEstoque), 'Valor total em estoque', `${itens.length} ${pl(itens.length, 'item', 'itens')}`)}
-        ${kpi(`${contagem.ruptura}`, 'Itens a repor', 'abaixo do mínimo ou negativos', contagem.ruptura > 0 ? 'red' : 'green')}
-        ${kpi(`${resumo.semCusto}`, 'Sem custo', resumo.semCusto > 0 ? 'valor total subestimado' : '', resumo.semCusto > 0 ? 'gold' : 'green')}
-        ${kpi(`${resumo.negativos}`, 'Saldos negativos', '', resumo.negativos > 0 ? 'red' : 'green')}
-      </div>`
+    ? grade([
+        [resumo.valorEstoque, kpi(reais(resumo.valorEstoque), 'Valor em estoque', variacao)],
+        [resumo.consumoValor ?? 0, kpi(reais(resumo.consumoValor ?? 0), 'Consumo no período', resumo.consumoDiaValor != null ? `${reais(resumo.consumoDiaValor)} por dia${resumo.giro != null ? ` · giro ${moneyFmt(resumo.giro)}×` : ''}` : '')],
+        [resumo.reposicaoValor, kpi(reais(resumo.reposicaoValor), 'Reposição estimada', subReposicao, contagem.ruptura > 0 ? 'red' : 'green')],
+        [capital.parado, kpi(reais(capital.parado), 'Capital parado', `${pct(resumo.pctParado)} do valor em estoque`, 'gold')],
+      ])
+    : grade([
+        [resumo.valorEstoque, kpi(reais(resumo.valorEstoque), 'Valor total em estoque', `${itens.length} ${pl(itens.length, 'item', 'itens')}`)],
+        [contagem.ruptura, kpi(`${contagem.ruptura}`, 'Itens a repor', 'abaixo do mínimo ou negativos', 'red')],
+        [resumo.semCusto, kpi(`${resumo.semCusto}`, 'Sem custo', 'valor total subestimado', 'gold')],
+        [resumo.negativos, kpi(`${resumo.negativos}`, 'Saldos negativos', '', 'red')],
+      ])
   const situacaoCards = comPeriodo
-    ? `<div class="kpi-grid est-kpi5">
-        ${kpi(`${contagem.ruptura}`, 'Repor', `cobertura < ${lim.ruptura} d, abaixo do mínimo ou negativo`, contagem.ruptura > 0 ? 'red' : 'green')}
-        ${kpi(`${contagem.programar}`, 'Programar', `cobertura de ${lim.ruptura} a ${lim.alvo} d`, contagem.programar > 0 ? 'gold' : 'green')}
-        ${kpi(`${contagem.parado}`, 'Parados', `${reais(capital.parado)} sem saída no período`, contagem.parado > 0 ? 'gold' : 'green')}
-        ${kpi(`${contagem.alto}`, 'Estoque alto', `${reais(capital.alto)} · cobertura > ${lim.alta} d (informativo)`, 'gray')}
-        ${kpi(`${contagem.ok}`, 'Em ordem', `${reais(capital.ok)} em estoque`)}
-      </div>`
+    ? grade([
+        [contagem.ruptura, kpi(qtd(contagem.ruptura), 'Repor', `cobertura < ${lim.ruptura} d, abaixo do mínimo ou negativo`, 'red')],
+        [contagem.programar, kpi(qtd(contagem.programar), 'Programar', `cobertura de ${lim.ruptura} a ${lim.alvo} d`, 'gold')],
+        [contagem.parado, kpi(qtd(contagem.parado), 'Parados', `${reais(capital.parado)} sem saída no período`, 'gold')],
+        [contagem.alto, kpi(qtd(contagem.alto), 'Estoque alto', `${reais(capital.alto)} · cobertura > ${lim.alta} d (informativo)`, 'gray')],
+        [contagem.ok, kpi(qtd(contagem.ok), 'Em ordem', `${reais(capital.ok)} em estoque`)],
+      ])
     : ''
   const qualidade = [
     resumo.semCusto > 0 && comPeriodo ? `${resumo.semCusto} ${pl(resumo.semCusto, 'item sem custo cadastrado', 'itens sem custo cadastrado')} (o valor total está subestimado)` : '',
@@ -390,7 +398,7 @@ export async function renderEstoqueHtml(input) {
   const notaProgramar = `Itens com cobertura entre ${lim.ruptura} e ${lim.alvo} dias: ainda sem risco imediato, mas abaixo da meta de ${lim.alvo} dias. Programe a compra considerando o prazo de entrega do fornecedor.`
   const notaParado = 'Parado: tem saldo e valor, mas não teve nenhuma saída no período. Vale conferir o motivo: item abandonado, comprado a mais ou sazonal.'
   const notaAlto = `Cobertura acima de ${lim.alta} dias. Não é necessariamente um problema: compra em lote, safra e entressafra justificam estoque maior. Serve para conferir se é intencional.`
-  const notaPosicao = `Valor em estoque = saldo ${comPeriodo ? 'final ' : ''}× custo médio atual do item. Saldo negativo vale 0 no valor.${comPeriodo ? ' Saldos reconstruídos pelo histórico de lançamentos do período.' : ''}`
+  const notaPosicao = `Valor em estoque = saldo ${comPeriodo ? 'final ' : ''}× custo médio atual do item. Saldo negativo vale 0 no valor.${comPeriodo ? ' Saldos calculados a partir dos lançamentos de estoque (entradas, saídas e ajustes) até a data final do período.' : ''}`
 
   // Cada bloco declara o que é; o motor de fluxo (flowEngine) mede o conteúdo real
   // no Chromium e distribui o mínimo de páginas, dividindo tabelas só quando preciso.

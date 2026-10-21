@@ -57,6 +57,8 @@ interface Props {
   relatorioInfo: RelatorioInfo
 }
 
+const COLUNAS_XL: Record<number, string> = { 1: 'xl:grid-cols-1', 2: 'xl:grid-cols-2', 3: 'xl:grid-cols-3', 4: 'xl:grid-cols-4', 5: 'xl:grid-cols-5' }
+
 type AbaDecisao = 'repor' | 'imobilizado' | 'itens'
 
 function formatarNumero(valor: number | null | undefined, casas = 2): string {
@@ -129,6 +131,8 @@ function PilulaSituacao({ situacao }: { situacao: SituacaoItem }) {
 }
 
 interface Indicador {
+  // Quantidade ou valor que o cartão representa: zerado não aparece.
+  n: number
   valor: string
   rotulo: string
   sub?: string
@@ -498,28 +502,37 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
   const variacao = resumo.variacaoPct != null
     ? `${resumo.variacaoPct >= 0 ? '+' : ''}${formatarNumero(resumo.variacaoPct, 1)}% vs início (aprox.)`
     : undefined
+  // Os cartões dizem do que estão falando: a aba ativa é de insumos ou de formulações.
+  const [substantivo, substantivoPl] = grupoEfetivo === 'formulacao' ? ['formulação', 'formulações'] : ['insumo', 'insumos']
+  const qtd = (n: number) => `${n} ${plural(n, substantivo, substantivoPl)}`
   const indicadores: Indicador[] = comPeriodo
     ? [
-        { valor: formatarMoeda(resumo.valorEstoque), rotulo: 'Valor em estoque', sub: variacao ?? `${itensGrupo.length} ${plural(itensGrupo.length, 'item', 'itens')}`, cor: GREEN_DARK, ajuda: 'Saldo final × custo médio atual. A variação compara com o início do período, que é aproximado (saldo inicial × custo atual).' },
-        { valor: formatarMoeda(resumo.consumoValor), rotulo: 'Consumo no período', sub: resumo.consumoDiaValor != null ? `${formatarMoeda(resumo.consumoDiaValor)} por dia${resumo.giro != null ? ` · giro ${formatarNumero(resumo.giro)}×` : ''}` : undefined, cor: GOLD, ajuda: 'Valor das saídas no período. Giro = consumo ÷ valor médio em estoque: quanto maior, menos tempo o dinheiro fica parado.' },
-        { valor: formatarMoeda(resumo.reposicaoValor), rotulo: 'Reposição estimada', sub: `${resumo.contagem.ruptura} ${plural(resumo.contagem.ruptura, 'item a repor', 'itens a repor')}${resumo.programarValor > 0 ? ` · +${formatarMoeda(resumo.programarValor)} a programar` : ''}`, cor: resumo.contagem.ruptura > 0 ? RED : GREEN_DARK, ajuda: `Compra de insumos para levar os itens a repor ao maior entre o estoque mínimo e ${COBERTURA_ALVO_DIAS} dias de consumo. Formulações são produzidas e ficam fora deste valor.`, onClick: () => setAba('repor') },
-        { valor: formatarMoeda(resumo.capital.parado), rotulo: 'Capital parado', sub: `${formatarNumero(resumo.pctParado, 1)}% do valor em estoque`, cor: resumo.capital.parado > 0 ? GOLD : GREEN_DARK, ajuda: 'Dinheiro em itens com saldo e valor, mas sem nenhuma saída no período.', onClick: () => setAba('imobilizado') },
+        { n: resumo.valorEstoque, valor: formatarMoeda(resumo.valorEstoque), rotulo: 'Valor em estoque', sub: variacao ?? `${itensGrupo.length} ${plural(itensGrupo.length, 'item', 'itens')}`, cor: GREEN_DARK, ajuda: 'Saldo final × custo médio atual. A variação compara com o início do período, que é aproximado (saldo inicial × custo atual).' },
+        { n: resumo.consumoValor ?? 0, valor: formatarMoeda(resumo.consumoValor), rotulo: 'Consumo no período', sub: resumo.consumoDiaValor != null ? `${formatarMoeda(resumo.consumoDiaValor)} por dia${resumo.giro != null ? ` · giro ${formatarNumero(resumo.giro)}×` : ''}` : undefined, cor: GOLD, ajuda: 'Valor das saídas no período. Giro = consumo ÷ valor médio em estoque: quanto maior, menos tempo o dinheiro fica parado.' },
+        { n: resumo.reposicaoValor, valor: formatarMoeda(resumo.reposicaoValor), rotulo: 'Reposição estimada', sub: `${resumo.contagem.ruptura} ${plural(resumo.contagem.ruptura, 'item a repor', 'itens a repor')}${resumo.programarValor > 0 ? ` · +${formatarMoeda(resumo.programarValor)} a programar` : ''}`, cor: resumo.contagem.ruptura > 0 ? RED : GREEN_DARK, ajuda: `Compra de insumos para levar os itens a repor ao maior entre o estoque mínimo e ${COBERTURA_ALVO_DIAS} dias de consumo. Formulações são produzidas e ficam fora deste valor.`, onClick: () => setAba('repor') },
+        { n: resumo.capital.parado, valor: formatarMoeda(resumo.capital.parado), rotulo: 'Capital parado', sub: `${formatarNumero(resumo.pctParado, 1)}% do valor em estoque`, cor: resumo.capital.parado > 0 ? GOLD : GREEN_DARK, ajuda: 'Dinheiro em itens com saldo e valor, mas sem nenhuma saída no período.', onClick: () => setAba('imobilizado') },
       ]
     : [
-        { valor: formatarMoeda(resumo.valorEstoque), rotulo: 'Valor em estoque', sub: `${itensGrupo.length} ${plural(itensGrupo.length, 'item', 'itens')}`, cor: GREEN_DARK },
-        { valor: String(resumo.contagem.ruptura), rotulo: 'Itens a repor', sub: 'abaixo do mínimo ou negativos', cor: resumo.contagem.ruptura > 0 ? RED : GREEN_DARK, onClick: () => setAba('repor') },
-        { valor: String(resumo.semCusto), rotulo: 'Sem custo', sub: resumo.semCusto > 0 ? 'valor total subestimado' : undefined, cor: resumo.semCusto > 0 ? GOLD : GREEN_DARK, onClick: () => irParaItens('sem_custo') },
-        { valor: String(resumo.negativos), rotulo: 'Saldos negativos', sub: resumo.negativos > 0 ? 'falta lançar entrada ou ajuste' : undefined, cor: resumo.negativos > 0 ? RED : GREEN_DARK, onClick: () => irParaItens('negativo') },
+        { n: resumo.valorEstoque, valor: formatarMoeda(resumo.valorEstoque), rotulo: 'Valor em estoque', sub: `${itensGrupo.length} ${plural(itensGrupo.length, 'item', 'itens')}`, cor: GREEN_DARK },
+        { n: resumo.contagem.ruptura, valor: String(resumo.contagem.ruptura), rotulo: 'Itens a repor', sub: 'abaixo do mínimo ou negativos', cor: resumo.contagem.ruptura > 0 ? RED : GREEN_DARK, onClick: () => setAba('repor') },
+        { n: resumo.semCusto, valor: String(resumo.semCusto), rotulo: 'Sem custo', sub: resumo.semCusto > 0 ? 'valor total subestimado' : undefined, cor: resumo.semCusto > 0 ? GOLD : GREEN_DARK, onClick: () => irParaItens('sem_custo') },
+        { n: resumo.negativos, valor: String(resumo.negativos), rotulo: 'Saldos negativos', sub: resumo.negativos > 0 ? 'falta lançar entrada ou ajuste' : undefined, cor: resumo.negativos > 0 ? RED : GREEN_DARK, onClick: () => irParaItens('negativo') },
       ]
   const situacoes: Indicador[] = comPeriodo
     ? [
-        { valor: String(resumo.contagem.ruptura), rotulo: 'Repor', sub: `cobertura < ${COBERTURA_RUPTURA_DIAS} d, abaixo do mínimo ou negativo`, cor: resumo.contagem.ruptura > 0 ? RED : GREEN_DARK, onClick: () => irParaItens('ruptura') },
-        { valor: String(resumo.contagem.programar), rotulo: 'Programar', sub: `cobertura de ${COBERTURA_RUPTURA_DIAS} a ${COBERTURA_ALVO_DIAS} d`, cor: resumo.contagem.programar > 0 ? GOLD : GREEN_DARK, onClick: () => irParaItens('programar') },
-        { valor: String(resumo.contagem.parado), rotulo: 'Parados', sub: `${formatarMoeda(resumo.capital.parado)} sem saída no período`, cor: resumo.contagem.parado > 0 ? GOLD : GREEN_DARK, onClick: () => irParaItens('parado') },
-        { valor: String(resumo.contagem.alto), rotulo: 'Estoque alto', sub: `${formatarMoeda(resumo.capital.alto)} · cobertura > ${COBERTURA_ALTA_DIAS} d (informativo)`, cor: '#52635a', ajuda: 'Informação, não alarme: compra em lote, safra e entressafra justificam estoque maior. Serve para conferir se é intencional.', onClick: () => irParaItens('alto') },
-        { valor: String(resumo.contagem.ok), rotulo: 'Em ordem', sub: `${formatarMoeda(resumo.capital.ok)} em estoque`, cor: GREEN_DARK },
+        { n: resumo.contagem.ruptura, valor: qtd(resumo.contagem.ruptura), rotulo: 'Repor', sub: `cobertura < ${COBERTURA_RUPTURA_DIAS} d, abaixo do mínimo ou negativo`, cor: resumo.contagem.ruptura > 0 ? RED : GREEN_DARK, onClick: () => irParaItens('ruptura') },
+        { n: resumo.contagem.programar, valor: qtd(resumo.contagem.programar), rotulo: 'Programar', sub: `cobertura de ${COBERTURA_RUPTURA_DIAS} a ${COBERTURA_ALVO_DIAS} d`, cor: resumo.contagem.programar > 0 ? GOLD : GREEN_DARK, onClick: () => irParaItens('programar') },
+        { n: resumo.contagem.parado, valor: qtd(resumo.contagem.parado), rotulo: 'Parados', sub: `${formatarMoeda(resumo.capital.parado)} sem saída no período`, cor: resumo.contagem.parado > 0 ? GOLD : GREEN_DARK, onClick: () => irParaItens('parado') },
+        { n: resumo.contagem.alto, valor: qtd(resumo.contagem.alto), rotulo: 'Estoque alto', sub: `${formatarMoeda(resumo.capital.alto)} · cobertura > ${COBERTURA_ALTA_DIAS} d (informativo)`, cor: '#52635a', ajuda: 'Informação, não alarme: compra em lote, safra e entressafra justificam estoque maior. Serve para conferir se é intencional.', onClick: () => irParaItens('alto') },
+        { n: resumo.contagem.ok, valor: qtd(resumo.contagem.ok), rotulo: 'Em ordem', sub: `${formatarMoeda(resumo.capital.ok)} em estoque`, cor: GREEN_DARK },
       ]
     : []
+
+  const visiveis = (lista: Indicador[]) => {
+    const cartoes = lista.filter((k) => Math.abs(k.n) > 0)
+    if (cartoes.length === 0) return null
+    return <div className={`grid grid-cols-2 ${COLUNAS_XL[cartoes.length] ?? 'xl:grid-cols-5'} gap-3`}>{cartoes.map(renderIndicador)}</div>
+  }
 
   const renderIndicador = (k: Indicador) => {
     const corpo = (
@@ -661,8 +674,8 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">{indicadores.map(renderIndicador)}</div>
-            {situacoes.length > 0 && <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">{situacoes.map(renderIndicador)}</div>}
+            {visiveis(indicadores)}
+            {visiveis(situacoes)}
 
             <div className="rounded-xl border-l-4 bg-white p-4 shadow-sm" style={{ borderLeftColor: GREEN_DARK }}>
               <p className="text-xs font-bold uppercase tracking-wide" style={{ color: GREEN_DARK }}>{comPeriodo ? 'Leitura do período' : 'Leitura da posição'}</p>
@@ -728,7 +741,7 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
                   </div>
                   {renderTabela()}
                   <p className="text-[11px] text-gray-400">
-                    Valor em estoque = saldo {comPeriodo ? 'final ' : ''}× custo médio atual do item (saldo negativo vale 0). {comPeriodo ? 'Saldos reconstruídos pelo histórico de lançamentos. Cobertura = saldo final ÷ consumo médio diário do período.' : ''}
+                    Valor em estoque = saldo {comPeriodo ? 'final ' : ''}× custo médio atual do item (saldo negativo vale 0). {comPeriodo ? 'Saldos calculados a partir dos lançamentos de estoque (entradas, saídas e ajustes) até a data final do período. Cobertura = saldo final ÷ consumo médio diário do período.' : ''}
                   </p>
                 </>
               )}
