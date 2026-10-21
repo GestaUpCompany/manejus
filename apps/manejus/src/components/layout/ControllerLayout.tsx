@@ -155,6 +155,8 @@ const menuStructure: MenuItem[] = [
       { label: 'Suplementação', path: '/controller/estoque-suplementacao' },
       { label: 'Almoxarifado', path: '/controller/estoque-almoxarifado' },
       { label: 'Cantina', path: '/controller/estoque-cantina' },
+      { label: 'Farmácia', path: '/controller/estoque-farmacia' },
+      { label: 'Registros da Farmácia', path: '/controller/farmacia' },
       { label: 'Pendências de devolução', path: '/controller/pendencias-almoxarifado' }
     ],
   },

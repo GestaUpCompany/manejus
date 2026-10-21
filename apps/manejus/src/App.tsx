@@ -58,6 +58,8 @@ const EstoqueCombustivel = laz(() => import('./pages/controller/EstoqueCombustiv
 const EstoqueSuplementacao = laz(() => import('./pages/controller/EstoqueSuplementacao'), 'EstoqueSuplementacao')
 const EstoqueAlmoxarifado = laz(() => import('./pages/controller/EstoqueAlmoxarifado'), 'EstoqueAlmoxarifado')
 const EstoqueCantina = laz(() => import('./pages/controller/EstoqueCantina'), 'EstoqueCantina')
+const EstoqueFarmacia = laz(() => import('./pages/controller/EstoqueFarmacia'), 'EstoqueFarmacia')
+const Farmacia = laz(() => import('./pages/controller/Farmacia'), 'Farmacia')
 const PendenciasAlmoxarifado = laz(() => import('./pages/controller/PendenciasAlmoxarifado'), 'PendenciasAlmoxarifado')
 const Rotinas = laz(() => import('./pages/controller/Rotinas'), 'Rotinas')
 const AuditoriaRotinas = laz(() => import('./pages/controller/AuditoriaRotinas'), 'AuditoriaRotinas')
@@ -562,6 +564,26 @@ function App() {
               <ControllerRoute>
                 <ControllerLayout>
                   <EstoqueCantina />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/estoque-farmacia"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <EstoqueFarmacia />
+                </ControllerLayout>
+              </ControllerRoute>
+            }
+          />
+          <Route
+            path="/controller/farmacia"
+            element={
+              <ControllerRoute>
+                <ControllerLayout>
+                  <Farmacia />
                 </ControllerLayout>
               </ControllerRoute>
             }
