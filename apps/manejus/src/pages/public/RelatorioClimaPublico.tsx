@@ -1046,14 +1046,14 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
           <h2 className="text-sm font-semibold text-gray-900">Calendário de chuva</h2>
           <p className="text-xs text-gray-600 mb-3">
-            Cada quadrado é um dia. O número grande é a <strong>média da fazenda</strong> no dia. O tom e o símbolo mostram a <strong>maior chuva em uma única região</strong>: ◆ forte ({LIMITE_CHUVA_FORTE_MM} a {LIMITE_CHUVA_TORRENCIAL_MM} mm) e ▲ torrencial (a partir de {LIMITE_CHUVA_TORRENCIAL_MM} mm), com o valor dessa região logo abaixo. Dia em branco = sem leitura registrada.
+            Cada quadrado é um dia. O número grande é a <strong>média da fazenda</strong> no dia. O tom e o símbolo mostram a <strong>maior chuva do dia em alguma região</strong>: ◆ forte ({LIMITE_CHUVA_FORTE_MM} a {LIMITE_CHUVA_TORRENCIAL_MM} mm) e ▲ torrencial ({LIMITE_CHUVA_TORRENCIAL_MM} mm ou mais), com o valor dessa região logo abaixo. A fazenda toda pode ter recebido bem menos que essa região. Dia em branco = sem leitura registrada.
           </p>
           <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-700">
             {[
               { rotulo: 'Sem leitura', fundo: '#FFFFFF', borda: '#D1D5DB' },
-              { rotulo: 'Normal (abaixo de 25 mm)', fundo: ESTILO_NIVEL.normal.fundo, borda: ESTILO_NIVEL.normal.borda },
-              { rotulo: '◆ Forte (25 a 50 mm)', fundo: ESTILO_NIVEL.forte.fundo, borda: ESTILO_NIVEL.forte.borda },
-              { rotulo: '▲ Torrencial (50 mm ou mais)', fundo: ESTILO_NIVEL.torrencial.fundo, borda: ESTILO_NIVEL.torrencial.borda },
+              { rotulo: 'Leitura sem chuva forte (abaixo de 25 mm em todas as regiões)', fundo: ESTILO_NIVEL.normal.fundo, borda: ESTILO_NIVEL.normal.borda },
+              { rotulo: '◆ Forte (25 a 50 mm em alguma região)', fundo: ESTILO_NIVEL.forte.fundo, borda: ESTILO_NIVEL.forte.borda },
+              { rotulo: '▲ Torrencial (50 mm ou mais em alguma região)', fundo: ESTILO_NIVEL.torrencial.fundo, borda: ESTILO_NIVEL.torrencial.borda },
             ].map((l) => (
               <span key={l.rotulo} className="inline-flex items-center gap-1.5">
                 <span className="inline-block h-3.5 w-3.5 rounded-sm" style={{ backgroundColor: l.fundo, border: `1.5px solid ${l.borda}` }} />
@@ -1100,6 +1100,7 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
                             <span className="text-[10px] opacity-80">{c.dia}</span>
                             {p && (
                               <>
+                                {/* número grande = média da fazenda no dia; nos eventos, símbolo + maior chuva em alguma região */}
                                 <span className="text-center text-sm font-bold">{fmtNum(p.mm_fazenda, 0)}</span>
                                 {p.nivel !== 'normal' && (
                                   <span className="text-center text-[10px] font-bold">

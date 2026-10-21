@@ -1,18 +1,20 @@
 // Endpoint fino do relatório de Clima. Mesmo padrão do consumo.js e
 // abastecimento.js: só existe aqui o que é específico deste relatório
-// (página de resumo com KPIs + gráficos, página de distribuição diária da
-// chuva e página com a tabela por pluviômetro). Toda a
-// infraestrutura (Chrome, Chart.js, template base, formatadores) vem do
-// _shared/.
+// (KPIs, gráficos de acumulado, calendário de chuva, chuva por mês e tabela
+// por pluviômetro). Toda a infraestrutura (Chrome, Chart.js, template base,
+// formatadores) vem do _shared/.
 //
 // Estrutura (ver docs/ArquiteturaRelatoriosPDF.md):
-//  - Página 1: KPIs + dois gráficos lado a lado: acumulado por pluviômetro
-//    × média da fazenda (barras horizontais) e evolução do acumulado da
-//    fazenda com faixa mín–máx entre pluviômetros (+ temperatura média).
-//  - Página 2: distribuição diária da chuva (barra = média da fazenda no dia,
-//    marcador = maior região, linhas de chuva forte/torrencial) + contagem de
-//    eventos. Substitui as antigas páginas de "Leituras detalhadas".
-//  - Página 3: tabela "Resumo por pluviômetro" com a linha da fazenda.
+//  - Página 1: KPIs + chuva por mês (barras). Se o período cabe num único
+//    mês, o calendário daquele mês ocupa o lugar do gráfico mensal.
+//  - Página 2: dois gráficos de acumulado lado a lado, com a página toda:
+//    acumulado por pluviômetro × média da fazenda (barras horizontais) e
+//    evolução do acumulado da fazenda com faixa mín–máx entre pluviômetros
+//    (+ temperatura média).
+//  - Calendários de chuva (2 meses ou mais): 6 meses por página; um quadrado
+//    por dia, só a classe do dia (forte ◆ / torrencial ▲, em alguma região).
+//  - Última página: tabela "Resumo por pluviômetro" com a linha da fazenda.
+//    Não há mais "Leituras detalhadas" no PDF.
 
 import { escapeHtml, dateFmt, numFmt, intFmt } from './_shared/formatters.js'
 import { CHART_DPR, getChartJsScript } from './_shared/chartjs.js'
@@ -68,8 +70,8 @@ const CLIMA_CSS = `
 .cal-sem,.cal-dias{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .cal-sem span{font-size:8.5px;text-align:center;color:#63736a;font-weight:700}
 .cal-d{height:6.1mm;border-radius:2px;padding:0 2px;display:flex;flex-direction:column;justify-content:space-between;line-height:1;overflow:hidden}
-.cal-topo{display:flex;justify-content:space-between;align-items:baseline;font-size:7px}
 .cal-dia{font-size:7px;opacity:.85}
+.cal-topo{display:flex;justify-content:space-between;align-items:baseline;font-size:7px}
 .cal-ev{font-weight:700;font-size:7.5px}
 .cal-val{text-align:center;font-weight:700;font-size:10.5px;line-height:1;padding-bottom:1px}
 .cal-0{background:#fff;border:1px solid #e5e7eb;color:#9ca3af}
@@ -287,9 +289,21 @@ const CHARTS_INIT_JS = `
             min: -span * 0.04,
             max: span * 1.04,
             grid: { display: false },
-            // um tick em cada data com leitura (até 12); acima disso, ticks automáticos
+            // um tick em cada data com leitura (até 12), pulando as que ficam coladas na anterior
+            // (senão os rótulos se sobrepõem); sempre mantém a última data. Acima de 12, ticks automáticos.
             afterBuildTicks: function(scale) {
-              if (xs.length <= 12) scale.ticks = xs.map(function(v){ return { value: v } })
+              if (xs.length > 12) return
+              var minGap = span * 0.1
+              var mantidos = []
+              xs.forEach(function(v) {
+                if (!mantidos.length || v - mantidos[mantidos.length - 1] >= minGap) mantidos.push(v)
+              })
+              var ultimo = xs[xs.length - 1]
+              if (mantidos[mantidos.length - 1] !== ultimo) {
+                if (mantidos.length > 1 && ultimo - mantidos[mantidos.length - 1] < minGap) mantidos.pop()
+                mantidos.push(ultimo)
+              }
+              scale.ticks = mantidos.map(function(v){ return { value: v } })
             },
             ticks: { color: MEDIUM_TEXT, font: { size: 10 }, callback: function(v){ return labelDe(v) } },
           },
@@ -506,10 +520,10 @@ function mesHtml(mes) {
 function legendaCalendarioHtml(limites) {
   return `<div class="cal-legenda">
     <span><i class="cal-0"></i> Sem leitura</span>
-    <span><i class="cal-n"></i> Normal (&lt; ${limites.forte} mm)</span>
-    <span><i class="cal-f"></i> ◆ Forte (${limites.forte} a ${limites.torrencial} mm)</span>
-    <span><i class="cal-t"></i> ▲ Torrencial (≥ ${limites.torrencial} mm)</span>
-    <em>Número grande = média da fazenda no dia · símbolo + valor = maior chuva em uma única região · dia em branco = sem leitura registrada</em>
+    <span><i class="cal-n"></i> Leitura sem chuva forte (&lt; ${limites.forte} mm em todas as regiões)</span>
+    <span><i class="cal-f"></i> ◆ Forte (${limites.forte} a ${limites.torrencial} mm em alguma região)</span>
+    <span><i class="cal-t"></i> ▲ Torrencial (≥ ${limites.torrencial} mm em alguma região)</span>
+    <em>Número grande = média da fazenda no dia · símbolo + valor = maior chuva do dia em alguma região (a fazenda toda pode ter recebido bem menos) · dia em branco = sem leitura registrada</em>
   </div>`
 }
 
@@ -529,26 +543,34 @@ export async function renderClimaHtml(input) {
     serie.some((p) => p.temp_media != null)
   const hasUmidade = registros.some((r) => r.umidade_relativa != null)
 
-  // Total de páginas conhecido de antemão (o rodapé mostra "Página X de Y"):
-  // 1 resumo + páginas de calendário (6 meses cada) + gráfico mensal (junto do
-  // último calendário se ele tiver até 3 meses, senão em página própria) + resumo por pluviômetro.
+  // Estrutura (o rodapé mostra "Página X de Y", então o total é conhecido de antemão):
+  //  1. KPIs + chuva por mês (ou, se o período cabe num único mês, o calendário daquele mês);
+  //  2. os dois gráficos de acumulado (por pluviômetro × média e evolução), com a página toda;
+  //  3. calendários de chuva, 6 meses por página, quando o período tem 2 meses ou mais;
+  //  4. resumo por pluviômetro.
   const meses = montarMeses(diaria)
+  const umMes = mensal.length === 0 && meses.length > 0
   const chunksMeses = []
-  for (let i = 0; i < meses.length; i += MESES_POR_PAGINA) chunksMeses.push(meses.slice(i, i + MESES_POR_PAGINA))
-  const mensalJunto = mensal.length > 0 && chunksMeses.length > 0 && chunksMeses[chunksMeses.length - 1].length <= 3
+  if (!umMes) for (let i = 0; i < meses.length; i += MESES_POR_PAGINA) chunksMeses.push(meses.slice(i, i + MESES_POR_PAGINA))
+  const temDados = serie.length > 0 && resumo.length > 0
   const temResumo = resumo.length > 0
-  const totalPages = 1 + chunksMeses.length + (mensal.length > 0 && !mensalJunto ? 1 : 0) + (temResumo ? 1 : 0)
+  const totalPages = 1 + (temDados ? 1 : 0) + chunksMeses.length + (temResumo ? 1 : 0)
 
   const chartsData = []
   const pagesHtml = []
   let pageIndex = 0
 
-  // Página 1: resumo (KPIs + dois gráficos)
+  // Página 1: KPIs + distribuição da chuva no tempo
   pageIndex += 1
-  const temDados = serie.length > 0 && resumo.length > 0
-  if (temDados) {
-    chartsData.push({ kind: 'porPluviometro', canvasId: 'chart-clima-pluv', resumo, media: kpis.mm_total })
-    chartsData.push({ kind: 'evolucao', canvasId: 'chart-clima-evolucao', serie, hasTemp, comFaixa: resumo.length > 1 })
+  const graficoMensalHtml = `<div class="clima-mensal">${chartCard({ canvasId: 'chart-clima-mensal', title: 'Chuva por mês', subtitle: 'Média da fazenda em cada mês (a soma das barras é a chuva acumulada do período). Meses sem leitura aparecem zerados.', hasData: true })}</div>`
+  const calendarioHtml = (chunk) =>
+    `${legendaCalendarioHtml(limites)}<div class="cal-grid${chunk.length <= 3 ? ' cal-grande' : ' cal-medio'}" style="grid-template-columns:repeat(${Math.min(chunk.length, 3)},1fr)">${chunk.map(mesHtml).join('')}</div>`
+  let corpoPrimeira = ''
+  if (mensal.length > 0) {
+    chartsData.push({ kind: 'mensal', canvasId: 'chart-clima-mensal', mensal })
+    corpoPrimeira = graficoMensalHtml
+  } else if (umMes) {
+    corpoPrimeira = `${calendarioHtml(meses)}<p class="clima-eventos">${escapeHtml(eventosTexto(diaria, limites))}</p>`
   }
   pagesHtml.push(
     pageSection(`
@@ -557,51 +579,48 @@ export async function renderClimaHtml(input) {
       <div class="clima-content">
         <div class="period-badge">${dateFmt(dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(dataFim)}</div>
         ${kpisHtml(kpis, hasTemp, hasUmidade)}
-        <div class="clima-charts">
-          <div class="clima-chart">${chartCard({ canvasId: 'chart-clima-pluv', title: 'Acumulado por pluviômetro × média da fazenda', subtitle: resumo.length > 1 ? '▲ acima · ▼ abaixo da média da fazenda (diferença em mm)' : `${registros.length} leitura(s) · ${resumo.length} pluviômetro(s)`, hasData: temDados })}</div>
-          <div class="clima-chart">${chartCard({ canvasId: 'chart-clima-evolucao', title: hasTemp ? 'Evolução do acumulado da fazenda e temperatura' : 'Evolução do acumulado da fazenda', subtitle: resumo.length > 1 ? 'Linha: média da fazenda até cada data; mais inclinada = mais chuva no intervalo. Faixa: só as regiões extremas (cima = a que mais choveu, baixo = a que menos). Borda de cima longe da linha = região bem mais molhada; borda de baixo longe = região bem atrás da média. Não mostra quantas regiões estão em cada borda: veja o gráfico ao lado.' : 'Acumulado do pluviômetro no período', hasData: temDados })}</div>
-        </div>
+        ${corpoPrimeira}
       </div>
       ${renderFooter({ ...period, page: pageIndex, totalPages })}
     `),
   )
 
-  // Páginas de calendário: um quadrado por dia, 6 meses por página (3 x 2)
-  const graficoMensalHtml = `<div class="clima-mensal">${chartCard({ canvasId: 'chart-clima-mensal', title: 'Chuva por mês', subtitle: 'Média da fazenda em cada mês (a soma das barras é a chuva acumulada do período). Meses sem leitura aparecem zerados.', hasData: true })}</div>`
+  // Página 2: acumulado da chuva (os dois gráficos lado a lado, com a altura da página)
+  if (temDados) {
+    pageIndex += 1
+    chartsData.push({ kind: 'porPluviometro', canvasId: 'chart-clima-pluv', resumo, media: kpis.mm_total })
+    chartsData.push({ kind: 'evolucao', canvasId: 'chart-clima-evolucao', serie, hasTemp, comFaixa: resumo.length > 1 })
+    pagesHtml.push(
+      pageSection(`
+        ${renderHeader({ ...brand, reportTitle: 'Relatório de Clima', section: 'Acumulado da chuva', sectionLabel: 'Seção' })}
+        <p class="section-kicker">Acumulado da chuva por região e ao longo do tempo</p>
+        <div class="clima-content">
+          <div class="clima-charts">
+            <div class="clima-chart">${chartCard({ canvasId: 'chart-clima-pluv', title: 'Acumulado por pluviômetro × média da fazenda', subtitle: resumo.length > 1 ? '▲ acima · ▼ abaixo da média da fazenda (diferença em mm)' : `${registros.length} leitura(s) · ${resumo.length} pluviômetro(s)`, hasData: temDados })}</div>
+            <div class="clima-chart">${chartCard({ canvasId: 'chart-clima-evolucao', title: hasTemp ? 'Evolução do acumulado da fazenda e temperatura' : 'Evolução do acumulado da fazenda', subtitle: resumo.length > 1 ? 'Linha: média da fazenda até cada data; mais inclinada = mais chuva no intervalo. Faixa: só as regiões extremas (cima = a que mais choveu, baixo = a que menos). Borda de cima longe da linha = região bem mais molhada; borda de baixo longe = região bem atrás da média. Não mostra quantas regiões estão em cada borda: veja o gráfico ao lado.' : 'Acumulado do pluviômetro no período', hasData: temDados })}</div>
+          </div>
+        </div>
+        ${renderFooter({ ...period, page: pageIndex, totalPages })}
+      `),
+    )
+  }
+
+  // Calendários de chuva (2 meses ou mais): um quadrado por dia, 6 meses por página (3 x 2)
   chunksMeses.forEach((chunk, idx) => {
     pageIndex += 1
     const ultima = idx === chunksMeses.length - 1
-    const comMensal = ultima && mensalJunto
     pagesHtml.push(
       pageSection(`
         ${renderHeader({ ...brand, reportTitle: 'Relatório de Clima', section: 'Calendário de chuva', sectionLabel: 'Seção' })}
         <p class="section-kicker">Calendário de chuva${chunksMeses.length > 1 ? ` (${idx + 1}/${chunksMeses.length})` : ''}</p>
         <div class="clima-content">
-          ${legendaCalendarioHtml(limites)}
-          <div class="cal-grid${chunk.length <= 3 ? ' cal-grande' : ' cal-medio'}" style="grid-template-columns:repeat(${Math.min(chunk.length, 3)},1fr)">${chunk.map(mesHtml).join('')}</div>
+          ${calendarioHtml(chunk)}
           ${ultima ? `<p class="clima-eventos">${escapeHtml(eventosTexto(diaria, limites))}</p>` : ''}
-          ${comMensal ? graficoMensalHtml : ''}
         </div>
         ${renderFooter({ ...period, page: pageIndex, totalPages })}
       `),
     )
   })
-
-  // Gráfico mensal em página própria (quando o último calendário já ocupa a página)
-  if (mensal.length > 0) {
-    chartsData.push({ kind: 'mensal', canvasId: 'chart-clima-mensal', mensal })
-    if (!mensalJunto) {
-      pageIndex += 1
-      pagesHtml.push(
-        pageSection(`
-          ${renderHeader({ ...brand, reportTitle: 'Relatório de Clima', section: 'Chuva por mês', sectionLabel: 'Seção' })}
-          <p class="section-kicker">Chuva por mês</p>
-          <div class="clima-content">${graficoMensalHtml}</div>
-          ${renderFooter({ ...period, page: pageIndex, totalPages })}
-        `),
-      )
-    }
-  }
 
   // Última página: resumo por pluviômetro
   if (temResumo) {

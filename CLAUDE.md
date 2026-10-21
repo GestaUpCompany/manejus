@@ -37,7 +37,7 @@ Monorepo pnpm do painel de gestão/admin (React 18 + TanStack Query + Vite), onl
 
 ## Prévia local do PDF de Clima (`pnpm preview:clima`)
 
-Script `apps/manejus/scripts/preview-clima.mjs`. Sobe um servidor em `http://127.0.0.1:5199` (porta via `PREVIEW_PORT`) que importa a mesma `renderClimaHtml` de `api/pdf/clima.js` e mostra o HTML de todas as páginas (resumo, calendário de chuva + chuva por mês, resumo por pluviômetro; `PREVIEW_MESES=N` amplia a amostra para N meses e testa a paginação do calendário); ao salvar `clima.js` ou `api/pdf/_shared/*.js` a aba recarrega sozinha. Cada requisição roda num processo novo, então não há cache de módulo.
+Script `apps/manejus/scripts/preview-clima.mjs`. Sobe um servidor em `http://127.0.0.1:5199` (porta via `PREVIEW_PORT`) que importa a mesma `renderClimaHtml` de `api/pdf/clima.js` e mostra o HTML de todas as páginas (KPIs + chuva por mês, gráficos de acumulado, calendários de chuva, resumo por pluviômetro; `PREVIEW_MESES=N` amplia a amostra para N meses e testa a paginação do calendário, e `PREVIEW_MESES=1` testa o período dentro de um único mês, em que o calendário vai para a página 1); ao salvar `clima.js` ou `api/pdf/_shared/*.js` a aba recarrega sozinha. Cada requisição roda num processo novo, então não há cache de módulo.
 
 **Finalidade:** iterar rápido o visual do PDF de Clima (KPIs, gráficos Chart.js, rótulos, tabelas, textos explicativos) sem gerar PDF, publicar na Vercel nem depender de dados reais. Abrir no DevTools só por `http://127.0.0.1`/`localhost` (regra do navegador acima), nunca por `file://`.
 

@@ -32,17 +32,23 @@ function dadosExemplo() {
     '04': [12, 58, 64, 15, 29], '05': [22, 0, 90, 22, 44], '06': [17, 21, 84, 38, 38],
     '07': [12, 18, 50, 32, 15], '08': [8, 29, 80, 35, 36], '09': [10, 22, 72, 32, 28],
   }
-  // PREVIEW_MESES=N amplia a amostra para N meses (testa a paginação do calendário); padrão 2
-  const nMeses = Math.max(2, Number(process.env.PREVIEW_MESES) || 2)
+  // PREVIEW_MESES=N amplia a amostra para N meses (testa a paginação do calendário); padrão 2.
+  // PREVIEW_MESES=1 usa só outubro (período dentro de um único mês).
+  const nMeses = Math.max(1, Number(process.env.PREVIEW_MESES) || 2)
   const extras = []
   for (let k = nMeses - 2; k >= 1; k--) {
     const d = new Date(Date.UTC(2026, 8 - k, 1))
     for (const dia of [9, 21]) extras.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`)
   }
-  const datas = [...extras, ...datasBase]
-  const mm = Object.fromEntries(
+  const todasDatas = [...extras, ...datasBase]
+  const todosMm = Object.fromEntries(
     Object.entries(mmBase).map(([k, vals], pi) => [k, [...extras.map((_, ei) => (ei * 11 + pi * 5) % 33), ...vals]]),
   )
+  const manter = nMeses === 1
+    ? todasDatas.map((d, i) => (d.startsWith('2026-10') ? i : -1)).filter((i) => i >= 0)
+    : todasDatas.map((_, i) => i)
+  const datas = manter.map((i) => todasDatas[i])
+  const mm = Object.fromEntries(Object.entries(todosMm).map(([k, v]) => [k, manter.map((i) => v[i])]))
   const registros = []
   for (const [nome, vals] of Object.entries(mm)) {
     vals.forEach((v, i) => {
