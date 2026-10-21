@@ -98,6 +98,7 @@ export const CADERNETA_GRUPOS: CadernetaGrupo[] = [
       { id: 'abastecimento', path: '/controller/cadernetas/abastecimento' },
       { id: 'almoxarifado', path: '/controller/cadernetas/almoxarifado' },
       { id: 'cantina', path: '/controller/cadernetas/alimentacao' },
+      { id: 'saida-farmacia', path: '/controller/cadernetas/saida-farmacia' },
     ],
   },
   {
@@ -108,7 +109,7 @@ export const CADERNETA_GRUPOS: CadernetaGrupo[] = [
       { id: 'entrada-combustivel', path: '/controller/cadernetas/entrada-combustivel' },
       { id: 'entrada-almoxarifado', path: '/controller/cadernetas/entrada-almoxarifado' },
       { id: 'entrada-cantina', path: '/controller/cadernetas/entrada-cantina' },
-      { id: 'farmacia', path: '/controller/cadernetas/farmacia' },
+      { id: 'entrada-farmacia', path: '/controller/cadernetas/entrada-farmacia' },
     ],
   },
 ]
@@ -135,7 +136,8 @@ const CADERNETA_LABELS: Record<string, string> = {
   'entrada-almoxarifado': 'Entrada de Almoxarifado',
   'entrada-cantina': 'Entrada de Cantina',
   'entrada-insumos': 'Entrada de Insumos',
-  farmacia: 'Farmácia',
+  'entrada-farmacia': 'Entrada de Farmácia',
+  'saida-farmacia': 'Saída de Farmácia',
   'saida-insumos': 'Produção Fábrica',
   'leitura-cocho': 'Leitura de Cocho',
   'trato-confinamento': 'Trato Confinamento',

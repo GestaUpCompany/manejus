@@ -32,7 +32,7 @@ import {
 
 const hojeLocal = () => new Date().toLocaleDateString('en-CA')
 
-const COLUNAS_ITEM = 'id,nome_comercial,tipo,unidade,estoque_atual,estoque_minimo,custo_unitario,custo_total_estoque,controla_estoque,conteudo_por_unidade,conteudo_unidade'
+const COLUNAS_ITEM = 'id,nome_comercial,sku,tipo,unidade,estoque_atual,estoque_minimo,custo_unitario,custo_total_estoque,controla_estoque,conteudo_por_unidade,conteudo_unidade'
 const COLUNAS_MOVIMENTO = 'id,medicamento_id,tipo_movimentacao,quantidade,custo_unitario,valor_total,data,origem,fornecedor,nota_fiscal,lote_produto,validade,observacao,unidade,registro_origem_id,created_at'
 
 const moeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -253,7 +253,8 @@ export function EstoqueFarmacia() {
         </div>
         <div className="flex flex-wrap gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
           <Button variant="secondary" onClick={() => navigate('/controller/cadastros-auxiliares')}>Cadastrar medicamentos</Button>
-          <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/farmacia')}>Registros da Farmácia</Button>
+          <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/entrada-farmacia')}>Entradas</Button>
+          <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/saida-farmacia')}>Saídas</Button>
           <Button variant="secondary" onClick={() => abrirModal('ajuste')}>Ajuste</Button>
           <Button onClick={() => abrirModal('entrada')}>Registrar Entrada</Button>
         </div>
@@ -283,7 +284,7 @@ export function EstoqueFarmacia() {
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
         <div className="sm:w-72 min-w-0">
-          <Input label="Buscar medicamento" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome comercial" />
+          <Input label="Buscar medicamento" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome comercial ou SKU" />
         </div>
         <div className="sm:w-60">
           <Select label="Tipo" value={tipo} onChange={setClassificacao} placeholder="Todas" options={categorias.map((c) => ({ value: c, label: c }))} />
@@ -307,7 +308,7 @@ export function EstoqueFarmacia() {
                 <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
                   <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
                     <p className="font-semibold text-content-strong truncate">{item.nome_comercial}</p>
-                    <p className="text-xs text-content-muted truncate">{item.tipo}{item.controla_estoque ? ` · ${item.unidade}` : ''}</p>
+                    <p className="text-xs text-content-muted truncate">{item.tipo}{item.controla_estoque ? ` · ${item.unidade}` : ''}{item.sku ? ` · SKU ${item.sku}` : ''}</p>
                   </div>
                   <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
                     {alerta && (

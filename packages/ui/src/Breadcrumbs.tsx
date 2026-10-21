@@ -86,6 +86,7 @@ export function Breadcrumbs({ maxItems = 3 }: BreadcrumbsProps) {
         .replace(/relatorios/g, 'Relatórios')
         .replace(/reproducao/g, 'Reprodução')
         .replace(/rodeio/g, 'Rodeio')
+        .replace(/saida/g, 'Saída')
         .replace(/suplementacao/g, 'Suplementação')
         .replace(/tratos/g, 'Tratos')
         .replace(/usuario/g, 'Usuário')
