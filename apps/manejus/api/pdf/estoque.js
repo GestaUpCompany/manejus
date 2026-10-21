@@ -21,7 +21,11 @@
 // Estrutura:
 //  - Página 1: resumo executivo (KPIs, situação dos itens, leitura do período).
 //  - Decisões: repor agora, programar compra, capital parado e estoque alto,
-//    em blocos que dividem a página quando são curtos.
+//    cada um com sua nota no cabeçalho da tabela (nunca separada dela).
+//  A paginação é do motor de fluxo (_shared/flowEngine.js): ele mede cada bloco e
+//  cada linha no Chromium e distribui o mínimo de páginas, dividindo tabelas só
+//  quando preciso. O total de cada tabela vai no título (linha de total no tbody
+//  poderia ficar sozinha numa página).
 //  - Curva ABC com a explicação de como ler, concentração e consumo por origem.
 //  - Posição de estoque (apêndice): fluxo contínuo de linhas por grupo.
 //  - Glossário.
@@ -35,26 +39,15 @@ import { escapeHtml, dateFmt, moneyFmt } from './_shared/formatters.js'
 import { generatePdf } from './_shared/puppeteer.js'
 import {
   renderHeader,
-  page as pageSection,
   htmlDocument,
   kpi,
 } from './_shared/template.js'
+import { flowBlock, flowIntro, flowSection, flowTable } from './_shared/flowEngine.js'
 
 const MAX_ITENS = 5000
 const MAX_BODY_BYTES = 8_000_000
 
-const POSICAO_ROWS = 17
 const ABC_TOP = 10
-
-// Paginação dos blocos de decisão, em px (medidos no A4 paisagem renderizado):
-// área útil de ~582 px com folga; cada bloco gasta título + cabeçalho + margens,
-// a última fatia ainda leva total e nota. A linha de compra/produção tem duas
-// linhas de texto (quantidade + critério), por isso é mais alta.
-const PAGINA_CAPACIDADE = 550
-const CUSTO_TITULO = 90
-const CUSTO_TOTAL_E_NOTA = 55
-const PESO_LINHA_COMPRA = 35
-const PESO_LINHA_SIMPLES = 25
 
 const GRUPOS = [
   { key: 'insumo', label: 'Insumos' },
@@ -91,6 +84,7 @@ const ESTOQUE_CSS = `
 .est-sit-alto{background:#eceff1;color:#52635a;border:1px solid #d9dfdc}
 .est-sit-ok{background:#eef6f1;color:#0b6a42;border:1px solid #d3e4d9}
 .est-sub{display:block;font-size:9px;font-weight:400;color:#7a8981;margin-top:1px}
+.est-nota-th{background:#f7faf8;color:#6b7b72;font-weight:400;font-size:9.5px;padding:4px 6px;border-bottom:1px solid #e5ebe7;letter-spacing:0}
 .est-nota{font-size:10px;color:#7a8981;margin:2mm 0 0}
 .est-leitura{margin:0;padding-left:16px}
 .est-leitura li{margin-bottom:2px;font-size:12px}
@@ -126,17 +120,11 @@ function footerEstoque(texto, page, totalPages) {
   return `<footer class="report-footer"><span>Gesta'Up · ${escapeHtml(texto)}</span><span>Página ${page} de ${totalPages}</span></footer>`
 }
 
-function tableHeadHtml(cols) {
+function tableHeadHtml(cols, nota = '') {
   const colgroup = `<colgroup>${cols.map(([, w]) => `<col style="width:${w}">`).join('')}</colgroup>`
-  const header = `<thead><tr>${cols.map(([t, , cls]) => `<th${cls ? ` class="${cls}"` : ''}>${t}</th>`).join('')}</tr></thead>`
+  const notaRow = nota ? `<tr><th class="est-nota-th" colspan="${cols.length}">${escapeHtml(nota)}</th></tr>` : ''
+  const header = `<thead>${notaRow}<tr>${cols.map(([t, , cls]) => `<th${cls ? ` class="${cls}"` : ''}>${t}</th>`).join('')}</tr></thead>`
   return colgroup + header
-}
-
-function chunkArray(arr, size) {
-  if (arr.length <= size) return [arr]
-  const chunks = []
-  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size))
-  return chunks
 }
 
 const soma = (lista, campo) => lista.reduce((s, x) => s + (Number(x[campo]) || 0), 0)
@@ -219,8 +207,8 @@ function montarLinhasPosicao(grupos, comPeriodo, abc, situacoes) {
   return linhas
 }
 
-function posicaoTableHtml(linhas, comPeriodo, total) {
-  return `<div class="table-block"><h3 class="table-title">Posição de estoque<span>${total} ${pl(total, 'item', 'itens')}</span></h3><table class="est-table">${tableHeadHtml(posicaoColunas(comPeriodo))}<tbody>${linhas.join('')}</tbody></table></div>`
+function posicaoTableHtml(linhas, comPeriodo, total, nota) {
+  return `<div class="table-block"><h3 class="table-title">Posição de estoque<span>${total} ${pl(total, 'item', 'itens')}</span></h3><table class="est-table">${tableHeadHtml(posicaoColunas(comPeriodo), nota)}<tbody>${linhas.join('')}</tbody></table></div>`
 }
 
 // ---------- Blocos de decisão ----------
@@ -239,7 +227,8 @@ function nomeComTipo(item) {
 }
 
 // Tabela de "repor agora" e "programar compra": mesma forma, só muda o título.
-function sugestaoTableHtml({ titulo, linhas, ultima, comPeriodo, lim, totalItens, totalValor }) {
+function sugestaoTableHtml({ titulo, linhas, comPeriodo, lim, totalValor, nota }) {
+  const totalItens = linhas.length
   const temProducao = linhas.some((l) => l.sugestao.acao === 'producao')
   const colCompra = temProducao ? 'Compra ou produção' : 'Compra sugerida'
   const cols = comPeriodo
@@ -255,52 +244,16 @@ function sugestaoTableHtml({ titulo, linhas, ultima, comPeriodo, lim, totalItens
     }
     return `<tr><td>${nomeComTipo(item)}</td><td>${escapeHtml(motivoRepor(item, lim))}</td>${saldo}<td class="num">${num(item.consumo_medio_dia)}</td><td class="num">${textoCobertura(item)}</td><td>${item.data_esgotamento ? dateFmt(item.data_esgotamento) : '—'}</td>${compra}</tr>`
   }).join('')
-  const vazios = '<td></td>'.repeat(cols.length - 2)
-  const total = ultima ? `<tr class="est-total-row"><td>Compra estimada de insumos</td>${vazios}<td class="num">${reais(totalValor)}</td></tr>` : ''
-  return `<div class="table-block"><h3 class="table-title">${escapeHtml(titulo)}<span>${totalItens} ${pl(totalItens, 'item', 'itens')}</span></h3><table class="est-table">${tableHeadHtml(cols)}<tbody>${rows}${total}</tbody></table></div>`
+  return `<div class="table-block"><h3 class="table-title">${escapeHtml(titulo)}<span>${totalItens} ${pl(totalItens, 'item', 'itens')} · compra estimada de insumos ${reais(totalValor)}</span></h3><table class="est-table">${tableHeadHtml(cols, nota)}<tbody>${rows}</tbody></table></div>`
 }
 
 // Tabela de capital parado e de estoque alto: mesma forma, só muda o título.
-function capitalTableHtml({ titulo, linhas, ultima, totalItens, totalValor, valorEstoque, situacoes }) {
+function capitalTableHtml({ titulo, linhas, valorEstoque, situacoes, nota }) {
+  const totalItens = linhas.length
+  const totalValor = soma(linhas, 'valor_estoque')
   const cols = [['Item', '28%'], ['Situação', '12%'], ['Saldo', '15%', 'num'], ['Cobertura', '12%', 'num'], ['Valor em estoque', '17%', 'num'], ['% do estoque total', '16%', 'num']]
   const rows = linhas.map((item) => `<tr><td>${nomeComTipo(item)}</td><td>${situacaoHtml(situacoes, item)}</td><td class="num">${moneyFmt(saldoDe(item))} ${unidadeDe(item)}</td><td class="num">${textoCobertura(item)}</td><td class="num"><strong>${reais(item.valor_estoque)}</strong></td><td class="num">${valorEstoque > 0 ? pct((item.valor_estoque / valorEstoque) * 100) : '—'}</td></tr>`).join('')
-  const total = ultima ? `<tr class="est-total-row"><td>Total (${totalItens} ${pl(totalItens, 'item', 'itens')})</td>${'<td></td>'.repeat(3)}<td class="num">${reais(totalValor)}</td><td class="num">${valorEstoque > 0 ? pct((totalValor / valorEstoque) * 100) : '—'}</td></tr>` : ''
-  return `<div class="table-block"><h3 class="table-title">${escapeHtml(titulo)}<span>${totalItens} ${pl(totalItens, 'item', 'itens')}</span></h3><table class="est-table">${tableHeadHtml(cols)}<tbody>${rows}${total}</tbody></table></div>`
-}
-
-// Distribui os blocos em páginas por "peso": blocos curtos dividem a página,
-// blocos longos continuam na seguinte. Cada fatia leva título; só a última leva total e nota.
-function paginarBlocos(blocos) {
-  const paginas = [[]]
-  let sobra = PAGINA_CAPACIDADE
-  for (const bloco of blocos) {
-    let i = 0
-    let parte = 0
-    while (i < bloco.linhas.length) {
-      const minimo = CUSTO_TITULO + bloco.peso * 2
-      if (sobra < minimo && paginas[paginas.length - 1].length > 0) {
-        paginas.push([])
-        sobra = PAGINA_CAPACIDADE
-      }
-      const maxLinhas = Math.max(1, Math.floor((sobra - CUSTO_TITULO) / bloco.peso))
-      let fatia = bloco.linhas.slice(i, i + maxLinhas)
-      // Se a última fatia não comporta total e nota, vira a página seguinte sem perder linhas.
-      let ultima = i + fatia.length >= bloco.linhas.length
-      if (ultima && CUSTO_TITULO + fatia.length * bloco.peso + CUSTO_TOTAL_E_NOTA > sobra && fatia.length > 1) {
-        fatia = fatia.slice(0, fatia.length - 1)
-        ultima = false
-      }
-      paginas[paginas.length - 1].push({ bloco, fatia, ultima, continuacao: parte > 0 })
-      sobra -= CUSTO_TITULO + fatia.length * bloco.peso + (ultima ? CUSTO_TOTAL_E_NOTA : 0)
-      i += fatia.length
-      parte += 1
-      if (i < bloco.linhas.length) {
-        paginas.push([])
-        sobra = PAGINA_CAPACIDADE
-      }
-    }
-  }
-  return paginas.filter((p) => p.length > 0)
+  return `<div class="table-block"><h3 class="table-title">${escapeHtml(titulo)}<span>${totalItens} ${pl(totalItens, 'item', 'itens')} · ${reais(totalValor)}${valorEstoque > 0 ? ` (${pct((totalValor / valorEstoque) * 100)} do estoque)` : ''}</span></h3><table class="est-table">${tableHeadHtml(cols, nota)}<tbody>${rows}</tbody></table></div>`
 }
 
 // ---------- Curva ABC ----------
@@ -397,36 +350,7 @@ export async function renderEstoqueHtml(input) {
   const parados = (decisao.parados ?? []).map((k) => porChave.get(k)).filter(Boolean)
   const altos = (decisao.altos ?? []).map((k) => porChave.get(k)).filter(Boolean)
   const valorDe = (lista) => lista.reduce((s, r) => s + r.sugestao.valor, 0)
-
-  const notaCompra = (comPeriodo, temProducao) => `Compra sugerida = ${comPeriodo ? `a quantidade que leva o item ao maior entre o estoque mínimo e ${lim.alvo} dias de consumo no ritmo do período; abaixo de cada quantidade está o critério que a definiu` : 'a quantidade necessária para chegar ao estoque mínimo cadastrado'}.${temProducao ? ' Formulações são produzidas: a quantidade é de produção e não entra nos valores em R$.' : ''} Ordenado do mais urgente ao menos urgente.`
-  const blocos = [
-    repor.length > 0 && {
-      chave: 'repor', titulo: 'Repor agora', linhas: repor, peso: PESO_LINHA_COMPRA,
-      render: (b) => sugestaoTableHtml({ titulo: b.continuacao ? 'Repor agora (continuação)' : 'Repor agora', linhas: b.fatia, ultima: b.ultima, comPeriodo, lim, totalItens: repor.length, totalValor: valorDe(repor) }),
-      nota: notaCompra(comPeriodo, repor.some((r) => r.sugestao.acao === 'producao')),
-    },
-    comPeriodo && programar.length > 0 && {
-      chave: 'programar', titulo: 'Programar compra', linhas: programar, peso: PESO_LINHA_COMPRA,
-      render: (b) => sugestaoTableHtml({ titulo: b.continuacao ? 'Programar compra (continuação)' : 'Programar compra', linhas: b.fatia, ultima: b.ultima, comPeriodo, lim, totalItens: programar.length, totalValor: valorDe(programar) }),
-      nota: `Itens com cobertura entre ${lim.ruptura} e ${lim.alvo} dias: ainda sem risco imediato, mas abaixo da meta de ${lim.alvo} dias. Programe a compra considerando o prazo de entrega do fornecedor.`,
-    },
-    comPeriodo && parados.length > 0 && {
-      chave: 'parados', titulo: 'Capital parado', linhas: parados, peso: PESO_LINHA_SIMPLES,
-      render: (b) => capitalTableHtml({ titulo: b.continuacao ? 'Capital parado (continuação)' : 'Capital parado', linhas: b.fatia, ultima: b.ultima, totalItens: parados.length, totalValor: soma(parados, 'valor_estoque'), valorEstoque: resumo.valorEstoque, situacoes }),
-      nota: 'Parado: tem saldo e valor, mas não teve nenhuma saída no período. Vale conferir o motivo: item abandonado, comprado a mais ou sazonal.',
-    },
-    comPeriodo && altos.length > 0 && {
-      chave: 'altos', titulo: 'Estoque alto', linhas: altos, peso: PESO_LINHA_SIMPLES,
-      render: (b) => capitalTableHtml({ titulo: b.continuacao ? 'Estoque alto, informativo (continuação)' : 'Estoque alto (informativo)', linhas: b.fatia, ultima: b.ultima, totalItens: altos.length, totalValor: soma(altos, 'valor_estoque'), valorEstoque: resumo.valorEstoque, situacoes }),
-      nota: `Cobertura acima de ${lim.alta} dias. Não é necessariamente um problema: compra em lote, safra e entressafra justificam estoque maior. Serve para conferir se é intencional.`,
-    },
-  ].filter(Boolean)
-  const paginasDecisao = paginarBlocos(blocos)
-
-  const linhasPosicao = montarLinhasPosicao(grupos, comPeriodo, abc, situacoes)
-  const posicaoChunks = linhasPosicao.length ? chunkArray(linhasPosicao, POSICAO_ROWS) : []
   const temAbc = itens.some((i) => i.valor_estoque > 0)
-  const totalPages = 1 + paginasDecisao.length + (temAbc ? 1 : 0) + posicaoChunks.length + 1
 
   const { contagem, capital } = resumo
   const variacao = resumo.variacaoPct != null
@@ -462,75 +386,56 @@ export async function renderEstoqueHtml(input) {
   ].filter(Boolean)
   const leituraHtml = `<div class="insight-box"><span class="insight-label">${comPeriodo ? 'Leitura do período' : 'Leitura da posição'}</span><ul class="est-leitura">${(decisao.leitura ?? []).map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>${qualidade.length ? `<p class="est-nota" style="margin-top:3mm">Qualidade dos dados: ${escapeHtml(qualidade.join(' · '))}.</p>` : ''}</div>`
 
-  const pagesHtml = []
-  let pageIndex = 1
-  pagesHtml.push(
-    pageSection(`
-      ${renderHeader({ ...brand, reportTitle: titulo })}
-      <p class="section-kicker">${comPeriodo ? 'Resumo executivo' : 'Posição atual'}</p>
-      <div class="period-badge">${comPeriodo ? escapeHtml(periodo) : `Estoque em ${dateFmt(gerado_em)}`}</div>
-      ${kpisHtml}
-      ${situacaoCards}
-      ${leituraHtml}
-      ${footerEstoque(rodape, pageIndex, totalPages)}
-    `),
-  )
+  const notaCompra = `Compra sugerida = ${comPeriodo ? `a quantidade que leva o item ao maior entre o estoque mínimo e ${lim.alvo} dias de consumo no ritmo do período; abaixo de cada quantidade está o critério que a definiu` : 'a quantidade necessária para chegar ao estoque mínimo cadastrado'}.${[...repor, ...programar].some((r) => r.sugestao.acao === 'producao') ? ' Formulações são produzidas: a quantidade é de produção e não entra nos valores em R$.' : ''} Ordenado do mais urgente ao menos urgente.`
+  const notaProgramar = `Itens com cobertura entre ${lim.ruptura} e ${lim.alvo} dias: ainda sem risco imediato, mas abaixo da meta de ${lim.alvo} dias. Programe a compra considerando o prazo de entrega do fornecedor.`
+  const notaParado = 'Parado: tem saldo e valor, mas não teve nenhuma saída no período. Vale conferir o motivo: item abandonado, comprado a mais ou sazonal.'
+  const notaAlto = `Cobertura acima de ${lim.alta} dias. Não é necessariamente um problema: compra em lote, safra e entressafra justificam estoque maior. Serve para conferir se é intencional.`
+  const notaPosicao = `Valor em estoque = saldo ${comPeriodo ? 'final ' : ''}× custo médio atual do item. Saldo negativo vale 0 no valor.${comPeriodo ? ' Saldos reconstruídos pelo histórico de lançamentos do período.' : ''}`
 
-  paginasDecisao.forEach((pagina, idx) => {
-    pageIndex += 1
-    const kicker = idx === 0 ? 'Decisões: o que fazer com cada item' : 'Decisões (continuação)'
-    const corpo = pagina.map((parte) => `<div style="margin-bottom:4mm">${parte.bloco.render({ fatia: parte.fatia, ultima: parte.ultima, continuacao: parte.continuacao })}${parte.ultima ? `<p class="est-nota">${escapeHtml(parte.bloco.nota)}</p>` : ''}</div>`).join('')
-    pagesHtml.push(
-      pageSection(`
-        ${renderHeader({ ...brand, reportTitle: titulo })}
-        <p class="section-kicker">${kicker}</p>
-        ${corpo}
-        ${footerEstoque(rodape, pageIndex, totalPages)}
-      `),
-    )
+  // Cada bloco declara o que é; o motor de fluxo (flowEngine) mede o conteúdo real
+  // no Chromium e distribui o mínimo de páginas, dividindo tabelas só quando preciso.
+  const secResumo = { sec: comPeriodo ? 'Resumo executivo' : 'Posição atual', lbl: 'Visão geral' }
+  const secDecisao = { sec: 'Decisões', lbl: 'O que fazer' }
+  const secAbc = { sec: 'Curva ABC', lbl: 'Concentração do valor' }
+  const secPosicao = { sec: 'Posição de estoque', lbl: 'Apêndice' }
+  const secGlossario = { sec: 'Glossário', lbl: 'Como ler' }
+  const temDecisao = repor.length > 0 || (comPeriodo && (programar.length > 0 || parados.length > 0 || altos.length > 0))
+  const periodoBadge = `<div class="period-badge">${comPeriodo ? escapeHtml(periodo) : `Estoque em ${dateFmt(gerado_em)}`}</div>`
+
+  const blocks = [
+    flowBlock(flowIntro(comPeriodo ? 'Resumo executivo' : 'Posição atual', periodoBadge), { ...secResumo, keepNext: true }),
+    flowBlock(kpisHtml, secResumo),
+    flowBlock(situacaoCards, secResumo),
+    flowBlock(leituraHtml, secResumo),
+
+    temDecisao ? flowBlock(flowIntro('Decisões: o que fazer com cada item', ''), { ...secDecisao, keepNext: true }) : '',
+    repor.length ? flowTable(sugestaoTableHtml({ titulo: 'Repor agora', linhas: repor, comPeriodo, lim, totalValor: valorDe(repor), nota: notaCompra }), secDecisao) : '',
+    comPeriodo && programar.length ? flowTable(sugestaoTableHtml({ titulo: 'Programar compra', linhas: programar, comPeriodo, lim, totalValor: valorDe(programar), nota: notaProgramar }), secDecisao) : '',
+    comPeriodo && parados.length ? flowTable(capitalTableHtml({ titulo: 'Capital parado', linhas: parados, valorEstoque: resumo.valorEstoque, situacoes, nota: notaParado }), secDecisao) : '',
+    comPeriodo && altos.length ? flowTable(capitalTableHtml({ titulo: 'Estoque alto (informativo)', linhas: altos, valorEstoque: resumo.valorEstoque, situacoes, nota: notaAlto }), secDecisao) : '',
+
+    temAbc ? flowBlock(flowIntro('Curva ABC e concentração do valor', ''), { ...secAbc, keepNext: true }) : '',
+    temAbc ? flowBlock(abcHtml(itens, abc, decisao, comPeriodo), secAbc) : '',
+
+    grupos.length ? flowTable(posicaoTableHtml(montarLinhasPosicao(grupos, comPeriodo, abc, situacoes), comPeriodo, itens.length, notaPosicao), secPosicao) : '',
+
+    flowBlock(flowIntro('Glossário', ''), { ...secGlossario, keepNext: true }),
+    flowBlock(glossarioHtml(comPeriodo, lim), secGlossario),
+  ]
+
+  const body = flowSection({
+    headerHtml: renderHeader({ ...brand, reportTitle: titulo, section: '__SEC__', sectionLabel: '__LBL__' }),
+    footerHtml: footerEstoque(rodape, 0, 0),
+    blocks,
   })
-
-  if (temAbc) {
-    pageIndex += 1
-    pagesHtml.push(
-      pageSection(`
-        ${renderHeader({ ...brand, reportTitle: titulo })}
-        <p class="section-kicker">Curva ABC e concentração do valor</p>
-        ${abcHtml(itens, abc, decisao, comPeriodo)}
-        ${footerEstoque(rodape, pageIndex, totalPages)}
-      `),
-    )
-  }
-
-  posicaoChunks.forEach((chunk, i) => {
-    pageIndex += 1
-    pagesHtml.push(
-      pageSection(`
-        ${renderHeader({ ...brand, reportTitle: titulo })}
-        <p class="section-kicker">Posição de estoque${i > 0 ? ' (continuação)' : ''}</p>
-        ${posicaoTableHtml(chunk, comPeriodo, itens.length)}
-        ${i === posicaoChunks.length - 1 ? `<p class="est-nota">Valor em estoque = saldo ${comPeriodo ? 'final ' : ''}× custo médio atual do item. Saldo negativo vale 0 no valor.${comPeriodo ? ' Saldos reconstruídos pelo histórico de lançamentos do período.' : ''}</p>` : ''}
-        ${footerEstoque(rodape, pageIndex, totalPages)}
-      `),
-    )
-  })
-
-  pageIndex += 1
-  pagesHtml.push(
-    pageSection(`
-      ${renderHeader({ ...brand, reportTitle: titulo })}
-      <p class="section-kicker">Glossário</p>
-      ${glossarioHtml(comPeriodo, lim)}
-      ${footerEstoque(rodape, pageIndex, totalPages)}
-    `),
-  )
 
   return htmlDocument({
     title: titulo,
     extraCss: ESTOQUE_CSS,
-    body: pagesHtml.join(''),
+    body,
   })
 }
+
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
