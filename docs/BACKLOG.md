@@ -85,7 +85,7 @@ A primeira entrega (protocolos, lotes no painel e no PWA, tarefas, IA, alertas, 
 
 ## Sanidade dos indivíduos: o que falta (painel implementado em 2026-10-16)
 
-**Feito no painel (16/10/2026, ver `docs/HISTORICO.md`)**: aplicações por animal e por lote, carência no catálogo, histórico unificado, aba Sanidade na ficha, página Manejo Sanitário (pendências), funções de carência, aviso `CARENCIA_ATIVA` na pesagem de OS de venda e alertas semanais. **Falta**: caderneta de sanidade no PWA, baixa de estoque de medicamento, custo por animal e indicação de carência nas listas de Lotes e Indivíduos.
+**Feito no painel (16/10/2026, ver `docs/HISTORICO.md`)**: aplicações por animal e por lote, carência no catálogo, histórico unificado, aba Sanidade na ficha, página Manejo Sanitário (pendências), funções de carência, aviso `CARENCIA_ATIVA` na pesagem de OS de venda e alertas semanais. **Falta**: caderneta de sanidade no PWA, baixa de estoque de medicamento pelas `aplicacoes_sanitarias` (a baixa pela Enfermaria e a Farmácia foram feitas em 21/10/2026, ver `docs/HISTORICO.md`; reaproveitar `farmacia_dose_para_estoque` e o padrão do trigger `trg_enfermaria_baixa_farmacia`), custo por animal e indicação de carência nas listas de Lotes e Indivíduos. Pendências da Farmácia: controle por lote/validade (FEFO), esconder o custo do peão (hoje o PWA lê `medicamentos` inteiro) e publicar o PWA em staging.
 
 **Dependência (resolvida, conferida em 19/10/2026)**: o PWA já envia `individuo_id` na Enfermaria (commit `0af960f`, 09/10, já em master e no staging-repo) e a Morte usa o vínculo desde `b03772f`. No banco, 3 de 15 registros de enfermaria têm `individuo_id` e nenhum registro de outubro com identificação ficou sem vínculo.
 

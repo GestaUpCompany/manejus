@@ -108,6 +108,7 @@ export const CADERNETA_GRUPOS: CadernetaGrupo[] = [
       { id: 'entrada-combustivel', path: '/controller/cadernetas/entrada-combustivel' },
       { id: 'entrada-almoxarifado', path: '/controller/cadernetas/entrada-almoxarifado' },
       { id: 'entrada-cantina', path: '/controller/cadernetas/entrada-cantina' },
+      { id: 'farmacia', path: '/controller/cadernetas/farmacia' },
     ],
   },
 ]
@@ -134,6 +135,7 @@ const CADERNETA_LABELS: Record<string, string> = {
   'entrada-almoxarifado': 'Entrada de Almoxarifado',
   'entrada-cantina': 'Entrada de Cantina',
   'entrada-insumos': 'Entrada de Insumos',
+  farmacia: 'Farmácia',
   'saida-insumos': 'Produção Fábrica',
   'leitura-cocho': 'Leitura de Cocho',
   'trato-confinamento': 'Trato Confinamento',

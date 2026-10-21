@@ -138,10 +138,10 @@ export function PendenciasAlmoxarifado() {
 
       {erro && <Card className="p-4 bg-red-500/10" disableHover><p className="text-sm text-red-700">{erro}</p></Card>}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="p-4" disableHover><p className="text-xs text-content-muted">Itens pendentes</p><p className="text-2xl font-bold">{pendencias.length}</p></Card>
-        <Card className="p-4" disableHover><p className="text-xs text-content-muted">Pessoas com itens</p><p className="text-2xl font-bold">{pessoas}</p></Card>
-        <Card className="p-4" disableHover><p className="text-xs text-content-muted">Vencidas</p><p className={`text-2xl font-bold ${vencidas > 0 ? 'text-red-600' : 'text-content-strong'}`}>{vencidas}</p></Card>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <Card className="p-4" disableHover><p className="text-xs text-content-muted">Itens pendentes</p><p className="text-xl sm:text-2xl font-bold">{pendencias.length}</p></Card>
+        <Card className="p-4" disableHover><p className="text-xs text-content-muted">Pessoas com itens</p><p className="text-xl sm:text-2xl font-bold">{pessoas}</p></Card>
+        <Card className="p-4" disableHover><p className="text-xs text-content-muted">Vencidas</p><p className={`text-xl sm:text-2xl font-bold ${vencidas > 0 ? 'text-red-600' : 'text-content-strong'}`}>{vencidas}</p></Card>
       </div>
 
       <FilterToolbar
