@@ -137,13 +137,14 @@ export function classificarABC(itens: ItemEstoque[]): Map<string, ClasseABC> {
   return resultado
 }
 
-export type FiltroEstoque = 'todos' | 'ruptura' | 'parado' | 'excesso' | 'negativo' | 'sem_custo'
+export type FiltroEstoque = 'todos' | 'ruptura' | 'programar' | 'parado' | 'alto' | 'negativo' | 'sem_custo'
 
 export const FILTROS_ESTOQUE: { key: FiltroEstoque; label: string }[] = [
   { key: 'todos', label: 'Todos' },
   { key: 'ruptura', label: 'A repor' },
+  { key: 'programar', label: 'Programar' },
   { key: 'parado', label: 'Parados' },
-  { key: 'excesso', label: 'Em excesso' },
+  { key: 'alto', label: 'Estoque alto' },
   { key: 'negativo', label: 'Saldo negativo' },
   { key: 'sem_custo', label: 'Sem custo' },
 ]
@@ -164,8 +165,9 @@ export function filtrarItens(
     if (termo && !semAcento(`${i.nome} ${i.tipo ?? ''}`).includes(termo)) return false
     switch (filtro) {
       case 'ruptura':
+      case 'programar':
       case 'parado':
-      case 'excesso': return situacaoDe?.(i) === filtro
+      case 'alto': return situacaoDe?.(i) === filtro
       case 'negativo': return i.negativo
       case 'sem_custo': return !!i.sem_custo
       default: return true

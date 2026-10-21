@@ -22,14 +22,16 @@ import {
 } from '../../features/relatorioEstoque/agregacao'
 import {
   COBERTURA_ALVO_DIAS,
-  COBERTURA_EXCESSO_DIAS,
+  COBERTURA_ALTA_DIAS,
   COBERTURA_RUPTURA_DIAS,
   ROTULO_SITUACAO,
   classificarSituacao,
   concentracaoABC,
   diasDoPeriodo,
   lerPeriodo,
-  listaImobilizado,
+  listaAltos,
+  listaParados,
+  listaProgramar,
   listaRepor,
   resumirDecisao,
   sugestaoReposicao,
@@ -94,23 +96,28 @@ const COR_CLASSE = {
 
 const COR_SITUACAO: Record<SituacaoItem, { backgroundColor: string; color: string }> = {
   ruptura: { backgroundColor: '#fdf6f5', color: RED },
+  programar: { backgroundColor: '#fdf3e3', color: '#9a6b17' },
   parado: { backgroundColor: '#fdf3e3', color: '#9a6b17' },
-  excesso: { backgroundColor: '#fdf3e3', color: '#9a6b17' },
+  alto: { backgroundColor: '#eceff1', color: '#52635a' },
   ok: { backgroundColor: '#eef6f1', color: GREEN_DARK },
 }
 
 function motivoRepor(item: ItemEstoque): string {
   if (item.negativo) return 'Saldo negativo'
   if (item.em_alerta) return 'Abaixo do mínimo'
-  return `Cobertura de ${Math.round(item.cobertura_dias ?? 0)} d (menos de ${COBERTURA_RUPTURA_DIAS} d)`
+  const cobertura = Math.round(item.cobertura_dias ?? 0)
+  return cobertura < COBERTURA_RUPTURA_DIAS
+    ? `Cobertura de ${cobertura} d (menos de ${COBERTURA_RUPTURA_DIAS} d)`
+    : `Cobertura de ${cobertura} d (meta de ${COBERTURA_ALVO_DIAS} d)`
 }
 
-// O que a compra cobre: o estoque mínimo ou os dias de consumo alvo (e, no mínimo, a cobertura final).
+// O que a compra (ou a produção) cobre: o estoque mínimo ou os dias de consumo alvo.
 function criterioCompra(item: ItemEstoque, sug: SugestaoReposicao): string {
   if (!sug.criterio) return ''
-  if (sug.criterio === 'cobertura') return `para ${COBERTURA_ALVO_DIAS} dias de consumo`
+  const verbo = sug.acao === 'producao' ? 'produzir ' : ''
+  if (sug.criterio === 'cobertura') return `${verbo}para ${COBERTURA_ALVO_DIAS} dias de consumo`
   const apos = sug.coberturaApos != null ? ` · cobre ${Math.round(sug.coberturaApos)} d` : ''
-  return `para o mínimo (${formatarNumero(item.estoque_minimo)} ${item.unidade || 'kg'})${apos}`
+  return `${verbo}para o mínimo (${formatarNumero(item.estoque_minimo)} ${item.unidade || 'kg'})${apos}`
 }
 
 function PilulaSituacao({ situacao }: { situacao: SituacaoItem }) {
@@ -195,7 +202,9 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
   const leitura = useMemo(() => lerPeriodo(resumo, concentracao), [resumo, concentracao])
   const situacaoDe = useCallback((i: ItemEstoque) => classificarSituacao(i, comPeriodo), [comPeriodo])
   const repor = useMemo(() => listaRepor(itensGrupo, comPeriodo), [itensGrupo, comPeriodo])
-  const imobilizado = useMemo(() => listaImobilizado(itensGrupo, comPeriodo), [itensGrupo, comPeriodo])
+  const programar = useMemo(() => listaProgramar(itensGrupo, comPeriodo), [itensGrupo, comPeriodo])
+  const parados = useMemo(() => listaParados(itensGrupo, comPeriodo), [itensGrupo, comPeriodo])
+  const altos = useMemo(() => listaAltos(itensGrupo, comPeriodo), [itensGrupo, comPeriodo])
   const resumoABC = useMemo(() => {
     const comValor = itensGrupo.filter((i) => abc.has(chaveItem(i)))
     const total = comValor.reduce((s, i) => s + i.valor_estoque, 0)
@@ -210,13 +219,11 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
     [itensGrupo, busca, filtro, campo, direcao, situacaoDe],
   )
   const abas: { key: AbaDecisao; rotulo: string; qtd?: number }[] = [
-    { key: 'repor', rotulo: 'O que repor', qtd: repor.length },
-    ...(comPeriodo ? [{ key: 'imobilizado' as const, rotulo: 'Parado e em excesso', qtd: imobilizado.length }] : []),
+    { key: 'repor', rotulo: 'O que repor', qtd: repor.length + programar.length },
+    ...(comPeriodo ? [{ key: 'imobilizado' as const, rotulo: 'Parado e estoque alto', qtd: parados.length + altos.length }] : []),
     { key: 'itens', rotulo: 'Todos os itens', qtd: itensGrupo.length },
   ]
-  const abaEfetiva: AbaDecisao = aba && abas.some((a) => a.key === aba) ? aba : repor.length > 0 ? 'repor' : 'itens'
-  const valorRepor = repor.reduce((s, i) => s + sugestaoReposicao(i).valor, 0)
-  const valorImobilizado = imobilizado.reduce((s, i) => s + i.valor_estoque, 0)
+  const abaEfetiva: AbaDecisao = aba && abas.some((a) => a.key === aba) ? aba : repor.length + programar.length > 0 ? 'repor' : 'itens'
   const totalOrigem = resumo.consumoPorOrigem.reduce((s, o) => s + o.valor, 0)
 
   const alternarOrdenacao = (novo: CampoOrdenacaoEstoque) => {
@@ -288,22 +295,33 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
     </div>
   )
 
-  const renderRepor = () => {
-    if (repor.length === 0) return vazio('Nenhum item com risco de ruptura neste grupo.')
+  // Tabela de "repor agora" e "programar compra": mesma forma, só muda o título e a nota.
+  const renderSugestoes = (titulo: string, destaque: string, lista: ItemEstoque[], nota: string) => {
+    if (lista.length === 0) return null
+    const temProducao = lista.some((i) => i.item_tipo === 'formulacao')
+    const colCompra = temProducao ? 'Compra ou produção' : 'Compra sugerida'
+    const valorTotal = lista.reduce((s, i) => s + sugestaoReposicao(i).valor, 0)
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div key={titulo} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900">{titulo} <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-normal text-gray-600">{lista.length}</span></h3>
+          <p className="text-xs text-gray-500">{destaque}</p>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             {cabecalhoSimples(comPeriodo
-              ? [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Consumo/dia', 'right'], ['Cobertura', 'right'], ['Esgota em', 'right'], ['Compra sugerida', 'right'], ['Valor estimado', 'right']]
-              : [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Mínimo', 'right'], ['Compra sugerida', 'right'], ['Valor estimado', 'right']])}
+              ? [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Consumo/dia', 'right'], ['Cobertura', 'right'], ['Esgota em', 'right'], [colCompra, 'right'], ['Valor estimado', 'right']]
+              : [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Mínimo', 'right'], [colCompra, 'right'], ['Valor estimado', 'right']])}
             <tbody>
-              {repor.map((item) => {
+              {lista.map((item) => {
                 const un = item.unidade || 'kg'
                 const sug = sugestaoReposicao(item)
                 return (
                   <tr key={chaveItem(item)} className="border-b border-gray-100 last:border-0">
-                    <td className="py-2.5 px-3 font-medium text-gray-900">{item.nome}</td>
+                    <td className="py-2.5 px-3 font-medium text-gray-900">
+                      {item.nome}
+                      {item.item_tipo === 'formulacao' && <span className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: '#eef2fa', color: '#4a5a8a' }}>formulação</span>}
+                    </td>
                     <td className="py-2.5 px-3 text-gray-600 whitespace-nowrap">{motivoRepor(item)}</td>
                     <td className="py-2.5 px-3 text-right whitespace-nowrap" style={{ color: item.negativo ? RED : '#111827' }}>{formatarNumero(item.saldo_final ?? item.estoque_atual)} {un}</td>
                     {comPeriodo && <td className="py-2.5 px-3 text-right text-gray-600">{formatarNumero(item.consumo_medio_dia)}</td>}
@@ -321,56 +339,74 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gray-200 bg-green-50/40">
-                <td className="py-2.5 px-3 font-semibold text-gray-900" colSpan={comPeriodo ? 7 : 5}>Reposição estimada ({repor.length} {plural(repor.length, 'item', 'itens')})</td>
-                <td className="py-2.5 px-3 text-right font-bold" style={{ color: GREEN_DARK }}>{formatarMoeda(valorRepor)}</td>
+                <td className="py-2.5 px-3 font-semibold text-gray-900" colSpan={comPeriodo ? 7 : 5}>Compra estimada de insumos</td>
+                <td className="py-2.5 px-3 text-right font-bold" style={{ color: GREEN_DARK }}>{formatarMoeda(valorTotal)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
-        <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-gray-100">
-          Compra sugerida = {comPeriodo ? `a quantidade que leva o item ao maior entre o estoque mínimo e ${COBERTURA_ALVO_DIAS} dias de consumo no ritmo do período; abaixo de cada quantidade está o critério que a definiu` : 'a quantidade necessária para chegar ao estoque mínimo cadastrado'}. Do mais urgente ao menos urgente.
-        </p>
+        <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-gray-100">{nota}</p>
+      </div>
+    )
+  }
+
+  const notaCompra = `Compra sugerida = ${comPeriodo ? `a quantidade que leva o item ao maior entre o estoque mínimo e ${COBERTURA_ALVO_DIAS} dias de consumo no ritmo do período; abaixo de cada quantidade está o critério que a definiu` : 'a quantidade necessária para chegar ao estoque mínimo cadastrado'}. Formulações são produzidas: a quantidade é de produção e não entra nos valores em R$. Do mais urgente ao menos urgente.`
+
+  const renderRepor = () => {
+    const blocos = [
+      renderSugestoes('Repor agora', 'risco de faltar', repor, notaCompra),
+      comPeriodo ? renderSugestoes('Programar compra', `cobertura de ${COBERTURA_RUPTURA_DIAS} a ${COBERTURA_ALVO_DIAS} dias: ainda sem risco imediato`, programar, `Abaixo da meta de ${COBERTURA_ALVO_DIAS} dias de cobertura. Programe a compra considerando o prazo de entrega do fornecedor.`) : null,
+    ].filter(Boolean)
+    if (blocos.length === 0) return vazio('Nenhum item com risco de ruptura neste grupo.')
+    return <div className="space-y-3">{blocos}</div>
+  }
+
+  // Tabela de capital parado e de estoque alto: mesma forma, só muda o título e a nota.
+  const renderCapital = (titulo: string, destaque: string, lista: ItemEstoque[], nota: string) => {
+    if (lista.length === 0) return null
+    const total = lista.reduce((s, i) => s + i.valor_estoque, 0)
+    return (
+      <div key={titulo} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900">{titulo} <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-normal text-gray-600">{lista.length}</span></h3>
+          <p className="text-xs text-gray-500">{destaque}</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            {cabecalhoSimples([['Item', 'left'], ['Situação', 'left'], ['Saldo', 'right'], ['Cobertura', 'right'], ['Valor em estoque', 'right'], ['% do estoque total', 'right']])}
+            <tbody>
+              {lista.map((item) => (
+                <tr key={chaveItem(item)} className="border-b border-gray-100 last:border-0">
+                  <td className="py-2.5 px-3 font-medium text-gray-900">{item.nome}</td>
+                  <td className="py-2.5 px-3"><PilulaSituacao situacao={situacaoDe(item)} /></td>
+                  <td className="py-2.5 px-3 text-right text-gray-600 whitespace-nowrap">{formatarNumero(item.saldo_final ?? item.estoque_atual)} {item.unidade || 'kg'}</td>
+                  <td className="py-2.5 px-3 text-right text-gray-600 whitespace-nowrap">{textoCobertura(item)}</td>
+                  <td className="py-2.5 px-3 text-right font-semibold text-gray-900">{formatarMoeda(item.valor_estoque)}</td>
+                  <td className="py-2.5 px-3 text-right text-gray-600">{resumo.valorEstoque > 0 ? `${formatarNumero((item.valor_estoque / resumo.valorEstoque) * 100, 1)}%` : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-gray-200 bg-green-50/40">
+                <td className="py-2.5 px-3 font-semibold text-gray-900" colSpan={4}>Total</td>
+                <td className="py-2.5 px-3 text-right font-bold" style={{ color: GREEN_DARK }}>{formatarMoeda(total)}</td>
+                <td className="py-2.5 px-3 text-right text-gray-600">{resumo.valorEstoque > 0 ? `${formatarNumero((total / resumo.valorEstoque) * 100, 1)}%` : '—'}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-gray-100">{nota}</p>
       </div>
     )
   }
 
   const renderImobilizado = () => {
-    if (imobilizado.length === 0) return vazio('Nenhum capital parado ou em excesso neste grupo.')
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            {cabecalhoSimples([['Item', 'left'], ['Situação', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Cobertura', 'right'], ['Valor parado', 'right'], ['% do total', 'right']])}
-            <tbody>
-              {imobilizado.map((item) => {
-                const situacao = situacaoDe(item)
-                return (
-                  <tr key={chaveItem(item)} className="border-b border-gray-100 last:border-0">
-                    <td className="py-2.5 px-3 font-medium text-gray-900">{item.nome}</td>
-                    <td className="py-2.5 px-3"><PilulaSituacao situacao={situacao} /></td>
-                    <td className="py-2.5 px-3 text-gray-600">{situacao === 'parado' ? 'Sem nenhuma saída no período' : `Cobertura acima de ${COBERTURA_EXCESSO_DIAS} d`}</td>
-                    <td className="py-2.5 px-3 text-right text-gray-600 whitespace-nowrap">{formatarNumero(item.saldo_final ?? item.estoque_atual)} {item.unidade || 'kg'}</td>
-                    <td className="py-2.5 px-3 text-right text-gray-600 whitespace-nowrap">{textoCobertura(item)}</td>
-                    <td className="py-2.5 px-3 text-right font-semibold text-gray-900">{formatarMoeda(item.valor_estoque)}</td>
-                    <td className="py-2.5 px-3 text-right text-gray-600">{valorImobilizado > 0 ? `${formatarNumero((item.valor_estoque / valorImobilizado) * 100, 1)}%` : '—'}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-gray-200 bg-green-50/40">
-                <td className="py-2.5 px-3 font-semibold text-gray-900" colSpan={5}>Capital imobilizado ({imobilizado.length} {plural(imobilizado.length, 'item', 'itens')})</td>
-                <td className="py-2.5 px-3 text-right font-bold" style={{ color: GREEN_DARK }}>{formatarMoeda(valorImobilizado)}</td>
-                <td />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-gray-100">
-          Parado: tem saldo e valor, mas não teve nenhuma saída no período. Em excesso: cobertura acima de {COBERTURA_EXCESSO_DIAS} dias no ritmo do período.
-        </p>
-      </div>
-    )
+    const blocos = [
+      renderCapital('Capital parado', 'atenção: sem nenhuma saída no período', parados, 'Parado: tem saldo e valor, mas não teve nenhuma saída no período. Vale conferir o motivo: item abandonado, comprado a mais ou sazonal.'),
+      renderCapital('Estoque alto', 'informativo: pode ser intencional', altos, `Cobertura acima de ${COBERTURA_ALTA_DIAS} dias. Não é necessariamente um problema: compra em lote, safra e entressafra justificam estoque maior. Serve para conferir se é intencional.`),
+    ].filter(Boolean)
+    if (blocos.length === 0) return vazio('Nenhum item parado nem com estoque alto neste grupo.')
+    return <div className="space-y-3">{blocos}</div>
   }
 
   const renderTabela = () => (
@@ -461,8 +497,8 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
     ? [
         { valor: formatarMoeda(resumo.valorEstoque), rotulo: 'Valor em estoque', sub: variacao ?? `${itensGrupo.length} ${plural(itensGrupo.length, 'item', 'itens')}`, cor: GREEN_DARK, ajuda: 'Saldo final × custo médio atual. A variação compara com o início do período, que é aproximado (saldo inicial × custo atual).' },
         { valor: formatarMoeda(resumo.consumoValor), rotulo: 'Consumo no período', sub: resumo.consumoDiaValor != null ? `${formatarMoeda(resumo.consumoDiaValor)} por dia${resumo.giro != null ? ` · giro ${formatarNumero(resumo.giro)}×` : ''}` : undefined, cor: GOLD, ajuda: 'Valor das saídas no período. Giro = consumo ÷ valor médio em estoque: quanto maior, menos tempo o dinheiro fica parado.' },
-        { valor: formatarMoeda(resumo.reposicaoValor), rotulo: 'Reposição estimada', sub: `${resumo.contagem.ruptura} ${plural(resumo.contagem.ruptura, 'item a repor', 'itens a repor')}`, cor: resumo.contagem.ruptura > 0 ? RED : GREEN_DARK, ajuda: `Quanto custa levar os itens a repor até o maior entre o estoque mínimo e ${COBERTURA_ALVO_DIAS} dias de cobertura.`, onClick: () => setAba('repor') },
-        { valor: formatarMoeda(resumo.capitalParadoExcesso), rotulo: 'Parado e em excesso', sub: `${formatarNumero(resumo.pctParadoExcesso, 1)}% do valor em estoque`, cor: resumo.capitalParadoExcesso > 0 ? GOLD : GREEN_DARK, ajuda: `Dinheiro em itens sem saída no período ou com cobertura acima de ${COBERTURA_EXCESSO_DIAS} dias.`, onClick: () => setAba('imobilizado') },
+        { valor: formatarMoeda(resumo.reposicaoValor), rotulo: 'Reposição estimada', sub: `${resumo.contagem.ruptura} ${plural(resumo.contagem.ruptura, 'item a repor', 'itens a repor')}${resumo.programarValor > 0 ? ` · +${formatarMoeda(resumo.programarValor)} a programar` : ''}`, cor: resumo.contagem.ruptura > 0 ? RED : GREEN_DARK, ajuda: `Compra de insumos para levar os itens a repor ao maior entre o estoque mínimo e ${COBERTURA_ALVO_DIAS} dias de consumo. Formulações são produzidas e ficam fora deste valor.`, onClick: () => setAba('repor') },
+        { valor: formatarMoeda(resumo.capital.parado), rotulo: 'Capital parado', sub: `${formatarNumero(resumo.pctParado, 1)}% do valor em estoque`, cor: resumo.capital.parado > 0 ? GOLD : GREEN_DARK, ajuda: 'Dinheiro em itens com saldo e valor, mas sem nenhuma saída no período.', onClick: () => setAba('imobilizado') },
       ]
     : [
         { valor: formatarMoeda(resumo.valorEstoque), rotulo: 'Valor em estoque', sub: `${itensGrupo.length} ${plural(itensGrupo.length, 'item', 'itens')}`, cor: GREEN_DARK },
@@ -472,10 +508,11 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
       ]
   const situacoes: Indicador[] = comPeriodo
     ? [
-        { valor: String(resumo.contagem.ruptura), rotulo: 'Itens a repor', sub: `cobertura < ${COBERTURA_RUPTURA_DIAS} d, abaixo do mínimo ou negativo`, cor: resumo.contagem.ruptura > 0 ? RED : GREEN_DARK, onClick: () => setAba('repor') },
-        { valor: String(resumo.contagem.parado), rotulo: 'Itens parados', sub: `${formatarMoeda(resumo.capital.parado)} sem saída no período`, cor: resumo.contagem.parado > 0 ? GOLD : GREEN_DARK, onClick: () => irParaItens('parado') },
-        { valor: String(resumo.contagem.excesso), rotulo: 'Itens em excesso', sub: `${formatarMoeda(resumo.capital.excesso)} com cobertura > ${COBERTURA_EXCESSO_DIAS} d`, cor: resumo.contagem.excesso > 0 ? GOLD : GREEN_DARK, onClick: () => irParaItens('excesso') },
-        { valor: String(resumo.contagem.ok), rotulo: 'Itens em ordem', sub: `${formatarMoeda(resumo.capital.ok)} em estoque`, cor: GREEN_DARK },
+        { valor: String(resumo.contagem.ruptura), rotulo: 'Repor', sub: `cobertura < ${COBERTURA_RUPTURA_DIAS} d, abaixo do mínimo ou negativo`, cor: resumo.contagem.ruptura > 0 ? RED : GREEN_DARK, onClick: () => irParaItens('ruptura') },
+        { valor: String(resumo.contagem.programar), rotulo: 'Programar', sub: `cobertura de ${COBERTURA_RUPTURA_DIAS} a ${COBERTURA_ALVO_DIAS} d`, cor: resumo.contagem.programar > 0 ? GOLD : GREEN_DARK, onClick: () => irParaItens('programar') },
+        { valor: String(resumo.contagem.parado), rotulo: 'Parados', sub: `${formatarMoeda(resumo.capital.parado)} sem saída no período`, cor: resumo.contagem.parado > 0 ? GOLD : GREEN_DARK, onClick: () => irParaItens('parado') },
+        { valor: String(resumo.contagem.alto), rotulo: 'Estoque alto', sub: `${formatarMoeda(resumo.capital.alto)} · cobertura > ${COBERTURA_ALTA_DIAS} d (informativo)`, cor: '#52635a', ajuda: 'Informação, não alarme: compra em lote, safra e entressafra justificam estoque maior. Serve para conferir se é intencional.', onClick: () => irParaItens('alto') },
+        { valor: String(resumo.contagem.ok), rotulo: 'Em ordem', sub: `${formatarMoeda(resumo.capital.ok)} em estoque`, cor: GREEN_DARK },
       ]
     : []
 
@@ -620,7 +657,7 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
         ) : (
           <>
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">{indicadores.map(renderIndicador)}</div>
-            {situacoes.length > 0 && <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">{situacoes.map(renderIndicador)}</div>}
+            {situacoes.length > 0 && <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">{situacoes.map(renderIndicador)}</div>}
 
             <div className="rounded-xl border-l-4 bg-white p-4 shadow-sm" style={{ borderLeftColor: GREEN_DARK }}>
               <p className="text-xs font-bold uppercase tracking-wide" style={{ color: GREEN_DARK }}>{comPeriodo ? 'Leitura do período' : 'Leitura da posição'}</p>
@@ -670,7 +707,7 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
                       className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm w-full sm:w-64"
                     />
                     <div className="flex flex-wrap gap-1">
-                      {FILTROS_ESTOQUE.filter((f) => comPeriodo || (f.key !== 'parado' && f.key !== 'excesso')).map((f) => (
+                      {FILTROS_ESTOQUE.filter((f) => comPeriodo || (f.key !== 'programar' && f.key !== 'parado' && f.key !== 'alto')).map((f) => (
                         <button
                           key={f.key}
                           onClick={() => setFiltro(f.key)}
@@ -738,9 +775,11 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
             <details className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
               <summary className="cursor-pointer font-semibold text-gray-900">Como ler este relatório</summary>
               <dl className="mt-3 grid gap-x-8 gap-y-2 text-xs lg:grid-cols-2">
-                <div><dt className="font-semibold text-gray-800">A repor</dt><dd>Saldo negativo, abaixo do estoque mínimo cadastrado{comPeriodo ? ` ou cobertura menor que ${COBERTURA_RUPTURA_DIAS} dias` : ''}. O item corre risco de faltar.</dd></div>
-                {comPeriodo && <div><dt className="font-semibold text-gray-800">Parado</dt><dd>Tem saldo e valor em estoque, mas nenhuma saída no período: dinheiro imobilizado sem giro.</dd></div>}
-                {comPeriodo && <div><dt className="font-semibold text-gray-800">Em excesso</dt><dd>Cobertura acima de {COBERTURA_EXCESSO_DIAS} dias no ritmo do período: comprou-se mais do que o consumo pede.</dd></div>}
+                <div><dt className="font-semibold text-gray-800">Repor</dt><dd>Saldo negativo, abaixo do estoque mínimo cadastrado{comPeriodo ? ` ou cobertura menor que ${COBERTURA_RUPTURA_DIAS} dias` : ''}. O item corre risco de faltar.</dd></div>
+                {comPeriodo && <div><dt className="font-semibold text-gray-800">Programar</dt><dd>Cobertura entre {COBERTURA_RUPTURA_DIAS} e {COBERTURA_ALVO_DIAS} dias: ainda sem risco imediato, mas abaixo da meta de {COBERTURA_ALVO_DIAS} dias. Entra na próxima compra, considerando o prazo de entrega.</dd></div>}
+                {comPeriodo && <div><dt className="font-semibold text-gray-800">Parado</dt><dd>Tem saldo e valor em estoque, mas nenhuma saída no período. É dinheiro sem giro e vale conferir o motivo.</dd></div>}
+                {comPeriodo && <div><dt className="font-semibold text-gray-800">Estoque alto</dt><dd>Cobertura acima de {COBERTURA_ALTA_DIAS} dias no ritmo do período. Informação, não alarme: compra em lote, safra e entressafra justificam estoque maior. Serve para conferir se é intencional.</dd></div>}
+                {comPeriodo && <div><dt className="font-semibold text-gray-800">Produção (formulações)</dt><dd>Formulação é produzida na fábrica, não comprada. A quantidade é de produção e não entra nos valores em R$ de compra.</dd></div>}
                 {comPeriodo && <div><dt className="font-semibold text-gray-800">Cobertura</dt><dd>Quantos dias o saldo final do item dura no consumo médio diário do período. É calculada por item: cada um gira num ritmo, então não existe uma cobertura única do estoque.</dd></div>}
                 {comPeriodo && <div><dt className="font-semibold text-gray-800">Giro</dt><dd>Consumo do período em R$ ÷ valor médio em estoque. Quanto maior, menos tempo o dinheiro fica parado.</dd></div>}
                 <div><dt className="font-semibold text-gray-800">Compra sugerida</dt><dd>{comPeriodo ? `Quantidade que leva o item ao maior entre o estoque mínimo e ${COBERTURA_ALVO_DIAS} dias de consumo no ritmo do período. Abaixo de cada quantidade, o relatório diz qual critério a definiu e, quando é o mínimo, quantos dias a compra cobre.` : 'Quantidade necessária para chegar ao estoque mínimo cadastrado.'}</dd></div>
