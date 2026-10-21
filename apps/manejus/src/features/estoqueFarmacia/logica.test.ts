@@ -4,12 +4,15 @@ import {
   divergenciaDeSaldo,
   emAlerta,
   filtrarEOrdenar,
+  modoBaixaEnfermaria,
   movimentoEditavel,
   movimentosComSaldo,
+  rotuloBaixaEnfermaria,
   semCusto,
   sinalMovimento,
   totaisDaTela,
   validarAjuste,
+  validarConteudo,
   validarEntrada,
   valorDoItem,
   type ItemEstoqueFarmacia,
@@ -134,5 +137,27 @@ describe('estoque da farmacia: formulários', () => {
     expect(validarAjuste({ ...ajuste, saldo: '' }).ok).toBe(false)
     expect(validarAjuste({ ...ajuste, observacao: '  ' }).ok).toBe(false)
     expect(validarAjuste({ ...ajuste, itemId: '' }).ok).toBe(false)
+  })
+})
+
+describe('baixa da Enfermaria (conversão de dose)', () => {
+  it('mL, L, g e kg convertem direto', () => {
+    for (const unidade of ['mL', 'L', 'g', 'kg']) {
+      expect(modoBaixaEnfermaria({ unidade, conteudo_por_unidade: null, conteudo_unidade: null })).toBe('direta')
+    }
+  })
+
+  it('frasco com conteúdo definido baixa pela embalagem; sem conteúdo não converte', () => {
+    expect(modoBaixaEnfermaria({ unidade: 'frasco', conteudo_por_unidade: 500, conteudo_unidade: 'mL' })).toBe('embalagem')
+    expect(modoBaixaEnfermaria({ unidade: 'frasco', conteudo_por_unidade: null, conteudo_unidade: null })).toBe('sem_conversao')
+    expect(rotuloBaixaEnfermaria({ unidade: 'frasco', conteudo_por_unidade: 500, conteudo_unidade: 'mL' })).toBe('Automática (500 mL por frasco)')
+    expect(rotuloBaixaEnfermaria({ unidade: 'dose', conteudo_por_unidade: null, conteudo_unidade: null })).toBe('Defina o conteúdo da embalagem')
+  })
+
+  it('valida o conteúdo da embalagem (opcional, maior que zero)', () => {
+    expect(validarConteudo('')).toEqual({ ok: true, valores: { conteudo: null } })
+    expect(validarConteudo('500,5')).toEqual({ ok: true, valores: { conteudo: 500.5 } })
+    expect(validarConteudo('0').ok).toBe(false)
+    expect(validarConteudo('abc').ok).toBe(false)
   })
 })

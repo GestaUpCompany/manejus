@@ -14,6 +14,8 @@ export interface ItemEstoqueFarmacia {
   custo_unitario: number
   custo_total_estoque: number
   controla_estoque: boolean
+  conteudo_por_unidade?: number | null
+  conteudo_unidade?: string | null
 }
 
 export type TipoMovimentoFarmacia = 'entrada' | 'baixa' | 'ajuste' | 'estorno'
@@ -58,6 +60,25 @@ export const ROTULO_ORIGEM: Record<string, string> = {
 }
 
 const num = (v: unknown) => Number(v) || 0
+
+export const UNIDADES_ESTOQUE = ['un', 'dose', 'frasco', 'caixa', 'mL', 'L', 'g', 'kg']
+export const UNIDADES_DIRETAS = ['mL', 'L', 'g', 'kg']
+export const UNIDADES_CONTEUDO = ['mL', 'mg']
+
+export type ModoBaixaEnfermaria = 'direta' | 'embalagem' | 'sem_conversao'
+
+// Espelha farmacia_dose_para_estoque (banco): mL/L/g/kg convertem direto; as demais precisam do conteúdo da embalagem.
+export function modoBaixaEnfermaria(item: Pick<ItemEstoqueFarmacia, 'unidade' | 'conteudo_por_unidade' | 'conteudo_unidade'>): ModoBaixaEnfermaria {
+  if (UNIDADES_DIRETAS.includes(item.unidade)) return 'direta'
+  return num(item.conteudo_por_unidade) > 0 && item.conteudo_unidade ? 'embalagem' : 'sem_conversao'
+}
+
+export function rotuloBaixaEnfermaria(item: Pick<ItemEstoqueFarmacia, 'unidade' | 'conteudo_por_unidade' | 'conteudo_unidade'>): string {
+  const modo = modoBaixaEnfermaria(item)
+  if (modo === 'direta') return `Automática (em ${item.unidade})`
+  if (modo === 'embalagem') return `Automática (${num(item.conteudo_por_unidade).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${item.conteudo_unidade} por ${item.unidade})`
+  return 'Defina o conteúdo da embalagem'
+}
 
 // Saldo negativo ou no mínimo/abaixo; só itens com controle de estoque.
 export function emAlerta(item: Pick<ItemEstoqueFarmacia, 'controla_estoque' | 'estoque_atual' | 'estoque_minimo'>): boolean {
@@ -188,6 +209,14 @@ export function validarEntrada(form: FormEntrada): ResultadoValidacao<{ quantida
   if (custo == null || custo <= 0) return { ok: false, erro: 'Informe o custo unitário (maior que zero).' }
   if (!DATA_ISO.test(form.data)) return { ok: false, erro: 'Informe a data da entrada.' }
   return { ok: true, valores: { quantidade, custo } }
+}
+
+// Conteúdo por embalagem é opcional: vazio significa "sem baixa automática da Enfermaria".
+export function validarConteudo(conteudo: string): ResultadoValidacao<{ conteudo: number | null }> {
+  if (conteudo.trim() === '') return { ok: true, valores: { conteudo: null } }
+  const n = numeroValido(conteudo)
+  if (n == null || n <= 0) return { ok: false, erro: 'Informe o conteúdo da embalagem maior que zero (ou deixe vazio).' }
+  return { ok: true, valores: { conteudo: n } }
 }
 
 export function validarAjuste(form: FormAjuste): ResultadoValidacao<{ saldo: number }> {

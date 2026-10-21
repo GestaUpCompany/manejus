@@ -21,12 +21,18 @@ import {
   type FormAjuste,
   type FormEntrada,
   type ItemEstoqueFarmacia,
+  UNIDADES_CONTEUDO,
+  UNIDADES_DIRETAS,
+  UNIDADES_ESTOQUE,
+  modoBaixaEnfermaria,
+  rotuloBaixaEnfermaria,
+  validarConteudo,
   type MovimentoFarmacia,
 } from '../../features/estoqueFarmacia/logica'
 
 const hojeLocal = () => new Date().toLocaleDateString('en-CA')
 
-const COLUNAS_ITEM = 'id,nome_comercial,tipo,unidade,estoque_atual,estoque_minimo,custo_unitario,custo_total_estoque,controla_estoque'
+const COLUNAS_ITEM = 'id,nome_comercial,tipo,unidade,estoque_atual,estoque_minimo,custo_unitario,custo_total_estoque,controla_estoque,conteudo_por_unidade,conteudo_unidade'
 const COLUNAS_MOVIMENTO = 'id,medicamento_id,tipo_movimentacao,quantidade,custo_unitario,valor_total,data,origem,fornecedor,nota_fiscal,lote_produto,validade,observacao,unidade,registro_origem_id,created_at'
 
 const moeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -54,7 +60,7 @@ export function EstoqueFarmacia() {
   const [tipo, setClassificacao] = useState('')
   const [modal, setModal] = useState<'entrada' | 'ajuste' | null>(null)
   // Ativação do controle: é o único momento de escolher a unidade (depois de haver histórico ela não muda)
-  const [ativacao, setAtivacao] = useState<{ item: ItemEstoqueFarmacia; unidade: string; minimo: string } | null>(null)
+  const [ativacao, setAtivacao] = useState<{ item: ItemEstoqueFarmacia; modo: 'ativar' | 'conteudo'; unidade: string; minimo: string; conteudo: string; conteudoUn: string } | null>(null)
   // Edição inline do estoque mínimo (igual ao estoque de suplementação)
   const [editandoMinimoId, setEditandoMinimoId] = useState<string | null>(null)
   const [valorMinimoEditando, setValorMinimoEditando] = useState('')
@@ -171,11 +177,21 @@ export function EstoqueFarmacia() {
 
   const salvarAtivacao = async () => {
     if (!ativacao || !fazendaId) return
-    const minimo = Number(ativacao.minimo.replace(',', '.') || '0')
-    if (!Number.isFinite(minimo) || minimo < 0) return setErroForm('Informe um mínimo válido (zero ou maior).')
+    const direta = UNIDADES_DIRETAS.includes(ativacao.unidade)
+    const conteudo = validarConteudo(direta ? '' : ativacao.conteudo)
+    if (!conteudo.ok) return setErroForm(conteudo.erro)
+    const campos: Record<string, unknown> = {
+      conteudo_por_unidade: conteudo.valores.conteudo,
+      conteudo_unidade: conteudo.valores.conteudo == null ? null : ativacao.conteudoUn,
+    }
+    if (ativacao.modo === 'ativar') {
+      const minimo = Number(ativacao.minimo.replace(',', '.') || '0')
+      if (!Number.isFinite(minimo) || minimo < 0) return setErroForm('Informe um mínimo válido (zero ou maior).')
+      Object.assign(campos, { controla_estoque: true, unidade: ativacao.unidade, estoque_minimo: minimo })
+    }
     const { error } = await supabase
       .from('medicamentos')
-      .update({ controla_estoque: true, unidade: ativacao.unidade, estoque_minimo: minimo })
+      .update(campos)
       .eq('id', ativacao.item.id)
       .eq('fazenda_id', fazendaId)
     if (error) return setErroForm(error.message)
@@ -324,7 +340,7 @@ export function EstoqueFarmacia() {
                       </>
                     ) : (
                       <button
-                        onClick={() => { setErroForm(null); setAtivacao({ item, unidade: item.unidade, minimo: '0' }) }}
+                        onClick={() => { setErroForm(null); setAtivacao({ item, modo: 'ativar', unidade: item.unidade, minimo: '0', conteudo: '', conteudoUn: 'mL' }) }}
                         className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary dark:text-primary-light transition-colors hover:bg-primary/10"
                       >
                         Ativar controle
@@ -381,6 +397,22 @@ export function EstoqueFarmacia() {
                       <span className="font-medium text-content">{Number(item.estoque_minimo) > 0 ? `${numero(Number(item.estoque_minimo))} ${item.unidade}` : '—'}</span>
                     )}
                   </div>
+                  {item.controla_estoque && (
+                    <div className="flex justify-between items-center gap-2 text-sm">
+                      <span className="text-content-muted">Baixa da Enfermaria</span>
+                      <span className="flex items-center gap-2 text-right">
+                        <span className={modoBaixaEnfermaria(item) === 'sem_conversao' ? 'text-amber-700' : 'text-content'}>{rotuloBaixaEnfermaria(item)}</span>
+                        {modoBaixaEnfermaria(item) !== 'direta' && (
+                          <button
+                            onClick={() => { setErroForm(null); setAtivacao({ item, modo: 'conteudo', unidade: item.unidade, minimo: String(item.estoque_minimo ?? 0), conteudo: item.conteudo_por_unidade ? String(Number(item.conteudo_por_unidade)).replace('.', ',') : '', conteudoUn: item.conteudo_unidade || 'mL' }) }}
+                            className="text-xs font-semibold text-primary dark:text-primary-light underline"
+                          >
+                            {modoBaixaEnfermaria(item) === 'embalagem' ? 'Alterar' : 'Definir'}
+                          </button>
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </Card>
             )
@@ -439,20 +471,37 @@ export function EstoqueFarmacia() {
         </div>
       </Modal>
 
-      <Modal isOpen={!!ativacao} onClose={() => setAtivacao(null)} title={ativacao ? `Ativar controle: ${ativacao.item.nome_comercial}` : 'Ativar controle'}>
+      <Modal isOpen={!!ativacao} onClose={() => setAtivacao(null)} title={ativacao ? `${ativacao.modo === 'ativar' ? 'Ativar controle' : 'Conteúdo da embalagem'}: ${ativacao.item.nome_comercial}` : 'Ativar controle'}>
         {ativacao && (
           <div className="space-y-3">
-            <Select
-              label="Unidade de medida"
-              value={ativacao.unidade}
-              onChange={(value) => setAtivacao({ ...ativacao, unidade: value })}
-              options={['un', 'dose', 'frasco', 'mL', 'L', 'g', 'kg', 'caixa'].map((u) => ({ value: u, label: u }))}
-            />
-            <p className="text-xs text-amber-700">Escolha com atenção: depois de ativado, a unidade não pode ser alterada, para o histórico continuar correto.</p>
-            <Input label="Estoque mínimo (alerta)" type="number" min="0" step="0.001" value={ativacao.minimo} onChange={(e) => setAtivacao({ ...ativacao, minimo: e.target.value })} />
+            {ativacao.modo === 'ativar' ? (
+              <>
+                <Select
+                  label="Unidade de medida"
+                  value={ativacao.unidade}
+                  onChange={(value) => setAtivacao({ ...ativacao, unidade: value })}
+                  options={UNIDADES_ESTOQUE.map((u) => ({ value: u, label: u }))}
+                />
+                <p className="text-xs text-amber-700">Escolha com atenção: depois de ativado, a unidade não pode ser alterada, para o histórico continuar correto.</p>
+                <Input label="Estoque mínimo (alerta)" type="number" min="0" step="0.001" value={ativacao.minimo} onChange={(e) => setAtivacao({ ...ativacao, minimo: e.target.value })} />
+              </>
+            ) : (
+              <p className="text-sm text-content-muted">Unidade de estoque: <strong>{ativacao.unidade}</strong></p>
+            )}
+            {UNIDADES_DIRETAS.includes(ativacao.unidade) ? (
+              <p className="text-xs text-content-muted">Em {ativacao.unidade}, a Enfermaria baixa o estoque direto pela dose aplicada.</p>
+            ) : (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input label={`Conteúdo por ${ativacao.unidade}`} type="number" min="0" step="0.001" value={ativacao.conteudo} onChange={(e) => setAtivacao({ ...ativacao, conteudo: e.target.value })} placeholder="Ex.: 500" />
+                  <Select label="Em" value={ativacao.conteudoUn} onChange={(value) => setAtivacao({ ...ativacao, conteudoUn: value })} options={UNIDADES_CONTEUDO.map((u) => ({ value: u, label: u }))} />
+                </div>
+                <p className="text-xs text-content-muted">Usado para a baixa automática da Enfermaria (ex.: 20 mL aplicados ÷ 500 mL = 0,04 {ativacao.unidade}). Vazio: a Enfermaria não baixa este medicamento. A dose na Enfermaria deve estar na mesma unidade (mL ou mg).</p>
+              </div>
+            )}
             {erroForm && <p className="text-sm text-red-700">{erroForm}</p>}
             <div className="flex gap-2 pt-2">
-              <Button onClick={salvarAtivacao}>Ativar</Button>
+              <Button onClick={salvarAtivacao}>{ativacao.modo === 'ativar' ? 'Ativar' : 'Salvar'}</Button>
               <Button variant="secondary" onClick={() => setAtivacao(null)}>Cancelar</Button>
             </div>
           </div>
