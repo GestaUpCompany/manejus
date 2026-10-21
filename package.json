@@ -7,6 +7,7 @@
     "dev": "pnpm --filter manejus dev",
     "dev:manejus": "pnpm --filter manejus dev",
     "dev:vision": "pnpm --filter vision dev",
+    "preview:clima": "pnpm --filter manejus preview:clima",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",

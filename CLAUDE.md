@@ -13,6 +13,7 @@ Monorepo pnpm do painel de gestão/admin (React 18 + TanStack Query + Vite), onl
 - Typecheck: `pnpm typecheck`
 - Lint: `pnpm lint` (eslint, manejus tem `--max-warnings 0`)
 - Test: `pnpm test` (vitest run, hoje só o manejus tem suite)
+- Prévia do HTML do PDF de Clima: `pnpm preview:clima` (ver "Prévia local do PDF de Clima" abaixo)
 
 ## Estrutura
 
@@ -33,6 +34,19 @@ Monorepo pnpm do painel de gestão/admin (React 18 + TanStack Query + Vite), onl
 - **Verificação antes de entregar**: `pnpm typecheck` + `pnpm lint` + `pnpm test`.
 - **Análise de impacto (dependency-cruiser)**: antes de alterar, remover ou renomear módulo, função exportada, hook, tipo ou contrato compartilhado, e sempre que for preciso saber o impacto real de uma mudança, rodar o grafo em foco no arquivo, dentro de `apps/manejus`: `../../node_modules/.bin/depcruise --no-config --exclude node_modules --focus "<regex do arquivo>" --output-type mermaid src` (use `--output-type json` para listar os dependentes). Não use `npx depcruise` sem `--no-install`: ele resolve outro pacote (`depcruise@1.0.0`). O grafo é por módulo e não enxerga SQL, RPC, triggers nem tabelas do Supabase; complemente com `Grep` pelo nome da função e com a seção "Impacto cruzado" abaixo.
 - **Idioma**: código, UI e comentários em pt-BR.
+
+## Prévia local do PDF de Clima (`pnpm preview:clima`)
+
+Script `apps/manejus/scripts/preview-clima.mjs`. Sobe um servidor em `http://127.0.0.1:5199` (porta via `PREVIEW_PORT`) que importa a mesma `renderClimaHtml` de `api/pdf/clima.js` e mostra o HTML da página 1 e do detalhamento; ao salvar `clima.js` ou `api/pdf/_shared/*.js` a aba recarrega sozinha. Cada requisição roda num processo novo, então não há cache de módulo.
+
+**Finalidade:** iterar rápido o visual do PDF de Clima (KPIs, gráficos Chart.js, rótulos, tabelas, textos explicativos) sem gerar PDF, publicar na Vercel nem depender de dados reais. Abrir no DevTools só por `http://127.0.0.1`/`localhost` (regra do navegador acima), nunca por `file://`.
+
+**Limitações (não tratar como verificação final):**
+- Mostra o **HTML** que o Chromium converteria em PDF, **não o PDF**. Quebra de página, margens de impressão e o paginador "Página X de Y" podem diferir; para isso use `scripts/paginacao-pdf.mjs` ou gere o PDF real.
+- Os dados são **sintéticos** (9 pluviômetros, 5 datas, sem temperatura/umidade), definidos em `dadosExemplo()` no próprio script. Não lê o banco, não valida o cálculo do relatório e não exercita casos como muitas datas, 1 pluviômetro, temperatura ou observações longas: para esses, altere `dadosExemplo()` ou confira o PDF real.
+- Cobre só o **endpoint do PDF** (`api/pdf/clima.js`). A tela pública (`RelatorioClimaPublico.tsx`, recharts) é outra implementação e se confere no `pnpm dev`.
+- Só escuta em `127.0.0.1`; sem autenticação, não expor.
+- Ele não substitui `pnpm typecheck`/`pnpm test`. Para outros relatórios (consumo, abastecimento...) não serve como está: o script é específico do Clima.
 
 ## Segurança: fazenda de testes e ações em produção (regras obrigatórias)
 

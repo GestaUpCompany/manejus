@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@gestaup/supabase'
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, Cell, ComposedChart, Area, Line, LabelList, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import logoManejus from '/images/manejus360.png'
 import { ordenarPeriodo } from '../../features/relatorioGeral/periodo'
 import { gerarRelatorioClimaPDFPuppeteer } from '../../utils/relatorioClimaPDFPuppeteer'
 
 const GREEN_DARK = '#0F6437'
-const PLUV_COLORS = ['#1E3A5F', '#0F6437', '#10B981', '#c28a27', '#6B7280', '#34b87c', '#5ccf94', '#a2e9bc']
+const COR_ACIMA_MEDIA = '#1E3A5F'
+const COR_ABAIXO_MEDIA = '#8FB3A0'
 const TEMP_COLOR = '#EF4444'
 
 const CHART_NO_FOCUS_CSS = `
@@ -83,11 +84,18 @@ export interface PontoSerieClima {
   data: string
   data_label: string
   temp_media: number | null
-  [pluviometro: string]: string | number | null
+  // Acumulado até a data: média dos pluviômetros (fazenda) e menor/maior região
+  acum_fazenda: number
+  acum_min: number
+  acum_max: number
 }
 
+// Cada pluviômetro representa uma região: a visão geral da fazenda é a média
+// dos pluviômetros, nunca a soma.
 export interface KpisClima {
+  // Chuva acumulada da fazenda: média das acumuladas dos pluviômetros com leitura no período
   mm_total: number
+  n_pluviometros: number
   n_leituras: number
   dias_com_chuva: number
   temp_media: number | null
@@ -118,8 +126,20 @@ function fmtNum(v: number | null | undefined, casas = 1): string {
   return v.toFixed(casas).replace('.', ',')
 }
 
+function chavePluviometro(r: LeituraClima): string {
+  return r.pluviometro_id || r.pluviometro_nome || 'desconhecido'
+}
+
 export function calcularKpis(registros: LeituraClima[]): KpisClima {
-  const mmTotal = registros.reduce((s, r) => s + (Number(r.medicao_mm) || 0), 0)
+  const acumuladoPorPluviometro = new Map<string, number>()
+  for (const r of registros) {
+    const key = chavePluviometro(r)
+    acumuladoPorPluviometro.set(key, (acumuladoPorPluviometro.get(key) ?? 0) + (Number(r.medicao_mm) || 0))
+  }
+  const nPluviometros = acumuladoPorPluviometro.size
+  const mmTotal = nPluviometros
+    ? Array.from(acumuladoPorPluviometro.values()).reduce((s, v) => s + v, 0) / nPluviometros
+    : 0
   const diasComChuva = new Set(
     registros.filter((r) => (Number(r.medicao_mm) || 0) > 0).map((r) => r.data),
   ).size
@@ -127,6 +147,7 @@ export function calcularKpis(registros: LeituraClima[]): KpisClima {
   const umidades = registros.map((r) => r.umidade_relativa).filter((u): u is number => u !== null && u !== undefined)
   return {
     mm_total: mmTotal,
+    n_pluviometros: nPluviometros,
     n_leituras: registros.length,
     dias_com_chuva: diasComChuva,
     temp_media: temps.length ? temps.reduce((s, t) => s + t, 0) / temps.length : null,
@@ -139,7 +160,7 @@ export function calcularKpis(registros: LeituraClima[]): KpisClima {
 export function resumirPorPluviometro(registros: LeituraClima[]): ResumoPluviometro[] {
   const map = new Map<string, LeituraClima[]>()
   for (const r of registros) {
-    const key = r.pluviometro_id || r.pluviometro_nome || 'desconhecido'
+    const key = chavePluviometro(r)
     const arr = map.get(key) || []
     arr.push(r)
     map.set(key, arr)
@@ -162,29 +183,64 @@ export function resumirPorPluviometro(registros: LeituraClima[]): ResumoPluviome
   }).sort((a, b) => b.mm_total - a.mm_total)
 }
 
-export function serieDiaria(registros: LeituraClima[], nomesPluviometros: string[]): PontoSerieClima[] {
+// Linha "Fazenda" do resumo: média dos pluviômetros (a soma dos totais não
+// representa a fazenda, cada pluviômetro é uma região).
+// "279,0 mm  ▲ +38,7" / "204,0 mm  ▼ -36,3": a posição em relação à média vai no
+// texto (símbolo + sinal), não só na cor da barra.
+export function rotuloBarra(mm: number, media: number, comparar: boolean): string {
+  const base = `${fmtNum(mm)} mm`
+  if (!comparar) return base
+  const dif = mm - media
+  if (Math.abs(dif) < 0.05) return `${base}  = média`
+  return `${base}  ${dif > 0 ? '▲ +' : '▼ -'}${fmtNum(Math.abs(dif))}`
+}
+
+export function resumirFazenda(resumo: ResumoPluviometro[]) {
+  const n = resumo.length
+  const media = (vals: number[]) => (vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null)
+  return {
+    n_pluviometros: n,
+    n_medicoes: resumo.reduce((s, r) => s + r.n_medicoes, 0),
+    mm_total: media(resumo.map((r) => r.mm_total)) ?? 0,
+    mm_medio: media(resumo.map((r) => r.mm_medio).filter((v): v is number => v !== null)),
+    maior_leitura: resumo.reduce<number | null>(
+      (m, r) => (r.maior_leitura === null ? m : m === null ? r.maior_leitura : Math.max(m, r.maior_leitura)),
+      null,
+    ),
+  }
+}
+
+// Evolução da chuva acumulada: um ponto por data com leitura. O acumulado de
+// cada pluviômetro vai somando (e é carregado nos dias sem leitura dele); a
+// fazenda é a média sobre os pluviômetros com leitura no período, o mesmo
+// denominador do KPI, então o último ponto é igual à "Chuva acumulada".
+export function serieDiaria(registros: LeituraClima[]): PontoSerieClima[] {
+  const acumulado = new Map<string, number>()
+  for (const r of registros) acumulado.set(chavePluviometro(r), 0)
   const byDia = new Map<string, LeituraClima[]>()
   for (const r of registros) {
     const arr = byDia.get(r.data) || []
     arr.push(r)
     byDia.set(r.data, arr)
   }
+  const arred = (v: number) => Number(v.toFixed(2))
   return Array.from(byDia.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([data, regs]) => {
+      for (const r of regs) {
+        const key = chavePluviometro(r)
+        acumulado.set(key, (acumulado.get(key) ?? 0) + (Number(r.medicao_mm) || 0))
+      }
+      const valores = Array.from(acumulado.values())
       const temps = regs.map((r) => r.temperatura_media ?? r.temperatura).filter((t): t is number => t !== null && t !== undefined)
-      const ponto: PontoSerieClima = {
+      return {
         data,
         data_label: dataLabel(data),
-        temp_media: temps.length ? Number((temps.reduce((s, t) => s + t, 0) / temps.length).toFixed(2)) : null,
+        temp_media: temps.length ? arred(temps.reduce((s, t) => s + t, 0) / temps.length) : null,
+        acum_fazenda: arred(valores.reduce((s, v) => s + v, 0) / valores.length),
+        acum_min: arred(Math.min(...valores)),
+        acum_max: arred(Math.max(...valores)),
       }
-      for (const nome of nomesPluviometros) {
-        const mm = regs
-          .filter((r) => (r.pluviometro_nome || '—') === nome)
-          .reduce((s, r) => s + (Number(r.medicao_mm) || 0), 0)
-        ponto[nome] = Number(mm.toFixed(1))
-      }
-      return ponto
     })
 }
 
@@ -273,14 +329,19 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
 
   const kpis = useMemo(() => calcularKpis(registrosFiltrados), [registrosFiltrados])
   const resumo = useMemo(() => resumirPorPluviometro(registrosFiltrados), [registrosFiltrados])
-  const serie = useMemo(() => serieDiaria(registrosFiltrados, nomesPluviometros), [registrosFiltrados, nomesPluviometros])
-
-  // Só entram no gráfico/legenda os pluviômetros com leitura no período
-  // filtrado (a lista completa inclui pluviômetros sem dados).
-  const nomesPluviometrosComDados = useMemo(() => {
-    const comDados = new Set(registrosFiltrados.map((r) => r.pluviometro_nome || '—'))
-    return nomesPluviometros.filter((n) => comDados.has(n))
-  }, [registrosFiltrados, nomesPluviometros])
+  const resumoFazenda = useMemo(() => resumirFazenda(resumo), [resumo])
+  const serie = useMemo(() => serieDiaria(registrosFiltrados), [registrosFiltrados])
+  // A faixa (mín. a máx. entre pluviômetros) vira um par para o <Area> do recharts
+  // `ts` posiciona cada data na proporção real do tempo (o eixo não espaça por igual)
+  const serieGrafico = useMemo(
+    () => serie.map((p) => ({ ...p, ts: Date.parse(`${p.data}T00:00:00Z`), faixa: [p.acum_min, p.acum_max] })),
+    [serie],
+  )
+  // Rótulo com a diferença para a média (▲/▼ + sinal), para não depender de cor em impressão P&B
+  const dadosBarras = useMemo(
+    () => resumo.map((r) => ({ ...r, rotulo: rotuloBarra(r.mm_total, kpis.mm_total, resumo.length > 1) })),
+    [resumo, kpis.mm_total],
+  )
 
   // Sem registros de temperatura/umidade no período, os cards, a linha do
   // gráfico e as colunas correspondentes ficam ocultos.
@@ -294,7 +355,10 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
   )
 
   const kpiCards = [
-    { label: 'Chuva acumulada', value: `${fmtNum(kpis.mm_total, 1)} mm` },
+    {
+      label: kpis.n_pluviometros > 1 ? `Chuva acumulada (média de ${kpis.n_pluviometros} pluviômetros)` : 'Chuva acumulada',
+      value: `${fmtNum(kpis.mm_total, 1)} mm`,
+    },
     { label: 'Leituras', value: kpis.n_leituras.toString() },
     { label: 'Dias com chuva', value: kpis.dias_com_chuva.toString() },
     ...(temTemperatura
@@ -574,20 +638,86 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Gráfico: chuva diária por pluviômetro + temperatura média */}
+        {/* Gráfico 1: acumulado de cada pluviômetro (região) x média da fazenda */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">
-            {temTemperatura ? 'Chuva diária (mm) e temperatura média (°C)' : 'Chuva diária (mm)'}
+          <h2 className="text-sm font-semibold text-gray-900">Chuva acumulada por pluviômetro × média da fazenda</h2>
+          <p className="text-xs text-gray-500 mb-4">
+            Cada barra é uma região; a linha tracejada é a média da fazenda ({fmtNum(kpis.mm_total, 1)} mm).
+          </p>
+          {resumo.length > 0 ? (
+            <ResponsiveContainer width="100%" height={Math.max(200, resumo.length * 34 + 80)}>
+              <BarChart data={dadosBarras} layout="vertical" margin={{ top: 32, right: 10, left: 0, bottom: 5 }} style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: '#666' }} unit=" mm" domain={[0, (max: number) => Math.ceil(max * 1.1)]} />
+                <YAxis yAxisId="nome" type="category" dataKey="pluviometro_nome" width={90} tick={{ fontSize: 12, fill: '#374151' }} />
+                {/* valores numa coluna à direita: a linha da média nunca passa por cima deles */}
+                <YAxis yAxisId="valor" orientation="right" type="category" dataKey="rotulo" width={150} axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 600, fill: '#111827' }} />
+                <Tooltip
+                  formatter={((value: any) => [`${fmtNum(Number(value))} mm`, 'Acumulado']) as any}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
+                />
+                <Bar yAxisId="nome" dataKey="mm_total" name="Acumulado" radius={[0, 4, 4, 0]} barSize={20}>
+                  {resumo.map((r) => (
+                    <Cell key={r.pluviometro_id} fill={r.mm_total >= kpis.mm_total ? COR_ACIMA_MEDIA : COR_ABAIXO_MEDIA} />
+                  ))}
+                </Bar>
+                {resumo.length > 1 && (
+                  <ReferenceLine
+                    yAxisId="nome"
+                    x={kpis.mm_total}
+                    stroke="#111827"
+                    strokeWidth={2}
+                    strokeDasharray="6 3"
+                    label={{ value: `Média ${fmtNum(kpis.mm_total, 1)} mm`, position: 'top', fontSize: 12, fontWeight: 700, fill: '#111827' }}
+                  />
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[180px] flex items-center justify-center text-gray-400 text-sm">
+              Sem dados para os filtros selecionados
+            </div>
+          )}
+          {resumo.length > 1 && (
+            <p className="mt-2 text-xs text-gray-600">
+              ▲ acima da média da fazenda · ▼ abaixo da média (diferença em mm, ao lado de cada valor)
+            </p>
+          )}
+        </div>
+
+        {/* Gráfico 2: evolução da chuva acumulada da fazenda (+ faixa entre regiões) */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <h2 className="text-sm font-semibold text-gray-900">
+            {temTemperatura ? 'Evolução da chuva acumulada da fazenda e temperatura média' : 'Evolução da chuva acumulada da fazenda'}
           </h2>
-          {serie.length > 0 ? (
-            <ResponsiveContainer width="100%" height={360}>
-              <ComposedChart data={serie} margin={{ top: 10, right: 25, left: 0, bottom: 20 }} style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}>
+          <div className="text-xs text-gray-600 mb-4 space-y-1">
+            <p>
+              <strong>Linha:</strong> a média da fazenda, quanto choveu em média até cada data. Só sobe: quanto mais inclinada, mais choveu naquele intervalo. O último ponto é o acumulado do período.
+            </p>
+            {resumo.length > 1 && (
+              <p>
+                <strong>Faixa cinza:</strong> mostra só as duas regiões extremas. Borda de cima = a que mais choveu; borda de baixo = a que menos choveu. Borda de cima longe da linha: há uma região bem mais molhada que a média. Borda de baixo longe da linha: há uma região bem atrás da média. Bordas coladas na linha: chuva parecida em toda a fazenda. A faixa não mostra quantas regiões estão perto de cada borda; para isso, veja o gráfico acima.
+              </p>
+            )}
+          </div>
+          {serieGrafico.length > 0 ? (
+            <ResponsiveContainer width="100%" height={320}>
+              <ComposedChart data={serieGrafico} margin={{ top: 20, right: 25, left: 0, bottom: 10 }} style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="data_label" tick={{ fontSize: 10, fill: '#666' }} />
+                <XAxis
+                  dataKey="ts"
+                  type="number"
+                  scale="time"
+                  domain={['dataMin', 'dataMax']}
+                  ticks={serieGrafico.length <= 12 ? serieGrafico.map((p) => p.ts) : undefined}
+                  padding={{ left: 24, right: 30 }}
+                  tickFormatter={(ts: number) => dataLabel(new Date(ts).toISOString().slice(0, 10))}
+                  tick={{ fontSize: 11, fill: '#666' }}
+                />
                 <YAxis
                   yAxisId="mm"
                   tick={{ fontSize: 11, fill: '#666' }}
-                  label={{ value: 'mm', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#666' } }}
+                  label={{ value: 'mm acumulados', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#666' } }}
                 />
                 {temTemperatura && (
                   <YAxis
@@ -598,40 +728,39 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
                   />
                 )}
                 <Tooltip
-                  formatter={((value: any, name: any) => [
-                    name === 'Temperatura média' ? `${fmtNum(Number(value))}°C` : `${fmtNum(Number(value))} mm`,
-                    name,
-                  ]) as any}
+                  formatter={((value: any, name: any) => {
+                    if (Array.isArray(value)) return [`${fmtNum(Number(value[0]))} a ${fmtNum(Number(value[1]))} mm`, name]
+                    return [name === 'Temperatura média' ? `${fmtNum(Number(value))}°C` : `${fmtNum(Number(value))} mm`, name]
+                  }) as any}
+                  labelFormatter={((ts: any) => formatarData(new Date(Number(ts)).toISOString())) as any}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                {nomesPluviometrosComDados.map((nome, idx) => (
-                  <Bar
-                    key={nome}
-                    yAxisId="mm"
-                    dataKey={nome}
-                    name={nome}
-                    fill={PLUV_COLORS[idx % PLUV_COLORS.length]}
-                    radius={[3, 3, 0, 0]}
-                    barSize={24}
+                {resumo.length > 1 && (
+                  <Area yAxisId="mm" type="linear" dataKey="faixa" name="Entre pluviômetros (mín. a máx.)" stroke="none" fill={COR_ACIMA_MEDIA} fillOpacity={0.15} isAnimationActive={false} />
+                )}
+                <Line yAxisId="mm" type="linear" dataKey="acum_fazenda" name="Média da fazenda" stroke={COR_ACIMA_MEDIA} strokeWidth={3} dot={{ r: 4 }} isAnimationActive={false}>
+                  {/* com muitas datas os valores se sobrepõem: nesse caso só o primeiro e o último ponto */}
+                  <LabelList
+                    dataKey="acum_fazenda"
+                    content={((p: any) => {
+                      const ultimo = serieGrafico.length - 1
+                      if (serieGrafico.length > 8 && p.index !== 0 && p.index !== ultimo) return null
+                      return (
+                        <text x={p.x} y={p.y - 10} textAnchor="middle" fontSize={12} fontWeight={700} fill="#111827" style={{ paintOrder: 'stroke', stroke: '#fff', strokeWidth: 4, strokeLinejoin: 'round' }}>
+                          {fmtNum(Number(p.value), 1)}
+                        </text>
+                      )
+                    }) as any}
                   />
-                ))}
+                </Line>
                 {temTemperatura && (
-                  <Line
-                    yAxisId="temp"
-                    type="monotone"
-                    dataKey="temp_media"
-                    name="Temperatura média"
-                    stroke={TEMP_COLOR}
-                    strokeWidth={2.5}
-                    dot={{ r: 3 }}
-                    connectNulls
-                  />
+                  <Line yAxisId="temp" type="monotone" dataKey="temp_media" name="Temperatura média" stroke={TEMP_COLOR} strokeWidth={1.5} dot={{ r: 2 }} connectNulls isAnimationActive={false} />
                 )}
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[360px] flex items-center justify-center text-gray-400 text-sm">
+            <div className="h-[320px] flex items-center justify-center text-gray-400 text-sm">
               Sem dados para os filtros selecionados
             </div>
           )}
@@ -676,6 +805,16 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
                       )}
                     </tr>
                   ))}
+                  {resumo.length > 1 && (
+                    <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
+                      <td className="py-2 px-3 text-gray-900" colSpan={2}>Fazenda (média de {resumoFazenda.n_pluviometros} pluviômetros)</td>
+                      <td className="py-2 px-3 text-right text-gray-700">{resumoFazenda.n_medicoes}</td>
+                      <td className="py-2 px-3 text-right" style={{ color: GREEN_DARK }}>{fmtNum(resumoFazenda.mm_total)} mm</td>
+                      <td className="py-2 px-3 text-right text-gray-700">{fmtNum(resumoFazenda.mm_medio)} mm</td>
+                      <td className="py-2 px-3 text-right text-gray-700">{fmtNum(resumoFazenda.maior_leitura)} mm</td>
+                      {temTemperatura && <td className="py-2 px-3" colSpan={2}></td>}
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

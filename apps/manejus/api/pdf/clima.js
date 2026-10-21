@@ -6,8 +6,9 @@
 // _shared/.
 //
 // Estrutura (ver docs/ArquiteturaRelatoriosPDF.md):
-//  - Página 1: KPIs + gráfico composto (barras agrupadas de mm por
-//    pluviômetro + linha de temperatura média, 2 eixos Y).
+//  - Página 1: KPIs + dois gráficos lado a lado: acumulado por pluviômetro
+//    × média da fazenda (barras horizontais) e evolução do acumulado da
+//    fazenda com faixa mín–máx entre pluviômetros (+ temperatura média).
 //  - Página 2+: tabela "Resumo por pluviômetro" + "Leituras detalhadas"
 //    pre-chunked; a primeira página de detalhe acomoda menos linhas
 //    porque divide o espaço com a tabela de resumo.
@@ -58,7 +59,8 @@ function isPDFData(value) {
 const CLIMA_CSS = `
 .page{display:flex;flex-direction:column}
 .clima-content{flex:1;display:flex;flex-direction:column;min-height:0}
-.clima-chart{flex:1;min-height:0}
+.clima-charts{flex:1;min-height:0;display:flex;gap:8px}
+.clima-chart{flex:1;min-width:0;min-height:0}
 .clima-chart .chart-card{height:100%}
 
 .clima-resumo-table td, .clima-leituras-table td{font-size:12px;padding:6px 5px;line-height:1.25}
@@ -70,12 +72,14 @@ const CLIMA_CSS = `
 .clima-resumo-table tbody tr:nth-child(even), .clima-leituras-table tbody tr:nth-child(even){background:#f7faf8}
 `
 
-// Script rodado dentro do Chromium headless para desenhar o gráfico
-// composto: um dataset de barras por pluviômetro (eixo Y esquerdo, mm)
-// + uma linha de temperatura média (eixo Y direito, °C).
+// Script rodado dentro do Chromium headless para desenhar os dois gráficos da
+// página 1: (1) barras horizontais com o acumulado de cada pluviômetro e a
+// linha da média da fazenda; (2) evolução do acumulado da fazenda com a faixa
+// entre o pluviômetro que menos e o que mais acumulou (+ temperatura opcional).
 const CHARTS_INIT_JS = `
 (function(){
-  var PALETTE = ['#1E3A5F', '#0F6437', '#10B981', '#c28a27', '#6B7280', '#34b87c', '#5ccf94', '#a2e9bc']
+  var COR_ACIMA = '#1E3A5F'
+  var COR_ABAIXO = '#8FB3A0'
   var TEMP_COLOR = '#EF4444'
   var DARK_TEXT = '#1F2937'
   var MEDIUM_TEXT = '#6B7280'
@@ -86,137 +90,230 @@ const CHARTS_INIT_JS = `
   Chart.defaults.font.family = 'Arial, Helvetica, sans-serif'
 
   var charts = (window.__reportData && window.__reportData.charts) || []
-  var remaining = charts.length
 
-  function drawChart(entry) {
+  function fmt(v) { return Number(v).toFixed(1).replace('.', ',') }
+
+  function drawPorPluviometro(entry) {
     var el = document.getElementById(entry.canvasId)
-    if (!el) { maybeDone(); return }
-    var serie = entry.serie || []
-    var pluviometros = entry.pluviometros || []
-    if (!serie.length || !pluviometros.length) { maybeDone(); return }
-
-    var maxMm = 1
-    serie.forEach(function(p) {
-      pluviometros.forEach(function(nome) {
-        var v = Number(p[nome]) || 0
-        if (v > maxMm) maxMm = v
-      })
-    })
-    var temps = serie.map(function(p){ return p.temp_media }).filter(function(t){ return t != null })
-    var maxTemp = temps.length ? Math.max.apply(null, temps) : 30
-
-    var datasets = pluviometros.map(function(nome, i) {
-      return {
-        type: 'bar',
-        label: nome,
-        data: serie.map(function(p){ return Number(p[nome]) || 0 }),
-        backgroundColor: PALETTE[i % PALETTE.length],
-        borderRadius: 3,
-        borderSkipped: false,
-        yAxisID: 'y',
-        order: 2,
-        barPercentage: 0.7,
-        categoryPercentage: 0.7,
-      }
-    })
-    if (entry.hasTemp) {
-      datasets.push({
-        type: 'line',
-        label: 'Temp. média (°C)',
-        data: serie.map(function(p){ return p.temp_media != null ? Number(p.temp_media) : null }),
-        borderColor: TEMP_COLOR,
-        backgroundColor: TEMP_COLOR,
-        borderWidth: 3,
-        pointRadius: 5,
-        pointBackgroundColor: TEMP_COLOR,
-        pointBorderColor: '#FFFFFF',
-        pointBorderWidth: 2,
-        yAxisID: 'y1',
-        order: 0,
-        tension: 0.3,
-        spanGaps: true,
-      })
-    }
-
+    var resumo = entry.resumo || []
+    if (!el || !resumo.length) return
+    var media = Number(entry.media) || 0
+    var maxMm = Math.max.apply(null, resumo.map(function(r){ return Number(r.mm_total) || 0 }).concat([media, 1]))
     new Chart(el, {
       type: 'bar',
-      data: { labels: serie.map(function(p){ return p.data_label }), datasets: datasets },
+      data: {
+        labels: resumo.map(function(r){ return r.pluviometro_nome || '—' }),
+        datasets: [{
+          data: resumo.map(function(r){ return Number(r.mm_total) || 0 }),
+          backgroundColor: resumo.map(function(r){ return (Number(r.mm_total) || 0) >= media ? COR_ACIMA : COR_ABAIXO }),
+          borderRadius: 3,
+          barPercentage: 0.75,
+          categoryPercentage: 0.9,
+        }],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        layout: { padding: { top: 18, right: 135, bottom: 4, left: 4 } },
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: {
+            beginAtZero: true,
+            suggestedMax: maxMm * 1.1,
+            title: { display: true, text: 'Chuva acumulada (mm)', color: MEDIUM_TEXT, font: { size: 11, weight: 'bold' } },
+            ticks: { color: MEDIUM_TEXT, font: { size: 10 } },
+            grid: { color: '#E5E7EB' },
+          },
+          y: { grid: { display: false }, ticks: { color: DARK_TEXT, font: { size: 11, weight: 'bold' } } },
+        },
+      },
+      plugins: [{
+        id: 'valoresEMedia',
+        afterDatasetsDraw: function(chart) {
+          var ctx = chart.ctx
+          var meta = chart.getDatasetMeta(0)
+          ctx.save()
+          ctx.font = 'bold 11px Arial, sans-serif'
+          ctx.fillStyle = DARK_TEXT
+          ctx.textAlign = 'left'
+          ctx.textBaseline = 'middle'
+          // desenhado depois da linha da média, com halo branco, para o valor
+          // continuar legível quando a linha passa por cima dele
+          var desenharValores = function() {
+            ctx.font = 'bold 11px Arial, sans-serif'
+            ctx.fillStyle = DARK_TEXT
+            ctx.textAlign = 'left'
+            ctx.textBaseline = 'middle'
+            ctx.lineWidth = 4
+            ctx.strokeStyle = '#FFFFFF'
+            meta.data.forEach(function(bar, i) {
+              var v = chart.data.datasets[0].data[i]
+              var t = fmt(v) + ' mm'
+              if (resumo.length > 1) {
+                var dif = v - media
+                t += Math.abs(dif) < 0.05 ? '  = média' : (dif > 0 ? '  \\u25B2 +' : '  \\u25BC -') + fmt(Math.abs(dif))
+              }
+              // coluna fixa à direita da área do gráfico: a linha da média nunca cruza os valores
+              ctx.strokeText(t, chart.chartArea.right + 8, bar.y)
+              ctx.fillText(t, chart.chartArea.right + 8, bar.y)
+            })
+          }
+          if (resumo.length > 1) {
+            var x = chart.scales.x.getPixelForValue(media)
+            var area = chart.chartArea
+            ctx.setLineDash([6, 4])
+            ctx.strokeStyle = '#111827'
+            ctx.lineWidth = 2
+            ctx.beginPath()
+            ctx.moveTo(x, area.top - 4)
+            ctx.lineTo(x, area.bottom)
+            ctx.stroke()
+            ctx.setLineDash([])
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'bottom'
+            ctx.font = 'bold 11px Arial, sans-serif'
+            ctx.fillText('Média da fazenda: ' + fmt(media) + ' mm', x, area.top - 6)
+          }
+          desenharValores()
+          ctx.restore()
+        },
+      }],
+    })
+  }
+
+  function drawEvolucao(entry) {
+    var el = document.getElementById(entry.canvasId)
+    var serie = entry.serie || []
+    if (!el || !serie.length) return
+    var comFaixa = entry.comFaixa === true
+    var maxMm = Math.max.apply(null, serie.map(function(p){ return Number(p.acum_max) || 0 }).concat([1]))
+    var temps = serie.map(function(p){ return p.temp_media }).filter(function(t){ return t != null })
+    var maxTemp = temps.length ? Math.max.apply(null, temps) : 30
+    // Eixo X proporcional ao tempo (dias desde a 1ª data): datas esparsas não
+    // podem ocupar o mesmo espaço, senão a inclinação da linha engana.
+    var DIA = 86400000
+    var base = Date.parse(serie[0].data + 'T00:00:00Z')
+    var xs = serie.map(function(p){ return Math.round((Date.parse(p.data + 'T00:00:00Z') - base) / DIA) })
+    var span = Math.max(xs[xs.length - 1], 1)
+    function pts(fn) { return serie.map(function(p, i){ var y = fn(p); return { x: xs[i], y: y } }) }
+    function labelDe(dias) {
+      var d = new Date(base + dias * DIA)
+      return ('0' + d.getUTCDate()).slice(-2) + '/' + ('0' + (d.getUTCMonth() + 1)).slice(-2)
+    }
+    var datasets = []
+    if (comFaixa) {
+      datasets.push({
+        label: 'Menor acumulado',
+        data: pts(function(p){ return Number(p.acum_min) || 0 }),
+        borderColor: 'rgba(30,58,95,0.35)', borderWidth: 1, borderDash: [3, 3], pointRadius: 0,
+        backgroundColor: 'rgba(30,58,95,0.12)', fill: '+1', yAxisID: 'y', order: 3, tension: 0,
+      })
+      datasets.push({
+        label: 'Maior acumulado',
+        data: pts(function(p){ return Number(p.acum_max) || 0 }),
+        borderColor: 'rgba(30,58,95,0.35)', borderWidth: 1, borderDash: [3, 3], pointRadius: 0,
+        fill: false, yAxisID: 'y', order: 3, tension: 0,
+      })
+    }
+    datasets.push({
+      label: 'Média da fazenda (mm)',
+      data: pts(function(p){ return Number(p.acum_fazenda) || 0 }),
+      borderColor: COR_ACIMA, backgroundColor: COR_ACIMA, borderWidth: 3,
+      pointRadius: 5, pointBackgroundColor: COR_ACIMA, pointBorderColor: '#FFFFFF', pointBorderWidth: 2,
+      yAxisID: 'y', order: 1, tension: 0,
+    })
+    var idxMedia = datasets.length - 1
+    if (entry.hasTemp) {
+      datasets.push({
+        label: 'Temp. média (°C)',
+        data: pts(function(p){ return p.temp_media != null ? Number(p.temp_media) : null }),
+        borderColor: TEMP_COLOR, backgroundColor: TEMP_COLOR, borderWidth: 1.5, pointRadius: 3,
+        yAxisID: 'y1', order: 2, tension: 0.3, spanGaps: true,
+      })
+    }
+    new Chart(el, {
+      type: 'line',
+      data: { datasets: datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         animation: false,
-        layout: { padding: { top: 30, right: 20, bottom: 10, left: 10 } },
+        layout: { padding: { top: 24, right: 20, bottom: 4, left: 4 } },
         plugins: {
           legend: {
             position: 'top',
-            align: 'center',
-            labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, color: DARK_TEXT, font: { size: 12, weight: 'bold' } },
+            labels: {
+              usePointStyle: true, pointStyle: 'circle', padding: 10, color: DARK_TEXT, font: { size: 10, weight: 'bold' },
+              // a faixa já é explicada no subtítulo do card; fora da legenda
+              filter: function(item) { return !(comFaixa && item.datasetIndex < 2) },
+            },
           },
           tooltip: { enabled: false },
         },
         scales: {
           x: {
+            type: 'linear',
+            min: -span * 0.04,
+            max: span * 1.04,
             grid: { display: false },
-            ticks: { color: MEDIUM_TEXT, font: { size: 11 } },
-            title: { display: true, text: 'Dias', color: MEDIUM_TEXT, font: { size: 12, weight: 'bold' }, padding: { top: 8 } },
+            // um tick em cada data com leitura (até 12); acima disso, ticks automáticos
+            afterBuildTicks: function(scale) {
+              if (xs.length <= 12) scale.ticks = xs.map(function(v){ return { value: v } })
+            },
+            ticks: { color: MEDIUM_TEXT, font: { size: 10 }, callback: function(v){ return labelDe(v) } },
           },
           y: {
-            position: 'left',
-            beginAtZero: true,
-            suggestedMax: maxMm * 1.2,
-            title: { display: true, text: 'Chuva (mm)', color: DARK_TEXT, font: { size: 12, weight: 'bold' } },
-            ticks: { color: MEDIUM_TEXT, font: { size: 11 } },
-            grid: { color: '#E5E7EB' },
+            beginAtZero: true, suggestedMax: maxMm * 1.15,
+            title: { display: true, text: 'Chuva acumulada (mm)', color: MEDIUM_TEXT, font: { size: 11, weight: 'bold' } },
+            ticks: { color: MEDIUM_TEXT, font: { size: 10 } }, grid: { color: '#E5E7EB' },
           },
           y1: {
-            display: entry.hasTemp === true,
-            position: 'right',
-            beginAtZero: true,
-            suggestedMax: maxTemp * 1.3,
-            title: { display: true, text: '°C', color: TEMP_COLOR, font: { size: 12, weight: 'bold' } },
-            ticks: { color: TEMP_COLOR, font: { size: 11 } },
-            grid: { display: false },
+            display: entry.hasTemp === true, position: 'right', beginAtZero: true, suggestedMax: maxTemp * 1.3,
+            title: { display: true, text: '°C', color: TEMP_COLOR, font: { size: 11, weight: 'bold' } },
+            ticks: { color: TEMP_COLOR, font: { size: 10 } }, grid: { display: false },
           },
         },
       },
       plugins: [{
-        id: 'mmLabels',
+        id: 'valoresMedia',
         afterDatasetsDraw: function(chart) {
           var ctx = chart.ctx
+          var meta = chart.getDatasetMeta(idxMedia)
           ctx.save()
-          ctx.textAlign = 'center'
-          ctx.font = 'bold 10px Arial, sans-serif'
+          ctx.font = 'bold 11px Arial, sans-serif'
           ctx.fillStyle = DARK_TEXT
-          pluviometros.forEach(function(nome, di) {
-            var meta = chart.getDatasetMeta(di)
-            var ds = chart.data.datasets[di]
-            meta.data.forEach(function(bar, j) {
-              var v = Number(ds.data[j])
-              if (!v) return
-              ctx.fillText(v.toFixed(1), bar.x, bar.y - 4)
-            })
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'bottom'
+          ctx.lineWidth = 4
+          ctx.strokeStyle = '#FFFFFF'
+          meta.data.forEach(function(pt, j) {
+            // com muitas datas os valores se sobrepõem: só o primeiro e o último ponto
+            if (serie.length > 8 && j !== 0 && j !== serie.length - 1) return
+            var t = fmt(chart.data.datasets[idxMedia].data[j].y)
+            ctx.strokeText(t, pt.x, pt.y - 9)
+            ctx.fillText(t, pt.x, pt.y - 9)
           })
           ctx.restore()
         },
       }],
     })
-    maybeDone()
   }
 
-  function maybeDone() {
-    remaining--
-    if (remaining <= 0) window.__chartsReady = true
-  }
-
-  if (!charts.length) { window.__chartsReady = true; return }
-  charts.forEach(drawChart)
+  charts.forEach(function(entry) {
+    if (entry.kind === 'evolucao') drawEvolucao(entry)
+    else drawPorPluviometro(entry)
+  })
+  window.__chartsReady = true
 })();
 `
 
 function kpisHtml(kpis, hasTemp, hasUmidade) {
   const temp = (v) => (v != null ? `${numFmt(v, 1)}°C` : '—')
   const cards = [
-    { value: `${numFmt(kpis.mm_total, 1)} mm`, label: 'Chuva acumulada' },
+    // mm_total já vem como média dos pluviômetros (cada um é uma região)
+    { value: `${numFmt(kpis.mm_total, 1)} mm`, label: kpis.n_pluviometros > 1 ? `Chuva acumulada (média de ${kpis.n_pluviometros} pluviômetros)` : 'Chuva acumulada' },
     { value: intFmt(kpis.n_leituras), label: 'Leituras' },
     { value: intFmt(kpis.dias_com_chuva), label: 'Dias com chuva' },
   ]
@@ -242,6 +339,17 @@ function tableHeadHtml(cols) {
   return colgroup + header
 }
 
+// Linha "Fazenda": média dos pluviômetros (a soma não representa a fazenda).
+function fazendaRowHtml(resumo, hasTemp) {
+  if (resumo.length < 2) return ''
+  const media = (vals) => (vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null)
+  const mmTotal = media(resumo.map((r) => Number(r.mm_total) || 0))
+  const mmMedio = media(resumo.map((r) => r.mm_medio).filter((v) => v != null))
+  const maior = Math.max(...resumo.map((r) => (r.maior_leitura != null ? r.maior_leitura : -Infinity)))
+  const leituras = resumo.reduce((s, r) => s + (r.n_medicoes || 0), 0)
+  return `<tr style="font-weight:700;background:#e8f1ec"><td colspan="2">Fazenda (média de ${resumo.length} pluviômetros)</td><td class="numeric">${intFmt(leituras)}</td><td class="numeric">${numFmt(mmTotal, 1)} mm</td><td class="numeric">${mmMedio != null ? `${numFmt(mmMedio, 1)} mm` : '—'}</td><td class="numeric">${Number.isFinite(maior) ? `${numFmt(maior, 1)} mm` : '—'}</td>${hasTemp ? '<td></td><td></td>' : ''}</tr>`
+}
+
 function resumoTableHtml(resumo, hasTemp) {
   const cols = [
     ['Pluviômetro', '16%'],
@@ -258,7 +366,7 @@ function resumoTableHtml(resumo, hasTemp) {
         `<tr><td>${escapeHtml(r.pluviometro_nome || '—')}</td><td>${escapeHtml(r.pluviometro_localizacao || '—')}</td><td class="numeric">${intFmt(r.n_medicoes)}</td><td class="numeric">${numFmt(r.mm_total, 1)} mm</td><td class="numeric">${r.mm_medio != null ? `${numFmt(r.mm_medio, 1)} mm` : '—'}</td><td class="numeric">${r.maior_leitura != null ? `${numFmt(r.maior_leitura, 1)} mm` : '—'}</td>${hasTemp ? `<td class="numeric">${r.temp_min != null ? `${numFmt(r.temp_min, 1)}°C` : '—'}</td><td class="numeric">${r.temp_max != null ? `${numFmt(r.temp_max, 1)}°C` : '—'}</td>` : ''}</tr>`,
     )
     .join('')
-  return `<h3 class="table-title">Resumo por pluviômetro<span>${resumo.length} pluviômetro(s)</span></h3><div class="table-block"><table class="clima-resumo-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
+  return `<h3 class="table-title">Resumo por pluviômetro<span>${resumo.length} pluviômetro(s)</span></h3><div class="table-block"><table class="clima-resumo-table">${tableHeadHtml(cols)}<tbody>${rows}${fazendaRowHtml(resumo, hasTemp)}</tbody></table></div>`
 }
 
 function leiturasTableHtml(registros, total, hasTemp, hasUmidade) {
@@ -290,14 +398,9 @@ function chunkArray(arr, size) {
 }
 
 export async function renderClimaHtml(input) {
-  const { dataInicio, dataFim, fazendaNome, logoGestao, logoFazenda, kpis, pluviometros, serie, resumo, registros } = input
+  const { dataInicio, dataFim, fazendaNome, logoGestao, logoFazenda, kpis, serie, resumo, registros } = input
   const brand = { logoGestao, logoFazenda, fazendaNome }
   const period = { dataInicio, dataFim }
-
-  // O payload traz todos os pluviômetros disponíveis da fazenda; o gráfico e
-  // a legenda só devem listar os que têm leitura no período filtrado.
-  const nomesComDados = new Set(registros.map((r) => r.pluviometro_nome || '—'))
-  const pluviometrosComDados = pluviometros.filter((n) => nomesComDados.has(n))
 
   // Quando a fazenda não registra temperatura/umidade no período, os cards,
   // a linha do gráfico e as colunas correspondentes são omitidos por completo.
@@ -308,7 +411,7 @@ export async function renderClimaHtml(input) {
 
   // Pré-calcula a paginação do detalhamento para saber o total de páginas
   // antes de montar (footer mostra "Página X de Y").
-  const resumoH = resumo.length > 0 ? TABLE_TITLE_H + TABLE_HEAD_H + resumo.length * ROW_H + TABLE_GAP_H : 0
+  const resumoH = resumo.length > 0 ? TABLE_TITLE_H + TABLE_HEAD_H + (resumo.length + (resumo.length > 1 ? 1 : 0)) * ROW_H + TABLE_GAP_H : 0
   const leiturasHeadH = registros.length > 0 ? TABLE_TITLE_H + TABLE_HEAD_H : 0
   const firstDetailCount =
     registros.length > 0 ? Math.max(0, Math.floor((CONTENT_H - resumoH - leiturasHeadH) / ROW_H)) : 0
@@ -323,9 +426,10 @@ export async function renderClimaHtml(input) {
 
   // Página 1: resumo (KPIs + gráfico composto)
   pageIndex += 1
-  const canvasId = 'chart-clima-1'
-  if (serie.length > 0 && pluviometrosComDados.length > 0) {
-    chartsData.push({ canvasId, serie, pluviometros: pluviometrosComDados, hasTemp })
+  const temDados = serie.length > 0 && resumo.length > 0
+  if (temDados) {
+    chartsData.push({ kind: 'porPluviometro', canvasId: 'chart-clima-pluv', resumo, media: kpis.mm_total })
+    chartsData.push({ kind: 'evolucao', canvasId: 'chart-clima-evolucao', serie, hasTemp, comFaixa: resumo.length > 1 })
   }
   pagesHtml.push(
     pageSection(`
@@ -334,7 +438,10 @@ export async function renderClimaHtml(input) {
       <div class="clima-content">
         <div class="period-badge">${dateFmt(dataInicio)} <span style="padding:0 7px;color:#9bb1a4">até</span> ${dateFmt(dataFim)}</div>
         ${kpisHtml(kpis, hasTemp, hasUmidade)}
-        <div class="clima-chart">${chartCard({ canvasId, title: hasTemp ? 'Chuva diária (mm) e temperatura média (°C)' : 'Chuva diária (mm)', subtitle: `${registros.length} leitura(s) · ${pluviometrosComDados.length} pluviômetro(s)`, hasData: serie.length > 0 && pluviometrosComDados.length > 0 })}</div>
+        <div class="clima-charts">
+          <div class="clima-chart">${chartCard({ canvasId: 'chart-clima-pluv', title: 'Acumulado por pluviômetro × média da fazenda', subtitle: resumo.length > 1 ? '▲ acima · ▼ abaixo da média da fazenda (diferença em mm)' : `${registros.length} leitura(s) · ${resumo.length} pluviômetro(s)`, hasData: temDados })}</div>
+          <div class="clima-chart">${chartCard({ canvasId: 'chart-clima-evolucao', title: hasTemp ? 'Evolução do acumulado da fazenda e temperatura' : 'Evolução do acumulado da fazenda', subtitle: resumo.length > 1 ? 'Linha: média da fazenda até cada data; mais inclinada = mais chuva no intervalo. Faixa: só as regiões extremas (cima = a que mais choveu, baixo = a que menos). Borda de cima longe da linha = região bem mais molhada; borda de baixo longe = região bem atrás da média. Não mostra quantas regiões estão em cada borda: veja o gráfico ao lado.' : 'Acumulado do pluviômetro no período', hasData: temDados })}</div>
+        </div>
       </div>
       ${renderFooter({ ...period, page: pageIndex, totalPages })}
     `),

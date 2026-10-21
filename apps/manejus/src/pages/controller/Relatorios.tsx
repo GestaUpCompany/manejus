@@ -60,7 +60,7 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
   {
     tipo: 'clima',
     titulo: 'Clima',
-    descricao: 'Chuva acumulada por pluviômetro, temperatura e umidade por período.',
+    descricao: 'Chuva acumulada média da fazenda e por pluviômetro (região), temperatura e umidade por período.',
     icone: '🌧️',
   },
   {
