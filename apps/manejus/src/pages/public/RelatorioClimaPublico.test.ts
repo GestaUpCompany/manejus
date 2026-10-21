@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { calcularKpis, resumirFazenda, resumirPorPluviometro, rotuloBarra, serieDiaria, type LeituraClima } from './RelatorioClimaPublico'
+import {
+  LIMITE_CHUVA_FORTE_MM,
+  LIMITE_CHUVA_TORRENCIAL_MM,
+  calcularKpis,
+  montarCalendario,
+  nivelDaChuva,
+  resumirEventosChuva,
+  serieChuvaMensal,
+  resumirFazenda,
+  resumirPorPluviometro,
+  rotuloBarra,
+  serieChuvaDiaria,
+  serieDiaria,
+  type LeituraClima,
+} from './RelatorioClimaPublico'
 
 function leitura(pluv: string, data: string, mm: number | null): LeituraClima {
   return {
@@ -76,6 +90,81 @@ describe('relatório de clima: visão geral = média dos pluviômetros', () => {
     expect(rotuloBarra(204, 240.3, true)).toBe('204,0 mm  ▼ -36,3')
     expect(rotuloBarra(240.3, 240.3, true)).toBe('240,3 mm  = média')
     expect(rotuloBarra(50, 50, false)).toBe('50,0 mm')
+  })
+
+  it('distribuição diária: barra é a média da fazenda e o marcador a maior região, classificada por intensidade', () => {
+    // 3 pluviômetros no período; em 01/10 só a e b leram (a=10, b=60), em 02/10 só c leu (30)
+    const diaria = serieChuvaDiaria([leitura('a', '2026-10-01', 10), leitura('b', '2026-10-01', 60), leitura('c', '2026-10-02', 30)])
+    expect(diaria).toHaveLength(2)
+    // média = soma do dia / 3 pluviômetros do período: a média esconde a chuva localizada, o marcador mostra
+    expect(diaria[0]).toMatchObject({ data: '2026-10-01', mm_fazenda: 23.33, mm_max_regiao: 60, regiao_max: 'Pluv b', nivel: 'torrencial' })
+    expect(diaria[1]).toMatchObject({ mm_fazenda: 10, mm_max_regiao: 30, nivel: 'forte' })
+  })
+
+  it('distribuição diária soma leituras do mesmo pluviômetro no dia antes de classificar', () => {
+    const diaria = serieChuvaDiaria([leitura('a', '2026-10-01', 20), leitura('a', '2026-10-01', 10)])
+    expect(diaria[0]).toMatchObject({ mm_max_regiao: 30, nivel: 'forte' })
+  })
+
+  it('limites de intensidade: 25 mm é forte, 50 mm é torrencial, abaixo disso é normal', () => {
+    expect(nivelDaChuva(24.9)).toBe('normal')
+    expect(nivelDaChuva(LIMITE_CHUVA_FORTE_MM)).toBe('forte')
+    expect(nivelDaChuva(49.9)).toBe('forte')
+    expect(nivelDaChuva(LIMITE_CHUVA_TORRENCIAL_MM)).toBe('torrencial')
+  })
+
+  it('resume os eventos do período: dias fortes, dias torrenciais e a maior chuva', () => {
+    const diaria = serieChuvaDiaria([
+      leitura('a', '2026-10-01', 5), leitura('a', '2026-10-02', 30), leitura('b', '2026-10-03', 90), leitura('a', '2026-10-04', 55),
+    ])
+    expect(resumirEventosChuva(diaria)).toEqual({ dias_forte: 1, dias_torrencial: 2, maior: { mm: 90, regiao: 'Pluv b', data: '2026-10-03' } })
+    expect(resumirEventosChuva([])).toEqual({ dias_forte: 0, dias_torrencial: 0, maior: null })
+  })
+
+  it('chuva por mês: média da fazenda, meses sem leitura zerados e soma igual ao acumulado do KPI', () => {
+    // 2 pluviômetros; leituras em jan e mar, nenhuma em fev
+    const regs = [leitura('a', '2026-01-10', 40), leitura('b', '2026-01-10', 20), leitura('a', '2026-03-05', 10)]
+    const mensal = serieChuvaMensal(regs)
+    expect(mensal.map((p) => p.mes)).toEqual(['2026-01', '2026-02', '2026-03'])
+    expect(mensal.map((p) => p.mes_label)).toEqual(['jan/26', 'fev/26', 'mar/26'])
+    expect(mensal[0]).toMatchObject({ mm_fazenda: 30, mm_min: 20, mm_max: 40 })
+    expect(mensal[1]).toMatchObject({ mm_fazenda: 0, mm_min: 0, mm_max: 0 })
+    expect(mensal[2]).toMatchObject({ mm_fazenda: 5, mm_min: 0, mm_max: 10 })
+    expect(mensal.reduce((s, p) => s + p.mm_fazenda, 0)).toBe(calcularKpis(regs).mm_total)
+    expect(serieChuvaMensal([])).toEqual([])
+  })
+
+  it('chuva por mês atravessa a virada do ano sem pular mês', () => {
+    const mensal = serieChuvaMensal([leitura('a', '2025-11-20', 5), leitura('a', '2026-02-02', 5)])
+    expect(mensal.map((p) => p.mes)).toEqual(['2025-11', '2025-12', '2026-01', '2026-02'])
+  })
+
+  it('calendário: um mês por bloco, semanas de domingo a sábado e dias com e sem leitura', () => {
+    // 01/10/2026 é quinta-feira; outubro tem 31 dias
+    const diaria = serieChuvaDiaria([leitura('a', '2026-10-04', 60), leitura('a', '2026-10-15', 30)])
+    const { meses, omitidos } = montarCalendario(diaria)
+    expect(omitidos).toBe(0)
+    expect(meses).toHaveLength(1)
+    expect(meses[0].titulo).toBe('Outubro de 2026')
+    const semanas = meses[0].semanas
+    expect(semanas.every((s) => s.length === 7)).toBe(true)
+    // quinta-feira é o índice 4: dom, seg, ter e qua ficam vazios antes do dia 1
+    expect(semanas[0].slice(0, 4)).toEqual([null, null, null, null])
+    expect(semanas[0][4]?.dia).toBe(1)
+    const dias = semanas.flat().filter((c) => c !== null)
+    expect(dias).toHaveLength(31)
+    expect(dias.find((c) => c!.dia === 4)?.ponto?.nivel).toBe('torrencial')
+    expect(dias.find((c) => c!.dia === 15)?.ponto?.nivel).toBe('forte')
+    expect(dias.find((c) => c!.dia === 5)?.ponto).toBeNull() // sem leitura
+  })
+
+  it('calendário cobre os meses entre a primeira e a última leitura e limita aos mais recentes', () => {
+    const diaria = serieChuvaDiaria([leitura('a', '2026-01-10', 5), leitura('a', '2026-05-10', 5)])
+    expect(montarCalendario(diaria).meses.map((m) => m.chave)).toEqual(['2026-01', '2026-02', '2026-03', '2026-04', '2026-05'])
+    const limitado = montarCalendario(diaria, 2)
+    expect(limitado.meses.map((m) => m.chave)).toEqual(['2026-04', '2026-05'])
+    expect(limitado.omitidos).toBe(3)
+    expect(montarCalendario([])).toEqual({ meses: [], omitidos: 0 })
   })
 
   it('com um só pluviômetro a faixa colapsa na linha da fazenda', () => {

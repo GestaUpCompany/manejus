@@ -2,6 +2,8 @@ import { carregarLogoComoBase64 } from './relatorioConsumoPDF'
 import type {
   KpisClima,
   LeituraClima,
+  PontoChuvaDiaria,
+  PontoChuvaMensal,
   PontoSerieClima,
   ResumoPluviometro,
 } from '../pages/public/RelatorioClimaPublico'
@@ -22,6 +24,10 @@ export interface ParametrosRelatorioClima {
   kpis: KpisClima
   pluviometros: string[]
   serie: PontoSerieClima[]
+  // Distribuição diária (barra = média da fazenda, marcador = maior região) e limites de intensidade
+  diaria: PontoChuvaDiaria[]
+  mensal: PontoChuvaMensal[]
+  limites: { forte: number; torrencial: number }
   resumo: ResumoPluviometro[]
   registros: LeituraClima[]
 }
@@ -33,7 +39,7 @@ export interface ParametrosRelatorioClima {
 export async function gerarRelatorioClimaPDFPuppeteer(
   params: ParametrosRelatorioClima,
 ): Promise<Blob> {
-  const { dataInicio, dataFim, fazendaNome, fazendaLogoUrl, kpis, pluviometros, serie, resumo, registros } = params
+  const { dataInicio, dataFim, fazendaNome, fazendaLogoUrl, kpis, pluviometros, serie, diaria, mensal, limites, resumo, registros } = params
 
   const [logoGestao, logoFazenda] = await Promise.all([
     carregarLogo('/images/manejus360.png'),
@@ -52,6 +58,9 @@ export async function gerarRelatorioClimaPDFPuppeteer(
       kpis,
       pluviometros,
       serie,
+      diaria,
+      mensal,
+      limites,
       resumo,
       registros,
     }),

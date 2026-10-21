@@ -37,13 +37,13 @@ Monorepo pnpm do painel de gestão/admin (React 18 + TanStack Query + Vite), onl
 
 ## Prévia local do PDF de Clima (`pnpm preview:clima`)
 
-Script `apps/manejus/scripts/preview-clima.mjs`. Sobe um servidor em `http://127.0.0.1:5199` (porta via `PREVIEW_PORT`) que importa a mesma `renderClimaHtml` de `api/pdf/clima.js` e mostra o HTML da página 1 e do detalhamento; ao salvar `clima.js` ou `api/pdf/_shared/*.js` a aba recarrega sozinha. Cada requisição roda num processo novo, então não há cache de módulo.
+Script `apps/manejus/scripts/preview-clima.mjs`. Sobe um servidor em `http://127.0.0.1:5199` (porta via `PREVIEW_PORT`) que importa a mesma `renderClimaHtml` de `api/pdf/clima.js` e mostra o HTML de todas as páginas (resumo, calendário de chuva + chuva por mês, resumo por pluviômetro; `PREVIEW_MESES=N` amplia a amostra para N meses e testa a paginação do calendário); ao salvar `clima.js` ou `api/pdf/_shared/*.js` a aba recarrega sozinha. Cada requisição roda num processo novo, então não há cache de módulo.
 
 **Finalidade:** iterar rápido o visual do PDF de Clima (KPIs, gráficos Chart.js, rótulos, tabelas, textos explicativos) sem gerar PDF, publicar na Vercel nem depender de dados reais. Abrir no DevTools só por `http://127.0.0.1`/`localhost` (regra do navegador acima), nunca por `file://`.
 
 **Limitações (não tratar como verificação final):**
 - Mostra o **HTML** que o Chromium converteria em PDF, **não o PDF**. Quebra de página, margens de impressão e o paginador "Página X de Y" podem diferir; para isso use `scripts/paginacao-pdf.mjs` ou gere o PDF real.
-- Os dados são **sintéticos** (9 pluviômetros, 5 datas, sem temperatura/umidade), definidos em `dadosExemplo()` no próprio script. Não lê o banco, não valida o cálculo do relatório e não exercita casos como muitas datas, 1 pluviômetro, temperatura ou observações longas: para esses, altere `dadosExemplo()` ou confira o PDF real.
+- Os dados são **sintéticos** (9 pluviômetros, 5 datas, com dias forte e torrencial, sem temperatura/umidade), definidos em `dadosExemplo()` no próprio script. Não lê o banco, não valida o cálculo do relatório e não exercita casos como muitas datas, 1 pluviômetro, temperatura ou observações longas: para esses, altere `dadosExemplo()` ou confira o PDF real.
 - Cobre só o **endpoint do PDF** (`api/pdf/clima.js`). A tela pública (`RelatorioClimaPublico.tsx`, recharts) é outra implementação e se confere no `pnpm dev`.
 - Só escuta em `127.0.0.1`; sem autenticação, não expor.
 - Ele não substitui `pnpm typecheck`/`pnpm test`. Para outros relatórios (consumo, abastecimento...) não serve como está: o script é específico do Clima.

@@ -244,6 +244,180 @@ export function serieDiaria(registros: LeituraClima[]): PontoSerieClima[] {
     })
 }
 
+// Limites de intensidade (mm em um dia, num mesmo pluviômetro). Ajustáveis aqui.
+export const LIMITE_CHUVA_FORTE_MM = 25
+export const LIMITE_CHUVA_TORRENCIAL_MM = 50
+
+export type NivelChuva = 'normal' | 'forte' | 'torrencial'
+
+// Cores do calendário: três tons de azul com luminosidade bem diferente (e símbolo no
+// próprio quadrado), para continuar legível em impressão preto e branco.
+export const ESTILO_NIVEL: Record<NivelChuva, { fundo: string; texto: string; borda: string }> = {
+  normal: { fundo: '#DCE8F2', texto: '#1F2937', borda: '#9DB7CE' },
+  forte: { fundo: '#6F9BC8', texto: '#0F172A', borda: '#1E3A5F' },
+  torrencial: { fundo: '#1E3A5F', texto: '#FFFFFF', borda: '#0F172A' },
+}
+
+export interface PontoChuvaDiaria {
+  data: string
+  data_label: string
+  // Soma do dia dividida pelos pluviômetros do período (as barras somam o acumulado da fazenda)
+  mm_fazenda: number
+  // Maior total do dia em UMA região: é ele que revela chuva localizada e torrencial
+  mm_max_regiao: number
+  regiao_max: string
+  nivel: NivelChuva
+}
+
+export interface ResumoEventosChuva {
+  dias_forte: number
+  dias_torrencial: number
+  maior: { mm: number; regiao: string; data: string } | null
+}
+
+export function nivelDaChuva(mm: number): NivelChuva {
+  if (mm >= LIMITE_CHUVA_TORRENCIAL_MM) return 'torrencial'
+  if (mm >= LIMITE_CHUVA_FORTE_MM) return 'forte'
+  return 'normal'
+}
+
+// Distribuição diária: uma barra por data com leitura (média da fazenda) e um
+// marcador com a maior leitura de uma região, classificada por intensidade.
+export function serieChuvaDiaria(registros: LeituraClima[]): PontoChuvaDiaria[] {
+  const nPluviometros = new Set(registros.map(chavePluviometro)).size
+  const porDia = new Map<string, Map<string, { mm: number; nome: string }>>()
+  for (const r of registros) {
+    const regioes = porDia.get(r.data) ?? new Map<string, { mm: number; nome: string }>()
+    const key = chavePluviometro(r)
+    const atual = regioes.get(key) ?? { mm: 0, nome: r.pluviometro_nome || '—' }
+    atual.mm += Number(r.medicao_mm) || 0
+    regioes.set(key, atual)
+    porDia.set(r.data, regioes)
+  }
+  const arred = (v: number) => Number(v.toFixed(2))
+  return Array.from(porDia.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([data, regioes]) => {
+      const lista = Array.from(regioes.values())
+      const maior = lista.reduce((m, r) => (r.mm > m.mm ? r : m), lista[0])
+      return {
+        data,
+        data_label: dataLabel(data),
+        mm_fazenda: nPluviometros ? arred(lista.reduce((s, r) => s + r.mm, 0) / nPluviometros) : 0,
+        mm_max_regiao: arred(maior.mm),
+        regiao_max: maior.nome,
+        nivel: nivelDaChuva(maior.mm),
+      }
+    })
+}
+
+export function resumirEventosChuva(diaria: PontoChuvaDiaria[]): ResumoEventosChuva {
+  const maior = diaria.reduce<PontoChuvaDiaria | null>((m, p) => (m === null || p.mm_max_regiao > m.mm_max_regiao ? p : m), null)
+  return {
+    dias_forte: diaria.filter((p) => p.nivel === 'forte').length,
+    dias_torrencial: diaria.filter((p) => p.nivel === 'torrencial').length,
+    maior: maior && maior.mm_max_regiao > 0 ? { mm: maior.mm_max_regiao, regiao: maior.regiao_max, data: maior.data } : null,
+  }
+}
+
+const MESES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+const MESES_NOME = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+
+export interface PontoChuvaMensal {
+  mes: string // YYYY-MM
+  mes_label: string // abr/26
+  // Média dos pluviômetros no mês (mesmo denominador do KPI: as barras somam o acumulado da fazenda)
+  mm_fazenda: number
+  // Região que menos e que mais acumulou no mês (pluviômetro sem leitura no mês conta 0)
+  mm_min: number
+  mm_max: number
+}
+
+// Chuva por mês, do primeiro ao último mês com leitura; meses sem leitura entram
+// com 0 para a distribuição ao longo do ano ficar contínua no gráfico.
+export function serieChuvaMensal(registros: LeituraClima[]): PontoChuvaMensal[] {
+  if (registros.length === 0) return []
+  const chaves = Array.from(new Set(registros.map(chavePluviometro)))
+  const porMes = new Map<string, Map<string, number>>()
+  for (const r of registros) {
+    const mes = r.data.slice(0, 7)
+    const regioes = porMes.get(mes) ?? new Map<string, number>()
+    const key = chavePluviometro(r)
+    regioes.set(key, (regioes.get(key) ?? 0) + (Number(r.medicao_mm) || 0))
+    porMes.set(mes, regioes)
+  }
+  const meses = Array.from(porMes.keys()).sort()
+  const [anoIni, mesIni] = meses[0].split('-').map(Number)
+  const [anoFim, mesFim] = meses[meses.length - 1].split('-').map(Number)
+  const arred = (v: number) => Number(v.toFixed(2))
+  const pontos: PontoChuvaMensal[] = []
+  let a = anoIni
+  let m = mesIni
+  while (a < anoFim || (a === anoFim && m <= mesFim)) {
+    const mes = `${a}-${String(m).padStart(2, '0')}`
+    const regioes = porMes.get(mes)
+    const valores = chaves.map((k) => regioes?.get(k) ?? 0)
+    pontos.push({
+      mes,
+      mes_label: `${MESES_ABREV[m - 1]}/${String(a).slice(2)}`,
+      mm_fazenda: arred(valores.reduce((s, v) => s + v, 0) / valores.length),
+      mm_min: arred(Math.min(...valores)),
+      mm_max: arred(Math.max(...valores)),
+    })
+    if (m === 12) {
+      a += 1
+      m = 1
+    } else {
+      m += 1
+    }
+  }
+  return pontos
+}
+
+export interface CelulaCalendario {
+  dia: number
+  ponto: PontoChuvaDiaria | null // null = sem leitura registrada nesse dia
+}
+
+export interface MesCalendario {
+  chave: string // YYYY-MM
+  titulo: string // Outubro de 2026
+  semanas: (CelulaCalendario | null)[][] // semanas de domingo a sábado; null = fora do mês
+}
+
+// Um calendário por mês, do primeiro ao último dia com leitura. Se passar de
+// `maxMeses`, ficam os mais recentes e `omitidos` diz quantos ficaram de fora.
+export function montarCalendario(diaria: PontoChuvaDiaria[], maxMeses = 12): { meses: MesCalendario[]; omitidos: number } {
+  if (diaria.length === 0) return { meses: [], omitidos: 0 }
+  const porData = new Map(diaria.map((p) => [p.data, p]))
+  const [anoIni, mesIni] = diaria[0].data.slice(0, 7).split('-').map(Number)
+  const [anoFim, mesFim] = diaria[diaria.length - 1].data.slice(0, 7).split('-').map(Number)
+  const todos: MesCalendario[] = []
+  let a = anoIni
+  let m = mesIni
+  while (a < anoFim || (a === anoFim && m <= mesFim)) {
+    const diasNoMes = new Date(Date.UTC(a, m, 0)).getUTCDate()
+    const primeiroDiaSemana = new Date(Date.UTC(a, m - 1, 1)).getUTCDay() // 0 = domingo
+    const celulas: (CelulaCalendario | null)[] = Array.from({ length: primeiroDiaSemana }, () => null)
+    for (let dia = 1; dia <= diasNoMes; dia++) {
+      const iso = `${a}-${String(m).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+      celulas.push({ dia, ponto: porData.get(iso) ?? null })
+    }
+    while (celulas.length % 7 !== 0) celulas.push(null)
+    const semanas: (CelulaCalendario | null)[][] = []
+    for (let i = 0; i < celulas.length; i += 7) semanas.push(celulas.slice(i, i + 7))
+    todos.push({ chave: `${a}-${String(m).padStart(2, '0')}`, titulo: `${MESES_NOME[m - 1]} de ${a}`, semanas })
+    if (m === 12) {
+      a += 1
+      m = 1
+    } else {
+      m += 1
+    }
+  }
+  const omitidos = Math.max(0, todos.length - maxMeses)
+  return { meses: todos.slice(omitidos), omitidos }
+}
+
 export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -333,6 +507,10 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
   const serie = useMemo(() => serieDiaria(registrosFiltrados), [registrosFiltrados])
   // A faixa (mín. a máx. entre pluviômetros) vira um par para o <Area> do recharts
   // `ts` posiciona cada data na proporção real do tempo (o eixo não espaça por igual)
+  const diaria = useMemo(() => serieChuvaDiaria(registrosFiltrados), [registrosFiltrados])
+  const eventos = useMemo(() => resumirEventosChuva(diaria), [diaria])
+  const mensal = useMemo(() => serieChuvaMensal(registrosFiltrados), [registrosFiltrados])
+  const calendario = useMemo(() => montarCalendario(diaria), [diaria])
   const serieGrafico = useMemo(
     () => serie.map((p) => ({ ...p, ts: Date.parse(`${p.data}T00:00:00Z`), faixa: [p.acum_min, p.acum_max] })),
     [serie],
@@ -416,6 +594,9 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
         kpis,
         pluviometros: nomesPluviometros,
         serie,
+        diaria,
+        mensal,
+        limites: { forte: LIMITE_CHUVA_FORTE_MM, torrencial: LIMITE_CHUVA_TORRENCIAL_MM },
         resumo,
         registros: registrosFiltrados,
       })
@@ -823,11 +1004,135 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
           )}
         </div>
 
-        {/* Leituras detalhadas */}
+        {/* Chuva por mês: como a chuva se distribui ao longo do ano */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">
-            Leituras detalhadas <span className="text-gray-400 font-normal">({registrosFiltrados.length})</span>
-          </h2>
+          <h2 className="text-sm font-semibold text-gray-900">Chuva por mês</h2>
+          <p className="text-xs text-gray-600 mb-3">
+            Cada barra é a média da fazenda no mês (a soma das barras é a chuva acumulada do período). Meses sem leitura aparecem zerados.
+          </p>
+          {mensal.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={mensal} margin={{ top: 24, right: 20, left: 0, bottom: 5 }} style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <XAxis dataKey="mes_label" tick={{ fontSize: 11, fill: '#666' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#666' }} label={{ value: 'mm no mês', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#666' } }} />
+                <Tooltip
+                  content={((p: any) => {
+                    if (!p.active || !p.payload?.length) return null
+                    const d = p.payload[0].payload as PontoChuvaMensal
+                    return (
+                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow">
+                        <p className="font-semibold text-gray-900">{d.mes_label}</p>
+                        <p>Média da fazenda: {fmtNum(d.mm_fazenda)} mm</p>
+                        <p>Região que mais choveu: {fmtNum(d.mm_max)} mm</p>
+                        <p>Região que menos choveu: {fmtNum(d.mm_min)} mm</p>
+                      </div>
+                    )
+                  }) as any}
+                />
+                <Bar dataKey="mm_fazenda" name="Média da fazenda" fill={COR_ACIMA_MEDIA} maxBarSize={56} radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                  <LabelList dataKey="mm_fazenda" position="top" formatter={((v: any) => fmtNum(Number(v), 1)) as any} style={{ fontSize: 12, fontWeight: 700, fill: '#111827' }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[160px] flex items-center justify-center text-gray-400 text-sm">
+              Sem dados para os filtros selecionados
+            </div>
+          )}
+        </div>
+
+        {/* Calendário de chuva: em que dias choveu e quais foram fortes/torrenciais */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <h2 className="text-sm font-semibold text-gray-900">Calendário de chuva</h2>
+          <p className="text-xs text-gray-600 mb-3">
+            Cada quadrado é um dia. O número grande é a <strong>média da fazenda</strong> no dia. O tom e o símbolo mostram a <strong>maior chuva em uma única região</strong>: ◆ forte ({LIMITE_CHUVA_FORTE_MM} a {LIMITE_CHUVA_TORRENCIAL_MM} mm) e ▲ torrencial (a partir de {LIMITE_CHUVA_TORRENCIAL_MM} mm), com o valor dessa região logo abaixo. Dia em branco = sem leitura registrada.
+          </p>
+          <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-700">
+            {[
+              { rotulo: 'Sem leitura', fundo: '#FFFFFF', borda: '#D1D5DB' },
+              { rotulo: 'Normal (abaixo de 25 mm)', fundo: ESTILO_NIVEL.normal.fundo, borda: ESTILO_NIVEL.normal.borda },
+              { rotulo: '◆ Forte (25 a 50 mm)', fundo: ESTILO_NIVEL.forte.fundo, borda: ESTILO_NIVEL.forte.borda },
+              { rotulo: '▲ Torrencial (50 mm ou mais)', fundo: ESTILO_NIVEL.torrencial.fundo, borda: ESTILO_NIVEL.torrencial.borda },
+            ].map((l) => (
+              <span key={l.rotulo} className="inline-flex items-center gap-1.5">
+                <span className="inline-block h-3.5 w-3.5 rounded-sm" style={{ backgroundColor: l.fundo, border: `1.5px solid ${l.borda}` }} />
+                {l.rotulo}
+              </span>
+            ))}
+          </div>
+          {calendario.meses.length > 0 ? (
+            <>
+              {calendario.omitidos > 0 && (
+                <p className="mb-2 text-xs text-amber-700">
+                  Mostrando os {calendario.meses.length} meses mais recentes; {calendario.omitidos} mês(es) anterior(es) ficaram de fora. Ajuste as datas no topo da página para ver outro período.
+                </p>
+              )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {calendario.meses.map((mes) => (
+                  <div key={mes.chave} className="rounded-lg border border-gray-200 p-3">
+                    <h3 className="mb-2 text-sm font-semibold text-gray-900">{mes.titulo}</h3>
+                    <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-gray-500">
+                      {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
+                        <span key={i}>{d}</span>
+                      ))}
+                    </div>
+                    <div className="mt-1 grid grid-cols-7 gap-1">
+                      {mes.semanas.flat().map((c, i) => {
+                        if (!c) return <span key={i} />
+                        const p = c.ponto
+                        const est = p ? ESTILO_NIVEL[p.nivel] : null
+                        return (
+                          <div
+                            key={i}
+                            title={
+                              p
+                                ? `${formatarData(p.data)}: média da fazenda ${fmtNum(p.mm_fazenda)} mm; maior região ${p.regiao_max}: ${fmtNum(p.mm_max_regiao)} mm`
+                                : 'Sem leitura registrada'
+                            }
+                            className="flex min-h-[52px] flex-col rounded px-1 py-0.5 leading-tight"
+                            style={{
+                              backgroundColor: est ? est.fundo : '#FFFFFF',
+                              color: est ? est.texto : '#9CA3AF',
+                              border: `${p && p.nivel !== 'normal' ? 2 : 1}px solid ${est ? est.borda : '#E5E7EB'}`,
+                            }}
+                          >
+                            <span className="text-[10px] opacity-80">{c.dia}</span>
+                            {p && (
+                              <>
+                                <span className="text-center text-sm font-bold">{fmtNum(p.mm_fazenda, 0)}</span>
+                                {p.nivel !== 'normal' && (
+                                  <span className="text-center text-[10px] font-bold">
+                                    {p.nivel === 'torrencial' ? '▲' : '◆'} {fmtNum(p.mm_max_regiao, 0)}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-gray-700">
+                <strong>No período:</strong> {eventos.dias_torrencial} dia(s) com chuva torrencial (≥ {LIMITE_CHUVA_TORRENCIAL_MM} mm) · {eventos.dias_forte} dia(s) com chuva forte ({LIMITE_CHUVA_FORTE_MM} a {LIMITE_CHUVA_TORRENCIAL_MM} mm)
+                {eventos.maior && <> · maior chuva: {fmtNum(eventos.maior.mm)} mm na região {eventos.maior.regiao} em {formatarData(eventos.maior.data)}</>}.
+              </p>
+            </>
+          ) : (
+            <div className="h-[160px] flex items-center justify-center text-gray-400 text-sm">
+              Sem dados para os filtros selecionados
+            </div>
+          )}
+        </div>
+
+        {/* Leituras detalhadas (recolhidas: o gráfico acima é a leitura principal) */}
+        <details className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <summary className="cursor-pointer text-sm font-semibold text-gray-900">
+            Ver leituras detalhadas <span className="text-gray-400 font-normal">({registrosFiltrados.length})</span>
+          </summary>
+          <div className="mt-4">
           {registrosFiltrados.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -862,7 +1167,8 @@ export function RelatorioClimaPublico({ token, relatorioInfo }: Props) {
           ) : (
             <p className="text-sm text-gray-400">Sem leituras para os filtros selecionados</p>
           )}
-        </div>
+          </div>
+        </details>
       </main>
     </div>
   )

@@ -1,5 +1,14 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Clima: calendário de chuva e chuva por mês no lugar das leituras detalhadas (2026-10-21)
+
+- **Pedido**: ver em que período e se ocorrem chuvas torrenciais, em gráfico e não em tabela. Uma primeira versão (barras diárias + marcador da maior região, eixo de datas esparso) foi descartada por ficar vaga: duas escalas para cruzar, barras finas, muito espaço vazio e rótulos esbarrando nos dados.
+- **Calendário de chuva** (tela pública e PDF): um calendário por mês, um quadrado por dia. O **número** é a média da fazenda no dia (soma do dia ÷ pluviômetros do período, então bate com o acumulado do KPI); o **tom** (3 azuis de luminosidade bem diferente), a **borda mais grossa** e o **símbolo** mostram a maior chuva do dia numa única região: ◆ forte (25 a 50 mm) e ▲ torrencial (≥ 50 mm), com o valor dessa região ao lado, porque a média esconde chuva localizada (um dia de 60 mm num pluviômetro e 0 nos outros marca ~7 mm). Dia em branco = sem leitura registrada (não prova que não choveu). Legível em preto e branco. Abaixo, a contagem: dias torrenciais, dias fortes e a maior chuva (valor, região, data).
+- **Chuva por mês** (barras, média da fazenda por mês): mostra a distribuição ao longo do ano; meses sem leitura entram zerados e as barras somam o acumulado do KPI. Tooltip da tela traz a região que mais e a que menos choveu no mês (pluviômetro sem leitura no mês conta 0, o mesmo efeito do início da série do gráfico de evolução).
+- **Período**: filtros de data do topo. A tela mostra os 12 meses mais recentes do período (avisa quando omite). No PDF, 6 meses por página (3 × 2); o gráfico mensal vai junto do último calendário se ele tiver até 3 meses, senão em página própria, e só aparece com 2 meses ou mais.
+- **Limites** em constantes (`LIMITE_CHUVA_FORTE_MM`/`LIMITE_CHUVA_TORRENCIAL_MM` em `RelatorioClimaPublico.tsx`); não configuráveis por fazenda (exigiria campo novo no cadastro e migration). Seguem a escala usual de intensidade em 24 h, não uma norma da fazenda.
+- **Leituras detalhadas**: saíram do PDF; na tela ficam num bloco recolhido "Ver leituras detalhadas". O cliente passa `diaria`, `mensal` e `limites` ao endpoint `api/pdf/clima.js`. `pnpm preview:clima` aceita `PREVIEW_MESES=N` para testar a paginação do calendário.
+
 ## Relatório de Estoque de Insumos redesenhado para decisão, sem extrato (2026-10-21)
 
 **Problema:** o relatório (link público, PDF e Infográfico Mensal) repetia fatos: tabela larga por item e extrato com todos os lançamentos do período. O PDF não explicava a curva ABC (só o link público).

@@ -26,12 +26,23 @@ const pdfDir = path.join(raiz, 'api', 'pdf')
 
 // Dados sintéticos no formato do relatório; mm por pluviômetro em cada data.
 function dadosExemplo() {
-  const datas = ['2026-09-01', '2026-09-22', '2026-10-04', '2026-10-09', '2026-10-15']
-  const mm = {
+  const datasBase = ['2026-09-01', '2026-09-22', '2026-10-04', '2026-10-09', '2026-10-15']
+  const mmBase = {
     '01': [15, 18, 85, 10, 30], '02': [12, 0, 64, 12, 30], '03': [12, 62, 64, 15, 29],
     '04': [12, 58, 64, 15, 29], '05': [22, 0, 90, 22, 44], '06': [17, 21, 84, 38, 38],
     '07': [12, 18, 50, 32, 15], '08': [8, 29, 80, 35, 36], '09': [10, 22, 72, 32, 28],
   }
+  // PREVIEW_MESES=N amplia a amostra para N meses (testa a paginação do calendário); padrão 2
+  const nMeses = Math.max(2, Number(process.env.PREVIEW_MESES) || 2)
+  const extras = []
+  for (let k = nMeses - 2; k >= 1; k--) {
+    const d = new Date(Date.UTC(2026, 8 - k, 1))
+    for (const dia of [9, 21]) extras.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`)
+  }
+  const datas = [...extras, ...datasBase]
+  const mm = Object.fromEntries(
+    Object.entries(mmBase).map(([k, vals], pi) => [k, [...extras.map((_, ei) => (ei * 11 + pi * 5) % 33), ...vals]]),
+  )
   const registros = []
   for (const [nome, vals] of Object.entries(mm)) {
     vals.forEach((v, i) => {
@@ -61,11 +72,37 @@ function dadosExemplo() {
     }))
     .sort((a, b) => b.mm_total - a.mm_total)
   const media = Object.values(acumulado).reduce((s, x) => s + x, 0) / 9
+  const limites = { forte: 25, torrencial: 50 }
+  const diaria = datas.map((d, i) => {
+    const doDia = Object.entries(mm).map(([k, vals]) => [k, vals[i]])
+    const [regiaoMax, maxMm] = doDia.reduce((m, p) => (p[1] > m[1] ? p : m))
+    return {
+      data: d, data_label: `${d.slice(8)}/${d.slice(5, 7)}`,
+      mm_fazenda: +(doDia.reduce((s, p) => s + p[1], 0) / 9).toFixed(2), mm_max_regiao: maxMm, regiao_max: regiaoMax,
+      nivel: maxMm >= limites.torrencial ? 'torrencial' : maxMm >= limites.forte ? 'forte' : 'normal',
+    }
+  })
+  // Chuva por mês: média dos 9 pluviômetros; meses sem leitura ficariam zerados (aqui todos têm)
+  const porMes = new Map()
+  datas.forEach((d, i) => {
+    const mes = d.slice(0, 7)
+    const acc = porMes.get(mes) ?? Object.fromEntries(Object.keys(mm).map((k) => [k, 0]))
+    for (const k of Object.keys(mm)) acc[k] += mm[k][i]
+    porMes.set(mes, acc)
+  })
+  const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+  const mensal = Array.from(porMes.entries()).map(([mes, acc]) => {
+    const v = Object.values(acc)
+    return {
+      mes, mes_label: `${MESES[Number(mes.slice(5)) - 1]}/${mes.slice(2, 4)}`,
+      mm_fazenda: +(v.reduce((s, x) => s + x, 0) / v.length).toFixed(2), mm_min: Math.min(...v), mm_max: Math.max(...v),
+    }
+  })
   return {
-    dataInicio: '2026-09-01', dataFim: '2026-10-20', fazendaNome: 'Fazenda de exemplo (dados sintéticos)',
+    dataInicio: datas[0], dataFim: '2026-10-20', fazendaNome: 'Fazenda de exemplo (dados sintéticos)',
     logoGestao: '', logoFazenda: '',
     kpis: { mm_total: media, n_pluviometros: 9, n_leituras: registros.length, dias_com_chuva: 5, temp_media: null, temp_min: null, temp_max: null, umidade_media: null },
-    pluviometros: Object.keys(mm), serie, resumo, registros,
+    pluviometros: Object.keys(mm), serie, diaria, mensal, limites, resumo, registros,
   }
 }
 
