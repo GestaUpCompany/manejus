@@ -11,7 +11,7 @@
 //
 // Estrutura:
 //  - Página 1: KPIs + itens que pedem atenção (mínimo, sem custo, negativos,
-//    divergência de saldo).
+//    sem custo).
 //  - Posição: fluxo contínuo de linhas (cabeçalho de grupo, itens e total do
 //    grupo paginados juntos, sem página quase vazia entre grupos).
 //  - Curva ABC por valor em estoque (barras em CSS, sem imagem).
@@ -72,7 +72,6 @@ const ESTOQUE_CSS = `
 .est-tag{display:inline-block;font-size:9px;font-weight:700;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle}
 .est-tag-min{background:#fdf3e3;color:#9a6b17;border:1px solid #eedcae}
 .est-tag-neg{background:#fdf6f5;color:#c94d46;border:1px solid #efd8d6}
-.est-tag-info{background:#eef2fa;color:#4a5a8a;border:1px solid #d5ddef}
 .est-grupo-row td{background:#e8f1ec;color:#0b6a42;font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.04em}
 .est-total-row td{background:#f0f6f2;border-top:2px solid #0b6a42;font-weight:700;color:#0b6a42}
 .est-classe{display:inline-block;min-width:16px;text-align:center;font-weight:700;border-radius:3px;padding:0 4px}
@@ -135,7 +134,6 @@ function tagsItem(item) {
     item.em_alerta ? '<span class="est-tag est-tag-min">abaixo do mínimo</span>' : '',
     item.negativo ? '<span class="est-tag est-tag-neg">saldo negativo</span>' : '',
     item.sem_custo ? '<span class="est-tag est-tag-min">sem custo</span>' : '',
-    item.divergencia_l != null ? '<span class="est-tag est-tag-info">divergência</span>' : '',
   ].join('')
 }
 
@@ -193,7 +191,6 @@ function situacaoAtencao(item) {
   if (item.negativo) partes.push('saldo negativo')
   if (item.em_alerta) partes.push('abaixo do mínimo')
   if (item.sem_custo) partes.push('sem custo')
-  if (item.divergencia_l != null) partes.push(`divergência de ${moneyFmt(item.divergencia_l)}`)
   return partes.join(' · ')
 }
 
@@ -268,10 +265,10 @@ export async function renderEstoqueHtml(input) {
     .map((g) => ({ ...g, itens: itens.filter((i) => i.item_tipo === g.key) }))
     .filter((g) => g.itens.length > 0)
 
-  // Gravidade: saldo negativo, abaixo do mínimo, divergência de saldo, sem custo.
-  const gravidade = (i) => (i.negativo ? 0 : i.em_alerta ? 1 : i.divergencia_l != null ? 2 : 3)
+  // Gravidade: saldo negativo, abaixo do mínimo, sem custo.
+  const gravidade = (i) => (i.negativo ? 0 : i.em_alerta ? 1 : 2)
   const atencao = itens
-    .filter((i) => i.negativo || i.em_alerta || i.sem_custo || i.divergencia_l != null)
+    .filter((i) => i.negativo || i.em_alerta || i.sem_custo)
     .sort((a, b) => gravidade(a) - gravidade(b))
   const linhasPosicao = montarLinhasPosicao(grupos, comPeriodo, abc)
   const posicaoChunks = linhasPosicao.length ? chunkArray(linhasPosicao, POSICAO_ROWS) : []
@@ -284,7 +281,6 @@ export async function renderEstoqueHtml(input) {
   const negativos = itens.filter((i) => i.negativo)
   const abaixo = itens.filter((i) => i.em_alerta).length
   const valorNegativo = soma(negativos, 'valor_negativo')
-  const divergencias = itens.filter((i) => i.divergencia_l != null).length
 
   const kpisHtml = comPeriodo
     ? `<div class="kpi-grid">
@@ -312,8 +308,7 @@ export async function renderEstoqueHtml(input) {
       <div class="period-badge">${comPeriodo ? escapeHtml(periodo) : `Estoque em ${dateFmt(gerado_em)}`}</div>
       ${kpisHtml}
       ${alertasHtml}
-      ${atencao.length ? atencaoTableHtml(atencao) : '<p class="est-nota">Nenhum item pede atenção: sem saldo negativo, abaixo do mínimo, sem custo ou divergência.</p>'}
-      ${divergencias ? `<p class="est-nota">Divergência: o saldo reconstruído pelo histórico difere do saldo atual cadastrado (lançamento retroativo ou histórico incompleto).</p>` : ''}
+      ${atencao.length ? atencaoTableHtml(atencao) : '<p class="est-nota">Nenhum item pede atenção: sem saldo negativo, abaixo do mínimo ou sem custo.</p>'}
       ${footerEstoque(rodape, pageIndex, totalPages)}
     `),
   )

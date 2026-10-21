@@ -1,5 +1,23 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Estoque de insumos: saldo recalculado em ordem de data e divergência removida do relatório (2026-10-21)
+
+**Problema:** o saldo da tela de Estoque (`insumos.estoque_atual`) não batia com o do relatório (ex.: URÉIA PECUÁRIA 1.274,1 × 1.420,00 kg). `recalcular_custo_medio_item(uuid, text, uuid)` ordenava o replay só por `created_at`; saídas com data anterior a um ajuste, lançadas depois dele, eram subtraídas do saldo ajustado. Regra de negócio: ajuste fixa o saldo absoluto a partir do seu dia, então o replay deve ser por `(data, created_at)`, como o relatório já fazia.
+
+**Feito:**
+- Migration `20261021160000_recalculo_estoque_ordem_por_data` (rollback em `supabase/rollbacks/`): `ORDER BY data ASC, created_at ASC`. Vale para os próximos lançamentos; o custo médio (WAC) também passa a seguir a ordem das datas.
+- Backfill autorizado na fazenda `d3965505-74d5-4af7-9858-f773d2e8aab3`: `recalcular_custo_medio_item` nos 3 insumos abaixo. Só `estoque_atual` mudou (custo igual); `saldo_anterior`/`saldo_posterior` das movimentações foram regravados.
+
+| Insumo | id | Saldo antes | Saldo depois |
+|---|---|---|---|
+| SAL BRANCO | consultar `backup.insumos_recalc_ordem_data_20261021` | 6.124,70 | 6.688,50 |
+| SAL MINERAL REPRODUÇÃO MATSUDA | idem | 7.947,70 | 8.263,40 |
+| URÉIA PECUÁRIA | idem | 1.274,10 | 1.420,00 |
+
+- **Reverter:** `backup.insumos_recalc_ordem_data_20261021` (3 insumos: `estoque_atual`, `custo_unitario`) e `backup.mov_saldos_recalc_ordem_data_20261021` (101 movimentações: `saldo_anterior`, `saldo_posterior`).
+- Relatório de Estoque (PDF, página pública, `agregacao.ts`): removidos tag, nota, filtro e item de atenção de "divergência". A RPC ainda devolve `divergencia_l`, sem uso.
+- Pendente: o item "TESTE Ajuste Saldo" da fazenda de testes (`d649c65e-…`) segue com gravado 24.000 × histórico 14.000; não investigado.
+
 ## Farmácia: estoque de medicamentos e vacinas, caderneta no PWA e baixa pela Enfermaria (2026-10-21)
 
 Branch `feat/farmacia-estoque` nos dois repos (a partir da staging). Liberada para todas as fazendas (sem flag de acesso).

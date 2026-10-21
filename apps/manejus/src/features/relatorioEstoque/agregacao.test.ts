@@ -23,7 +23,7 @@ describe('relatório de estoque de insumos: agregação', () => {
   it('totaliza o grupo com os indicadores de qualidade', () => {
     const totais = totaisDoGrupo([
       item({ valor_estoque: 100, em_alerta: true, falta_para_minimo: 5, entradas_valor: 40, saidas_valor: 10 }),
-      item({ valor_estoque: 0, negativo: true, sem_custo: true, divergencia_l: -3 }),
+      item({ valor_estoque: 0, negativo: true, sem_custo: true }),
       item({ valor_estoque: 50 }),
     ])
     expect(totais.valor_total).toBe(150)
@@ -32,7 +32,6 @@ describe('relatório de estoque de insumos: agregação', () => {
     expect(totais.negativos).toBe(1)
     expect(totais.sem_custo).toBe(1)
     expect(totais.a_repor).toBe(1)
-    expect(totais.divergencias).toBe(1)
     expect(totais.valor_entradas).toBe(40)
     expect(totais.valor_saidas).toBe(10)
   })
@@ -65,7 +64,6 @@ describe('relatório de estoque de insumos: agregação', () => {
     expect(filtrarItens(itens, '', 'alerta')).toHaveLength(1)
     expect(filtrarItens(itens, '', 'sem_custo').map((i) => i.nome)).toEqual(['Milho'])
     expect(filtrarItens(itens, '', 'negativo').map((i) => i.nome)).toEqual(['Ureia'])
-    expect(filtrarItens(itens, '', 'divergencia')).toHaveLength(0)
   })
 
   it('ordena e mantém valores nulos no fim nas duas direções', () => {
@@ -92,10 +90,9 @@ describe('relatório de estoque de insumos: agregação', () => {
     const itens = [
       item({ nome: 'ok' }),
       item({ nome: 'semcusto', sem_custo: true }),
-      item({ nome: 'div', divergencia_l: 2 }),
       item({ nome: 'min', em_alerta: true }),
       item({ nome: 'neg', negativo: true }),
     ]
-    expect(itensDeAtencao(itens).map((i) => i.nome)).toEqual(['neg', 'min', 'div', 'semcusto'])
+    expect(itensDeAtencao(itens).map((i) => i.nome)).toEqual(['neg', 'min', 'semcusto'])
   })
 })

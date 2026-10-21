@@ -248,15 +248,6 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
                     {item.sem_custo && (
                       <span className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: '#fdf3e3', color: GOLD }}>sem custo</span>
                     )}
-                    {item.divergencia_l != null && (
-                      <span
-                        className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                        style={{ backgroundColor: '#eef2fa', color: '#4a5a8a' }}
-                        title={`Saldo reconstruído pelo histórico difere do saldo atual (${formatarNumero(item.estoque_atual)} ${unidade}) em ${formatarNumero(item.divergencia_l)}`}
-                      >
-                        divergência
-                      </span>
-                    )}
                   </td>
                   <td className="py-2.5 px-3 text-gray-500">{item.tipo || '—'}</td>
                   <td className="py-2.5 px-3">
@@ -471,7 +462,6 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
                       {(totais.sem_custo ?? 0) > 0 && <li>{totais.sem_custo} {plural(totais.sem_custo ?? 0, 'item sem custo cadastrado', 'itens sem custo cadastrado')}: o valor total está subestimado.</li>}
                       {qtdNegativos > 0 && <li>{qtdNegativos} {plural(qtdNegativos, 'item com saldo negativo', 'itens com saldo negativo')}{valorNegativo > 0 ? ` (${formatarMoeda(valorNegativo)} que não entram no valor total)` : ''}: falta lançar entrada ou ajuste.</li>}
                       {totais.em_alerta > 0 && <li>{totais.em_alerta} {plural(totais.em_alerta, 'item', 'itens')} no estoque mínimo ou abaixo dele.</li>}
-                      {(totais.divergencias ?? 0) > 0 && <li>{totais.divergencias} {plural(totais.divergencias ?? 0, 'item', 'itens')} com divergência: o saldo reconstruído pelo histórico difere do saldo atual (lançamento retroativo ou histórico incompleto).</li>}
                     </ul>
                   </div>
                 )}

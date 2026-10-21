@@ -42,7 +42,6 @@ export interface ItemEstoque {
   cobertura_dias?: number | null
   data_esgotamento?: string | null
   sem_custo?: boolean
-  divergencia_l?: number | null
   qtd_negativa?: number | null
   valor_negativo?: number | null
 }
@@ -71,7 +70,6 @@ export interface TotaisEstoque {
   negativos: number
   sem_custo?: number
   a_repor?: number
-  divergencias?: number
   valor_entradas?: number
   valor_saidas?: number
 }
@@ -133,7 +131,6 @@ export function totaisDoGrupo(itens: ItemEstoque[]): TotaisEstoque {
     negativos: itens.filter((i) => i.negativo).length,
     sem_custo: itens.filter((i) => i.sem_custo).length,
     a_repor: itens.filter((i) => (i.falta_para_minimo ?? 0) > 0).length,
-    divergencias: itens.filter((i) => i.divergencia_l != null).length,
     valor_entradas: soma(itens.map((i) => i.entradas_valor)),
     valor_saidas: soma(itens.map((i) => i.saidas_valor)),
   }
@@ -163,7 +160,7 @@ export function classificarABC(itens: ItemEstoque[]): Map<string, ClasseABC> {
   return resultado
 }
 
-export type FiltroEstoque = 'todos' | 'alerta' | 'negativo' | 'sem_custo' | 'a_repor' | 'divergencia'
+export type FiltroEstoque = 'todos' | 'alerta' | 'negativo' | 'sem_custo' | 'a_repor'
 
 export const FILTROS_ESTOQUE: { key: FiltroEstoque; label: string }[] = [
   { key: 'todos', label: 'Todos' },
@@ -171,7 +168,6 @@ export const FILTROS_ESTOQUE: { key: FiltroEstoque; label: string }[] = [
   { key: 'a_repor', label: 'A repor' },
   { key: 'negativo', label: 'Saldo negativo' },
   { key: 'sem_custo', label: 'Sem custo' },
-  { key: 'divergencia', label: 'Divergência' },
 ]
 
 function semAcento(texto: string): string {
@@ -187,7 +183,6 @@ export function filtrarItens(itens: ItemEstoque[], busca: string, filtro: Filtro
       case 'negativo': return i.negativo
       case 'sem_custo': return !!i.sem_custo
       case 'a_repor': return (i.falta_para_minimo ?? 0) > 0
-      case 'divergencia': return i.divergencia_l != null
       default: return true
     }
   })
@@ -241,14 +236,13 @@ export function textoCobertura(item: Pick<ItemEstoque, 'cobertura_dias' | 'consu
 function gravidade(item: ItemEstoque): number {
   if (item.negativo) return 0
   if (item.em_alerta) return 1
-  if (item.divergencia_l != null) return 2
-  return 3
+  return 2
 }
 
 // Itens que precisam de atenção, na ordem de gravidade: saldo negativo,
-// abaixo do mínimo, divergência de saldo e, por último, sem custo.
+// abaixo do mínimo e, por último, sem custo.
 export function itensDeAtencao(itens: ItemEstoque[]): ItemEstoque[] {
   return itens
-    .filter((i) => i.negativo || i.em_alerta || i.sem_custo || i.divergencia_l != null)
+    .filter((i) => i.negativo || i.em_alerta || i.sem_custo)
     .sort((a, b) => gravidade(a) - gravidade(b))
 }
