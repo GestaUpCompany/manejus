@@ -88,8 +88,6 @@ export interface ResumoDecisao {
   variacaoPct: number | null
   consumoValor: number | null
   consumoDiaValor: number | null
-  // Valor em estoque ÷ consumo diário em R$: quantos dias o estoque cobre.
-  coberturaDias: number | null
   giro: number | null
   contagem: Record<SituacaoItem, number>
   capital: Record<SituacaoItem, number>
@@ -163,7 +161,6 @@ export function resumirDecisao(itens: ItemEstoque[], comPeriodo: boolean, dias: 
     variacaoPct: comPeriodo && valorInicial > 0 ? ((valorEstoque - valorInicial) / valorInicial) * 100 : null,
     consumoValor: comPeriodo ? consumoValor : null,
     consumoDiaValor,
-    coberturaDias: consumoDiaValor && consumoDiaValor > 0 ? valorEstoque / consumoDiaValor : null,
     giro: comPeriodo && mediaEstoque > 0 ? consumoValor / mediaEstoque : null,
     contagem,
     capital,
@@ -255,9 +252,6 @@ export function lerPeriodo(resumo: ResumoDecisao, conc: Concentracao): string[] 
       frases.push(`${moeda(resumo.capitalParadoExcesso)} (${pct(resumo.pctParadoExcesso)} do valor em estoque) está parado ou em excesso: ${partes.join(' e ')}.`)
     } else {
       frases.push('Nenhum capital parado ou em excesso no período.')
-    }
-    if (resumo.coberturaDias != null) {
-      frases.push(`No ritmo de consumo do período, o estoque cobre cerca de ${Math.round(resumo.coberturaDias)} dias.`)
     }
   }
   if (conc.itensComValor > 0) {

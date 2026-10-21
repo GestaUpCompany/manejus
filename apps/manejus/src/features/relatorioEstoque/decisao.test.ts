@@ -77,7 +77,6 @@ describe('relatório de estoque: regras de decisão', () => {
     expect(r.valorInicial).toBe((100 + 150 + 50 + 250) * 2)
     expect(r.consumoValor).toBe(100)
     expect(r.consumoDiaValor).toBe(10)
-    expect(r.coberturaDias).toBe(100)
     expect(r.capitalParadoExcesso).toBe(400)
     expect(r.pctParadoExcesso).toBe(40)
     expect(r.giro).toBeCloseTo(100 / ((1100 + 1000) / 2))
@@ -92,7 +91,6 @@ describe('relatório de estoque: regras de decisão', () => {
   it('sem período não inventa métricas de consumo', () => {
     const r = resumirDecisao([item({ em_alerta: true }), item({})], false, null)
     expect(r.consumoValor).toBeNull()
-    expect(r.coberturaDias).toBeNull()
     expect(r.giro).toBeNull()
     expect(r.valorInicial).toBeNull()
     expect(r.contagem.ruptura).toBe(1)

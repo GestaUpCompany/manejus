@@ -292,8 +292,7 @@ function glossarioHtml(comPeriodo, lim) {
     ...(comPeriodo ? [
       ['Parado', 'Tem saldo e valor em estoque, mas nenhuma saída no período. É dinheiro imobilizado sem giro.'],
       ['Em excesso', `Cobertura acima de ${lim.excesso} dias no ritmo do período: comprou-se mais do que o consumo pede.`],
-      ['Cobertura do item', 'Quantos dias o saldo final dura no consumo médio diário do período (saldo ÷ consumo por dia).'],
-      ['Cobertura do estoque', 'Valor total em estoque ÷ consumo médio diário em R$: quantos dias a carteira inteira dura.'],
+      ['Cobertura', 'Quantos dias o saldo final do item dura no consumo médio diário do período (saldo ÷ consumo por dia). É calculada por item: não existe uma cobertura única do estoque, porque cada item gira num ritmo.'],
       ['Giro', 'Consumo do período em R$ ÷ valor médio em estoque. Quanto maior, menos tempo o dinheiro fica parado.'],
       ['Sugestão de compra', `Quantidade para chegar ao maior entre o estoque mínimo e a cobertura de ${lim.alvo} dias no ritmo do período.`],
       ['Variação do valor', 'Compara o valor atual com o do início do período, que é aproximado: saldo inicial × custo médio atual.'],
@@ -352,7 +351,7 @@ export async function renderEstoqueHtml(input) {
     ? `<div class="kpi-grid">
         ${kpi(reais(resumo.valorEstoque), 'Valor em estoque', variacao)}
         ${kpi(reais(resumo.consumoValor ?? 0), 'Consumo no período', resumo.consumoDiaValor != null ? `${reais(resumo.consumoDiaValor)} por dia${resumo.giro != null ? ` · giro ${moneyFmt(resumo.giro)}×` : ''}` : '')}
-        ${kpi(resumo.coberturaDias != null ? `${Math.round(resumo.coberturaDias)} dias` : '—', 'Cobertura do estoque', resumo.coberturaDias != null ? 'no ritmo de consumo do período' : 'sem consumo no período')}
+        ${kpi(reais(resumo.reposicaoValor), 'Reposição estimada', `${contagem.ruptura} ${pl(contagem.ruptura, 'item a repor', 'itens a repor')}`, contagem.ruptura > 0 ? 'red' : 'green')}
         ${kpi(reais(resumo.capitalParadoExcesso), 'Parado e em excesso', `${pct(resumo.pctParadoExcesso)} do valor em estoque`, resumo.capitalParadoExcesso > 0 ? 'gold' : 'green')}
       </div>`
     : `<div class="kpi-grid">
