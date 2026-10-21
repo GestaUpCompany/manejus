@@ -65,6 +65,7 @@ export function Breadcrumbs({ maxItems = 3 }: BreadcrumbsProps) {
         .replace(/cantina/g, 'Cantina')
         .replace(/clima/g, 'Clima')
         .replace(/enfermaria/g, 'Enfermaria')
+        .replace(/farmacia/g, 'Farmácia')
         .replace(/individuo/g, 'Indivíduo')
         .replace(/individuos/g, 'Indivíduos')
         .replace(/limpeza/g, 'Limpeza')
