@@ -245,23 +245,23 @@ export function EstoqueFarmacia() {
 
       {erro && <Card className="p-4 bg-red-500/10"><p className="text-sm text-red-700">{erro}</p></Card>}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         <Card className="p-4" disableHover>
           <p className="text-xs text-content-muted">Medicamentos controlados</p>
-          <p className="text-xl sm:text-2xl font-bold break-words">{totais.controlados}</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold break-words">{totais.controlados}</p>
         </Card>
         <Card className="p-4" disableHover>
           <p className="text-xs text-content-muted">Em alerta</p>
-          <p className="text-xl sm:text-2xl font-bold text-amber-600">{totais.em_alerta}</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-amber-600">{totais.em_alerta}</p>
           {totais.sem_custo > 0 && <p className="text-[11px] text-content-muted">{totais.sem_custo} sem custo</p>}
         </Card>
         <Card className="p-4" disableHover>
           <p className="text-xs text-content-muted">Valor em estoque</p>
-          <p className="text-xl sm:text-2xl font-bold break-words">{moeda(totais.valor_total)}</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold break-words">{moeda(totais.valor_total)}</p>
         </Card>
         <Card className="p-4" disableHover>
           <p className="text-xs text-content-muted">Baixas no mês</p>
-          <p className="text-xl sm:text-2xl font-bold break-words">{moeda(consumoMes)}</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold break-words">{moeda(consumoMes)}</p>
         </Card>
       </div>
 
