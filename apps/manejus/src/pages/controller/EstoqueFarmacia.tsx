@@ -230,12 +230,12 @@ export function EstoqueFarmacia() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between gap-3">
-        <div>
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Estoque da Farmácia</h2>
           {fazendaNome && <p className="text-sm text-content-muted">{fazendaNome}</p>}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
           <Button variant="secondary" onClick={() => navigate('/controller/cadastros-auxiliares')}>Cadastrar medicamentos</Button>
           <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/farmacia')}>Registros da Farmácia</Button>
           <Button variant="secondary" onClick={() => abrirModal('ajuste')}>Ajuste</Button>
@@ -245,28 +245,28 @@ export function EstoqueFarmacia() {
 
       {erro && <Card className="p-4 bg-red-500/10"><p className="text-sm text-red-700">{erro}</p></Card>}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="p-4" disableHover>
           <p className="text-xs text-content-muted">Medicamentos controlados</p>
-          <p className="text-2xl font-bold">{totais.controlados}</p>
+          <p className="text-xl sm:text-2xl font-bold break-words">{totais.controlados}</p>
         </Card>
         <Card className="p-4" disableHover>
           <p className="text-xs text-content-muted">Em alerta</p>
-          <p className="text-2xl font-bold text-amber-600">{totais.em_alerta}</p>
+          <p className="text-xl sm:text-2xl font-bold text-amber-600">{totais.em_alerta}</p>
           {totais.sem_custo > 0 && <p className="text-[11px] text-content-muted">{totais.sem_custo} sem custo</p>}
         </Card>
         <Card className="p-4" disableHover>
           <p className="text-xs text-content-muted">Valor em estoque</p>
-          <p className="text-2xl font-bold">{moeda(totais.valor_total)}</p>
+          <p className="text-xl sm:text-2xl font-bold break-words">{moeda(totais.valor_total)}</p>
         </Card>
         <Card className="p-4" disableHover>
           <p className="text-xs text-content-muted">Baixas no mês</p>
-          <p className="text-2xl font-bold">{moeda(consumoMes)}</p>
+          <p className="text-xl sm:text-2xl font-bold break-words">{moeda(consumoMes)}</p>
         </Card>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-        <div className="sm:w-72">
+        <div className="sm:w-72 min-w-0">
           <Input label="Buscar medicamento" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome comercial" />
         </div>
         <div className="sm:w-60">
