@@ -31,6 +31,16 @@
 - Relatório de Estoque (PDF, página pública, `agregacao.ts`): removidos tag, nota, filtro e item de atenção de "divergência". A RPC ainda devolve `divergencia_l`, sem uso.
 - Pendente: o item "TESTE Ajuste Saldo" da fazenda de testes (`d649c65e-…`) segue com gravado 24.000 × histórico 14.000; não investigado.
 
+## Farmácia (PWA): layout modernizado, textos tratados e novo teste de entrada e saída (2026-10-21)
+
+Branch `feat/farmacia-layout-moderno` no PWA (a partir da staging; sem mudança de schema nem de painel).
+
+- **Layout**: `FarmaciaForm` passou ao kit das cadernetas modernas (Rodeio/Enfermaria): `CadernetaSection`, `InfoCard` do medicamento (saldo, mínimo, unidade e faixa de situação: abaixo do mínimo, perto, ok, sem controle ou medicamento novo), `StepperInput` com a unidade, faixa de prévia ("Saldo passará de X para Y", vermelha se a saída deixa o saldo negativo, sem bloquear), motivo da saída em `ChoiceGrid` (gravado no começo da observação, sem coluna nova), custo total calculado, validade com `DatePicker`, ditado por voz, `FormFooter` com o que falta, rascunho recuperável (`useRascunhoForm`) e data sem dia futuro. "Cadastrar novo" virou folha sobreposta (`NovoMedicamentoModal`). "Recado" renomeado para "Observação". Regras puras em `utils/farmaciaEstoque.ts`.
+- **Plural**: frasco, dose e caixa vão ao plural quando o valor é maior que 1 (saldo, mínimo, prévia, sufixo da quantidade, lista e texto compartilhado); mL, L, g, kg e un não mudam.
+- **Textos tratados**: o texto do SuccessModal/Compartilhar tinha caído no caminho genérico e mostrava campos internos (`medicamentoId`, `novoMedicamento`, unidade solta). Agora há ramo próprio em `shareUtils.ts` ("ENTRADA/SAÍDA DE ESTOQUE - FARMÁCIA", medicamento, quantidade com unidade, lote, e só na entrada custo unitário, custo total, validade em dd/mm/aaaa, fornecedor e NF). A lista de registros (`config/cadernetas/farmacia.ts`) mostra "2 frascos", "R$ 120,50 (total R$ 241,00)" e validade em BR, e oculta `unidade`, `novoMedicamento` e ids.
+- **Testes**: 510 testes do PWA passam (16 do helper e do texto compartilhado, sem ids); typecheck e lint limpos nos arquivos alterados. **Fluxo completo pelo formulário novo** (fazenda de testes, peão Victor Hugo): entrada de 2 frascos de Draxxin (custo R$ 120,50, lote L-LAYOUT-01, NF-LAYOUT-101, validade) sincronizou, saldo 18 → 20; saída de 1 frasco com motivo "Uso na fazenda" sincronizou, saldo 20 → 19 (custo médio R$ 115,44); o painel mostra 19 frascos e as listas do PWA exibem os registros formatados. Conferidos também o aviso de saída maior que o saldo (Exceller, 5 contra 3 doses), a restauração do rascunho após recarregar e o modal de cadastro novo (abertura e campos; o cadastro de medicamento novo de ponta a ponta continua coberto pelo teste da entrada de Ivomec e da vacina com SKU).
+- **Não incluído**: foto da nota/produto (exigiria coluna e armazenamento novos).
+
 ## Farmácia: Entrada e Saída em cadernetas separadas e cadastro de medicamento novo na entrada (2026-10-21)
 
 Branch `feat/farmacia-entrada-saida` nos dois repos (a partir da staging, depois do merge da Farmácia).
