@@ -9,6 +9,7 @@
 - PDF (`api/pdf/estoque.js`): resumo executivo, O que repor, Capital parado e em excesso (as duas na mesma página quando as listas são curtas), Curva ABC com a caixa "Como ler", concentração e origem do consumo, posição de estoque e glossário. Sem extrato. O cliente envia o payload `decisao` pronto (o endpoint não importa TS do front).
 - Link público (`RelatorioEstoquePublico.tsx`): mesmos indicadores, abas "O que repor" / "Parado e em excesso" / "Todos os itens", filtros por situação, ABC com a mesma legenda e glossário. Extrato removido.
 - Infográfico Mensal (`relatorioGeral/loaders.ts`): mesmo payload; sem extrato de estoque de insumos (o limite de 4 MB deixa de pesar neste relatório; a constante restante é da Cantina).
+- Cada "Compra sugerida" informa o critério que a definiu: "para 30 dias de consumo" ou "para o mínimo (X kg) · cobre N d" (o que exigir mais), para o usuário saber o que o valor cobre.
 - Sem período (links antigos) só valem "a repor" por mínimo/saldo negativo e a posição; cobertura, parado e excesso não se aplicam.
 - Pendente: migration que tira `movimentacoes` (e `divergencia_l`) do retorno de `get_dados_relatorio_estoque`. A RPC ainda monta o extrato de cada item, sem uso no front.
 

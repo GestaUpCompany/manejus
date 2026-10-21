@@ -34,6 +34,7 @@ import {
   resumirDecisao,
   sugestaoReposicao,
   type SituacaoItem,
+  type SugestaoReposicao,
 } from '../../features/relatorioEstoque/decisao'
 import { plural } from '../../features/relatorioPastagens/agregacao'
 
@@ -102,6 +103,14 @@ function motivoRepor(item: ItemEstoque): string {
   if (item.negativo) return 'Saldo negativo'
   if (item.em_alerta) return 'Abaixo do mínimo'
   return `Cobertura de ${Math.round(item.cobertura_dias ?? 0)} d (menos de ${COBERTURA_RUPTURA_DIAS} d)`
+}
+
+// O que a compra cobre: o estoque mínimo ou os dias de consumo alvo (e, no mínimo, a cobertura final).
+function criterioCompra(item: ItemEstoque, sug: SugestaoReposicao): string {
+  if (!sug.criterio) return ''
+  if (sug.criterio === 'cobertura') return `para ${COBERTURA_ALVO_DIAS} dias de consumo`
+  const apos = sug.coberturaApos != null ? ` · cobre ${Math.round(sug.coberturaApos)} d` : ''
+  return `para o mínimo (${formatarNumero(item.estoque_minimo)} ${item.unidade || 'kg'})${apos}`
 }
 
 function PilulaSituacao({ situacao }: { situacao: SituacaoItem }) {
@@ -286,8 +295,8 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             {cabecalhoSimples(comPeriodo
-              ? [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Consumo/dia', 'right'], ['Cobertura', 'right'], ['Esgota em', 'right'], ['Sugestão de compra', 'right'], ['Valor estimado', 'right']]
-              : [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Mínimo', 'right'], ['Sugestão de compra', 'right'], ['Valor estimado', 'right']])}
+              ? [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Consumo/dia', 'right'], ['Cobertura', 'right'], ['Esgota em', 'right'], ['Compra sugerida', 'right'], ['Valor estimado', 'right']]
+              : [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Mínimo', 'right'], ['Compra sugerida', 'right'], ['Valor estimado', 'right']])}
             <tbody>
               {repor.map((item) => {
                 const un = item.unidade || 'kg'
@@ -301,7 +310,10 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
                     {comPeriodo && <td className="py-2.5 px-3 text-right text-gray-600 whitespace-nowrap">{textoCobertura(item)}</td>}
                     {comPeriodo && <td className="py-2.5 px-3 text-right text-gray-600 whitespace-nowrap">{formatarData(item.data_esgotamento)}</td>}
                     {!comPeriodo && <td className="py-2.5 px-3 text-right text-gray-600">{item.estoque_minimo > 0 ? formatarNumero(item.estoque_minimo) : '—'}</td>}
-                    <td className="py-2.5 px-3 text-right font-semibold text-gray-900 whitespace-nowrap">{sug.quantidade > 0 ? `${formatarNumero(sug.quantidade)} ${un}` : '—'}</td>
+                    <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                      <span className="font-semibold text-gray-900">{sug.quantidade > 0 ? `${formatarNumero(sug.quantidade)} ${un}` : '—'}</span>
+                      {sug.criterio && <span className="block text-[11px] text-gray-400">{criterioCompra(item, sug)}</span>}
+                    </td>
                     <td className="py-2.5 px-3 text-right text-gray-700">{item.sem_custo || sug.valor <= 0 ? '—' : formatarMoeda(sug.valor)}</td>
                   </tr>
                 )
@@ -316,7 +328,7 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
           </table>
         </div>
         <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-gray-100">
-          Sugestão de compra = {comPeriodo ? `o maior entre o necessário para chegar ao estoque mínimo e para cobrir ${COBERTURA_ALVO_DIAS} dias no ritmo de consumo do período` : 'o necessário para chegar ao estoque mínimo cadastrado'}. Do mais urgente ao menos urgente.
+          Compra sugerida = {comPeriodo ? `a quantidade que leva o item ao maior entre o estoque mínimo e ${COBERTURA_ALVO_DIAS} dias de consumo no ritmo do período; abaixo de cada quantidade está o critério que a definiu` : 'a quantidade necessária para chegar ao estoque mínimo cadastrado'}. Do mais urgente ao menos urgente.
         </p>
       </div>
     )
@@ -731,7 +743,7 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
                 {comPeriodo && <div><dt className="font-semibold text-gray-800">Em excesso</dt><dd>Cobertura acima de {COBERTURA_EXCESSO_DIAS} dias no ritmo do período: comprou-se mais do que o consumo pede.</dd></div>}
                 {comPeriodo && <div><dt className="font-semibold text-gray-800">Cobertura</dt><dd>Quantos dias o saldo final do item dura no consumo médio diário do período. É calculada por item: cada um gira num ritmo, então não existe uma cobertura única do estoque.</dd></div>}
                 {comPeriodo && <div><dt className="font-semibold text-gray-800">Giro</dt><dd>Consumo do período em R$ ÷ valor médio em estoque. Quanto maior, menos tempo o dinheiro fica parado.</dd></div>}
-                <div><dt className="font-semibold text-gray-800">Sugestão de compra</dt><dd>{comPeriodo ? `Quantidade para chegar ao maior entre o estoque mínimo e a cobertura de ${COBERTURA_ALVO_DIAS} dias no ritmo do período.` : 'Quantidade necessária para chegar ao estoque mínimo cadastrado.'}</dd></div>
+                <div><dt className="font-semibold text-gray-800">Compra sugerida</dt><dd>{comPeriodo ? `Quantidade que leva o item ao maior entre o estoque mínimo e ${COBERTURA_ALVO_DIAS} dias de consumo no ritmo do período. Abaixo de cada quantidade, o relatório diz qual critério a definiu e, quando é o mínimo, quantos dias a compra cobre.` : 'Quantidade necessária para chegar ao estoque mínimo cadastrado.'}</dd></div>
                 <div><dt className="font-semibold text-gray-800">Valor em estoque</dt><dd>Saldo {comPeriodo ? 'final ' : ''}× custo médio atual. Saldo negativo vale 0 e item sem custo vale 0, o que subestima o total.</dd></div>
               </dl>
             </details>

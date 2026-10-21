@@ -44,6 +44,10 @@ export function classificarSituacao(item: ItemEstoque, comPeriodo: boolean): Sit
 export interface SugestaoReposicao {
   quantidade: number
   valor: number
+  // O que a quantidade cobre: o estoque mínimo ou os 30 dias de consumo (o que exigir mais).
+  criterio: 'minimo' | 'cobertura' | null
+  // Cobertura em dias com a compra feita (null sem consumo no período).
+  coberturaApos: number | null
 }
 
 // Quantidade para chegar ao maior entre o estoque mínimo e a cobertura alvo
@@ -51,9 +55,15 @@ export interface SugestaoReposicao {
 export function sugestaoReposicao(item: ItemEstoque): SugestaoReposicao {
   const saldo = saldoDoItem(item)
   const ateMinimo = item.falta_para_minimo ?? 0
-  const ateAlvo = item.consumo_medio_dia != null ? item.consumo_medio_dia * COBERTURA_ALVO_DIAS - saldo : 0
+  const consumo = item.consumo_medio_dia ?? 0
+  const ateAlvo = consumo > 0 ? consumo * COBERTURA_ALVO_DIAS - saldo : 0
   const quantidade = Math.max(ateMinimo, ateAlvo, 0)
-  return { quantidade, valor: item.sem_custo ? 0 : quantidade * item.custo_unitario }
+  return {
+    quantidade,
+    valor: item.sem_custo ? 0 : quantidade * item.custo_unitario,
+    criterio: quantidade <= 0 ? null : ateAlvo >= ateMinimo ? 'cobertura' : 'minimo',
+    coberturaApos: consumo > 0 ? Math.max(saldo + quantidade, 0) / consumo : null,
+  }
 }
 
 // Dias do período (inclusivo). Sem data de início não há média diária.

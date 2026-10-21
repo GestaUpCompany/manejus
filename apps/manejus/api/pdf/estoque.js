@@ -38,9 +38,9 @@ import {
 const MAX_ITENS = 5000
 const MAX_BODY_BYTES = 8_000_000
 
-const REPOR_ROWS = 13
+const REPOR_ROWS = 10
 const IMOBILIZADO_ROWS = 13
-const JUNTAS_MAX_ROWS = 5
+const JUNTAS_MAX_ROWS = 4
 const POSICAO_ROWS = 17
 const ABC_TOP = 10
 
@@ -76,6 +76,7 @@ const ESTOQUE_CSS = `
 .est-sit-ruptura{background:#fdf6f5;color:#c94d46;border:1px solid #efd8d6}
 .est-sit-parado,.est-sit-excesso{background:#fdf3e3;color:#9a6b17;border:1px solid #eedcae}
 .est-sit-ok{background:#eef6f1;color:#0b6a42;border:1px solid #d3e4d9}
+.est-sub{display:block;font-size:9px;font-weight:400;color:#7a8981;margin-top:1px}
 .est-nota{font-size:10px;color:#7a8981;margin:2mm 0 0}
 .est-leitura{margin:0;padding-left:16px}
 .est-leitura li{margin-bottom:2px;font-size:12px}
@@ -208,14 +209,23 @@ function posicaoTableHtml(linhas, comPeriodo, total) {
 
 // ---------- Repor ----------
 
+// O que a compra cobre: o estoque mínimo ou os dias de consumo alvo (e, no mínimo, a cobertura final).
+function criterioCompra(item, sugestao, lim) {
+  if (!sugestao.criterio) return ''
+  if (sugestao.criterio === 'cobertura') return `para ${lim.alvo} dias de consumo`
+  const apos = sugestao.coberturaApos != null ? ` · cobre ${Math.round(sugestao.coberturaApos)} d` : ''
+  return `para o mínimo (${moneyFmt(item.estoque_minimo)} ${item.unidade || 'kg'})${apos}`
+}
+
 function reporTableHtml(linhas, comPeriodo, lim, totalItens, totalValor, ultima) {
   const cols = comPeriodo
-    ? [['Item', '22%'], ['Motivo', '20%'], ['Saldo', '11%', 'num'], ['Consumo/dia', '10%', 'num'], ['Cobertura', '9%', 'num'], ['Esgota em', '9%'], ['Sugestão de compra', '11%', 'num'], ['Valor estimado', '8%', 'num']]
-    : [['Item', '28%'], ['Motivo', '24%'], ['Saldo', '14%', 'num'], ['Mínimo', '12%', 'num'], ['Sugestão de compra', '12%', 'num'], ['Valor estimado', '10%', 'num']]
+    ? [['Item', '20%'], ['Motivo', '17%'], ['Saldo', '10%', 'num'], ['Consumo/dia', '9%', 'num'], ['Cobertura', '8%', 'num'], ['Esgota em', '9%'], ['Compra sugerida', '18%', 'num'], ['Valor estimado', '9%', 'num']]
+    : [['Item', '26%'], ['Motivo', '22%'], ['Saldo', '13%', 'num'], ['Mínimo', '11%', 'num'], ['Compra sugerida', '17%', 'num'], ['Valor estimado', '11%', 'num']]
   const rows = linhas.map(({ item, sugestao }) => {
     const un = unidadeDe(item)
     const saldo = `<td class="${item.negativo ? 'num est-neg' : 'num'}">${moneyFmt(saldoDe(item))} ${un}</td>`
-    const compra = `<td class="num"><strong>${sugestao.quantidade > 0 ? `${moneyFmt(sugestao.quantidade)} ${un}` : '—'}</strong></td><td class="num">${item.sem_custo || sugestao.valor <= 0 ? '—' : reais(sugestao.valor)}</td>`
+    const criterio = criterioCompra(item, sugestao, lim)
+    const compra = `<td class="num"><strong>${sugestao.quantidade > 0 ? `${moneyFmt(sugestao.quantidade)} ${un}` : '—'}</strong>${criterio ? `<span class="est-sub">${escapeHtml(criterio)}</span>` : ''}</td><td class="num">${item.sem_custo || sugestao.valor <= 0 ? '—' : reais(sugestao.valor)}</td>`
     if (!comPeriodo) {
       return `<tr><td>${escapeHtml(item.nome)}</td><td>${escapeHtml(motivoRepor(item, lim))}</td>${saldo}<td class="num">${item.estoque_minimo > 0 ? moneyFmt(item.estoque_minimo) : '—'}</td>${compra}</tr>`
     }
@@ -294,10 +304,10 @@ function glossarioHtml(comPeriodo, lim) {
       ['Em excesso', `Cobertura acima de ${lim.excesso} dias no ritmo do período: comprou-se mais do que o consumo pede.`],
       ['Cobertura', 'Quantos dias o saldo final do item dura no consumo médio diário do período (saldo ÷ consumo por dia). É calculada por item: não existe uma cobertura única do estoque, porque cada item gira num ritmo.'],
       ['Giro', 'Consumo do período em R$ ÷ valor médio em estoque. Quanto maior, menos tempo o dinheiro fica parado.'],
-      ['Sugestão de compra', `Quantidade para chegar ao maior entre o estoque mínimo e a cobertura de ${lim.alvo} dias no ritmo do período.`],
+      ['Compra sugerida', `Quantidade que leva o item ao maior entre o estoque mínimo e ${lim.alvo} dias de consumo no ritmo do período. Abaixo de cada quantidade, o relatório diz qual critério a definiu e, quando é o mínimo, quantos dias a compra cobre.`],
       ['Variação do valor', 'Compara o valor atual com o do início do período, que é aproximado: saldo inicial × custo médio atual.'],
     ] : [
-      ['Sugestão de compra', 'Quantidade necessária para chegar ao estoque mínimo cadastrado.'],
+      ['Compra sugerida', 'Quantidade necessária para chegar ao estoque mínimo cadastrado.'],
     ]),
     ['Curva ABC', 'Classifica os itens pelo valor em estoque acumulado: A até 80%, B até 95%, C o restante. Itens sem saldo positivo ou sem custo ficam fora.'],
     ['Valor em estoque', `Saldo ${comPeriodo ? 'final ' : ''}× custo médio atual do item. Saldo negativo vale 0 e item sem custo vale 0, o que subestima o total.`],
@@ -325,7 +335,7 @@ export async function renderEstoqueHtml(input) {
     .filter((g) => g.itens.length > 0)
 
   const repor = (decisao.repor ?? [])
-    .map((r) => ({ item: porChave.get(r.chave), sugestao: { quantidade: r.quantidade, valor: r.valor } }))
+    .map((r) => ({ item: porChave.get(r.chave), sugestao: r }))
     .filter((r) => r.item)
   const imobilizado = (decisao.imobilizado ?? [])
     .map((k) => ({ item: porChave.get(k), situacao: situacoes[k] }))
@@ -389,7 +399,7 @@ export async function renderEstoqueHtml(input) {
     `),
   )
 
-  const notaRepor = `<p class="est-nota">Sugestão de compra = ${comPeriodo ? `o maior entre o necessário para chegar ao estoque mínimo e para cobrir ${lim.alvo} dias no ritmo de consumo do período` : 'o necessário para chegar ao estoque mínimo cadastrado'}. Ordenado do mais urgente ao menos urgente.</p>`
+  const notaRepor = `<p class="est-nota">Compra sugerida = ${comPeriodo ? `a quantidade que leva o item ao maior entre o estoque mínimo e ${lim.alvo} dias de consumo no ritmo do período; abaixo de cada quantidade está o critério que a definiu` : 'a quantidade necessária para chegar ao estoque mínimo cadastrado'}. Ordenado do mais urgente ao menos urgente.</p>`
   const notaImob = `<p class="est-nota">Parado: tem saldo e valor, mas não teve nenhuma saída no período. Em excesso: cobertura acima de ${lim.excesso} dias no ritmo do período. Ordenado pelo maior valor imobilizado.</p>`
 
   reporChunks.forEach((chunk, i) => {

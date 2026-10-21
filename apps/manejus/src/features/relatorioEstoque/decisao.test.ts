@@ -49,6 +49,12 @@ describe('relatório de estoque: regras de decisão', () => {
     const s = sugestaoReposicao(item({ consumo_medio_dia: 5, falta_para_minimo: 10 }))
     expect(s.quantidade).toBe(5 * COBERTURA_ALVO_DIAS - 100)
     expect(s.valor).toBe(s.quantidade * 2)
+    // O critério diz o que a compra cobre e a cobertura final acompanha.
+    expect(sugestaoReposicao(item({ consumo_medio_dia: 5, falta_para_minimo: 80 }))).toMatchObject({ criterio: 'minimo', coberturaApos: 36 })
+    expect(sugestaoReposicao(item({ consumo_medio_dia: 5, falta_para_minimo: 10 }))).toMatchObject({ criterio: 'cobertura', coberturaApos: COBERTURA_ALVO_DIAS })
+    // Sem consumo no período, só o mínimo vale e não há cobertura a informar.
+    expect(sugestaoReposicao(item({ consumo_medio_dia: null, falta_para_minimo: 40 }))).toMatchObject({ criterio: 'minimo', coberturaApos: null })
+    expect(sugestaoReposicao(item({ consumo_medio_dia: null })).criterio).toBeNull()
     // Saldo negativo entra na conta.
     expect(sugestaoReposicao(item({ saldo_final: -20, consumo_medio_dia: 1 })).quantidade).toBe(50)
     // Sem consumo e sem mínimo: nada a sugerir. Sem custo: quantidade sem valor.
