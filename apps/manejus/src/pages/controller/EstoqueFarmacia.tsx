@@ -53,7 +53,12 @@ export function EstoqueFarmacia() {
   const [busca, setBusca] = useState('')
   const [tipo, setClassificacao] = useState('')
   const [modal, setModal] = useState<'entrada' | 'ajuste' | null>(null)
-  const [config, setConfig] = useState<{ item: ItemEstoqueFarmacia; unidade: string; minimo: string } | null>(null)
+  // Ativação do controle: é o único momento de escolher a unidade (depois de haver histórico ela não muda)
+  const [ativacao, setAtivacao] = useState<{ item: ItemEstoqueFarmacia; unidade: string; minimo: string } | null>(null)
+  // Edição inline do estoque mínimo (igual ao estoque de suplementação)
+  const [editandoMinimoId, setEditandoMinimoId] = useState<string | null>(null)
+  const [valorMinimoEditando, setValorMinimoEditando] = useState('')
+  const [salvandoMinimo, setSalvandoMinimo] = useState(false)
   const [formEntrada, setFormEntrada] = useState<FormEntrada>(formEntradaVazio)
   const [formAjuste, setFormAjuste] = useState<FormAjuste>(formAjusteVazio)
   const [erroForm, setErroForm] = useState<string | null>(null)
@@ -164,19 +169,29 @@ export function EstoqueFarmacia() {
     }
   }
 
-  const salvarConfig = async () => {
-    if (!config || !fazendaId) return
-    const minimo = Number(config.minimo.replace(',', '.') || '0')
+  const salvarAtivacao = async () => {
+    if (!ativacao || !fazendaId) return
+    const minimo = Number(ativacao.minimo.replace(',', '.') || '0')
     if (!Number.isFinite(minimo) || minimo < 0) return setErroForm('Informe um mínimo válido (zero ou maior).')
-    const { error } = await supabase.from('medicamentos').update({ unidade: config.unidade, estoque_minimo: minimo }).eq('id', config.item.id).eq('fazenda_id', fazendaId)
+    const { error } = await supabase
+      .from('medicamentos')
+      .update({ controla_estoque: true, unidade: ativacao.unidade, estoque_minimo: minimo })
+      .eq('id', ativacao.item.id)
+      .eq('fazenda_id', fazendaId)
     if (error) return setErroForm(error.message)
-    setConfig(null)
+    setAtivacao(null)
     await carregar()
   }
 
-  const ativarControle = async (item: ItemEstoqueFarmacia) => {
-    const { error } = await supabase.from('medicamentos').update({ controla_estoque: true }).eq('id', item.id).eq('fazenda_id', fazendaId!)
+  const salvarEstoqueMinimo = async (itemId: string) => {
+    if (!fazendaId) return
+    const minimo = Number(valorMinimoEditando.replace(',', '.') || '0')
+    if (!Number.isFinite(minimo) || minimo < 0) return setErro('Informe um mínimo válido (zero ou maior).')
+    setSalvandoMinimo(true)
+    const { error } = await supabase.from('medicamentos').update({ estoque_minimo: minimo }).eq('id', itemId).eq('fazenda_id', fazendaId)
+    setSalvandoMinimo(false)
     if (error) return setErro(error.message)
+    setEditandoMinimoId(null)
     await carregar()
   }
 
@@ -270,35 +285,103 @@ export function EstoqueFarmacia() {
           {visiveis.map((item) => {
             const saldo = Number(item.estoque_atual)
             const alerta = emAlerta(item)
+            const editandoEste = editandoMinimoId === item.id
             return (
-              <Card key={item.id} className="p-4" disableHover>
-                <div className="flex justify-between gap-2">
-                  <div>
-                    <h3 className="font-semibold text-content-strong">{item.nome_comercial}</h3>
-                    <p className="text-xs text-content-muted">{item.tipo} · {item.unidade}</p>
+              <Card key={item.id} className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+                <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
+                  <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
+                    <p className="font-semibold text-content-strong truncate">{item.nome_comercial}</p>
+                    <p className="text-xs text-content-muted truncate">{item.tipo}{item.controla_estoque ? ` · ${item.unidade}` : ''}</p>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    {alerta && <span className="text-xs rounded-full px-2 py-1 bg-amber-500/10 text-amber-700">{saldo < 0 ? 'Saldo negativo' : 'Abaixo do mínimo'}</span>}
-                    {semCusto(item) && <span className="text-xs rounded-full px-2 py-1 bg-blue-500/10 text-blue-700">Sem custo</span>}
-                    {!item.controla_estoque && <span className="text-xs rounded-full px-2 py-1 bg-gray-500/10 text-content-muted">Sem controle de estoque</span>}
+                  <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
+                    {alerta && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 dark:text-red-300">{saldo < 0 ? 'Negativo' : 'Alerta'}</span>
+                    )}
+                    {semCusto(item) && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-700">Sem custo</span>}
+                    {item.controla_estoque ? (
+                      <>
+                        <button
+                          onClick={() => { setEditandoMinimoId(item.id); setValorMinimoEditando(String(Number(item.estoque_minimo)).replace('.', ',')) }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary dark:text-primary-light transition-colors hover:bg-primary/10"
+                          title="Editar estoque mínimo"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => abrirModal('ajuste', item.id)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300 transition-colors hover:bg-amber-500/20"
+                          title="Ajustar saldo atual"
+                        >
+                          Ajustar
+                        </button>
+                        <button
+                          onClick={() => abrirHistorico(item)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-border-base bg-surface-2 px-2.5 py-1 text-xs font-semibold text-content transition-colors hover:bg-surface-2"
+                          title="Ver histórico"
+                        >
+                          Histórico
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => { setErroForm(null); setAtivacao({ item, unidade: item.unidade, minimo: '0' }) }}
+                        className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary dark:text-primary-light transition-colors hover:bg-primary/10"
+                      >
+                        Ativar controle
+                      </button>
+                    )}
                   </div>
                 </div>
-                <div className="mt-4 space-y-1 text-sm">
-                  <div className="flex justify-between"><span className="text-content-muted">Saldo</span><strong className={saldo < 0 ? 'text-red-600' : ''}>{numero(saldo)} {item.unidade}</strong></div>
-                  <div className="flex justify-between"><span className="text-content-muted">Custo médio</span><span>{moeda(Number(item.custo_unitario))}</span></div>
-                  <div className="flex justify-between"><span className="text-content-muted">Mínimo</span><span>{Number(item.estoque_minimo) > 0 ? `${numero(Number(item.estoque_minimo))} ${item.unidade}` : '—'}</span></div>
-                  <div className="flex justify-between"><span className="text-content-muted">Valor</span><strong>{moeda(valorDoItem(item))}</strong></div>
-                </div>
-                {item.controla_estoque ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => abrirModal('entrada', item.id)}>Entrada</Button>
-                    <Button size="sm" variant="secondary" onClick={() => abrirModal('ajuste', item.id)}>Ajuste</Button>
-                    <Button size="sm" variant="secondary" onClick={() => abrirHistorico(item)}>Histórico</Button>
-                    <Button size="sm" variant="secondary" onClick={() => { setErroForm(null); setConfig({ item, unidade: item.unidade, minimo: String(item.estoque_minimo ?? 0) }) }}>Configurar</Button>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-content-muted">Saldo atual</span>
+                    <span className={`font-semibold ${saldo < 0 ? 'text-red-500' : 'text-content-strong'}`}>{numero(saldo)} {item.unidade}</span>
                   </div>
-                ) : (
-                  <div className="mt-4"><Button size="sm" variant="secondary" onClick={() => ativarControle(item)}>Ativar controle de estoque</Button></div>
-                )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-content-muted">Custo médio</span>
+                    <span className="text-content">{moeda(Number(item.custo_unitario))}/{item.unidade}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-content-muted">Valor em estoque</span>
+                    <span className="font-semibold text-content-strong">{moeda(valorDoItem(item))}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-content-muted">Estoque mínimo</span>
+                    {editandoEste ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={valorMinimoEditando}
+                          onChange={(e) => setValorMinimoEditando(e.target.value.replace(/[^\d,]/g, ''))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') salvarEstoqueMinimo(item.id)
+                            if (e.key === 'Escape') setEditandoMinimoId(null)
+                          }}
+                          className="w-20 rounded border border-surface-3 px-1.5 py-0.5 text-right text-sm"
+                          autoFocus
+                          disabled={salvandoMinimo}
+                        />
+                        <button
+                          onClick={() => salvarEstoqueMinimo(item.id)}
+                          disabled={salvandoMinimo}
+                          className="rounded bg-blue-500 px-1.5 py-0.5 text-xs font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
+                        >
+                          OK
+                        </button>
+                        <button
+                          onClick={() => setEditandoMinimoId(null)}
+                          disabled={salvandoMinimo}
+                          className="rounded bg-surface-3 px-1.5 py-0.5 text-xs font-semibold text-content-muted hover:bg-surface-2"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="font-medium text-content">{Number(item.estoque_minimo) > 0 ? `${numero(Number(item.estoque_minimo))} ${item.unidade}` : '—'}</span>
+                    )}
+                  </div>
+                </div>
               </Card>
             )
           })}
@@ -356,20 +439,21 @@ export function EstoqueFarmacia() {
         </div>
       </Modal>
 
-      <Modal isOpen={!!config} onClose={() => setConfig(null)} title={config ? `Configurar: ${config.item.nome_comercial}` : 'Configurar'}>
-        {config && (
+      <Modal isOpen={!!ativacao} onClose={() => setAtivacao(null)} title={ativacao ? `Ativar controle: ${ativacao.item.nome_comercial}` : 'Ativar controle'}>
+        {ativacao && (
           <div className="space-y-3">
             <Select
-              label="Unidade"
-              value={config.unidade}
-              onChange={(value) => setConfig({ ...config, unidade: value })}
+              label="Unidade de medida"
+              value={ativacao.unidade}
+              onChange={(value) => setAtivacao({ ...ativacao, unidade: value })}
               options={['un', 'dose', 'frasco', 'mL', 'L', 'g', 'kg', 'caixa'].map((u) => ({ value: u, label: u }))}
             />
-            <Input label="Estoque mínimo" type="number" min="0" step="0.001" value={config.minimo} onChange={(e) => setConfig({ ...config, minimo: e.target.value })} />
+            <p className="text-xs text-amber-700">Escolha com atenção: depois de ativado, a unidade não pode ser alterada, para o histórico continuar correto.</p>
+            <Input label="Estoque mínimo (alerta)" type="number" min="0" step="0.001" value={ativacao.minimo} onChange={(e) => setAtivacao({ ...ativacao, minimo: e.target.value })} />
             {erroForm && <p className="text-sm text-red-700">{erroForm}</p>}
             <div className="flex gap-2 pt-2">
-              <Button onClick={salvarConfig}>Salvar</Button>
-              <Button variant="secondary" onClick={() => setConfig(null)}>Cancelar</Button>
+              <Button onClick={salvarAtivacao}>Ativar</Button>
+              <Button variant="secondary" onClick={() => setAtivacao(null)}>Cancelar</Button>
             </div>
           </div>
         )}
