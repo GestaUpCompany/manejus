@@ -25,7 +25,13 @@ interface RegistroFarmacia {
 const dataBR = (iso: string) => iso.split('-').reverse().join('/')
 const numero = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
 
-export function Farmacia() {
+// Entrada lista as entradas; Saída lista as baixas (PWA, Enfermaria) e estornos. Ajustes ficam no histórico do estoque.
+const TIPOS_POR_MODO: Record<'entrada' | 'saida', TipoMovimentoFarmacia[]> = {
+  entrada: ['entrada'],
+  saida: ['baixa', 'estorno'],
+}
+
+export function Farmacia({ modo }: { modo: 'entrada' | 'saida' }) {
   const { user } = useAuth()
   const [registros, setRegistros] = useState<RegistroFarmacia[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,6 +52,7 @@ export function Farmacia() {
         .from('movimentacoes_farmacia')
         .select('id,data,tipo_movimentacao,quantidade,unidade,custo_unitario,origem,fornecedor,nota_fiscal,lote_produto,validade,observacao,nome_usuario,created_at,medicamentos(nome_comercial,tipo)')
         .eq('fazenda_id', fazendaId)
+        .in('tipo_movimentacao', TIPOS_POR_MODO[modo])
         .is('deleted_at', null)
         .order('data', { ascending: false })
         .order('created_at', { ascending: false })
@@ -54,7 +61,7 @@ export function Farmacia() {
       else setRegistros((data as unknown as RegistroFarmacia[]) || [])
       setLoading(false)
     })()
-  }, [user])
+  }, [user, modo])
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
@@ -69,7 +76,7 @@ export function Farmacia() {
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Registros da Farmácia</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">{modo === 'entrada' ? 'Entradas da Farmácia' : 'Saídas da Farmácia'}</h2>
         {fazendaNome && <p className="text-sm text-content-muted">{fazendaNome}</p>}
       </div>
 
@@ -80,7 +87,7 @@ export function Farmacia() {
           <SearchInput value={busca} onChange={setBusca} placeholder="Medicamento, fornecedor, lote, nota..." className="text-sm" />
         </FilterField>
         <FilterField label="Tipo">
-          <Select value={tipo} onChange={setTipo} placeholder="Todos" options={Object.entries(ROTULO_TIPO).map(([value, label]) => ({ value, label }))} />
+          <Select value={tipo} onChange={setTipo} placeholder="Todos" options={TIPOS_POR_MODO[modo].map((value) => ({ value, label: ROTULO_TIPO[value] }))} />
         </FilterField>
         <FilterField label="Data Início">
           <Input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="text-sm" />
@@ -91,7 +98,7 @@ export function Farmacia() {
       </FilterToolbar>
 
       {registros.length === 0 ? (
-        <EmptyState title="Nenhum registro da farmácia encontrado" />
+        <EmptyState title={modo === 'entrada' ? 'Nenhuma entrada da farmácia encontrada' : 'Nenhuma saída da farmácia encontrada'} />
       ) : filtrados.length === 0 ? (
         <EmptyState title="Nenhum registro encontrado" description="Nenhum registro encontrado com os filtros aplicados" />
       ) : (
@@ -132,3 +139,6 @@ export function Farmacia() {
     </div>
   )
 }
+
+export const FarmaciaEntradas = () => <Farmacia modo="entrada" />
+export const FarmaciaSaidas = () => <Farmacia modo="saida" />

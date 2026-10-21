@@ -29,7 +29,8 @@ export type CadernetaImage =
   | 'entrada-combustivel'
   | 'entrada-almoxarifado'
   | 'entrada-cantina'
-  | 'farmacia'
+  | 'entrada-farmacia'
+  | 'saida-farmacia'
   | 'comunicado-venda'
   | 'comunicado-compra'
   | 'comunicado-transferencia'
@@ -66,7 +67,8 @@ export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   'entrada-combustivel': '/images/cadernetas/entradacombustivel.png',
   'entrada-almoxarifado': '/images/almoxarifado.png',
   'entrada-cantina': '/images/cadernetas/cantina.png',
-  farmacia: '/images/cadernetas/sanidade.png',
+  'entrada-farmacia': '/images/cadernetas/sanidade.png',
+  'saida-farmacia': '/images/cadernetas/sanidade.png',
   'comunicado-venda': '/images/cadernetas/comunicado.png',
   'comunicado-compra': '/images/cadernetas/comunicado.png',
   'comunicado-transferencia': '/images/cadernetas/movimentacao.png',
@@ -104,7 +106,8 @@ export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
   'entrada-combustivel': 'Entrada de Combustível',
   'entrada-almoxarifado': 'Entrada Almoxarifado',
   'entrada-cantina': 'Entrada Cantina',
-  farmacia: 'Farmácia',
+  'entrada-farmacia': 'Entrada Farmácia',
+  'saida-farmacia': 'Saída Farmácia',
   'comunicado-venda': 'Comunicado de Venda',
   'comunicado-compra': 'Comunicado de Compra',
   'comunicado-transferencia': 'Comunicado de Transferência',
@@ -142,7 +145,8 @@ export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
   'entrada-combustivel': 'Registros de entrada de combustível',
   'entrada-almoxarifado': 'Registros de entrada no almoxarifado',
   'entrada-cantina': 'Registros de entrada na cantina',
-  farmacia: 'Registros de entrada e saída de medicamentos e vacinas',
+  'entrada-farmacia': 'Registros de entrada de medicamentos e vacinas',
+  'saida-farmacia': 'Registros de saída de medicamentos e vacinas (inclui a baixa da Enfermaria)',
   'comunicado-venda': 'Comunicados de venda de animais',
   'comunicado-compra': 'Comunicados de compra de animais',
   'comunicado-transferencia': 'Comunicados de transferência entre fazendas',

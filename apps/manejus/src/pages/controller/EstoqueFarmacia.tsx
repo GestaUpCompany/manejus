@@ -253,7 +253,8 @@ export function EstoqueFarmacia() {
         </div>
         <div className="flex flex-wrap gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
           <Button variant="secondary" onClick={() => navigate('/controller/cadastros-auxiliares')}>Cadastrar medicamentos</Button>
-          <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/farmacia')}>Registros da Farmácia</Button>
+          <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/entrada-farmacia')}>Entradas</Button>
+          <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/saida-farmacia')}>Saídas</Button>
           <Button variant="secondary" onClick={() => abrirModal('ajuste')}>Ajuste</Button>
           <Button onClick={() => abrirModal('entrada')}>Registrar Entrada</Button>
         </div>

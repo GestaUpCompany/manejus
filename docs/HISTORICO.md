@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Farmácia: Entrada e Saída em cadernetas separadas e cadastro de medicamento novo na entrada (2026-10-21)
+
+Branch `feat/farmacia-entrada-saida` nos dois repos (a partir da staging, depois do merge da Farmácia).
+
+- **Organização**: a Farmácia era uma caderneta única (`farmacia`) com tipo entrada/saída; virou duas, no padrão das demais: `entrada-farmacia` (grupo "Entrada de Estoque") e `saida-farmacia` (grupo "Saída de Estoque"), ambas gravando em `movimentacoes_farmacia`. PWA: IndexedDB v41 (stores `entrada-farmacia` e `saida-farmacia`, no lugar de `farmacia`, que nunca foi publicada), formulário único `FarmaciaForm` (prop `modo`), páginas e listas por modo, rotas `/caderneta/entrada-farmacia` e `/caderneta/saida-farmacia`. Painel: `/controller/cadernetas/entrada-farmacia` (só entradas) e `/controller/cadernetas/saida-farmacia` (baixas do PWA e da Enfermaria, e estornos); os ajustes aparecem só no histórico do estoque. Na tela de Estoque da Farmácia, o botão "Registros da Farmácia" virou "Entradas" e "Saídas".
+- **Medicamento novo na entrada (PWA)**: botão "Não está na lista? Cadastrar novo" (nome, tipo do enum `medicamento_tipo`, unidade e, para frasco/dose/caixa/un, conteúdo por embalagem opcional). O app gera o id (funciona offline) e o sync chama a RPC `criar_medicamento_pwa` (migration `20261021130000`, com rollback) antes de postar a movimentação, no molde de `criar_item_cantina_pwa`: idempotente por id, deduplica por nome na fazenda (devolve o existente e liga o controle de estoque se ainda não tinha lançamentos) e cria já com `controla_estoque`. O app usa o id devolvido. Só a entrada cadastra; a saída só escolhe da lista. Princípio ativo fica "Não informado" (coluna obrigatória) e pode ser completado no painel.
+- **Testado** (fazenda de testes, pelo PWA e pelo painel): medicamento "Ivomec Teste PWA" criado pela entrada (tipo Vermífugo, frasco, 500 mL, custo R$ 80, lote L-IVO-01): saldo 10; saída de 2: saldo 8; o painel lista cada um na tela do seu grupo. Limitação conhecida: se a RPC deduplicar e devolver outro id, registros offline posteriores que ainda usem o id local do aparelho falhariam; a tela evita criar nome repetido (seleciona o existente).
+
 ## Farmácia: estoque de medicamentos e vacinas, caderneta no PWA e baixa pela Enfermaria (2026-10-21)
 
 Branch `feat/farmacia-estoque` nos dois repos (a partir da staging). Liberada para todas as fazendas (sem flag de acesso).
