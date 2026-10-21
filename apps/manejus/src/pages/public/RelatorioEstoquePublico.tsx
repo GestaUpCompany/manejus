@@ -214,6 +214,11 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
       return { classe, itens: lista.length, valor, pct: total > 0 ? (valor / total) * 100 : 0 }
     })
   }, [itensGrupo, abc])
+  // Ranking dos maiores valores em estoque, com a classe ABC de cada item (igual ao PDF).
+  const { maioresValores, totalValorABC } = useMemo(() => {
+    const comValor = itensGrupo.filter((i) => abc.has(chaveItem(i)) && i.valor_estoque > 0).sort((a, b) => b.valor_estoque - a.valor_estoque)
+    return { maioresValores: comValor.slice(0, 10), totalValorABC: comValor.reduce((s, i) => s + i.valor_estoque, 0) }
+  }, [itensGrupo, abc])
   const itensVisiveis = useMemo(
     () => ordenarItens(filtrarItens(itensGrupo, busca, filtro, situacaoDe), campo, direcao),
     [itensGrupo, busca, filtro, campo, direcao, situacaoDe],
@@ -730,7 +735,8 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
             </div>
 
             {resumoABC.some((r) => r.itens > 0) && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div className="space-y-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                   <p className="text-sm font-semibold text-gray-900 mb-2">Curva ABC por valor em estoque</p>
                   <div className="flex gap-3">
@@ -751,24 +757,47 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
                     <strong style={{ color: '#9a6b17' }}>Como ler a curva ABC.</strong> Ordena os itens do maior para o menor valor em estoque e soma o valor acumulado. <strong>A</strong>: os itens que somam até 80% do valor (poucos itens, muito dinheiro: controle de perto). <strong>B</strong>: de 80% a 95%. <strong>C</strong>: os 5% finais (muitos itens, pouco valor: controle simples). Calculada separadamente para insumos e formulações; itens sem saldo positivo ou sem custo ficam fora.
                   </div>
                 </div>
-                {comPeriodo && resumo.consumoPorOrigem.length > 1 && (
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                    <p className="text-sm font-semibold text-gray-900 mb-2">Para onde foi o consumo do período <span className="text-xs font-normal text-gray-400">({formatarMoeda(totalOrigem)})</span></p>
-                    <ul className="space-y-2">
-                      {resumo.consumoPorOrigem.slice(0, 6).map((o) => (
-                        <li key={o.origem}>
-                          <div className="flex justify-between text-xs text-gray-600">
-                            <span>{o.rotulo}</span>
-                            <span>{formatarMoeda(o.valor)} · {formatarNumero(totalOrigem > 0 ? (o.valor / totalOrigem) * 100 : 0, 1)}%</span>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-2">Maiores valores em estoque <span className="text-xs font-normal text-gray-400">(top {maioresValores.length})</span></p>
+                  <ul className="space-y-2">
+                    {maioresValores.map((i) => {
+                      const classe = abc.get(chaveItem(i))
+                      return (
+                        <li key={chaveItem(i)}>
+                          <div className="flex items-center justify-between gap-2 text-xs text-gray-700">
+                            <span className="flex items-center gap-2 min-w-0">
+                              {classe && <span className="rounded px-1.5 py-0.5 text-[10px] font-bold" style={COR_CLASSE[classe]}>{classe}</span>}
+                              <span className="truncate">{i.nome}</span>
+                            </span>
+                            <span className="whitespace-nowrap text-gray-600">{formatarMoeda(i.valor_estoque)} · {formatarNumero(totalValorABC > 0 ? (i.valor_estoque / totalValorABC) * 100 : 0, 1)}%</span>
                           </div>
                           <div className="mt-1 h-2 rounded bg-gray-100">
-                            <div className="h-2 rounded" style={{ width: `${Math.max(2, totalOrigem > 0 ? (o.valor / resumo.consumoPorOrigem[0].valor) * 100 : 0)}%`, backgroundColor: GOLD }} />
+                            <div className="h-2 rounded" style={{ width: `${Math.max(2, (i.valor_estoque / (maioresValores[0]?.valor_estoque || 1)) * 100)}%`, backgroundColor: GREEN_DARK }} />
                           </div>
                         </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                      )
+                    })}
+                  </ul>
+                </div>
+              </div>
+              {comPeriodo && resumo.consumoPorOrigem.length > 1 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-2">Para onde foi o consumo do período <span className="text-xs font-normal text-gray-400">({formatarMoeda(totalOrigem)})</span></p>
+                  <ul className="space-y-2">
+                    {resumo.consumoPorOrigem.slice(0, 6).map((o) => (
+                      <li key={o.origem}>
+                        <div className="flex justify-between text-xs text-gray-600">
+                          <span>{o.rotulo}</span>
+                          <span>{formatarMoeda(o.valor)} · {formatarNumero(totalOrigem > 0 ? (o.valor / totalOrigem) * 100 : 0, 1)}%</span>
+                        </div>
+                        <div className="mt-1 h-2 rounded bg-gray-100">
+                          <div className="h-2 rounded" style={{ width: `${Math.max(2, totalOrigem > 0 ? (o.valor / resumo.consumoPorOrigem[0].valor) * 100 : 0)}%`, backgroundColor: GOLD }} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               </div>
             )}
 
