@@ -40,7 +40,7 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
   {
     id: 'estoque',
     titulo: 'Estoque de Insumos',
-    descricao: 'Insumos e formulações no período: saldo inicial, entradas, saídas, saldo final, cobertura, valor em estoque e curva ABC.',
+    descricao: 'Insumos e formulações no período: o que repor, capital parado ou em excesso, cobertura, consumo, valor em estoque e curva ABC.',
   },
   {
     id: 'estoque_combustivel',

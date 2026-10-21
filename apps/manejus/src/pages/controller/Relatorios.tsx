@@ -84,7 +84,7 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
   {
     tipo: 'estoque',
     titulo: 'Estoque de Insumos',
-    descricao: 'Insumos e formulações por período: saldo inicial, entradas, saídas, saldo final, cobertura, itens abaixo do mínimo, valor em estoque, curva ABC e extrato.',
+    descricao: 'Apoio à decisão sobre insumos e formulações: o que repor e quanto comprar, capital parado ou em excesso, cobertura, consumo do período, valor em estoque e curva ABC.',
     icone: '📦',
   },
   {

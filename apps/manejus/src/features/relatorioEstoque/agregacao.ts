@@ -5,9 +5,12 @@
 //
 // Sem período (links antigos) a RPC devolve a posição atual e os campos de
 // movimento vêm nulos (tem_periodo = false). Com período, o saldo é
-// reconstruído pelo ledger movimentacoes_estoque_suplementos.
+// reconstruído pelo ledger movimentacoes_estoque_suplementos. As regras de
+// decisão (ruptura, parado, excesso, reposição) vivem em decisao.ts.
 // valor_estoque usa max(0, saldo final) * custo médio ATUAL: saldo negativo é
 // flag de saneamento (campo `negativo`), não ativo de valor negativo.
+
+import type { SituacaoItem } from './decisao'
 
 export type EscopoEstoque = 'insumos' | 'formulacoes' | 'todos'
 
@@ -46,23 +49,6 @@ export interface ItemEstoque {
   valor_negativo?: number | null
 }
 
-export interface MovimentacaoEstoque {
-  item_tipo: ItemTipoEstoque
-  item: string
-  unidade: string | null
-  data: string
-  tipo: 'entrada' | 'producao' | 'baixa' | 'consumo' | 'ajuste'
-  origem: string | null
-  quantidade: number
-  variacao: number
-  custo_unitario: number | null
-  valor: number | null
-  saldo_apos: number
-  fornecedor: string | null
-  nota_fiscal: string | null
-  observacao: string | null
-}
-
 export interface TotaisEstoque {
   valor_total: number
   total_itens: number
@@ -82,7 +68,6 @@ export interface DadosRelatorioEstoque {
   tem_periodo?: boolean
   itens: ItemEstoque[]
   totais: TotaisEstoque
-  movimentacoes?: MovimentacaoEstoque[]
 }
 
 export const GRUPOS_ESTOQUE: { key: ItemTipoEstoque; label: string }[] = [
@@ -105,14 +90,6 @@ export const ROTULO_ORIGEM: Record<string, string> = {
   painel_ajuste: 'Painel (ajuste)',
   estoque_inicial: 'Saldo inicial',
   outros: 'Outros',
-}
-
-export const ROTULO_TIPO_MOVIMENTACAO: Record<MovimentacaoEstoque['tipo'], string> = {
-  entrada: 'Entrada',
-  producao: 'Produção',
-  baixa: 'Baixa',
-  consumo: 'Consumo',
-  ajuste: 'Ajuste',
 }
 
 export function itensPorGrupo(itens: ItemEstoque[], grupo: ItemTipoEstoque): ItemEstoque[] {
@@ -160,12 +137,13 @@ export function classificarABC(itens: ItemEstoque[]): Map<string, ClasseABC> {
   return resultado
 }
 
-export type FiltroEstoque = 'todos' | 'alerta' | 'negativo' | 'sem_custo' | 'a_repor'
+export type FiltroEstoque = 'todos' | 'ruptura' | 'parado' | 'excesso' | 'negativo' | 'sem_custo'
 
 export const FILTROS_ESTOQUE: { key: FiltroEstoque; label: string }[] = [
   { key: 'todos', label: 'Todos' },
-  { key: 'alerta', label: 'Abaixo do mínimo' },
-  { key: 'a_repor', label: 'A repor' },
+  { key: 'ruptura', label: 'A repor' },
+  { key: 'parado', label: 'Parados' },
+  { key: 'excesso', label: 'Em excesso' },
   { key: 'negativo', label: 'Saldo negativo' },
   { key: 'sem_custo', label: 'Sem custo' },
 ]
@@ -174,15 +152,22 @@ function semAcento(texto: string): string {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 }
 
-export function filtrarItens(itens: ItemEstoque[], busca: string, filtro: FiltroEstoque): ItemEstoque[] {
+// `situacaoDe` vem de decisao.ts (classificarSituacao já amarrada ao período).
+export function filtrarItens(
+  itens: ItemEstoque[],
+  busca: string,
+  filtro: FiltroEstoque,
+  situacaoDe?: (item: ItemEstoque) => SituacaoItem,
+): ItemEstoque[] {
   const termo = semAcento(busca.trim())
   return itens.filter((i) => {
     if (termo && !semAcento(`${i.nome} ${i.tipo ?? ''}`).includes(termo)) return false
     switch (filtro) {
-      case 'alerta': return i.em_alerta
+      case 'ruptura':
+      case 'parado':
+      case 'excesso': return situacaoDe?.(i) === filtro
       case 'negativo': return i.negativo
       case 'sem_custo': return !!i.sem_custo
-      case 'a_repor': return (i.falta_para_minimo ?? 0) > 0
       default: return true
     }
   })
@@ -233,16 +218,3 @@ export function textoCobertura(item: Pick<ItemEstoque, 'cobertura_dias' | 'consu
   return `${Math.round(item.cobertura_dias)} d`
 }
 
-function gravidade(item: ItemEstoque): number {
-  if (item.negativo) return 0
-  if (item.em_alerta) return 1
-  return 2
-}
-
-// Itens que precisam de atenção, na ordem de gravidade: saldo negativo,
-// abaixo do mínimo e, por último, sem custo.
-export function itensDeAtencao(itens: ItemEstoque[]): ItemEstoque[] {
-  return itens
-    .filter((i) => i.negativo || i.em_alerta || i.sem_custo)
-    .sort((a, b) => gravidade(a) - gravidade(b))
-}

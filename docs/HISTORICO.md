@@ -1,5 +1,17 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Estoque de Insumos redesenhado para decisão, sem extrato (2026-10-21)
+
+**Problema:** o relatório (link público, PDF e Infográfico Mensal) repetia fatos: tabela larga por item e extrato com todos os lançamentos do período. O PDF não explicava a curva ABC (só o link público).
+
+**Feito (branch `feat/relatorio-estoque-decisao`):**
+- Regras novas e testadas em `features/relatorioEstoque/decisao.ts` (+ `decisao.test.ts`), tudo derivado de campos que a RPC já devolvia: situação por item (**A repor** = saldo negativo, abaixo do mínimo ou cobertura < 15 d; **Parado** = com saldo e valor, sem saída no período; **Em excesso** = cobertura > 90 d; **Ok**), sugestão de compra (maior entre o mínimo e 30 dias de cobertura), cobertura do estoque em dias (valor ÷ consumo diário em R$), giro, capital parado/em excesso, concentração da classe A, consumo por origem e "Leitura do período" em frases. Limites fixos (`COBERTURA_RUPTURA_DIAS`, `_ALVO_`, `_EXCESSO_`).
+- PDF (`api/pdf/estoque.js`): resumo executivo, O que repor, Capital parado e em excesso (as duas na mesma página quando as listas são curtas), Curva ABC com a caixa "Como ler", concentração e origem do consumo, posição de estoque e glossário. Sem extrato. O cliente envia o payload `decisao` pronto (o endpoint não importa TS do front).
+- Link público (`RelatorioEstoquePublico.tsx`): mesmos indicadores, abas "O que repor" / "Parado e em excesso" / "Todos os itens", filtros por situação, ABC com a mesma legenda e glossário. Extrato removido.
+- Infográfico Mensal (`relatorioGeral/loaders.ts`): mesmo payload; sem extrato de estoque de insumos (o limite de 4 MB deixa de pesar neste relatório; a constante restante é da Cantina).
+- Sem período (links antigos) só valem "a repor" por mínimo/saldo negativo e a posição; cobertura, parado e excesso não se aplicam.
+- Pendente: migration que tira `movimentacoes` (e `divergencia_l`) do retorno de `get_dados_relatorio_estoque`. A RPC ainda monta o extrato de cada item, sem uso no front.
+
 ## Estoque de insumos: saldo recalculado em ordem de data e divergência removida do relatório (2026-10-21)
 
 **Problema:** o saldo da tela de Estoque (`insumos.estoque_atual`) não batia com o do relatório (ex.: URÉIA PECUÁRIA 1.274,1 × 1.420,00 kg). `recalcular_custo_medio_item(uuid, text, uuid)` ordenava o replay só por `created_at`; saídas com data anterior a um ajuste, lançadas depois dele, eram subtraídas do saldo ajustado. Regra de negócio: ajuste fixa o saldo absoluto a partir do seu dia, então o replay deve ser por `(data, created_at)`, como o relatório já fazia.

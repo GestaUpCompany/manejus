@@ -24,6 +24,7 @@ import type { ParametrosRelatorioPastagens } from '../../utils/relatorioPastagen
 import { calcularResumoRodeio, type RegistroRodeio } from '../relatorioRodeio/agregacao'
 import { calcularResumoPastagens, normalizarNomesPasto, type OcupacaoPasto, type PastoInfo, type RegistroPastagem } from '../relatorioPastagens/agregacao'
 import { classificarABC, type ClasseABC, type DadosRelatorioEstoque } from '../relatorioEstoque/agregacao'
+import { montarDecisao, type DecisaoPDF } from '../relatorioEstoque/decisao'
 import { DADOS_ESTOQUE_COMBUSTIVEL_VAZIO, type DadosRelatorioEstoqueCombustivel } from '../relatorioEstoqueCombustivel/agregacao'
 import { classificarABC as classificarABCCantina, DADOS_CANTINA_VAZIO, type DadosRelatorioCantina } from '../relatorioCantina/agregacao'
 import type { TipoRelatorioGeral } from './catalogo'
@@ -65,7 +66,7 @@ export type PayloadRelatorioGeral =
   | { tipo: 'morte'; dados: ParametrosRelatorioMorte }
   | { tipo: 'rodeio'; dados: ParametrosRelatorioRodeio }
   | { tipo: 'pastagens'; dados: ParametrosRelatorioPastagens }
-  | { tipo: 'estoque'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC>; movimentacoes_total: number } & DadosRelatorioEstoque }
+  | { tipo: 'estoque'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC>; decisao: DecisaoPDF } & DadosRelatorioEstoque }
   | { tipo: 'estoque_combustivel'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null } & DadosRelatorioEstoqueCombustivel }
   | { tipo: 'cantina'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC> } & DadosRelatorioCantina }
   | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
@@ -400,14 +401,15 @@ async function carregarPastagens(
   }
 }
 
-// Limite do extrato no Infográfico: o /api/pdf/geral aceita 4 MB no total, então
-// o extrato vai truncado (o PDF avisa e o link público tem o extrato completo).
+// Limite do extrato da Cantina no Infográfico: o /api/pdf/geral aceita 4 MB no
+// total, então o extrato vai truncado (o PDF avisa e o link público tem o completo).
 const MAX_MOVIMENTACOES_ESTOQUE_GERAL = 250
 
 // Estoque usa o período do infográfico: saldo inicial, entradas, saídas e saldo
 // final por item. A RPC _fazenda sempre cobre insumos + formulações (sem seletor
-// de escopo, que só existe no link público). A curva ABC vai calculada, pois o
-// endpoint de PDF não importa as regras do front.
+// de escopo, que só existe no link público). A curva ABC e as decisões (situação,
+// reposição, leitura do período) vão calculadas, pois o endpoint de PDF não
+// importa as regras do front.
 async function carregarEstoque(
   fazenda: FazendaRelatorio,
   dataInicio: string,
@@ -420,7 +422,8 @@ async function carregarEstoque(
   })
   if (error) throw error
   const dados = (data?.dados ?? { escopo: 'todos', itens: [], totais: null }) as DadosRelatorioEstoque
-  const movimentacoes = dados.movimentacoes ?? []
+  const itens = dados.itens ?? []
+  const abc = classificarABC(itens)
   return {
     tipo: 'estoque',
     dados: {
@@ -429,9 +432,8 @@ async function carregarEstoque(
       fazendaNome: fazenda.nome,
       fazendaLogoUrl: fazenda.logoUrl,
       ...dados,
-      abc: Object.fromEntries(classificarABC(dados.itens ?? [])),
-      movimentacoes: movimentacoes.slice(0, MAX_MOVIMENTACOES_ESTOQUE_GERAL),
-      movimentacoes_total: movimentacoes.length,
+      abc: Object.fromEntries(abc),
+      decisao: montarDecisao({ ...dados, itens }, abc),
     },
   }
 }

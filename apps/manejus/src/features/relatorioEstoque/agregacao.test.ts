@@ -3,7 +3,6 @@ import {
   chaveItem,
   classificarABC,
   filtrarItens,
-  itensDeAtencao,
   ordenarItens,
   rotuloUnidadeCusto,
   textoCobertura,
@@ -61,7 +60,8 @@ describe('relatório de estoque de insumos: agregação', () => {
     ]
     expect(filtrarItens(itens, 'nucleo', 'todos').map((i) => i.nome)).toEqual(['Núcleo Mineral'])
     expect(filtrarItens(itens, 'proteico', 'todos').map((i) => i.nome)).toEqual(['Ureia'])
-    expect(filtrarItens(itens, '', 'alerta')).toHaveLength(1)
+    const situacaoDe = (i: ItemEstoque) => (i.em_alerta ? 'ruptura' : 'ok')
+    expect(filtrarItens(itens, '', 'ruptura', situacaoDe).map((i) => i.nome)).toEqual(['Núcleo Mineral'])
     expect(filtrarItens(itens, '', 'sem_custo').map((i) => i.nome)).toEqual(['Milho'])
     expect(filtrarItens(itens, '', 'negativo').map((i) => i.nome)).toEqual(['Ureia'])
   })
@@ -84,15 +84,5 @@ describe('relatório de estoque de insumos: agregação', () => {
     expect(textoCobertura({ cobertura_dias: 0, consumo_medio_dia: 5 })).toBe('Sem saldo')
     expect(rotuloUnidadeCusto({ unidade: null })).toBe('R$/kg')
     expect(rotuloUnidadeCusto({ unidade: 'saco' })).toBe('R$/saco')
-  })
-
-  it('lista só os itens que pedem atenção, do mais grave ao menos grave', () => {
-    const itens = [
-      item({ nome: 'ok' }),
-      item({ nome: 'semcusto', sem_custo: true }),
-      item({ nome: 'min', em_alerta: true }),
-      item({ nome: 'neg', negativo: true }),
-    ]
-    expect(itensDeAtencao(itens).map((i) => i.nome)).toEqual(['neg', 'min', 'semcusto'])
   })
 })
