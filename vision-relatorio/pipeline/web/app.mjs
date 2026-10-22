@@ -61,6 +61,12 @@ export const PAGE_NUMS = {
   p13b: '18', p14: '19', p15: '20', p16: '21', p17: '22', p18: '23', p20: '24',
 };
 
+// Páginas que dependem do rebanho. No modo 'financeiro' ficam sempre de fora
+// (p18 Índices permanece, mas sem a seção de rebanho e @ produzida).
+export const PAGINAS_REBANHO = [
+  'p02', 'p03', 'p04', 'p05', 'p05e', 'p05s', 'p19', 'p06a', 'p06b', 'p07', 'p08', 'p09', 'p10',
+];
+
 // IDs de página sem nenhum dado no período do modelo. Capa, estoque, rebanho,
 // índices e encerramento sempre renderizam (o estoque existe mesmo sem
 // movimentação). O resto só faz sentido quando a aba-fonte tem linhas.
@@ -162,7 +168,8 @@ const fmtPt = (ymd) => { const [y, m, d] = ymd.split('-'); return `${d}/${m}/${y
 export function mountRelatorio(el, payload, config = {}) {
   ensureFont();
   const { reads, ctx, defaults, range } = payload;
-  const hiddenManual = new Set(config.hiddenPages ?? []);
+  const modo = config.modo === 'financeiro' ? 'financeiro' : 'completo';
+  const hiddenManual = new Set([...(config.hiddenPages ?? []), ...(modo === 'financeiro' ? PAGINAS_REBANHO : [])]);
   const isPublic = !!config.public;
   if (config.titulo) document.title = config.titulo;
 
@@ -254,6 +261,7 @@ export function mountRelatorio(el, payload, config = {}) {
       ini: parseISODate(ini), fim: parseISODate(fim),
       saldoCaixaInicial: defaults.saldoCaixaInicial ?? 0,
       anoBaseGiro: defaults.anoBaseGiro,
+      modo,
     });
     // Páginas sem nenhum dado no período ficam fora automaticamente (além das
     // ocultadas manualmente). Recalcula a cada filtro: estreitar o período
@@ -347,11 +355,13 @@ export function buildMergedHtml(payload, config = {}) {
   const { reads, ctx, defaults } = payload;
   const ini = config.ini ?? defaults.ini;
   const fim = config.fim ?? defaults.fim;
-  const hidden = new Set(config.hiddenPages ?? []);
+  const modo = config.modo === 'financeiro' ? 'financeiro' : 'completo';
+  const hidden = new Set([...(config.hiddenPages ?? []), ...(modo === 'financeiro' ? PAGINAS_REBANHO : [])]);
   const model = buildModelFromReads(reads, {
     ini: parseISODate(ini), fim: parseISODate(fim),
     saldoCaixaInicial: defaults.saldoCaixaInicial ?? 0,
     anoBaseGiro: defaults.anoBaseGiro,
+    modo,
   });
   for (const id of paginasSemDados(model)) hidden.add(id);
   // mesma renumeração sequencial do modo interativo (sem buracos na numeração)

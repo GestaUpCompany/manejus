@@ -6,6 +6,7 @@ import {
   PAGE_TITLES,
   PAGE_NUMS,
   PAGE_ORDER,
+  PAGINAS_REBANHO,
   auditSheets,
   buildModelFromReads,
   paginasSemDados,
@@ -18,11 +19,21 @@ import {
   decompressPayload,
   sheetsFromFile,
   type FazendaRef,
+  type ModoRelatorio,
   type RelatorioPayload,
 } from '../report/vision'
 import type { AuditIssue } from '../../../../vision-relatorio/pipeline/lib/audit.mjs'
 
 const PAGE_IDS = PAGE_ORDER.filter((id) => id in PAGE_TITLES)
+
+// Planilha sem nenhum registro de animais (estoque, diárias, compras, vendas): sugere o modo financeiro.
+function temDadosRebanho(r: Record<string, unknown>): boolean {
+  const n = (k: string) => {
+    const v = r[k]
+    return Array.isArray(v) ? v.length : v && typeof v === 'object' ? Object.keys(v).length : 0
+  }
+  return n('estoque') + n('diarias') + n('comprasAll') + n('vendasAll') > 0
+}
 
 interface Fazenda extends FazendaRef {
   acesso_id: string
@@ -31,7 +42,7 @@ interface Fazenda extends FazendaRef {
 interface LinkRow {
   id: string
   titulo: string
-  config: { paginas_ocultas?: string[] }
+  config: { paginas_ocultas?: string[]; modo?: ModoRelatorio }
   criado_em: string
   expira_em: string | null
   ativo: boolean
@@ -124,6 +135,8 @@ export function RelatorioVision() {
   const [fim, setFim] = useState('')
   const [saldoCaixa, setSaldoCaixa] = useState('0')
   const [anoGiro, setAnoGiro] = useState('')
+  // 'financeiro': relatório sem rebanho (planilhas de fazendas sem dados de animais)
+  const [modo, setModo] = useState<ModoRelatorio>('completo')
   const [ocultas, setOcultas] = useState<Set<string>>(new Set())
   // Páginas sem dados são ocultadas automaticamente; `desocultas` guarda as
   // que o usuário forçou a exibir mesmo vazias.
@@ -202,6 +215,7 @@ export function RelatorioVision() {
       const rg = computeRange(r)
       setReads(r)
       setRange(rg)
+      setModo(temDadosRebanho(r) ? 'completo' : 'financeiro')
       const agora = new Date()
       const ano = agora.getFullYear()
       const ultimoDiaMesAtual = String(new Date(ano, agora.getMonth() + 1, 0).getDate()).padStart(2, '0')
@@ -285,6 +299,7 @@ export function RelatorioVision() {
         p_titulo: `Relatório Vision — ${fazenda.nome}`,
         p_config: {
           paginas_ocultas: ocultasEfetivas,
+          modo,
           ini,
           fim,
           saldo_caixa_inicial: Number(saldoCaixa.replace(',', '.')) || 0,
@@ -310,6 +325,7 @@ export function RelatorioVision() {
     return {
       b64,
       hiddenPages: ocultasEfetivas,
+      modo,
       titulo: `Relatório Vision — ${fazenda.nome}`,
       ts: Date.now(),
       preview: true,
@@ -354,7 +370,7 @@ export function RelatorioVision() {
     }, 700)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reads, fazendaId, ini, fim, saldoCaixa, anoGiro, ocultas])
+  }, [reads, fazendaId, ini, fim, saldoCaixa, anoGiro, ocultas, modo])
 
   async function baixarPdf() {
     const payload = montarPayload()
@@ -366,6 +382,7 @@ export function RelatorioVision() {
       // sai idêntico às lâminas, sem diálogo de impressão do navegador.
       await baixarPdfRelatorio(payload, {
         hiddenPages: ocultasEfetivas,
+        modo,
         titulo: `Relatorio Vision - ${fazenda.nome}`,
       })
     } catch (e) {
@@ -396,6 +413,7 @@ export function RelatorioVision() {
       const payload = await decompressPayload(data)
       await baixarPdfRelatorio(payload, {
         hiddenPages: link.config?.paginas_ocultas ?? [],
+        modo: link.config?.modo,
         titulo: link.titulo,
       })
     } catch (e) {
@@ -432,6 +450,7 @@ export function RelatorioVision() {
         p_payload: b64,
         p_config: {
           paginas_ocultas: ocultasEfetivas,
+          modo,
           ini,
           fim,
           saldo_caixa_inicial: Number(saldoCaixa.replace(',', '.')) || 0,
@@ -458,11 +477,12 @@ export function RelatorioVision() {
         fim: new Date(`${fim}T12:00:00`),
         saldoCaixaInicial: Number(saldoCaixa.replace(',', '.')) || 0,
         anoBaseGiro: Number(anoGiro) || undefined,
+        modo,
       })
     } catch {
       return null
     }
-  }, [reads, ini, fim, saldoCaixa, anoGiro])
+  }, [reads, ini, fim, saldoCaixa, anoGiro, modo])
 
   const resumo = useMemo(() => {
     if (!modelo) return null
@@ -480,9 +500,11 @@ export function RelatorioVision() {
 
   // Auto-ocultação: páginas sem nenhum dado no período selecionado.
   const autoOcultas = useMemo(() => new Set(modelo ? paginasSemDados(modelo) : []), [modelo])
+  // No modo financeiro as páginas de rebanho ficam sempre ocultas (não dá para reexibir).
+  const forcadas = useMemo(() => new Set(modo === 'financeiro' ? PAGINAS_REBANHO : []), [modo])
   const ocultasEfetivas = useMemo(
-    () => PAGE_IDS.filter((id) => (ocultas.has(id) || autoOcultas.has(id)) && !desocultas.has(id)),
-    [ocultas, autoOcultas, desocultas],
+    () => PAGE_IDS.filter((id) => forcadas.has(id) || ((ocultas.has(id) || autoOcultas.has(id)) && !desocultas.has(id))),
+    [ocultas, autoOcultas, desocultas, forcadas],
   )
   const nAutoOcultas = useMemo(
     () => [...autoOcultas].filter((id) => !desocultas.has(id)).length,
@@ -490,6 +512,7 @@ export function RelatorioVision() {
   )
 
   function alternarOculta(id: string) {
+    if (forcadas.has(id)) return
     if (ocultasEfetivas.includes(id)) {
       // Reexibir: se é auto-oculta, marca como desocultada; senão tira do manual.
       if (autoOcultas.has(id)) setDesocultas((s) => new Set(s).add(id))
@@ -606,9 +629,13 @@ export function RelatorioVision() {
               Conferência rápida do período selecionado
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1.5 text-sm">
-              <span className="text-content-muted">Rebanho final <b className="text-content-strong">{fmtInt(resumo.rebanho)} cab</b></span>
-              <span className="text-content-muted">Compras <b className="text-content-strong">{fmtInt(resumo.comprasCab)} cab · {fmtRs(resumo.comprasRs)}</b></span>
-              <span className="text-content-muted">Vendas <b className="text-content-strong">{fmtInt(resumo.vendasCab)} cab · {fmtRs(resumo.vendasRs)}</b></span>
+              {modo === 'completo' && (
+                <>
+                  <span className="text-content-muted">Rebanho final <b className="text-content-strong">{fmtInt(resumo.rebanho)} cab</b></span>
+                  <span className="text-content-muted">Compras <b className="text-content-strong">{fmtInt(resumo.comprasCab)} cab · {fmtRs(resumo.comprasRs)}</b></span>
+                  <span className="text-content-muted">Vendas <b className="text-content-strong">{fmtInt(resumo.vendasCab)} cab · {fmtRs(resumo.vendasRs)}</b></span>
+                </>
+              )}
               <span className="text-content-muted">Desembolso <b className="text-content-strong">{fmtRs(resumo.desembolso)}</b></span>
               <span className="text-content-muted">Receitas <b className="text-content-strong">{fmtRs(resumo.receitas)}</b></span>
               <span className="text-content-muted">Saldo de caixa <b className="text-content-strong">{fmtRs(resumo.caixa)}</b></span>
@@ -729,6 +756,27 @@ export function RelatorioVision() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-content mb-1">Tipo de relatório</label>
+            <div className="inline-flex rounded-lg border border-border-base overflow-hidden text-sm">
+              {([['completo', 'Completo (financeiro + rebanho)'], ['financeiro', 'Somente financeiro']] as const).map(([v, rotulo]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setModo(v)}
+                  className={`px-3 py-1.5 ${modo === v ? 'bg-green-700 text-white' : 'bg-surface-1 text-content hover:bg-surface-2'}`}
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+            {modo === 'financeiro' && (
+              <p className="mt-1 text-xs text-content-muted">
+                Remove as páginas de rebanho e os indicadores por cabeça, @ e UA. Mantém desembolso, custeio, receitas, pareto e fluxo de caixa.
+              </p>
+            )}
+          </div>
+
+          <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-content">
                 Ocultar páginas ({ocultasEfetivas.length} selecionadas
@@ -757,11 +805,12 @@ export function RelatorioVision() {
                           : 'border-red-300 bg-red-50 text-red-800 line-through'
                         : 'border-border-base bg-surface-1 text-content hover:bg-surface-2'
                     }`}
-                    title={auto ? 'Sem dados no período — ocultada automaticamente. Desmarque para exibir mesmo assim.' : undefined}
+                    title={forcadas.has(id) ? 'Página de rebanho — fora do relatório somente financeiro.' : auto ? 'Sem dados no período — ocultada automaticamente. Desmarque para exibir mesmo assim.' : undefined}
                   >
                     <input
                       type="checkbox"
                       checked={oculta}
+                      disabled={forcadas.has(id)}
                       onChange={() => alternarOculta(id)}
                       className={auto && !ocultas.has(id) ? 'accent-amber-600' : 'accent-red-600'}
                     />

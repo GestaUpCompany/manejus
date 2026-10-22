@@ -2,11 +2,14 @@ import { NEEDED_SHEETS } from '../../../../vision-relatorio/pipeline/lib/core.mj
 import { sheetsFromXlsxBlob } from '../../../../vision-relatorio/pipeline/lib/xlsx-stream.mjs'
 import { buildModelFromReads, extractReads } from '../../../../vision-relatorio/pipeline/lib/model.mjs'
 import { buildPayload, compressPayload, computeRange, decompressPayload } from '../../../../vision-relatorio/pipeline/lib/payload.mjs'
-import { mountRelatorio, buildMergedHtml, PAGE_TITLES, PAGE_NUMS, PAGE_ORDER, SHELL_CSS, paginasSemDados } from '../../../../vision-relatorio/pipeline/web/app.mjs'
+import { mountRelatorio, buildMergedHtml, PAGE_TITLES, PAGE_NUMS, PAGE_ORDER, PAGINAS_REBANHO, SHELL_CSS, paginasSemDados } from '../../../../vision-relatorio/pipeline/web/app.mjs'
 import { auditSheets, fmtLinhas } from '../../../../vision-relatorio/pipeline/lib/audit.mjs'
 import { supabase } from '@gestaup/supabase'
 
-export { mountRelatorio, buildMergedHtml, PAGE_TITLES, PAGE_NUMS, PAGE_ORDER, SHELL_CSS, decompressPayload, computeRange, extractReads, buildModelFromReads, auditSheets, fmtLinhas, paginasSemDados }
+export { mountRelatorio, buildMergedHtml, PAGE_TITLES, PAGE_NUMS, PAGE_ORDER, PAGINAS_REBANHO, SHELL_CSS, decompressPayload, computeRange, extractReads, buildModelFromReads, auditSheets, fmtLinhas, paginasSemDados }
+
+// 'financeiro' ignora o rebanho: sem páginas de rebanho nem KPIs por cabeça/@/UA.
+export type ModoRelatorio = 'completo' | 'financeiro'
 
 export interface FazendaRef {
   id: string
@@ -72,9 +75,9 @@ export function payloadToB64(payload: RelatorioPayload): Promise<string> {
 // impressão do navegador (que fatiava as páginas e injetava cabeçalho/rodapé).
 export async function baixarPdfRelatorio(
   payload: RelatorioPayload,
-  opts: { hiddenPages?: string[]; titulo?: string } = {},
+  opts: { hiddenPages?: string[]; modo?: ModoRelatorio; titulo?: string } = {},
 ): Promise<void> {
-  const html = buildMergedHtml(payload, { hiddenPages: opts.hiddenPages })
+  const html = buildMergedHtml(payload, { hiddenPages: opts.hiddenPages, modo: opts.modo })
   // compressPayload aceita qualquer valor JSON-serializável: aqui o HTML vira
   // uma string JSON comprimida (o merge de ~2MB baixa para ~300KB no POST).
   const htmlGz = await compressPayload(html)

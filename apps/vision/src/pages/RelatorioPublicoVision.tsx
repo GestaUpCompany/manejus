@@ -37,6 +37,7 @@ export function RelatorioPublicoVision() {
         mountRelatorio(hostRef.current, payload, {
           public: true,
           hiddenPages: (rel.config as { paginas_ocultas?: string[] })?.paginas_ocultas ?? [],
+          modo: (rel.config as { modo?: string })?.modo === 'financeiro' ? 'financeiro' : 'completo',
           titulo: rel.titulo ?? 'Relatório Vision',
         })
         setEstado('ok')

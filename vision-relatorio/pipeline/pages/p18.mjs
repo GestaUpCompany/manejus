@@ -1,22 +1,44 @@
 // p.21 — Índices Técnicos e Econômicos (grade de cards + fórmula @ Produzida)
 import { pageShell } from '../lib/shell.mjs';
-import { divergingChart } from '../lib/svg.mjs';
-import { fmt1, fmt2, fmtInt, fmtPct, mesAno, kickerPeriodo } from '../lib/fmt.mjs';
+import { divergingChart, areaChart, C } from '../lib/svg.mjs';
+import { fmt1, fmt2, fmtInt, fmtPct, mesAno, mesAbrev, kickerPeriodo } from '../lib/fmt.mjs';
 
 export function render({ model, ctx }) {
   const { meta, indices: x } = model;
+  const fin = meta.modo === 'financeiro';
 
   const kpi = (lbl, val, unit = '', cls = '') =>
     `<div class="kpi ${cls}"><div class="lbl">${lbl}</div><div class="val">${val}${unit ? ` <small>${unit}</small>` : ''}</div></div>`;
   const rs = (v) => `<small>R$</small> ${fmt2(v)}`;
 
-  const atMes = x.atPorMes ?? [];
+  const atMes = fin ? [] : (x.atPorMes ?? []);
   const chartAt = atMes.length ? divergingChart({
     rows: atMes.map(m => ({ label: mesAno(m.mes), bar: m.at, line: m.at })),
     W: 620, H: 108,
   }) : '';
 
+  // Modo financeiro: no lugar da faixa de @ produzida, faturamento × desembolso por mês.
+  const crossYear = new Date(meta.ini).getUTCFullYear() !== new Date(meta.fim).getUTCFullYear();
+  const mesLbl = (ym) => crossYear ? `${mesAbrev(ym)}/${ym.slice(2, 4)}` : mesAbrev(ym);
+  const linhasFluxo = model.fluxoCaixa?.linhas ?? [];
+  const mil = (v) => `R$ ${fmtInt(v / 1000)} mil`;
+  const areaFin = (key, color) => areaChart({
+    labels: linhasFluxo.map(m => mesLbl(m.mes)),
+    values: linhasFluxo.map(m => m[key]),
+    W: 576, H: 230, color, labelFmt: mil, labelScale: 1.2,
+  });
+  const chartFin = fin && linhasFluxo.length
+    ? `<div class="fin-pair"><div><div class="ct2">Faturamento por mês</div>${areaFin('entrada', C.green)}</div><div><div class="ct2">Desembolso por mês</div>${areaFin('saida', C.blue)}</div></div>`
+    : '';
+
   const extraCss = `
+    .chart-fin { margin: 0 48px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px 6px; box-shadow: 0 1px 2px rgba(18,38,58,.03), 0 2px 8px rgba(18,38,58,.04); }
+    .chart-fin .ct { display: flex; justify-content: space-between; align-items: center; font-size:11.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .fin-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .ct2 { font-size:10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin: 2px 0 0 4px; }
+    .chart-fin .lg { display: flex; gap: 14px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
+    .chart-fin .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+    .body.fin { justify-content: flex-start; gap: 22px; padding-top: 6px; }
     .body { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding-bottom: 14px; }
     .section { padding: 0 48px; }
     .section-title { font-size:11.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 9px; display: flex; align-items: baseline; gap: 14px; }
@@ -40,8 +62,8 @@ export function render({ model, ctx }) {
   `;
 
   const body = `
-  <div class="body">
-  <div class="section">
+  <div class="body${fin ? ' fin' : ''}">
+  ${fin ? '' : `  <div class="section">
     <div class="section-title">Rebanho e produção de arrobas</div>
     <div class="grid4">
       ${kpi('Estoque Inicial', fmtInt(x.estoqueInicialAt), '@')}
@@ -74,23 +96,28 @@ export function render({ model, ctx }) {
       <div class="lbl">@ produzida por mês</div>
       ${chartAt}
     </div>
-  </div>
+  </div>`}
 
   <div class="section">
     <div class="section-title">Indicadores econômicos
       <span class="res-badge ${x.resultado < 0 ? 'neg' : ''}">Resultado do período: R$ ${fmt2(x.resultado)} · margem ${fmtPct(x.margem)}</span>
     </div>
-    <div class="grid4">
+    <div class="grid4"${fin ? ' style="grid-template-columns:repeat(3,1fr)"' : ''}>
       ${kpi('Desembolso por ha', rs(x.desembolsoHa))}
-      ${kpi('Desembolso por cab.', rs(x.desembolsoCab))}
+      ${fin ? '' : kpi('Desembolso por cab.', rs(x.desembolsoCab))}
       ${kpi('Despesa Média Mensal', rs(x.despesaMediaMensal))}
-      ${kpi('Custo Diária/cab', rs(x.custoDiariaCab))}
+      ${fin ? '' : kpi('Custo Diária/cab', rs(x.custoDiariaCab))}
       ${kpi('Custeio por ha', rs(x.custeioHa))}
-      ${kpi('Custeio por @ Produzida', rs(x.custeioPorAt))}
+      ${fin ? '' : kpi('Custeio por @ Produzida', rs(x.custeioPorAt))}
       ${kpi('Faturamento por ha', rs(x.faturamentoHa), '', 'g')}
       ${kpi('Faturamento Médio Mensal', rs(x.faturamentoMedioMensal), '', 'g')}
+      ${fin ? kpi('Resultado do Período', rs(x.resultado), '', x.resultado < 0 ? '' : 'g') : ''}
     </div>
   </div>
+
+  ${fin && chartFin ? `<div class="chart-fin">
+    ${chartFin}
+  </div>` : ''}
 
   </div>`;
 

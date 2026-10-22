@@ -5,6 +5,7 @@ import { fmt2, fmtInt, fmtPct, fmtMoney, mesAbrev, mesNome, kickerPeriodo, esc }
 
 export function render({ model, ctx }) {
   const { meta, receitas: r } = model;
+  const fin = meta.modo === 'financeiro';
   const crossYear = new Date(meta.ini).getUTCFullYear() !== new Date(meta.fim).getUTCFullYear();
   const mesLbl = (ym) => crossYear ? `${mesAbrev(ym)}/${ym.slice(2, 4)}` : mesAbrev(ym);
 
@@ -56,11 +57,11 @@ export function render({ model, ctx }) {
   `;
 
   const body = `
-  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+  <div class="kpis" style="grid-template-columns:repeat(${fin ? 3 : 4},1fr)">
     <div class="kpi"><div class="lbl">Receita Total</div><div class="val"><small>R$</small> ${fmt2(r.total)}</div></div>
     <div class="kpi"><div class="lbl">Faturamento Médio Mensal</div><div class="val"><small>R$</small> ${fmt2(r.mediaMensal)}</div></div>
     <div class="kpi"><div class="lbl">Faturamento por ha</div><div class="val"><small>R$</small> ${fmt2(r.porHa)}</div></div>
-    <div class="kpi"><div class="lbl">Faturamento por cab.</div><div class="val"><small>R$</small> ${fmt2(r.porCab)}</div></div>
+    ${fin ? '' : `<div class="kpi"><div class="lbl">Faturamento por cab.</div><div class="val"><small>R$</small> ${fmt2(r.porCab)}</div></div>`}
   </div>
 
   <div class="chart1">

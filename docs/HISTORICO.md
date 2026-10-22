@@ -1,5 +1,18 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório Vision: modo "Somente financeiro" para fazendas sem dados de rebanho (2026-10-22)
+
+- **Problema**: o Relatório Vision mistura financeiro e rebanho. Em planilhas sem as abas de animais, p02, p03 e p18 sempre renderizavam (zeradas) e os KPIs "por cabeça" saíam 0. Sem área em Cadastros Q17, os valores "por ha" saíam NaN/Infinity.
+- **Feito** (motor em `vision-relatorio/pipeline/`, sem migration; `apps/vision` só repassa a flag):
+  - `buildModelFromReads(reads, { modo })` (`lib/model.mjs`): em `'financeiro'` trata as abas de rebanho como vazias (estoque, diárias, compras, vendas, mortes, nascimentos). `meta.modo` vai no modelo. O padrão continua `'completo'` e o golden do Guanabara segue reconciliado.
+  - Divisões por hectare passam por `porHa()`: sem área cadastrada dão 0, em qualquer modo (antes NaN/Infinity).
+  - `PAGINAS_REBANHO` (`web/app.mjs`): p02–p10 e p19 (inclui p05e/p05s e p06a/p06b) ficam sempre ocultas no modo financeiro, em `mountRelatorio` e em `buildMergedHtml` (link público e PDF), com a renumeração de rodapé que já existia.
+  - Páginas mantidas, sem os itens de rebanho: p11 (sem "Diária média/cab"), p12 e p13 (sem "Custo Diária/cab" nem o combo com rebanho médio; o gráfico de R$/ha ocupa o espaço), p15 (sem "Faturamento por cab."), p16 (idem, sem o combo faturamento/cab × rebanho), p18 (sem a seção "Rebanho e produção de arrobas" nem a faixa de @ produzida; indicadores econômicos sem os itens por cab/@, com "Resultado do Período" no lugar). Sem alteração: p01, p13b, p14, p17, p20.
+  - Config: `relatorios_publicos.config.modo` (`'completo'` | `'financeiro'`), gravado em `vision_criar_relatorio` e `vision_atualizar_payload`; link antigo, sem a chave, continua completo. Em `RelatorioVision.tsx` há o seletor "Tipo de relatório", que já vem em "Somente financeiro" quando a planilha não tem nenhum registro de animais; no modo financeiro a conferência rápida esconde rebanho/compras/vendas e a grade de páginas trava as de rebanho.
+- **Verificado**: `pnpm typecheck`, `pnpm lint` (sem avisos novos) e `pnpm test` (572 testes) passam. `run-model.mjs --golden` do Guanabara reconcilia antes e depois. O documento montado por `buildMergedHtml` tem 20 páginas no completo e 11 no financeiro (p01 p11 p12 p13 p13b p14 p15 p16 p17 p18 p20), sem NaN/Infinity/null visíveis, inclusive com a planilha sem rebanho e sem área.
+- **Conferência visual (PDF real, 11 páginas, dados do Guanabara)**: p12/p13 e p16 ganharam gráficos maiores no espaço dos combos removidos; p18 ficava com o topo vazio e agora mostra os 6 indicadores e dois gráficos de área (faturamento e desembolso por mês).
+- **Em aberto**: falta flag `--modo financeiro` no `build-interativo.mjs`/`compose.mjs`, golden do modo financeiro e teste vitest (o Vision não tem suíte). Com a área vazia, os KPIs "por ha" mostram 0,00 em vez de sumir.
+
 ## Marcon: 12 registros de clima duplicados excluídos (soft-delete) (2026-10-21)
 
 - **Origem**: o relatório de Clima da Marcon dizia "maior chuva 90 mm em 04/10", mas nenhuma leitura tinha 90: eram 45 + 45 do pluviômetro 05, a mesma chuva lançada duas vezes. A soma de leituras do mesmo pluviômetro no dia (correta para medições distintas) contava a repetição em dobro. Também deixava 04/10 como "torrencial" (45 + 45 ≥ 50) quando a maior leitura real é 45 mm (forte).

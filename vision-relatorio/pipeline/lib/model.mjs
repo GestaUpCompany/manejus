@@ -233,7 +233,15 @@ export function buildModel(sheets, params = {}) {
   return buildModelFromReads(extractReads(sheets), params);
 }
 
-export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, anoBaseGiro = 2025 } = {}) {
+// Abas de rebanho: no modo 'financeiro' elas são ignoradas (tratadas como vazias),
+// de modo que nenhum cálculo de rebanho ou misto (R$/cab, @, UA) é alimentado.
+const READS_REBANHO_VAZIOS = { estoque: {}, diarias: [], diariasCat: [], comprasAll: [], vendasAll: [], mortesAll: [], nascAll: [] };
+
+export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, anoBaseGiro = 2025, modo = 'completo' } = {}) {
+  const financeiro = modo === 'financeiro';
+  if (financeiro) reads = { ...reads, ...READS_REBANHO_VAZIOS };
+  // divisão por hectare protegida: sem área cadastrada (Q17) vira 0 em vez de NaN/Infinity
+  const porHa = (v) => (reads.cad.areaHa ? v / reads.cad.areaHa : 0);
   const { cad, diarias, diariasCat, comprasAll, vendasAll, mortesAll, nascAll, desembAll, receitasAll } = reads;
   const estoque = reads.estoque instanceof Map ? reads.estoque : new Map(Object.entries(reads.estoque || {}));
 
@@ -350,7 +358,7 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
       const dias = dcPorMesDia.get(k);
       if (dias) ua = avg([...dias.values()]);
     }
-    return { mes: k, uaha: ua / cad.areaHa, rebMedio: rebMedioPorMes.get(k) || 0 };
+    return { mes: k, uaha: porHa(ua), rebMedio: rebMedioPorMes.get(k) || 0 };
   });
   const uahaMedia = avg(uahaPorMes, x => x.uaha);
   const pesoVivoMedioRef = avg(blocoPesos.linhas, l => l.pesoKg);
@@ -555,26 +563,26 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   const desembolsoPage = {
     total: desembTotal,
     mediaMensal: desembTotal / nMeses,
-    porHa: desembTotal / cad.areaHa,
-    porHaMes: nMeses ? desembTotal / nMeses / cad.areaHa : 0,
+    porHa: porHa(desembTotal),
+    porHaMes: nMeses ? porHa(desembTotal / nMeses) : 0,
     custoDiariaCab: animalDias ? desembTotal / animalDias : 0,
     mensal: desembPorMesT.map(m => ({
-      ...m, porHa: m.valor / cad.areaHa,
+      ...m, porHa: porHa(m.valor),
       custoDiariaCab: m.animalDias ? m.valor / m.animalDias : 0,
     })),
     porTipo: desembPorTipo.map(t => ({ ...t, pct: desembTotal ? t.valor / desembTotal : 0 })),
     rankingPlanos: desembPorPlano,
     cf: { total: cfTotal, cvTotal, cfcvTotal, relacao: cfcvTotal ? [cfTotal / cfcvTotal, cvTotal / cfcvTotal] : [0, 0] },
     mensalCfCv: cfcvPorMesT.map(m => ({
-      ...m, porHa: m.total / cad.areaHa,
+      ...m, porHa: porHa(m.total),
       pctCf: m.total ? m.cf / m.total : 0, pctCv: m.total ? m.cv / m.total : 0,
       custoDiariaCab: m.animalDias ? m.total / m.animalDias : 0,
     })),
     custeio: {
       total: cfcvTotal,
       mediaMensal: cfcvTotal / nMeses,
-      porHa: cfcvTotal / cad.areaHa,
-      porHaMes: nMeses ? cfcvTotal / nMeses / cad.areaHa : 0,
+      porHa: porHa(cfcvTotal),
+      porHaMes: nMeses ? porHa(cfcvTotal / nMeses) : 0,
       custoDiariaCab: animalDias ? cfcvTotal / animalDias : 0,
     },
   };
@@ -609,10 +617,10 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   const receitasPage = {
     total: recTotal,
     mediaMensal: recTotal / nMeses,
-    porHa: recTotal / cad.areaHa,
+    porHa: porHa(recTotal),
     porCab: rebanhoMedio ? recTotal / rebanhoMedio : 0,
     lancamentos: receitas.length,
-    mensal: recPorMes.map(m => ({ ...m, porHa: m.valor / cad.areaHa })),
+    mensal: recPorMes.map(m => ({ ...m, porHa: porHa(m.valor) })),
     porCategoria: [...groupBy(receitas, x => x.plano)].map(([k, g]) => ({ plano: k, valor: sum(g, x => x.valorLiq) })).sort((a, b) => b.valor - a.valor),
     porTipo: [...groupBy(receitas, x => x.classificacao)].map(([k, g]) => ({ tipo: k, valor: sum(g, x => x.valorLiq) })).sort((a, b) => b.valor - a.valor),
     porEmpresa: [...groupBy(receitas, x => x.empresa)].map(([k, g]) => ({
@@ -664,13 +672,13 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     entradasAt, saidasAt, atProduzida,
     rebanhoMedio, uahaMedia,
     txDesfrute: rebanhoMedio ? sum(vendasAbate, x => x.cab) / rebanhoMedio : 0,
-    producaoAtHa: atProduzida / cad.areaHa,
+    producaoAtHa: porHa(atProduzida),
     atPorMes: atProduzidaPorMes,
     faturamento: recTotal,
     desembolso: desembTotal,
     resultado: recTotal - desembTotal,
     margem: recTotal ? (recTotal - desembTotal) / recTotal : 0,
-    resultadoHa: (recTotal - desembTotal) / cad.areaHa,
+    resultadoHa: porHa(recTotal - desembTotal),
     resultadoCab: rebanhoMedio ? (recTotal - desembTotal) / rebanhoMedio : 0,
     txMortalidade: mortesPage.taxa,
     nascimentos: nascPage.total,
@@ -705,7 +713,7 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     meta: {
       ini, fim, meses, nMeses, nDias, areaHa: cad.areaHa, categorias: cad.categorias,
       saldoCaixaInicial, anoBaseGiro,
-      rebanhoMedio, animalDias,
+      rebanhoMedio, animalDias, modo,
     },
     estoque: estoquePage,
     rebanho: rebanhoPage,

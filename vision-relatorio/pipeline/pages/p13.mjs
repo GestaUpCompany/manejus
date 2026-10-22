@@ -5,6 +5,7 @@ import { fmt2, fmtInt, mesAbrev, kickerPeriodo } from '../lib/fmt.mjs';
 
 export function render({ model, ctx }) {
   const { meta, desembolso: d } = model;
+  const fin = meta.modo === 'financeiro';
   const crossYear = new Date(meta.ini).getUTCFullYear() !== new Date(meta.fim).getUTCFullYear();
   const mesLbl = (ym) => crossYear ? `${mesAbrev(ym)}/${ym.slice(2, 4)}` : mesAbrev(ym);
   const c = d.custeio;
@@ -12,7 +13,7 @@ export function render({ model, ctx }) {
   const area = areaChart({
     labels: d.mensalCfCv.map(m => mesLbl(m.mes)),
     values: d.mensalCfCv.map(m => m.porHa),
-    W: 1184, H: 185, color: C.green, labelFmt: (v) => `R$ ${fmt2(v)}`, labelScale: 1.3,
+    W: 1184, H: fin ? 440 : 185, color: C.green, labelFmt: (v) => `R$ ${fmt2(v)}`, labelScale: 1.3,
   });
 
   const combo = comboChart({
@@ -40,11 +41,11 @@ export function render({ model, ctx }) {
   `;
 
   const body = `
-  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+  <div class="kpis" style="grid-template-columns:repeat(${fin ? 3 : 4},1fr)">
     <div class="kpi"><div class="lbl">Desembolso Total (CF+CV)</div><div class="val"><small>R$</small> ${fmt2(c.total)}</div></div>
     <div class="kpi"><div class="lbl">Despesa Média Mensal</div><div class="val"><small>R$</small> ${fmt2(c.mediaMensal)}</div></div>
     <div class="kpi"><div class="lbl">Custeio por ha/mês</div><div class="val"><small>R$</small> ${fmt2(c.porHaMes)}</div></div>
-    <div class="kpi"><div class="lbl">Custo Diária/cab</div><div class="val"><small>R$</small> ${fmt2(c.custoDiariaCab)}</div></div>
+    ${fin ? '' : `<div class="kpi"><div class="lbl">Custo Diária/cab</div><div class="val"><small>R$</small> ${fmt2(c.custoDiariaCab)}</div></div>`}
   </div>
 
   <div class="chart1">
@@ -52,13 +53,13 @@ export function render({ model, ctx }) {
     ${area}
   </div>
 
-  <div class="chart2">
+  ${fin ? '' : `<div class="chart2">
     <div class="chart-title">
       Custo diário por cabeça × rebanho médio
       <span class="legend"><span><span class="sw b"></span>Custo Diária/cab</span><span><span class="sw g"></span>Rebanho Médio</span></span>
     </div>
     ${combo}
-  </div>`;
+  </div>`}`;
 
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),

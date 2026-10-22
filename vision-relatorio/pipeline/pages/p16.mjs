@@ -5,12 +5,13 @@ import { fmt2, fmtPct, fmtMoney, fmtInt, mesAbrev, kickerPeriodo, esc } from '..
 
 export function render({ model, ctx }) {
   const { meta, receitas: r } = model;
+  const fin = meta.modo === 'financeiro';
   const crossYear = new Date(meta.ini).getUTCFullYear() !== new Date(meta.fim).getUTCFullYear();
   const mesLbl = (ym) => crossYear ? `${mesAbrev(ym)}/${ym.slice(2, 4)}` : mesAbrev(ym);
 
   const bars = comboChart({
     labels: r.mensal.map(m => mesLbl(m.mes)),
-    W: 640, H: 215, labelScale: 1.3,
+    W: 640, H: fin ? 400 : 215, labelScale: 1.3,
     bars: {
       values: r.mensal.map(m => m.porHa),
       color: C.green, labelFmt: (v) => `R$ ${fmt2(v)}`, labelInside: false,
@@ -59,11 +60,11 @@ export function render({ model, ctx }) {
   `;
 
   const body = `
-  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+  <div class="kpis" style="grid-template-columns:repeat(${fin ? 3 : 4},1fr)">
     <div class="kpi"><div class="lbl">Receita Total</div><div class="val"><small>R$</small> ${fmt2(r.total)}</div></div>
     <div class="kpi"><div class="lbl">Faturamento Médio Mensal</div><div class="val"><small>R$</small> ${fmt2(r.mediaMensal)}</div></div>
     <div class="kpi"><div class="lbl">Faturamento por ha</div><div class="val"><small>R$</small> ${fmt2(r.porHa)}</div></div>
-    <div class="kpi"><div class="lbl">Faturamento por cab.</div><div class="val"><small>R$</small> ${fmt2(r.porCab)}</div></div>
+    ${fin ? '' : `<div class="kpi"><div class="lbl">Faturamento por cab.</div><div class="val"><small>R$</small> ${fmt2(r.porCab)}</div></div>`}
   </div>
 
   <div class="content">
@@ -74,13 +75,13 @@ export function render({ model, ctx }) {
     <div class="tipo-panel"><div class="t-lbl">Faturamento por tipo de receita</div>${tbar}${trows}</div>
   </div>
 
-  <div class="chart2">
+  ${fin ? '' : `<div class="chart2">
     <div class="chart-title">
       Faturamento por cabeça × rebanho médio
       <span class="legend"><span><span class="sw b"></span>Faturamento/cab</span><span><span class="sw g"></span>Rebanho Médio</span></span>
     </div>
     ${combo}
-  </div>`;
+  </div>`}`;
 
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),

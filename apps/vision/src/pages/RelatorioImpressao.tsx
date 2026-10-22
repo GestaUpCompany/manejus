@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { baixarPdfRelatorio, decompressPayload, mountRelatorio } from '../report/vision'
+import { baixarPdfRelatorio, decompressPayload, mountRelatorio, type ModoRelatorio } from '../report/vision'
 
 interface PrintJob {
   b64: string
   hiddenPages: string[]
+  modo?: ModoRelatorio
   titulo: string
   ts?: number
   preview?: boolean
@@ -28,12 +29,13 @@ export function RelatorioImpressao() {
       hostRef.current.replaceChildren(host)
       mountRelatorio(host, payload, {
         hiddenPages: j.hiddenPages,
+        modo: j.modo,
         autoPrint: !j.preview,
         titulo: j.titulo,
         // O botão "Baixar PDF" do próprio relatório gera via Puppeteer no
         // servidor — window.print() sairia com cabeçalho/rodapé do navegador
         // e as lâminas fatiadas em A4.
-        onPdf: () => baixarPdfRelatorio(payload, { hiddenPages: j.hiddenPages, titulo: j.titulo }),
+        onPdf: () => baixarPdfRelatorio(payload, { hiddenPages: j.hiddenPages, modo: j.modo, titulo: j.titulo }),
       })
     }
 
