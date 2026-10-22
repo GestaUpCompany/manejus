@@ -172,6 +172,10 @@ export function Formulacoes() {
   } | null>(null)
   // Cabeças que recebem a formulação aberta como dieta ativa (null = carregando ou erro)
   const [cabecasDieta, setCabecasDieta] = useState<(CabecasPorDieta & { formulacaoId: string }) | null>(null)
+  // Reordenação dos insumos por arrastar (a alça liga o draggable da linha)
+  const [dragHandleIdx, setDragHandleIdx] = useState<number | null>(null)
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
 
   useEffect(() => {
     loadFormulacoes()
@@ -325,6 +329,16 @@ export function Formulacoes() {
 
   const handleRemoveInsumo = (index: number) => {
     setSelectedInsumos(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleReorderInsumos = (from: number, to: number) => {
+    if (from === to) return
+    setSelectedInsumos(prev => {
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      next.splice(to, 0, moved)
+      return next
+    })
   }
 
   const formulaMsTotal = selectedInsumos.reduce((sum, i) => sum + i.formula_teor_ms, 0)
@@ -1224,9 +1238,13 @@ export function Formulacoes() {
             {/* Formulation Table */}
             {selectedInsumos.length > 0 && (
               <div className="overflow-x-auto">
+                <p className="text-xs text-content-muted mb-2">
+                  Arraste pela alça para definir a ordem de carregamento exibida no PWA.
+                </p>
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="bg-surface-2 border-b border-border-base">
+                      <th className="p-2 w-8"></th>
                       <th className="text-center p-2 font-medium text-content">Insumos</th>
                       <th className="text-center p-2 font-medium text-content">Teor MS (%)</th>
                       <th className="text-center p-2 font-medium text-content">Preço (R$/Ton/MN)</th>
@@ -1239,7 +1257,45 @@ export function Formulacoes() {
                   </thead>
                   <tbody>
                     {recalculated.map((item, idx) => (
-                      <tr key={item.insumo_id + idx} className="border-b border-border-subtle hover:bg-surface-2">
+                      <tr
+                        key={item.insumo_id}
+                        draggable={dragHandleIdx === idx}
+                        onDragStart={(e) => {
+                          setDragIdx(idx)
+                          e.dataTransfer.setData('text/plain', String(idx))
+                          e.dataTransfer.effectAllowed = 'move'
+                        }}
+                        onDragOver={(e) => {
+                          if (dragIdx === null) return
+                          e.preventDefault()
+                          setDragOverIdx(idx)
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          if (dragIdx !== null) handleReorderInsumos(dragIdx, idx)
+                          setDragIdx(null)
+                          setDragOverIdx(null)
+                          setDragHandleIdx(null)
+                        }}
+                        onDragEnd={() => {
+                          setDragIdx(null)
+                          setDragOverIdx(null)
+                          setDragHandleIdx(null)
+                        }}
+                        className={`border-b border-border-subtle hover:bg-surface-2 ${dragIdx === idx ? 'opacity-50' : ''} ${dragOverIdx === idx && dragIdx !== idx ? 'bg-primary/5' : ''}`}
+                      >
+                        <td
+                          className="p-2 text-center text-content-faint cursor-grab select-none"
+                          title="Arraste para mudar a ordem de carregamento"
+                          onMouseDown={() => setDragHandleIdx(idx)}
+                          onMouseUp={() => setDragHandleIdx(null)}
+                        >
+                          <svg className="w-4 h-4 inline" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <circle cx="7" cy="5" r="1.5" /><circle cx="13" cy="5" r="1.5" />
+                            <circle cx="7" cy="10" r="1.5" /><circle cx="13" cy="10" r="1.5" />
+                            <circle cx="7" cy="15" r="1.5" /><circle cx="13" cy="15" r="1.5" />
+                          </svg>
+                        </td>
                         <td className="p-2 text-center font-medium text-content-strong">{item.nome}</td>
                         <td className="p-2 text-center text-content-muted">{fmt(item.teor_ms)}%</td>
                         <td className="p-2 text-center text-content-muted">
@@ -1275,6 +1331,7 @@ export function Formulacoes() {
                     ))}
                     {/* Total row */}
                     <tr className="border-t-2 border-surface-3 bg-surface-2 font-semibold">
+                      <td className="p-2"></td>
                       <td className="p-2 text-center text-content-strong">Total</td>
                       <td className="p-2 text-center text-content-strong relative" title="Teor de Matéria Seca da Dieta">
                         {fmt(teorMSDieta)}%

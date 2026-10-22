@@ -1,5 +1,11 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Formulações: ordem de carregamento dos insumos por arrastar e soltar (2026-10-22)
+
+- `Formulacoes.tsx`: a tabela de insumos ganhou alça (6 pontos) para arrastar as linhas (HTML5 nativo, mesmo padrão de `ProgramacaoTratos.tsx`). A ordem é gravada em `formulacao_insumos.ordem` ao salvar; sem mudança de schema.
+- PWA sem alteração: `getInsumosByFormulacaoCached` já ordena por `ordem` e `FabricaConfinamentoPage` exibe nessa ordem ("Insumos na ordem de carregar").
+- Validado no DevTools na fazenda de testes (Terminação Boi): arraste, gravação no banco, PWA online e PWA offline (cache) mostraram a nova ordem. Ordem original restaurada depois.
+
 ## Relatório Vision: modo "Somente financeiro" para fazendas sem dados de rebanho (2026-10-22)
 
 - **Problema**: o Relatório Vision mistura financeiro e rebanho. Em planilhas sem as abas de animais, p02, p03 e p18 sempre renderizavam (zeradas) e os KPIs "por cabeça" saíam 0. Sem área em Cadastros Q17, os valores "por ha" saíam NaN/Infinity.
