@@ -103,6 +103,7 @@ export interface TotaisTela {
   controlados: number
   em_alerta: number
   sem_custo: number
+  sem_conversao: number
   valor_total: number
 }
 
@@ -112,6 +113,8 @@ export function totaisDaTela(itens: ItemEstoqueFarmacia[]): TotaisTela {
     controlados: controlados.length,
     em_alerta: controlados.filter(emAlerta).length,
     sem_custo: controlados.filter(semCusto).length,
+    // Controlados que a Enfermaria não consegue converter em baixa (sem conteúdo da embalagem)
+    sem_conversao: controlados.filter((i) => modoBaixaEnfermaria(i) === 'sem_conversao').length,
     valor_total: controlados.reduce((s, i) => s + valorDoItem(i), 0),
   }
 }
@@ -217,6 +220,20 @@ export function validarConteudo(conteudo: string): ResultadoValidacao<{ conteudo
   if (conteudo.trim() === '') return { ok: true, valores: { conteudo: null } }
   const n = numeroValido(conteudo)
   if (n == null || n <= 0) return { ok: false, erro: 'Informe o conteúdo da embalagem maior que zero (ou deixe vazio).' }
+  return { ok: true, valores: { conteudo: n } }
+}
+
+// Ao ativar o controle, unidades que não são mL/L/g/kg precisam do conteúdo da embalagem para a Enfermaria baixar.
+export function validarConteudoObrigatorio(
+  unidade: string,
+  conteudo: string,
+  conteudoUn: string,
+): ResultadoValidacao<{ conteudo: number | null }> {
+  if (UNIDADES_DIRETAS.includes(unidade)) return validarConteudo(conteudo)
+  if (conteudo.trim() === '') return { ok: false, erro: `Informe o conteúdo por ${unidade} (ex.: 500 mL por frasco) para a Enfermaria dar baixa automática.` }
+  const n = numeroValido(conteudo)
+  if (n == null || n <= 0) return { ok: false, erro: 'Informe o conteúdo da embalagem maior que zero.' }
+  if (!UNIDADES_CONTEUDO.includes(conteudoUn)) return { ok: false, erro: 'Escolha mL ou mg para o conteúdo da embalagem.' }
   return { ok: true, valores: { conteudo: n } }
 }
 

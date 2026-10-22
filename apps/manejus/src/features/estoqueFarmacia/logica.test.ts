@@ -13,6 +13,7 @@ import {
   totaisDaTela,
   validarAjuste,
   validarConteudo,
+  validarConteudoObrigatorio,
   validarEntrada,
   valorDoItem,
   type ItemEstoqueFarmacia,
@@ -60,7 +61,16 @@ describe('estoque da farmacia: alertas e totais', () => {
       item({ estoque_atual: 5, custo_unitario: 0, estoque_minimo: 8 }),
       item({ estoque_atual: 100, custo_unitario: 9, controla_estoque: false }),
     ])
-    expect(totais).toEqual({ controlados: 3, em_alerta: 2, sem_custo: 1, valor_total: 20 })
+    expect(totais).toEqual({ controlados: 3, em_alerta: 2, sem_custo: 1, sem_conversao: 0, valor_total: 20 })
+  })
+
+  it('conta controlados sem conversão para a Enfermaria (frasco sem conteúdo)', () => {
+    const totais = totaisDaTela([
+      item({ unidade: 'frasco', conteudo_por_unidade: null, conteudo_unidade: null }),
+      item({ unidade: 'frasco', conteudo_por_unidade: 500, conteudo_unidade: 'mL' }),
+      item({ unidade: 'dose', conteudo_por_unidade: null, conteudo_unidade: null, controla_estoque: false }),
+    ])
+    expect(totais.sem_conversao).toBe(1)
   })
 
   it('filtra por busca sem acento e classificação, com alertas primeiro', () => {
@@ -159,6 +169,19 @@ describe('baixa da Enfermaria (conversão de dose)', () => {
     expect(validarConteudo('500,5')).toEqual({ ok: true, valores: { conteudo: 500.5 } })
     expect(validarConteudo('0').ok).toBe(false)
     expect(validarConteudo('abc').ok).toBe(false)
+  })
+
+  it('exige o conteúdo ao ativar controle em unidade de embalagem', () => {
+    expect(validarConteudoObrigatorio('frasco', '', 'mL').ok).toBe(false)
+    expect(validarConteudoObrigatorio('dose', '  ', 'mL').ok).toBe(false)
+    expect(validarConteudoObrigatorio('caixa', '0', 'mL').ok).toBe(false)
+    expect(validarConteudoObrigatorio('frasco', '500', 'mL')).toEqual({ ok: true, valores: { conteudo: 500 } })
+    expect(validarConteudoObrigatorio('un', '10', 'g').ok).toBe(false)
+  })
+
+  it('unidade direta (mL, L, g, kg) não exige conteúdo', () => {
+    expect(validarConteudoObrigatorio('mL', '', 'mL')).toEqual({ ok: true, valores: { conteudo: null } })
+    expect(validarConteudoObrigatorio('kg', '', 'mL')).toEqual({ ok: true, valores: { conteudo: null } })
   })
 })
 

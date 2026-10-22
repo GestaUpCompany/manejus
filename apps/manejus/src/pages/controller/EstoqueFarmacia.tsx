@@ -16,6 +16,7 @@ import {
   sinalMovimento,
   totaisDaTela,
   validarAjuste,
+  validarConteudoObrigatorio,
   validarEntrada,
   valorDoItem,
   type FormAjuste,
@@ -178,7 +179,10 @@ export function EstoqueFarmacia() {
   const salvarAtivacao = async () => {
     if (!ativacao || !fazendaId) return
     const direta = UNIDADES_DIRETAS.includes(ativacao.unidade)
-    const conteudo = validarConteudo(direta ? '' : ativacao.conteudo)
+    // Ativar controle exige conteúdo para a Enfermaria baixar; na edição de item já ativo continua opcional
+    const conteudo = ativacao.modo === 'ativar'
+      ? validarConteudoObrigatorio(ativacao.unidade, direta ? '' : ativacao.conteudo, ativacao.conteudoUn)
+      : validarConteudo(direta ? '' : ativacao.conteudo)
     if (!conteudo.ok) return setErroForm(conteudo.erro)
     const campos: Record<string, unknown> = {
       conteudo_por_unidade: conteudo.valores.conteudo,
@@ -281,6 +285,12 @@ export function EstoqueFarmacia() {
           <p className="text-base sm:text-lg xl:text-xl font-bold break-words">{moeda(consumoMes)}</p>
         </Card>
       </div>
+
+      {totais.sem_conversao > 0 && (
+        <p className="text-sm text-amber-700">
+          {totais.sem_conversao} {totais.sem_conversao === 1 ? 'medicamento controlado sem conteúdo definido' : 'medicamentos controlados sem conteúdo definido'}: a Enfermaria não dá baixa no estoque deles. Use "Definir" no card para informar o conteúdo da embalagem.
+        </p>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
         <div className="sm:w-72 min-w-0">
@@ -497,7 +507,10 @@ export function EstoqueFarmacia() {
                   <Input label={`Conteúdo por ${ativacao.unidade}`} type="number" min="0" step="0.001" value={ativacao.conteudo} onChange={(e) => setAtivacao({ ...ativacao, conteudo: e.target.value })} placeholder="Ex.: 500" />
                   <Select label="Em" value={ativacao.conteudoUn} onChange={(value) => setAtivacao({ ...ativacao, conteudoUn: value })} options={UNIDADES_CONTEUDO.map((u) => ({ value: u, label: u }))} />
                 </div>
-                <p className="text-xs text-content-muted">Usado para a baixa automática da Enfermaria (ex.: 20 mL aplicados ÷ 500 mL = 0,04 {ativacao.unidade}). Vazio: a Enfermaria não baixa este medicamento. A dose na Enfermaria deve estar na mesma unidade (mL ou mg).</p>
+                <p className="text-xs text-content-muted">
+                  Usado para a baixa automática da Enfermaria (ex.: 20 mL aplicados ÷ 500 mL = 0,04 {ativacao.unidade}).
+                  {ativacao.modo === 'ativar' ? ' Obrigatório ao ativar.' : ' Vazio: a Enfermaria não baixa este medicamento.'} No aplicativo, a dose é digitada na mesma unidade (mL ou mg).
+                </p>
               </div>
             )}
             {erroForm && <p className="text-sm text-red-700">{erroForm}</p>}
