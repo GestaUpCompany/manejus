@@ -36,7 +36,7 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
   {
     tipo: 'consumo',
     titulo: 'Consumo',
-    descricao: 'CMS (kg/cab/dia), consumo %PV, leitura de cocho e custo por lote e período.',
+    descricao: 'CMS (kg/cab/dia) em matéria natural e matéria seca, consumo %PV, leitura de cocho e custo por lote e período.',
     icone: '🌿',
   },
   {

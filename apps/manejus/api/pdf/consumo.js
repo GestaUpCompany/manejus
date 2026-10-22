@@ -69,10 +69,10 @@ const CONSUMO_CSS = `
 .dieta-sep{display:flex;align-items:center;gap:10px;margin:2mm 0 3mm;color:#0b6a42;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
 .dieta-sep::before,.dieta-sep::after{content:'';flex:1;height:1px;background:#cfdad3}
 .lote-body{display:grid;grid-template-columns:40mm 1fr;gap:6px;flex:1;min-height:0}
-.kpi-col{display:flex;flex-direction:column;gap:5px}
-.kpi-col .kpi-card{min-height:0;padding:6px 8px}
-.kpi-col .kpi-value{font-size:15px}
-.kpi-col .kpi-label{font-size:11px;margin-top:3px}
+.kpi-col{display:flex;flex-direction:column;gap:3px}
+.kpi-col .kpi-card{min-height:0;padding:4px 8px}
+.kpi-col .kpi-value{font-size:14px}
+.kpi-col .kpi-label{font-size:10.5px;margin-top:1px}
 .kpi-col .kpi-sub{font-size:10px}
 .chart-col{display:flex;flex-direction:column;min-height:0}
 .chart-col .chart-card{height:100%}
@@ -359,6 +359,12 @@ function consumoMnMedio(dados) {
   return validos.reduce((s, d) => s + d.trato_kg_cab_dia, 0) / validos.length
 }
 
+function consumoMsMedio(dados) {
+  const validos = dados.filter((d) => d.trato_kg_ms_cab_dia != null)
+  if (!validos.length) return null
+  return validos.reduce((s, d) => s + d.trato_kg_ms_cab_dia, 0) / validos.length
+}
+
 function custoMedio(dados) {
   const validos = dados.filter((d) => d.custo_reais_cab_dia != null)
   if (!validos.length) return null
@@ -395,11 +401,13 @@ function pillsHtml(info) {
 function kpisHtml(info, dados) {
   const cm = consumoMedio(dados)
   const cmMn = consumoMnMedio(dados)
+  const cmMs = consumoMsMedio(dados)
   const custo = custoMedio(dados)
   const cards = [
     { value: intFmt(info.peso_entrada_kg), label: 'Peso Entrada (kg)' },
     { value: cm != null ? `${numFmt(cm, 2)}%` : '—', label: 'Consumo %PV' },
     { value: cmMn != null ? numFmt(cmMn, 2) : '—', label: 'Consumo MN (kg/cab/dia)' },
+    { value: cmMs != null ? numFmt(cmMs, 2) : '—', label: 'Consumo MS (kg/cab/dia)' },
     { value: custo != null ? `R$ ${numFmt(custo, 2)}` : '—', label: 'R$/cab/dia' },
     { value: numFmt(info.peso_atual_kg, 2), label: 'Peso Atual (kg)' },
     { value: intFmt(info.dias), label: 'Período Dieta Atual' },

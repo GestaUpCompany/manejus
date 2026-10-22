@@ -6,6 +6,8 @@ export interface DadoRelatorioConsumo {
   data: string
   data_label: string
   trato_kg_cab_dia: number
+  /** Consumo em matéria seca por cabeça/dia; null quando o teor de MS não é conhecido */
+  trato_kg_ms_cab_dia?: number | null
   consumo_percent_pv: number
   leitura_cocho: number | null
   custo_reais_cab_dia: number | null

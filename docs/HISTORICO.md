@@ -1,5 +1,11 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de consumo: KPI Consumo MS (kg/cab/dia) (2026-10-22)
+
+- Novo KPI "Consumo MS (kg/cab/dia)" na tela pública e no PDF (o Infográfico Mensal herda do PDF). Diferente do MN, usa o consumo em matéria seca já gravado: `registros_suplementacao.consumo_medio_geral_kg_ms` (pasto) e `consumo_confinamento_dia.kg_ms_cab_dia` (confinamento), sem recalcular a partir do teor da formulação atual.
+- Migration `20261022100000_relatorio_consumo_kg_ms.sql` (rollback em `supabase/rollbacks/`): `get_dados_relatorio_consumo` passa a devolver `trato_kg_ms_cab_dia` em cada ponto. Campo aditivo; NULL quando não há teor de MS.
+- Front: `DadoRelatorioConsumo.trato_kg_ms_cab_dia` (opcional), `consumoMsMedio` em `consumo.js` e `calcularKPIs` em `RelatorioConsumoPublico.tsx` (grid de KPIs de 8 para 9 colunas em `lg`). Descrição do card em `Relatorios.tsx`.
+
 ## Formulações: ordem de carregamento dos insumos por arrastar e soltar (2026-10-22)
 
 - `Formulacoes.tsx`: a tabela de insumos ganhou alça (6 pontos) para arrastar as linhas (HTML5 nativo, mesmo padrão de `ProgramacaoTratos.tsx`). A ordem é gravada em `formulacao_insumos.ordem` ao salvar; sem mudança de schema.
