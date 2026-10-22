@@ -2890,3 +2890,7 @@ Implementado em 2026-10-13. `lote_categorias.idade` (meses) é a idade na data-b
 ## Cadernetas novas só na fazenda de testes (painel) (16/10/2026)
 - `utils/cadernetas.ts`: `CADERNETAS_EM_TESTE` (`manejo-curral`, `sanidade`), `FAZENDA_DE_TESTES_ID`, `cadernetaVisivelNaFazenda`, `cadernetasDaFazenda` e `gruposDaFazenda` (teste em `cadernetasEmTeste.test.ts`). Aplicado na página Cadernetas, nos grupos do Dashboard e na lista de permissões por funcionário em Cadastros Auxiliares (inclui o "Selecionar todas" e o texto "todas"). Enquanto a fazenda ainda não é conhecida, as cadernetas em teste ficam ocultas. Espelha a regra do PWA (`utils/constants.ts`).
 - Fora do alcance: a página Manejo Sanitário e a de sessões de manejo de curral continuam acessíveis por URL direta (não vazam dados de outra fazenda: a RLS filtra). Para liberar para todas: esvaziar `CADERNETAS_EM_TESTE` nos dois repositórios.
+
+## Baixas de farmácia valorizadas pelo ledger (22/10/2026)
+
+Migration `20261022120000_farmacia_baixa_valorizada.sql` (rollback em `supabase/rollbacks/`). `recalcular_estoque_farmacia` grava em cada baixa/estorno o custo médio vigente no momento e o valor (quantidade × custo). Entrada retroativa revaloriza as baixas posteriores; entradas valorizadas − baixas valorizadas = `custo_total_estoque`. `update_estoque_farmacia` não recalcula de novo enquanto `gestaup.recalc_farmacia` estiver 'on' (gravação interna). Backfill feito nas baixas existentes (saldos e custos médios inalterados). Listas Entradas/Saídas ganham "Custo un." e "Valor" (`valorDoMovimento`).

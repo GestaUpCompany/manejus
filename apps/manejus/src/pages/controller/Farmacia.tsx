@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth, getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import { Card, Input, EmptyState, PageSkeleton, Select, Table, Thead, Tbody, Tr, Th, Td, SearchInput, FilterToolbar, FilterField } from '@gestaup/ui'
-import { ROTULO_ORIGEM, ROTULO_TIPO, sinalMovimento, type TipoMovimentoFarmacia } from '../../features/estoqueFarmacia/logica'
+import { ROTULO_ORIGEM, ROTULO_TIPO, sinalMovimento, valorDoMovimento, type TipoMovimentoFarmacia } from '../../features/estoqueFarmacia/logica'
 
 interface RegistroFarmacia {
   id: string
@@ -11,6 +11,7 @@ interface RegistroFarmacia {
   quantidade: number
   unidade: string | null
   custo_unitario: number | null
+  valor_total: number | null
   origem: string | null
   fornecedor: string | null
   nota_fiscal: string | null
@@ -24,6 +25,7 @@ interface RegistroFarmacia {
 
 const dataBR = (iso: string) => iso.split('-').reverse().join('/')
 const numero = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
+const moeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 // Entrada lista as entradas; Saída lista as baixas (PWA, Enfermaria) e estornos. Ajustes ficam no histórico do estoque.
 const TIPOS_POR_MODO: Record<'entrada' | 'saida', TipoMovimentoFarmacia[]> = {
@@ -50,7 +52,7 @@ export function Farmacia({ modo }: { modo: 'entrada' | 'saida' }) {
       getFazendaNome(fazendaId).then(setFazendaNome)
       const { data, error } = await supabase
         .from('movimentacoes_farmacia')
-        .select('id,data,tipo_movimentacao,quantidade,unidade,custo_unitario,origem,fornecedor,nota_fiscal,lote_produto,validade,observacao,nome_usuario,created_at,medicamentos(nome_comercial,tipo,sku)')
+        .select('id,data,tipo_movimentacao,quantidade,unidade,custo_unitario,valor_total,origem,fornecedor,nota_fiscal,lote_produto,validade,observacao,nome_usuario,created_at,medicamentos(nome_comercial,tipo,sku)')
         .eq('fazenda_id', fazendaId)
         .in('tipo_movimentacao', TIPOS_POR_MODO[modo])
         .is('deleted_at', null)
@@ -110,6 +112,8 @@ export function Farmacia({ modo }: { modo: 'entrada' | 'saida' }) {
                 <Th>Tipo</Th>
                 <Th>Medicamento</Th>
                 <Th>Quantidade</Th>
+                <Th>Custo un.</Th>
+                <Th>Valor</Th>
                 <Th>Lote / Validade</Th>
                 <Th>Fornecedor / NF</Th>
                 <Th>Origem</Th>
@@ -125,6 +129,8 @@ export function Farmacia({ modo }: { modo: 'entrada' | 'saida' }) {
                     <Td>{ROTULO_TIPO[r.tipo_movimentacao] ?? r.tipo_movimentacao}</Td>
                     <Td>{r.medicamentos?.nome_comercial ?? '-'}{r.medicamentos?.sku && <span className="block text-xs text-content-muted">SKU {r.medicamentos.sku}</span>}</Td>
                     <Td className={sinal === '−' ? 'text-red-600' : ''}>{sinal} {numero(qtd)} {r.unidade ?? ''}</Td>
+                    <Td>{r.custo_unitario == null ? '—' : moeda(Number(r.custo_unitario))}</Td>
+                    <Td>{(() => { const v = valorDoMovimento(r); return v == null ? '—' : moeda(v) })()}</Td>
                     <Td>{[r.lote_produto, r.validade ? dataBR(r.validade) : null].filter(Boolean).join(' · ') || '-'}</Td>
                     <Td>{[r.fornecedor, r.nota_fiscal].filter(Boolean).join(' · ') || '-'}</Td>
                     <Td className="text-content-muted">{ROTULO_ORIGEM[r.origem ?? ''] ?? r.origem ?? 'Manual'}</Td>

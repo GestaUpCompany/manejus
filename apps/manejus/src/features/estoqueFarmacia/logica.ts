@@ -176,6 +176,13 @@ export function consumoDoMes(movimentos: Array<Pick<MovimentoFarmacia, 'tipo_mov
     }, 0)
 }
 
+// Valor do lançamento: o gravado (baixas valorizadas pelo ledger) ou, sem ele, quantidade × custo; nulo sem custo.
+export function valorDoMovimento(m: Pick<MovimentoFarmacia, 'quantidade' | 'custo_unitario' | 'valor_total'>): number | null {
+  if (m.valor_total != null) return num(m.valor_total)
+  if (m.custo_unitario == null) return null
+  return num(m.quantidade) * num(m.custo_unitario)
+}
+
 export interface FormEntrada {
   itemId: string
   quantidade: string

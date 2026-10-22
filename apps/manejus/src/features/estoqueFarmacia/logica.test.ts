@@ -16,6 +16,7 @@ import {
   validarConteudoObrigatorio,
   validarEntrada,
   valorDoItem,
+  valorDoMovimento,
   type ItemEstoqueFarmacia,
   type MovimentoFarmacia,
 } from './logica'
@@ -182,6 +183,18 @@ describe('baixa da Enfermaria (conversão de dose)', () => {
   it('unidade direta (mL, L, g, kg) não exige conteúdo', () => {
     expect(validarConteudoObrigatorio('mL', '', 'mL')).toEqual({ ok: true, valores: { conteudo: null } })
     expect(validarConteudoObrigatorio('kg', '', 'mL')).toEqual({ ok: true, valores: { conteudo: null } })
+  })
+})
+
+describe('valor do movimento', () => {
+  it('usa o valor gravado (baixa valorizada pelo ledger)', () => {
+    expect(valorDoMovimento({ quantidade: 2, custo_unitario: 80, valor_total: 160 })).toBe(160)
+  })
+  it('sem valor gravado, calcula quantidade × custo', () => {
+    expect(valorDoMovimento({ quantidade: 3, custo_unitario: 20, valor_total: null })).toBe(60)
+  })
+  it('sem custo conhecido não tem valor', () => {
+    expect(valorDoMovimento({ quantidade: 3, custo_unitario: null, valor_total: null })).toBeNull()
   })
 })
 
