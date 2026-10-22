@@ -360,6 +360,10 @@ export function EstoqueFarmacia() {
                   </div>
                 </div>
                 <div className="space-y-1">
+                  {!item.controla_estoque ? (
+                    <p className="text-sm text-content-muted">Sem controle de estoque. Ative o controle para acompanhar saldo e custo.</p>
+                  ) : (
+                    <>
                   <div className="flex justify-between text-sm">
                     <span className="text-content-muted">Saldo atual</span>
                     <span className={`font-semibold ${saldo < 0 ? 'text-red-500' : 'text-content-strong'}`}>{numero(saldo)} {item.unidade}</span>
@@ -408,6 +412,8 @@ export function EstoqueFarmacia() {
                       <span className="font-medium text-content">{Number(item.estoque_minimo) > 0 ? `${numero(Number(item.estoque_minimo))} ${item.unidade}` : '—'}</span>
                     )}
                   </div>
+                    </>
+                  )}
                   {item.controla_estoque && (
                     <div className="flex justify-between items-center gap-2 text-sm">
                       <span className="text-content-muted">Baixa da Enfermaria</span>
