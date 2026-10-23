@@ -1,4 +1,4 @@
-// p.2 — Auditoria Mensal de Estoque (jan do ano × mês de referência final)
+// p.2 — Auditoria Mensal de Estoque (1º mês do período × mês de referência final)
 import { pageShell } from '../lib/shell.mjs';
 import { fmtInt, fmt2, mesNome, kickerPeriodo, esc } from '../lib/fmt.mjs';
 

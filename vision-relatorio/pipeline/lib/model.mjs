@@ -273,10 +273,10 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     rebMedioPorMes.set(k, avg(g, x => x.saldoFinal));
   }
 
-  // ---------- p.2 Estoque (jan do ano de ini × mês de fim) ----------
+  // ---------- p.2 Estoque (1º mês do período × mês de fim) ----------
   // Meses futuros têm saldo zerado por guarda da planilha (A>TODAY()); usar o
   // último bloco do período com saldo real como "mês de referência".
-  const keyJan = `${ini.getUTCFullYear()}-01`;
+  const keyIni = meses[0];
   let keyFim = ym(fim);
   // Preferência: último bloco com avaliação completa (saldo e valor preenchidos —
   // meses projetados da Aruã têm cabeças mas inputs X/AB vazios, zerando @ e R$).
@@ -293,12 +293,12 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   if (!estoque.get(keyFim) || (estoque.get(keyFim).total?.saldoFim || sum(estoque.get(keyFim).linhas, l => l.saldoFim)) <= 0) {
     keyFim = keyFimSaldo ?? keyFim;
   }
-  const blocoJan = estoque.get(keyJan) || { linhas: [], total: null };
+  const blocoIni = estoque.get(keyIni) || { linhas: [], total: null };
   const blocoFim = estoque.get(keyFim) || { linhas: [], total: null };
 
   const estoquePage = {
-    mesIni: keyJan, mesFim: keyFim,
-    inicial: blocoJan.linhas.map(l => ({
+    mesIni: keyIni, mesFim: keyFim,
+    inicial: blocoIni.linhas.map(l => ({
       descricao: l.descricao, cab: l.saldoIni, at: l.atIni, valorAt: l.valorAtIni, valor: l.valorIni,
     })),
     final: blocoFim.linhas.map(l => ({
