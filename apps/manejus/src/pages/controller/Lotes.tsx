@@ -1191,28 +1191,8 @@ export function Lotes() {
       return
     }
 
-    // Sincronizar lote_pasto_historico e lote_modulo_historico quando o pasto
-    // do lote muda na edição. O trigger trg_registros_pastagens_mover_lote só
-    // dispara via registros_pastagens; a edição direta de lotes.pasto_id aqui
-    // precisa chamar a RPC para fechar o histórico antigo e abrir o novo.
-    if (editingLote && !isConfinamento) {
-      const pastoAnterior = editingLote.pasto_id || null
-      const pastoNovo = formData.pasto_id || null
-      if (pastoAnterior !== pastoNovo) {
-        const { error: syncError } = await supabase.rpc(
-          'sincronizar_historico_pasto_lote_edit',
-          {
-            p_lote_id: loteId,
-            p_pasto_id_anterior: pastoAnterior,
-            p_pasto_id_novo: pastoNovo,
-          }
-        )
-        if (syncError) {
-          console.error('Erro ao sincronizar histórico de pasto:', syncError)
-          toast.error('Lote salvo, mas houve erro ao sincronizar o histórico de pasto. Verifique o console.')
-        }
-      }
-    }
+    // O histórico de pasto (lote_pasto_historico) é fechado e aberto pelo trigger
+    // trg_lotes_pasto_historico na própria edição de lotes.pasto_id; não chamar a RPC aqui.
 
     // Gerenciar associação do lote com curral. Só mexe quando o curral realmente
     // mudou: cada troca encerra e abre uma ocupação em lote_curral_historico (dia 1

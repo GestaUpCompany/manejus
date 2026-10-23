@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Histórico de pasto sem duplicação na edição do lote (23/10/2026)
+
+- **Causa**: ao trocar o pasto na tela de Lotes, o trigger `trg_lotes_pasto_historico` fechava e abria `lote_pasto_historico`, e logo depois a RPC `sincronizar_historico_pasto_lote_edit` fechava a linha recém-aberta e inseria outra. Havia 38 linhas de duração zero em 30 lotes.
+- **Correção** (`apps/manejus/src/pages/controller/Lotes.tsx`): removida a chamada da RPC no save. O histórico de pasto fica só com o trigger. A RPC continua no banco (usada por outros fluxos, se houver).
+- **Testado** na fazenda de testes: lote "Teste 3" trocado de P50 para P10. Resultado: P50 fechado (saída no mesmo instante) e P10 aberto, sem linha extra.
+- **Pendente**: curral → pasto na mesma edição falha no trigger `trg_lote_pasto_curral_exclusivo` (o lote ainda está no curral quando `pasto_id` é gravado). Não corrigido.
+
 ## Limite de Serverless Functions no Vercel (Hobby) — PDFs consolidados (23/10/2026)
 
 O deploy do manejus falhava com "No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan": havia 13 arquivos em `api/pdf/*.js`, cada um virando uma função. Agora há uma função só: `apps/manejus/api/pdf/[relatorio].js` despacha `POST /api/pdf/<relatorio>` (mesmas URLs do front) para os módulos em `api/pdf/_relatorios/` (fora da contagem, prefixo `_`). `boletimRebanho` não tem endpoint e segue só como renderizador. Respostas: 404 para nome desconhecido (checado com `Object.hasOwn`), 405 para método diferente de POST (como antes). Imports de `_shared/reportRegistry.js` e os caminhos dos testes (`boletimRebanho.test.ts`, `pdfHtml.test.ts`) e de `scripts/preview-clima.mjs` foram ajustados. Verificado: typecheck, testes (578/578) e smoke do despachante; **falta confirmar o deploy na Vercel e gerar um PDF de cada tipo**.
