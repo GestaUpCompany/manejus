@@ -1,5 +1,5 @@
 // Mapa único de rótulos amigáveis para diagnósticos de morte, unificando o que
-// existia duplicado entre api/pdf/morte.js e src/utils/relatorioMortePDF.ts.
+// existia duplicado entre api/pdf/_relatorios/morte.js e src/utils/relatorioMortePDF.ts.
 // Se o cliente adicionar um diagnóstico novo, o rótulo entra aqui e passa a
 // aparecer corretamente em ambos os caminhos (jsPDF e Puppeteer).
 

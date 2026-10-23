@@ -2,26 +2,26 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 // @ts-ignore -- modulos .js sem declaracao de tipos, carregados em dev local
-import morteHandler from './api/pdf/morte.js'
+import morteHandler from './api/pdf/_relatorios/morte.js'
 // @ts-ignore
-import consumoHandler from './api/pdf/consumo.js'
+import consumoHandler from './api/pdf/_relatorios/consumo.js'
 // @ts-ignore
-import abastecimentoHandler from './api/pdf/abastecimento.js'
+import abastecimentoHandler from './api/pdf/_relatorios/abastecimento.js'
 // @ts-ignore
-import bebedourosHandler from './api/pdf/bebedouros.js'
+import bebedourosHandler from './api/pdf/_relatorios/bebedouros.js'
 // @ts-ignore
-import geralHandler from './api/pdf/geral.js'
+import geralHandler from './api/pdf/_relatorios/geral.js'
 // @ts-ignore
-import climaHandler from './api/pdf/clima.js'
+import climaHandler from './api/pdf/_relatorios/clima.js'
 // @ts-ignore
-import rodeioHandler from './api/pdf/rodeio.js'
-import pastagensHandler from './api/pdf/pastagens.js'
+import rodeioHandler from './api/pdf/_relatorios/rodeio.js'
+import pastagensHandler from './api/pdf/_relatorios/pastagens.js'
 // @ts-ignore
-import estoqueHandler from './api/pdf/estoque.js'
+import estoqueHandler from './api/pdf/_relatorios/estoque.js'
 // @ts-ignore
-import estoqueCombustivelHandler from './api/pdf/estoqueCombustivel.js'
-import cantinaHandler from './api/pdf/cantina.js'
-import zootecnicoHandler from './api/pdf/zootecnico.js'
+import estoqueCombustivelHandler from './api/pdf/_relatorios/estoqueCombustivel.js'
+import cantinaHandler from './api/pdf/_relatorios/cantina.js'
+import zootecnicoHandler from './api/pdf/_relatorios/zootecnico.js'
 
 function localPdfApi(): Plugin {
   return {
