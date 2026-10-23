@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
-import { Card, DetailLayout, DetailSection, DetailField, formatValue } from '@gestaup/ui'
+import { Button, Card, DetailLayout, DetailSection, DetailField, Modal, formatValue, useToast } from '@gestaup/ui'
 import { formatDate } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
 
@@ -34,13 +34,35 @@ interface RegistroMaternidade {
   updated_at?: string
 }
 
+interface PreviaExclusao {
+  pode_excluir: boolean
+  motivo_bloqueio: string | null
+  cria: { id: string | null; criada_pelo_parto: boolean; motivos_bloqueio: string[] }
+  mae: { id: string | null; criada_pelo_parto: boolean; elegivel_exclusao: boolean }
+  categoria: {
+    nome: string | null
+    criada_pelo_parto: boolean
+    tem_outros_usos: boolean
+    quant_inicial_novo: number | null
+  }
+  notificacoes: number
+}
+
 export function MaternidadeDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [registro, setRegistro] = useState<RegistroMaternidade | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [previa, setPrevia] = useState<PreviaExclusao | null>(null)
+  const [previaLoading, setPreviaLoading] = useState(false)
+  const [excluirMae, setExcluirMae] = useState(false)
+
+  const canDelete = user && (user.papel === 'admin' || user.papel === 'super_admin' || user.papel === 'controller')
 
   useEffect(() => {
     loadRegistro()
@@ -81,13 +103,78 @@ export function MaternidadeDetalhes() {
 
   const backUrl = '/controller/cadernetas/maternidade'
 
+  const handleOpenDelete = async () => {
+    if (!registro || !user) return
+    setPrevia(null)
+    setExcluirMae(false)
+    setIsDeleteOpen(true)
+    setPreviaLoading(true)
+    try {
+      const _fazendaId = await getFazendaIdForUser(user.id)
+      if (!_fazendaId) return
+      const { data, error } = await supabase.rpc('previa_exclusao_maternidade', {
+        p_id: registro.id,
+        p_fazenda_id: _fazendaId,
+      })
+      if (error) {
+        console.error('Erro na prévia de exclusão:', error)
+        toast.error(error.message || 'Erro ao calcular o que será desfeito')
+        setIsDeleteOpen(false)
+        return
+      }
+      setPrevia(data as PreviaExclusao)
+    } finally {
+      setPreviaLoading(false)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!registro || !user || isSubmitting) return
+
+    setIsSubmitting(true)
+    try {
+      const _fazendaId = await getFazendaIdForUser(user.id)
+      if (!_fazendaId) return
+
+      const { error } = await supabase.rpc('excluir_registro_maternidade', {
+        p_id: registro.id,
+        p_fazenda_id: _fazendaId,
+        p_usuario_id: user.id,
+        p_usuario_email: user.email,
+        p_excluir_mae: excluirMae,
+      })
+
+      if (error) {
+        console.error('Erro ao excluir registro:', error)
+        toast.error(error.message || 'Erro ao excluir registro')
+        return
+      }
+
+      toast.success('Registro excluído e ações do parto desfeitas.')
+      navigate(backUrl)
+    } catch (err) {
+      console.error('Erro ao excluir registro:', err)
+      toast.error('Erro inesperado ao excluir registro')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const actions = canDelete ? (
+    <Button variant="danger" onClick={handleOpenDelete} className="text-sm">
+      Excluir
+    </Button>
+  ) : undefined
+
   return (
+    <>
     <DetailLayout
       loading={loading}
       loadError={loadError}
       notFound={!registro}
       onBack={() => navigate(backUrl)}
       title="Detalhes do Registro de Maternidade"
+      actions={actions}
     >
       {() => (
       <Card className="bg-surface-1 p-4 sm:p-6 border-0 shadow-sm" disableHover>
@@ -179,5 +266,78 @@ export function MaternidadeDetalhes() {
       </Card>
       )}
     </DetailLayout>
+
+    {registro && (
+      <Modal
+        isOpen={isDeleteOpen}
+        onClose={() => !isSubmitting && setIsDeleteOpen(false)}
+        title="Excluir Registro de Maternidade"
+        size="sm"
+      >
+        <div className="space-y-3 text-content text-sm">
+          <p>
+            Tem certeza que deseja excluir o parto de {formatDate(registro.data)}
+            {registro.numero_mae || registro.id_brinco_mae ? ` (mãe ${registro.id_brinco_mae || registro.numero_mae})` : ''}?
+          </p>
+          {previaLoading && <p className="text-content-subtle">Calculando o que será desfeito...</p>}
+          {previa && !previa.pode_excluir && (
+            <p className="rounded-lg bg-red-50 text-red-700 p-3">
+              Exclusão bloqueada: {previa.motivo_bloqueio}.
+            </p>
+          )}
+          {previa && previa.pode_excluir && (
+            <>
+              <p className="font-medium">Será desfeito:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>O registro de maternidade será marcado como excluído.</li>
+                {previa.cria.criada_pelo_parto && <li>A cria cadastrada por este parto será excluída.</li>}
+                {previa.notificacoes > 0 && (
+                  <li>{previa.notificacoes} notificação(ões) de indivíduo incompleto será(ão) removida(s).</li>
+                )}
+                {previa.categoria.nome && (
+                  <li>
+                    {previa.categoria.criada_pelo_parto && previa.categoria.quant_inicial_novo === 0 && !previa.categoria.tem_outros_usos
+                      ? `A categoria ${previa.categoria.nome} criada no lote por este parto será desativada.`
+                      : previa.categoria.criada_pelo_parto
+                        ? `A categoria ${previa.categoria.nome} foi criada por este parto: o saldo inicial dela será ajustado para ${previa.categoria.quant_inicial_novo ?? 0} e a quantidade recalculada.`
+                        : `A quantidade de ${previa.categoria.nome} no lote será recalculada.`}
+                  </li>
+                )}
+                {previa.mae.id && <li>O número de partos e a classificação da mãe serão recalculados.</li>}
+              </ul>
+              {previa.mae.elegivel_exclusao && (
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={excluirMae}
+                    onChange={(e) => setExcluirMae(e.target.checked)}
+                    disabled={isSubmitting}
+                  />
+                  <span>Excluir também a mãe, cadastrada automaticamente por este parto e sem outro uso.</span>
+                </label>
+              )}
+            </>
+          )}
+        </div>
+        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
+          <button
+            onClick={() => setIsDeleteOpen(false)}
+            disabled={isSubmitting}
+            className="flex-1 sm:flex-none px-4 py-2 text-content bg-surface-2 rounded-lg transition-all min-h-[44px]"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirmDelete}
+            disabled={isSubmitting || previaLoading || !previa || !previa.pode_excluir}
+            className="flex-1 sm:flex-none px-4 py-2 text-white bg-red-600 rounded-lg transition-all min-h-[44px] disabled:opacity-50"
+          >
+            {isSubmitting ? 'Excluindo...' : 'Excluir'}
+          </button>
+        </div>
+      </Modal>
+    )}
+    </>
   )
 }

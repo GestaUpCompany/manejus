@@ -42,6 +42,13 @@ Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar 
 
 `calculate_quant_atual`/`calculate_quant_em` usam `quant_inicial` mais um corte `data >= lote_categorias.created_at`. Hoje a data retroativa é contornada ajustando `data` para now() (`data_informada` guarda a original). Desenho mais robusto: livro-razão, com saldo inicial como lançamento e contagem por lançamentos, sem corte temporal. Invasivo (afeta `calculate_quant_em`, recategorização com `quant_base`, relatórios por período); avaliar em separado. Também pendente: ação explícita de "corrigir entrada" no painel que reponderee o peso.
 
+## Maternidade: parto que chega fora de ordem não entra no saldo de Bezerro/Bezerra ao Pé (achado em 2026-10-23)
+
+- `fn_ensure_categoria_bezerro_ao_pe` cria a categoria com `quant_inicial = 1` e `created_at = data do parto + 1s`, e `calculate_quant_atual` só conta partos com `data >= created_at`. Se um parto **com data anterior** chega depois (sincronização do PWA fora de ordem, aparelho que ficou offline), ele fica antes do corte e **nunca entra no saldo**. Simulação na fazenda de testes (lote `SIM-CAT-2`): 4 partos ativos, saldo 3, sem nenhuma exclusão.
+- Pode explicar parte dos excessos/faltas de 1 a 2 bezerros nas conciliações (ver "Indivíduos: excluir parto não desfaz mãe e cria"); conferir antes de atribuir a outra causa.
+- Caminhos: (a) trigger de INSERT que, ao detectar parto com `data < created_at` da categoria, incrementa `quant_inicial` (exige a exceção controlada da trava `lock_quant_inicial`, criada em `20261023120000`); (b) o desenho de livro-razão da seção "Contagem do lote" acima, que elimina o corte temporal. Decidir junto com (b).
+- Disparador: ao mexer em `calculate_quant_atual`, na trava de `quant_inicial`, ou ao investigar saldo de bezerro divergente do número de partos.
+
 ## Relatório de consumo: pendências do gráfico e da leitura de cocho (2026-10-14)
 
 - **Gráfico da página pública (Recharts) ainda sobrepõe rótulos** no pé do gráfico (CMS, %PV e leitura de cocho); a correção anti-colisão e a faixa da leitura foram feitas só no PDF (`api/pdf/consumo.js`). Aplicar a mesma ideia em `criarLabelsAntiColisao` de `RelatorioConsumoPublico.tsx`.
