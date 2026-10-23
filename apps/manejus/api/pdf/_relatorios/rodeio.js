@@ -14,18 +14,18 @@
 //  - Página 3+: tabela "Registros detalhados" pre-chunked, com composição
 //    resumida (só categorias com cabeças) e equipe abreviada.
 
-import { escapeHtml, dateFmt, numFmt, intFmt } from './_shared/formatters.js'
-import { rodeioAlertas } from './_shared/labels.js'
-import { CHART_DPR, getChartJsScript } from './_shared/chartjs.js'
-import { generatePdf } from './_shared/puppeteer.js'
+import { escapeHtml, dateFmt, numFmt, intFmt } from '../_shared/formatters.js'
+import { rodeioAlertas } from '../_shared/labels.js'
+import { CHART_DPR, getChartJsScript } from '../_shared/chartjs.js'
+import { generatePdf } from '../_shared/puppeteer.js'
 import {
   renderHeader,
   renderFooter,
   kpi,
   chartCard,
   htmlDocument,
-} from './_shared/template.js'
-import { flowBlock, flowIntro, flowSection, flowTable } from './_shared/flowEngine.js'
+} from '../_shared/template.js'
+import { flowBlock, flowIntro, flowSection, flowTable } from '../_shared/flowEngine.js'
 
 const MAX_REGISTROS = 20000
 const MAX_BODY_BYTES = 8_000_000

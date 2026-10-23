@@ -16,9 +16,9 @@
 //  - Última página: tabela "Resumo por pluviômetro" com a linha da fazenda.
 //    Não há mais "Leituras detalhadas" no PDF.
 
-import { escapeHtml, dateFmt, numFmt, intFmt } from './_shared/formatters.js'
-import { CHART_DPR, getChartJsScript } from './_shared/chartjs.js'
-import { generatePdf } from './_shared/puppeteer.js'
+import { escapeHtml, dateFmt, numFmt, intFmt } from '../_shared/formatters.js'
+import { CHART_DPR, getChartJsScript } from '../_shared/chartjs.js'
+import { generatePdf } from '../_shared/puppeteer.js'
 import {
   renderHeader,
   renderFooter,
@@ -26,7 +26,7 @@ import {
   page as pageSection,
   chartCard,
   htmlDocument,
-} from './_shared/template.js'
+} from '../_shared/template.js'
 
 const MAX_REGISTROS = 20000
 const MAX_BODY_BYTES = 8_000_000

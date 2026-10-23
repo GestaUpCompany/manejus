@@ -5,11 +5,11 @@
 // relatório de morte: composição das páginas, gráficos usados e paginação da
 // tabela de detalhamento.
 
-import { escapeHtml, dateFmt, numFmt, intFmt, moneyFmt, titleCase } from './_shared/formatters.js'
-import { diagLabel } from './_shared/labels.js'
-import { CHART_DPR, getChartJsScript } from './_shared/chartjs.js'
-import { getMaplibreAssets } from './_shared/maplibre.js'
-import { generatePdf } from './_shared/puppeteer.js'
+import { escapeHtml, dateFmt, numFmt, intFmt, moneyFmt, titleCase } from '../_shared/formatters.js'
+import { diagLabel } from '../_shared/labels.js'
+import { CHART_DPR, getChartJsScript } from '../_shared/chartjs.js'
+import { getMaplibreAssets } from '../_shared/maplibre.js'
+import { generatePdf } from '../_shared/puppeteer.js'
 import {
   renderHeader,
   renderFooter,
@@ -17,7 +17,7 @@ import {
   page as pageSection,
   chartCard,
   htmlDocument,
-} from './_shared/template.js'
+} from '../_shared/template.js'
 
 // Limites do body do endpoint. Sem imagens de gráfico embutidas (agora
 // renderizadas no servidor), o payload são só JSONs de linhas + resumo + logos.

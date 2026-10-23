@@ -1,13 +1,13 @@
-import { renderAbastecimentoHtml } from '../abastecimento.js'
-import { renderBebedourosHtml } from '../bebedouros.js'
-import { renderConsumoHtml } from '../consumo.js'
-import { renderMorteHtml } from '../morte.js'
-import { renderRodeioHtml } from '../rodeio.js'
-import { renderPastagensHtml } from '../pastagens.js'
-import { renderEstoqueHtml } from '../estoque.js'
-import { renderEstoqueCombustivelHtml } from '../estoqueCombustivel.js'
-import { renderCantinaHtml } from '../cantina.js'
-import { renderBoletimRebanhoHtml } from '../boletimRebanho.js'
+import { renderAbastecimentoHtml } from '../_relatorios/abastecimento.js'
+import { renderBebedourosHtml } from '../_relatorios/bebedouros.js'
+import { renderConsumoHtml } from '../_relatorios/consumo.js'
+import { renderMorteHtml } from '../_relatorios/morte.js'
+import { renderRodeioHtml } from '../_relatorios/rodeio.js'
+import { renderPastagensHtml } from '../_relatorios/pastagens.js'
+import { renderEstoqueHtml } from '../_relatorios/estoque.js'
+import { renderEstoqueCombustivelHtml } from '../_relatorios/estoqueCombustivel.js'
+import { renderCantinaHtml } from '../_relatorios/cantina.js'
+import { renderBoletimRebanhoHtml } from '../_relatorios/boletimRebanho.js'
 
 export const REPORT_REGISTRY = {
   abastecimento: {

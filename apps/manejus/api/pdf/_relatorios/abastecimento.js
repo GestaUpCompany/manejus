@@ -17,9 +17,9 @@
 //    critério do mergeDetail do morte.js).
 //  - Pills de filtro condicionais (0 a 3) com fallback "Sem filtros".
 
-import { escapeHtml, dateFmt, numFmt, titleCase } from './_shared/formatters.js'
-import { CHART_DPR, getChartJsScript } from './_shared/chartjs.js'
-import { generatePdf } from './_shared/puppeteer.js'
+import { escapeHtml, dateFmt, numFmt, titleCase } from '../_shared/formatters.js'
+import { CHART_DPR, getChartJsScript } from '../_shared/chartjs.js'
+import { generatePdf } from '../_shared/puppeteer.js'
 import {
   renderHeader,
   renderFooter,
@@ -27,7 +27,7 @@ import {
   page as pageSection,
   chartCard,
   htmlDocument,
-} from './_shared/template.js'
+} from '../_shared/template.js'
 
 // Limite do body. O payload do abastecimento é bem mais enxuto que consumo
 // ou morte: ~3 agregados (porMaquina, porCombustivel, porOperacao) com poucas

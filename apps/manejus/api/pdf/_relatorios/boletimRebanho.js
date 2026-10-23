@@ -1,6 +1,6 @@
-import { escapeHtml } from './_shared/formatters.js'
-import { htmlDocument, renderHeader } from './_shared/template.js'
-import { flowBlock, flowIntro, flowSection, flowTable } from './_shared/flowEngine.js'
+import { escapeHtml } from '../_shared/formatters.js'
+import { htmlDocument, renderHeader } from '../_shared/template.js'
+import { flowBlock, flowIntro, flowSection, flowTable } from '../_shared/flowEngine.js'
 
 const BOLETIM_CSS = `
 .boletim-table{margin-top:3mm;border-radius:6px;overflow:hidden}

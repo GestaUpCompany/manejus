@@ -1,5 +1,10 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Limite de Serverless Functions no Vercel (Hobby) — PDFs consolidados (23/10/2026)
+
+O deploy do manejus falhava com "No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan": havia 13 arquivos em `api/pdf/*.js`, cada um virando uma função. Agora há uma função só: `apps/manejus/api/pdf/[relatorio].js` despacha `POST /api/pdf/<relatorio>` (mesmas URLs do front) para os módulos em `api/pdf/_relatorios/` (fora da contagem, prefixo `_`). `boletimRebanho` não tem endpoint e segue só como renderizador. Respostas: 404 para nome desconhecido (checado com `Object.hasOwn`), 405 para método diferente de POST (como antes). Imports de `_shared/reportRegistry.js` e os caminhos dos testes (`boletimRebanho.test.ts`, `pdfHtml.test.ts`) e de `scripts/preview-clima.mjs` foram ajustados. Verificado: typecheck, testes (578/578) e smoke do despachante; **falta confirmar o deploy na Vercel e gerar um PDF de cada tipo**.
+
+
 ## Correção pontual de datas e período inválidos (23/10/2026)
 
 Operação pontual, autorizada com escopo fechado pelo usuário. Backup em `backup.lote_categorias_20261023`, `backup.lotes_20261023` e `backup.currais_20261023`.

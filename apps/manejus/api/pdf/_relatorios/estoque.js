@@ -35,14 +35,14 @@
 // arquivo só renderiza. No Infográfico Mensal, dataInicio/dataFim (camelCase)
 // valem quando data_inicio/data_fim (snake_case, da RPC) não vêm preenchidos.
 
-import { escapeHtml, dateFmt, moneyFmt } from './_shared/formatters.js'
-import { generatePdf } from './_shared/puppeteer.js'
+import { escapeHtml, dateFmt, moneyFmt } from '../_shared/formatters.js'
+import { generatePdf } from '../_shared/puppeteer.js'
 import {
   renderHeader,
   htmlDocument,
   kpi,
-} from './_shared/template.js'
-import { flowBlock, flowIntro, flowSection, flowTable } from './_shared/flowEngine.js'
+} from '../_shared/template.js'
+import { flowBlock, flowIntro, flowSection, flowTable } from '../_shared/flowEngine.js'
 
 const MAX_ITENS = 5000
 const MAX_BODY_BYTES = 8_000_000

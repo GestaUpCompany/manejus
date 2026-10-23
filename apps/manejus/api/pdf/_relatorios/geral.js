@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
-import { renderPartsToPdf } from './_shared/partsPdf.js'
-import { composeReportParts } from './_shared/reportComposer.js'
-import { isReportType } from './_shared/reportRegistry.js'
-import { createAuthenticatedSupabase, downloadImageDataUrl } from './_shared/supabaseAuth.js'
+import { renderPartsToPdf } from '../_shared/partsPdf.js'
+import { composeReportParts } from '../_shared/reportComposer.js'
+import { isReportType } from '../_shared/reportRegistry.js'
+import { createAuthenticatedSupabase, downloadImageDataUrl } from '../_shared/supabaseAuth.js'
 
 const MAX_BODY_BYTES = 4_000_000
 const DIA_MS = 86_400_000
@@ -15,7 +15,7 @@ let capaPadraoCache = null
 function capaPadraoDataUrl() {
   if (capaPadraoCache === null) {
     try {
-      capaPadraoCache = `data:image/png;base64,${readFileSync(new URL('./_shared/capa-padrao.png', import.meta.url)).toString('base64')}`
+      capaPadraoCache = `data:image/png;base64,${readFileSync(new URL('../_shared/capa-padrao.png', import.meta.url)).toString('base64')}`
     } catch {
       capaPadraoCache = ''
     }

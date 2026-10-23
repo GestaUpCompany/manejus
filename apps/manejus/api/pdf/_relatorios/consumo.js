@@ -12,9 +12,9 @@
 //  - O gráfico é composto (barra CMS + linha %PV + linha Leitura de Cocho) com
 //    3 eixos Y e rótulos anti-colisão desenhados via afterDatasetsDraw.
 
-import { escapeHtml, dateFmt, numFmt, intFmt, titleCase } from './_shared/formatters.js'
-import { CHART_DPR, getChartJsScript } from './_shared/chartjs.js'
-import { generatePdf } from './_shared/puppeteer.js'
+import { escapeHtml, dateFmt, numFmt, intFmt, titleCase } from '../_shared/formatters.js'
+import { CHART_DPR, getChartJsScript } from '../_shared/chartjs.js'
+import { generatePdf } from '../_shared/puppeteer.js'
 import {
   renderHeader,
   renderFooter,
@@ -22,7 +22,7 @@ import {
   page as pageSection,
   chartCard,
   htmlDocument,
-} from './_shared/template.js'
+} from '../_shared/template.js'
 
 // Limite do body. Cada ponto de consumo pesa ~150 bytes em JSON (bem menos que
 // uma linha de morte, que tem ~250). 20 mil pontos cabem em ~3MB, folgando nos

@@ -7,11 +7,11 @@
 // fluxo (_shared/flowEngine.js): mede as linhas reais e encaixa as tabelas em sequência, sem
 // páginas forçadas; Geral e total da seção ficam no thead e se repetem em cada página.
 
-import { escapeHtml, dateFmt } from './_shared/formatters.js'
-import { generatePdf } from './_shared/puppeteer.js'
-import { createAuthenticatedSupabase } from './_shared/supabaseAuth.js'
-import { renderHeader, htmlDocument } from './_shared/template.js'
-import { flowBlock, flowSection, flowTable } from './_shared/flowEngine.js'
+import { escapeHtml, dateFmt } from '../_shared/formatters.js'
+import { generatePdf } from '../_shared/puppeteer.js'
+import { createAuthenticatedSupabase } from '../_shared/supabaseAuth.js'
+import { renderHeader, htmlDocument } from '../_shared/template.js'
+import { flowBlock, flowSection, flowTable } from '../_shared/flowEngine.js'
 
 const MAX_LINHAS = 1000
 const MAX_COLUNAS = 40

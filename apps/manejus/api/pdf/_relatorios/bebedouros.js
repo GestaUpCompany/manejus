@@ -22,15 +22,15 @@
 // Não há gráfico de "dias desde a última limpeza": a tabela de cronograma
 // (última / próxima limpeza) cobre essa leitura.
 
-import { escapeHtml, dateFmt } from './_shared/formatters.js'
-import { CHART_DPR, getChartJsScript } from './_shared/chartjs.js'
-import { generatePdf } from './_shared/puppeteer.js'
+import { escapeHtml, dateFmt } from '../_shared/formatters.js'
+import { CHART_DPR, getChartJsScript } from '../_shared/chartjs.js'
+import { generatePdf } from '../_shared/puppeteer.js'
 import {
   renderHeader,
   kpi,
   htmlDocument,
-} from './_shared/template.js'
-import { flowBlock, flowIntro, flowSection, flowTable } from './_shared/flowEngine.js'
+} from '../_shared/template.js'
+import { flowBlock, flowIntro, flowSection, flowTable } from '../_shared/flowEngine.js'
 
 // === Limites do body ===
 const MAX_BEBEDOUROS = 2000

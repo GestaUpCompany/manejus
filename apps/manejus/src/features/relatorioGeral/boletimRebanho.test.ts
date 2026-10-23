@@ -155,7 +155,7 @@ describe('normalizador do Boletim de Rebanho', () => {
   it('renderiza uma tabela para o consolidado e outra para cada local', async () => {
     const resultado = normalizarPlanilhaBoletim(workbookBytes())
     const agrupado = agruparBoletim(resultado.registros, 7)
-    const rendererPath = '../../../api/pdf/boletimRebanho.js'
+    const rendererPath = '../../../api/pdf/_relatorios/boletimRebanho.js'
     const { renderBoletimRebanhoHtml } = await import(rendererPath)
     const html = renderBoletimRebanhoHtml({ ano: 2026, mesReferencia: 'Julho', mesNumero: 7, ...agrupado, fazendaNome: 'Fazenda Teste' })
     // As páginas são montadas pelo motor de fluxo no navegador: aqui só

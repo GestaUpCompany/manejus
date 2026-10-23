@@ -2,7 +2,7 @@
 //
 // Para que serve: iterar o visual da página 1 (KPIs, gráficos Chart.js, tabelas)
 // sem gerar PDF, subir a Vercel ou depender de dados reais. Importa a MESMA
-// função do endpoint (`renderClimaHtml` em api/pdf/clima.js), então os gráficos
+// função do endpoint (`renderClimaHtml` em api/pdf/_relatorios/clima.js), então os gráficos
 // são desenhados pelo mesmo código; ao salvar clima.js (ou algo em _shared/) a
 // aba recarrega sozinha.
 //
@@ -159,5 +159,5 @@ createServer(async (req, res) => {
   }
 }).listen(porta, '127.0.0.1', () => {
   console.log(`Prévia do relatório de Clima (dados sintéticos): http://127.0.0.1:${porta}`)
-  console.log('Edite api/pdf/clima.js ou api/pdf/_shared/*.js: a aba recarrega sozinha. Ctrl+C para sair.')
+  console.log('Edite api/pdf/_relatorios/clima.js ou api/pdf/_shared/*.js: a aba recarrega sozinha. Ctrl+C para sair.')
 })

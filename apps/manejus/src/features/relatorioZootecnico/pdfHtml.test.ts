@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-const ZOOTECNICO_PATH = '../../../api/pdf/zootecnico.js'
+const ZOOTECNICO_PATH = '../../../api/pdf/_relatorios/zootecnico.js'
 
 async function renderZootecnicoHtml(input: unknown): Promise<string> {
   const module = await import(ZOOTECNICO_PATH)

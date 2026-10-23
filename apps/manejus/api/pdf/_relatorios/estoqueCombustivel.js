@@ -12,14 +12,14 @@
 // No Infográfico Mensal, dataInicio/dataFim (camelCase) chegam no payload e
 // valem quando data_inicio/data_fim (snake_case, da RPC) não vêm preenchidos.
 
-import { escapeHtml, dateFmt, moneyFmt } from './_shared/formatters.js'
-import { generatePdf } from './_shared/puppeteer.js'
+import { escapeHtml, dateFmt, moneyFmt } from '../_shared/formatters.js'
+import { generatePdf } from '../_shared/puppeteer.js'
 import {
   renderHeader,
   page as pageSection,
   htmlDocument,
   kpi,
-} from './_shared/template.js'
+} from '../_shared/template.js'
 
 const MAX_TANQUES = 500
 const MAX_MOVIMENTACOES = 5000
