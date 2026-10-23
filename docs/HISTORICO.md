@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Correção pontual de datas e período inválidos (23/10/2026)
+
+Operação pontual, autorizada com escopo fechado pelo usuário. Backup em `backup.lote_categorias_20261023`, `backup.lotes_20261023` e `backup.currais_20261023`.
+- CM-02 (Fazenda Jacamim), categoria boi magro `3af9a846-9f4b-4021-8632-1d593f28dcf7`: `periodo` de 739903 para 7 (dias desde 16/10/2026). Data de pesagem mantida.
+- Mistura de machos (Fazenda Jacamim): desativação feita e **revertida no mesmo dia** a pedido do usuário (lote `c067a45d-c4fd-406e-80b0-738d61992b99` ativo de novo, curral `0c58c0c6-e56a-40f2-819a-0a5601eca73b` vinculado de novo, a partir de `backup.lotes_20261023` e `backup.currais_20261023`). A categoria boi magro `85beb267-8194-4369-aeb0-9260897c1af3` segue com `data_pesagem = 0001-01-01` e `periodo = 739903`, sem correção ainda.
+- Lote 14 (Fazenda Guanabara), categoria bezerro `b5991115-3ab8-4093-b10d-c33f6aca0bc4`: `data_pesagem` de 0026-09-29 para 2026-09-29. `periodo` ainda 9 até o próximo recálculo.
+- **Reverter** (CM-02 e lote 14): restaurar as linhas a partir de `backup.lote_categorias_20261023`.
+
 ## Período da categoria conta desde a entrada no lote (23/10/2026)
 
 - **Migration** `20261023160000_periodo_lote_categoria_base_entrada` (rollback em `supabase/rollbacks/`), aplicada com `supabase db push` em 23/10/2026. Redefine `update_dados_lotes`: `lote_categorias.periodo` deixa de ser `days_diff`. Com plano: dias desde `GREATEST(início do plano, data_pesagem)`. Bezerro ao pé: dias desde `data_pesagem` (fallback `created_at`). Peso e notificações não mudaram.

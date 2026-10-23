@@ -516,6 +516,10 @@ export function Lotes() {
     }
   }, [formData.categorias.map(cat => cat.quant_inicial).join(','), editingLote])
 
+  // Datas anteriores a isso são erro de digitação (ex.: ano parcial "0002" no input date)
+  const DATA_MINIMA_VALIDA = '2000-01-01'
+  const dataValida = (data?: string | null): data is string => !!data && data >= DATA_MINIMA_VALIDA
+
   // Função unificada para recalcular todos os campos dependentes de uma categoria
   const recalcularCategoria = (cat: LoteCategoria): LoteCategoria => {
     let updatedCat = { ...cat }
@@ -542,17 +546,21 @@ export function Lotes() {
         updatedCat = { ...updatedCat, periodo: diffDays > 0 ? diffDays : 0 }
       }
     } else if (planoVigente) {
-      // Plano vigente ativo: calcular periodo a partir de data_inicio do plano
+      // Plano vigente ativo: periodo conta desde a entrada no lote, ou desde o início
+      // do plano se ele for depois (mesma regra do cron update_dados_lotes).
       // Não recalcular peso_vivo_atual_kg_cab aqui - o cron update_dados_lotes()
       // atualiza server-side diariamente. O frontend deve respeitar o valor do banco.
-      const dataInicio = new Date(planoVigente.data_inicio! + 'T00:00:00')
+      const dataBase = dataValida(updatedCat.data_pesagem) && updatedCat.data_pesagem > planoVigente.data_inicio!
+        ? updatedCat.data_pesagem
+        : planoVigente.data_inicio!
+      const dataInicio = new Date(dataBase + 'T00:00:00')
       const currentDate = new Date()
       currentDate.setHours(0, 0, 0, 0)
       const diffTime = currentDate.getTime() - dataInicio.getTime()
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
       updatedCat = { ...updatedCat, periodo: diffDays > 0 ? diffDays : 0 }
-    } else if (updatedCat.data_pesagem) {
-      // Sem plano vigente: comportamento legado com data_pesagem
+    } else if (dataValida(updatedCat.data_pesagem)) {
+      // Sem plano vigente: comportamento legado com data_pesagem (data inválida não calcula)
       const dataPesagem = new Date(updatedCat.data_pesagem + 'T00:00:00')
       const currentDate = new Date()
       currentDate.setHours(0, 0, 0, 0)
