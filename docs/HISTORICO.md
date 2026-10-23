@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Período da categoria conta desde a entrada no lote (23/10/2026)
+
+- **Migration** `20261023160000_periodo_lote_categoria_base_entrada` (rollback em `supabase/rollbacks/`), aplicada com `supabase db push` em 23/10/2026. Redefine `update_dados_lotes`: `lote_categorias.periodo` deixa de ser `days_diff`. Com plano: dias desde `GREATEST(início do plano, data_pesagem)`. Bezerro ao pé: dias desde `data_pesagem` (fallback `created_at`). Peso e notificações não mudaram.
+- **Causa**: o período contava desde o início do plano (que podia ser anterior à entrada) e zerava a cada ajuste de peso. Ex.: CM- 01 (Jacamim), entrada 05/10 e plano de 08/07, mostrava 107 dias no relatório zootécnico.
+- **Efeito**: vale para todas as fazendas no próximo cron. Só a coluna `periodo` muda. Pendente: origem do valor 739903 em CM-02 / boi magro (Jacamim), não investigada.
+- **Reverter**: aplicar o arquivo de rollback via MCP ou `db push` com a migration removida.
+
 ## Maternidade: botão Excluir no painel desfaz tudo que o parto causou (2026-10-23)
 
 - **Migrations** (cada uma com rollback em `supabase/rollbacks/`): `20261023100000_excluir_registro_maternidade` (funções `individuo_usos_do_parto`, `previa_exclusao_maternidade`, `excluir_registro_maternidade`); `20261023110000_maternidade_previa_exclusao_security_definer` (a prévia dava 403 para o usuário do painel: lógica em `previa_exclusao_maternidade_interna`, wrapper `SECURITY DEFINER` com `caller_has_fazenda_access`, helpers sem acesso direto); `20261023120000_maternidade_exclusao_ajusta_quant_inicial`; `20261023130000_maternidade_usos_do_parto_array_append` (`v := v || 'texto'` era lido como literal de array e quebrava a prévia sempre que a cria tinha outro uso).
