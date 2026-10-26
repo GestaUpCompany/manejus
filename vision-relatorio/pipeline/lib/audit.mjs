@@ -198,11 +198,11 @@ export function auditSheets(sheets) {
     if (!status) {
       push('aviso', 'Venda_Gado', 5, 'Status', ln,
         'Venda sem status',
-        'a linha entra como recebida no fluxo de caixa da p.17 — se ainda não foi paga, a caixa sai mais alta que o real');
+        'a venda fica fora de todas as páginas de vendas (só entram lotes "Pago")');
     } else if (!/^(pago|em aberto)$/i.test(status)) {
       push('erro', 'Venda_Gado', 5, 'Status', ln,
         `Status "${status}" não reconhecido`,
-        'o relatório só entende "Pago" e "Em Aberto" — qualquer outro valor é tratado como recebido, entrando no fluxo de caixa da p.17 antes da hora');
+        'o relatório só entende "Pago" e "Em Aberto" — esta venda fica fora de todas as páginas de vendas (só entram lotes "Pago")');
     }
     const tipoV = toStr(r[7]);
     if (!tipoV) {
@@ -292,11 +292,11 @@ export function auditSheets(sheets) {
     if (!statusC) {
       push('aviso', 'Compra_Gado', 3, 'Status', ln,
         'Compra sem status',
-        'a linha entra como paga no fluxo de caixa — se ainda não foi paga, o desembolso sai antecipado');
+        'a compra fica fora de todas as páginas de compras (só entram lotes "Pago")');
     } else if (!/^(pago|em aberto)$/i.test(statusC)) {
       push('erro', 'Compra_Gado', 3, 'Status', ln,
         `Status "${statusC}" não reconhecido`,
-        'o relatório só entende "Pago" e "Em Aberto" — outro valor é tratado como pago e entra no desembolso/fluxo de caixa antes da hora');
+        'o relatório só entende "Pago" e "Em Aberto" — esta compra fica fora de todas as páginas de compras (só entram lotes "Pago")');
     }
     const dPagC = toDate(r[2]);
     if (dPagC && d - dPagC > 31 * DIA) {

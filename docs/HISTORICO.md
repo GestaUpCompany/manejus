@@ -1,5 +1,10 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório Vision: compras e vendas só com status "Pago" (26/10/2026)
+- `vision-relatorio/pipeline/lib/model.mjs`: `compras` e `vendas` do período passam a incluir só lotes com status "Pago" (`contaCompraVenda`). Transferências entre fazendas continuam sempre incluídas. Afeta p.4/p.5, p.6, p.7, p.18 (@ de entrada/saída) e p.19, além do giro de estoque da p.7.
+- `readVendas` passa a ler o status (coluna F). Payloads antigos de links públicos, sem status, mantêm o comportamento anterior.
+- `audit.mjs`: textos dos avisos de status de compra e venda atualizados para dizer que o lote fica fora das páginas.
+
 ## Relatório de Combustível unificado: Abastecimento + Estoque (26/10/2026)
 
 - **Objetivo**: ver no mesmo relatório as métricas de abastecimento e de estoque de combustível, com um período comum.

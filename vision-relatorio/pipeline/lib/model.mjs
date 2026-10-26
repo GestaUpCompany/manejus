@@ -141,7 +141,7 @@ function readVendas(rows) {
     if (!d || !cab) continue;
     out.push({
       data: d, tipo: toStr(r[7]), cab, categoria: toStr(r[9]), sexo: toStr(r[10]),
-      kgFinal: toNum(r[22]), rendCarc: toNum(r[29]), atAbatidas: toNum(r[31]),
+      status: toStr(r[5]), kgFinal: toNum(r[22]), rendCarc: toNum(r[29]), atAbatidas: toNum(r[31]),
       comprador: toStr(r[35]), valorLiq: toNum(r[39]), rsAt: toNum(r[40]),
       rsCab: toNum(r[41]), rsKgPV: toNum(r[42]),
     });
@@ -245,8 +245,11 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   const { cad, diarias, diariasCat, comprasAll, vendasAll, mortesAll, nascAll, desembAll, receitasAll } = reads;
   const estoque = reads.estoque instanceof Map ? reads.estoque : new Map(Object.entries(reads.estoque || {}));
 
-  const compras = comprasAll.filter(x => inPeriod(x.data, ini, fim));
-  const vendas = vendasAll.filter(x => inPeriod(x.data, ini, fim));
+  // Compras e vendas só contam lotes "Pago" (Em Aberto ainda não foi pago). Transferências
+  // são movimentação física e ficam sempre. Status ausente = payload antigo de link público.
+  const contaCompraVenda = (x) => /^tran(s)?f/i.test(x.tipo) || x.status === undefined || /^pago$/i.test(x.status);
+  const compras = comprasAll.filter(x => inPeriod(x.data, ini, fim) && contaCompraVenda(x));
+  const vendas = vendasAll.filter(x => inPeriod(x.data, ini, fim) && contaCompraVenda(x));
   const vendasAbate = vendas.filter(x => /^abate/i.test(x.tipo));
   const vendasVivo = vendas.filter(x => /vivo/i.test(x.tipo));
   const mortes = mortesAll.filter(x => inPeriod(x.data, ini, fim) && /^morte/i.test(x.tipo));
