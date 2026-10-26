@@ -57,7 +57,7 @@ const TABLE_GAP_H = 6 // margin-bottom do .table-block
 const DETAIL_ROW_H = 9
 const OPER_MERGE_MIN_ROWS = 3
 
-function isPDFData(value) {
+export function isPDFData(value) {
   if (!value || typeof value !== 'object') return false
   if (typeof value.titulo !== 'string') return false
   if (typeof value.fazendaNome !== 'string') return false

@@ -4,14 +4,13 @@ import { moverRelatorio, RELATORIOS_GERAIS } from './catalogo'
 describe('catálogo do relatório geral', () => {
   it('mantém os dez relatórios na ordem padrão', () => {
     expect(RELATORIOS_GERAIS.map((item) => item.id)).toEqual([
-      'abastecimento',
+      'combustivel',
       'consumo',
       'bebedouros',
       'morte',
       'rodeio',
       'pastagens',
       'estoque',
-      'estoque_combustivel',
       'cantina',
       'boletim_rebanho',
     ])
@@ -21,17 +20,16 @@ describe('catálogo do relatório geral', () => {
     const ids = RELATORIOS_GERAIS.map((item) => item.id)
     expect(moverRelatorio(ids, 'consumo', -1)).toEqual([
       'consumo',
-      'abastecimento',
+      'combustivel',
       'bebedouros',
       'morte',
       'rodeio',
       'pastagens',
       'estoque',
-      'estoque_combustivel',
       'cantina',
       'boletim_rebanho',
     ])
-    expect(moverRelatorio(ids, 'abastecimento', -1)).toBe(ids)
+    expect(moverRelatorio(ids, 'combustivel', -1)).toBe(ids)
     expect(moverRelatorio(ids, 'boletim_rebanho', 1)).toBe(ids)
   })
 })

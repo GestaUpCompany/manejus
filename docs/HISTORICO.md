@@ -1,5 +1,18 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Combustível unificado: Abastecimento + Estoque (26/10/2026)
+
+- **Objetivo**: ver no mesmo relatório as métricas de abastecimento e de estoque de combustível, com um período comum.
+- **Banco**: migration `20261026120000_relatorio_combustivel_unificado` (rollback em `supabase/rollbacks/`), aplicada com `supabase db push`. Cria `get_dados_relatorio_combustivel(token, ini, fim)` (anon + authenticated) e `get_dados_relatorio_combustivel_fazenda(fazenda_id, ini, fim)` (authenticated). Ambas compõem as RPCs já existentes, criando linhas temporárias em `relatorios_publicos` dentro da mesma transação. As RPCs antigas não mudaram.
+- **Verificado** na fazenda de testes: a RPC nova devolve 8 registros de abastecimento, 4 tanques e 13 movimentações, iguais às RPCs antigas. O link temporário foi apagado e não sobrou linha temporária.
+- **Front**: `EstoqueCombustivelSecao.tsx` (KPIs, posição por tanque e extrato) é compartilhado pela página de estoque e pelo relatório combinado. `RelatorioPublico.tsx` trata o tipo `combustivel` com a RPC nova e mostra a seção de estoque no fim da página, com o mesmo período. Os filtros de máquina, combustível e operação valem só para o abastecimento.
+- **Catálogo**: o card "Combustível" substitui os cards "Abastecimento" e "Estoque de Combustível" em `Relatorios.tsx` e no Infográfico. No Infográfico, `combustivel` gera duas seções (abastecimento e estoque), com os loaders que já existiam.
+- **Links antigos**: os tipos `abastecimento` e `estoque_combustivel` continuam funcionando como antes. Só deixam de ser criados pela tela.
+- **PDF combinado**: `api/pdf/_relatorios/combustivel.js` (despachante `/api/pdf/combustivel`) renderiza a parte de abastecimento e a de estoque com os módulos existentes e junta as páginas com pdf-lib, em um arquivo só. A numeração "Página X de Y" é de cada parte. O cliente é `src/utils/relatorioCombustivelPDFPuppeteer.ts`, e o botão "Exportar PDF" do relatório combinado usa esse endpoint. Teste de fumaça do handler: status 200, PDF de 5 páginas. **Falta conferir o conteúdo visual** das páginas no navegador.
+- **Ajustes após teste no navegador (fazenda de testes)**: no relatório combinado, a seção "Estoque atual de combustível" da parte de abastecimento foi escondida, porque a seção de estoque já mostra a posição dos tanques. Testado em `localhost`: página carrega sem erros no console e a RPC responde 200.
+- **Pendente (depende de deploy)**: testar o PDF combinado em `/api/pdf/combustivel`. Em `pnpm dev` a rota dá 404, porque as funções de `api/` só rodam na Vercel. Também conferir o Infográfico com a seção de combustível.
+- **Pendente (decisão)**: `get_dados_relatorio_combustivel_fazenda` não é usada, porque o Infográfico chama os loaders separados. Remover exige nova migration.
+
 ## Histórico de pasto sem duplicação na edição do lote (23/10/2026)
 
 - **Causa**: ao trocar o pasto na tela de Lotes, o trigger `trg_lotes_pasto_historico` fechava e abria `lote_pasto_historico`, e logo depois a RPC `sincronizar_historico_pasto_lote_edit` fechava a linha recém-aberta e inseria outra. Havia 38 linhas de duração zero em 30 lotes.

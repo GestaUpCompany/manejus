@@ -5,7 +5,8 @@ import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveCo
 import logoManejus from '/images/manejus360.png'
 import { ordenarPeriodo } from '../../features/relatorioGeral/periodo'
 import { gerarRelatorioAbastecimentoPDFPuppeteer } from '../../utils/relatorioAbastecimentoPDFPuppeteer'
-import type { TanqueSaldo } from '../../utils/relatorioAbastecimentoPDF'
+import { gerarRelatorioCombustivelPDFPuppeteer } from '../../utils/relatorioCombustivelPDFPuppeteer'
+import type { DadosPDFRelatorioAbastecimento, TanqueSaldo } from '../../utils/relatorioAbastecimentoPDF'
 import { RelatorioConsumoPublico } from './RelatorioConsumoPublico'
 import { RelatorioTratosPublico } from './RelatorioTratosPublico'
 import { RelatorioMortePublico } from './RelatorioMortePublico'
@@ -17,6 +18,8 @@ import { RelatorioPastagensPublico } from './RelatorioPastagensPublico'
 import { RelatorioEstoquePublico } from './RelatorioEstoquePublico'
 import { RelatorioEstoqueCombustivelPublico } from './RelatorioEstoqueCombustivelPublico'
 import { RelatorioCantinaPublico } from './RelatorioCantinaPublico'
+import { EstoqueCombustivelSecao } from './EstoqueCombustivelSecao'
+import type { DadosRelatorioEstoqueCombustivel } from '../../features/relatorioEstoqueCombustivel/agregacao'
 
 const CHART_NO_FOCUS_CSS = `
 .recharts-surface {
@@ -205,6 +208,8 @@ export function RelatorioPublico() {
   const [error, setError] = useState<string | null>(null)
   const [relatorioInfo, setRelatorioInfo] = useState<RelatorioInfo | null>(null)
   const [dados, setDados] = useState<DadosRelatorio | null>(null)
+  // Tipo 'combustivel': parte de estoque (tanques e extrato) vem junto com o abastecimento
+  const [estoque, setEstoque] = useState<DadosRelatorioEstoqueCombustivel | null>(null)
 
   // Slicers (data vai ao banco; os demais sao cross-filters multi-select no frontend)
   const [dataInicio, setDataInicio] = useState('')
@@ -260,8 +265,9 @@ export function RelatorioPublico() {
         return
       }
 
+      const combinado = relData.tipo === 'combustivel'
       const { data: rpcData, error: rpcError } = await supabase
-        .rpc('get_dados_relatorio_abastecimento', {
+        .rpc(combinado ? 'get_dados_relatorio_combustivel' : 'get_dados_relatorio_abastecimento', {
           p_token: token,
           p_data_inicio: dataInicio || null,
           p_data_fim: dataFim || null,
@@ -274,7 +280,12 @@ export function RelatorioPublico() {
         return
       }
 
-      setDados(rpcData?.dados as DadosRelatorio)
+      if (combinado) {
+        setDados(rpcData?.dados?.abastecimento as DadosRelatorio)
+        setEstoque(rpcData?.dados?.estoque as DadosRelatorioEstoqueCombustivel)
+      } else {
+        setDados(rpcData?.dados as DadosRelatorio)
+      }
       setError(null)
     } catch (err) {
       console.error('Erro:', err)
@@ -461,7 +472,7 @@ export function RelatorioPublico() {
     if (!relatorioInfo || !dados) return
     try {
       setExportandoPDF(true)
-      const blob = await gerarRelatorioAbastecimentoPDFPuppeteer({
+      const abastecimento: DadosPDFRelatorioAbastecimento = {
         titulo: relatorioInfo.titulo,
         fazendaNome: relatorioInfo.fazenda_nome,
         fazendaLogoUrl: relatorioInfo.fazenda_logo_url,
@@ -480,13 +491,23 @@ export function RelatorioPublico() {
         detalhesPorMaquina,
         tanques: dados.tanques ?? [],
         geradoEm: dados.gerado_em ?? '',
-      })
+      }
+      // Combustível: um PDF com abastecimento e estoque (mesmo período)
+      const combinado = relatorioInfo.tipo === 'combustivel' && estoque
+      const blob = combinado
+        ? await gerarRelatorioCombustivelPDFPuppeteer({
+            abastecimento,
+            estoque: { ...estoque, fazendaNome: relatorioInfo.fazenda_nome ?? '', fazendaLogoUrl: relatorioInfo.fazenda_logo_url },
+          })
+        : await gerarRelatorioAbastecimentoPDFPuppeteer(abastecimento)
 
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
       const nomeFazenda = relatorioInfo.fazenda_nome || 'Fazenda'
-      link.download = `Gesta'Up - Relatório de Abastecimento ${nomeFazenda}.pdf`
+      link.download = combinado
+        ? `Gesta'Up - Relatório de Combustível ${nomeFazenda}.pdf`
+        : `Gesta'Up - Relatório de Abastecimento ${nomeFazenda}.pdf`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -1226,7 +1247,8 @@ export function RelatorioPublico() {
         </div>
 
         {/* Estoque atual de combustível (posição na geração, independe do período) */}
-        {dados && dados.tanques && dados.tanques.length > 0 && (
+        {/* No relatório combinado a posição dos tanques já aparece na seção de Estoque */}
+        {relatorioInfo?.tipo !== 'combustivel' && dados && dados.tanques && dados.tanques.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <h2 className="text-sm font-semibold text-gray-900">Estoque atual de combustível</h2>
             <p className="text-xs text-gray-500 mb-4">
@@ -1301,6 +1323,13 @@ export function RelatorioPublico() {
             </table>
           </div>
         </div>
+        {/* Estoque de combustível (só no relatório combinado; usa o mesmo período) */}
+        {relatorioInfo?.tipo === 'combustivel' && estoque && (
+          <section className="space-y-6">
+            <h2 className="text-lg font-bold" style={{ color: GREEN_DARK }}>Estoque de Combustível</h2>
+            <EstoqueCombustivelSecao dados={estoque} />
+          </section>
+        )}
       </main>
 
       {/* Footer (identidade visual Manejus 360) */}

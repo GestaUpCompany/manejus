@@ -1,4 +1,4 @@
-export type TipoRelatorioGeral = 'abastecimento' | 'consumo' | 'bebedouros' | 'morte' | 'rodeio' | 'pastagens' | 'estoque' | 'estoque_combustivel' | 'cantina' | 'boletim_rebanho'
+export type TipoRelatorioGeral = 'combustivel' | 'consumo' | 'bebedouros' | 'morte' | 'rodeio' | 'pastagens' | 'estoque' | 'cantina' | 'boletim_rebanho'
 
 export interface RelatorioGeralCatalogoItem {
   id: TipoRelatorioGeral
@@ -8,9 +8,9 @@ export interface RelatorioGeralCatalogoItem {
 
 export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
   {
-    id: 'abastecimento',
-    titulo: 'Abastecimento',
-    descricao: 'Consumo de combustível por máquina, combustível e operação.',
+    id: 'combustivel',
+    titulo: 'Combustível',
+    descricao: 'Abastecimento por máquina, combustível e operação, e estoque por tanque com extrato, no mesmo período.',
   },
   {
     id: 'consumo',
@@ -41,11 +41,6 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
     id: 'estoque',
     titulo: 'Estoque de Insumos',
     descricao: 'Insumos e formulações no período: o que repor, capital parado ou em excesso, cobertura, consumo, valor em estoque e curva ABC.',
-  },
-  {
-    id: 'estoque_combustivel',
-    titulo: 'Estoque de Combustível',
-    descricao: 'Saldo inicial, entradas, baixas e saldo final por tanque no período, com valor em estoque e extrato.',
   },
   {
     id: 'cantina',

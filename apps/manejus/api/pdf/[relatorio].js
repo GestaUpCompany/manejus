@@ -8,6 +8,7 @@ import abastecimento from './_relatorios/abastecimento.js'
 import bebedouros from './_relatorios/bebedouros.js'
 import cantina from './_relatorios/cantina.js'
 import clima from './_relatorios/clima.js'
+import combustivel from './_relatorios/combustivel.js'
 import consumo from './_relatorios/consumo.js'
 import estoque from './_relatorios/estoque.js'
 import estoqueCombustivel from './_relatorios/estoqueCombustivel.js'
@@ -22,6 +23,7 @@ const RELATORIOS = {
   bebedouros,
   cantina,
   clima,
+  combustivel,
   consumo,
   estoque,
   estoqueCombustivel,

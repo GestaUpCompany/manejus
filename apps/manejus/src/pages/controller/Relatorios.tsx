@@ -28,9 +28,9 @@ interface RelatorioDisponivel {
 
 const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
   {
-    tipo: 'abastecimento',
-    titulo: 'Abastecimento',
-    descricao: 'Consumo de combustível por máquina/veículo, tipo de combustível e operação.',
+    tipo: 'combustivel',
+    titulo: 'Combustível',
+    descricao: 'Abastecimento por máquina/veículo, combustível e operação, e estoque por tanque com extrato, no mesmo período.',
     icone: '⛽',
   },
   {
@@ -86,12 +86,6 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     titulo: 'Estoque de Insumos',
     descricao: 'Apoio à decisão sobre insumos e formulações: o que repor e quanto comprar, capital parado ou em excesso, cobertura, consumo do período, valor em estoque e curva ABC.',
     icone: '📦',
-  },
-  {
-    tipo: 'estoque_combustivel',
-    titulo: 'Estoque de Combustível',
-    descricao: 'Posição por tanque (saldo inicial, entradas, baixas e saldo final), valor em estoque e extrato de movimentações por período.',
-    icone: '🛢️',
   },
   {
     tipo: 'cantina',

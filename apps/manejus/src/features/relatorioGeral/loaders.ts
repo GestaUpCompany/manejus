@@ -514,7 +514,10 @@ async function carregarBoletim(
   }
 }
 
-const LOADERS: Record<TipoRelatorioGeral, (fazenda: FazendaRelatorio, dataInicio: string, dataFim: string, opcoes?: OpcoesCarregamentoRelatorios) => Promise<PayloadRelatorioGeral>> = {
+// Cada item do catálogo gera uma ou mais seções do PDF. 'combustivel' junta abastecimento e estoque de combustível.
+type TipoCarregavel = 'abastecimento' | 'estoque_combustivel' | Exclude<TipoRelatorioGeral, 'combustivel'>
+
+const LOADERS: Record<TipoCarregavel, (fazenda: FazendaRelatorio, dataInicio: string, dataFim: string, opcoes?: OpcoesCarregamentoRelatorios) => Promise<PayloadRelatorioGeral>> = {
   abastecimento: carregarAbastecimento,
   consumo: carregarConsumo,
   bebedouros: carregarBebedouros,
@@ -538,7 +541,10 @@ export async function carregarRelatoriosGerais(
   const resultados: PayloadRelatorioGeral[] = []
   for (const tipo of tipos) {
     onEtapa?.(`Carregando ${tipo}`)
-    resultados.push(await LOADERS[tipo](fazenda, dataInicio, dataFim, opcoes))
+    const subtipos: TipoCarregavel[] = tipo === 'combustivel' ? ['abastecimento', 'estoque_combustivel'] : [tipo]
+    for (const subtipo of subtipos) {
+      resultados.push(await LOADERS[subtipo](fazenda, dataInicio, dataFim, opcoes))
+    }
   }
   return resultados
 }

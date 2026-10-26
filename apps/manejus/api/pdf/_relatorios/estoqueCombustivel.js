@@ -41,7 +41,7 @@ const ORIGEM_ROTULO = {
 
 const TIPO_ROTULO = { entrada: 'Entrada', baixa: 'Baixa', ajuste: 'Ajuste' }
 
-function isPDFData(value) {
+export function isPDFData(value) {
   if (!value || typeof value !== 'object') return false
   if (typeof value.fazendaNome !== 'string') return false
   if (!Array.isArray(value.tanques)) return false
