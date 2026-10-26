@@ -33,12 +33,15 @@ export default async function handler(req, res) {
 
   try {
     // Numeração contínua: conta as páginas de cada parte no HTML (sem Chromium) e renderiza com o total geral
+    // O PDF combinado é um resumo: sem tabelas de lançamentos (máquina, operador, placa e extrato)
+    const opcoesAbastecimento = { incluirDetalhes: false }
+    const opcoesEstoque = { incluirExtrato: false }
     const contarPaginas = (html) => (html.match(/<section class="page">/g) || []).length
-    const totalAbastecimento = contarPaginas(await renderAbastecimentoHtml(abastecimento))
-    const totalEstoque = contarPaginas(await renderEstoqueCombustivelHtml(estoque))
+    const totalAbastecimento = contarPaginas(await renderAbastecimentoHtml(abastecimento, opcoesAbastecimento))
+    const totalEstoque = contarPaginas(await renderEstoqueCombustivelHtml(estoque, opcoesEstoque))
     const totalPaginas = totalAbastecimento + totalEstoque
 
-    const htmlAbastecimento = await renderAbastecimentoHtml(abastecimento, { grandTotal: totalPaginas })
+    const htmlAbastecimento = await renderAbastecimentoHtml(abastecimento, { ...opcoesAbastecimento, grandTotal: totalPaginas })
     const pdfAbastecimento = await generatePdf({
       html: htmlAbastecimento,
       format: 'A4',
@@ -47,7 +50,7 @@ export default async function handler(req, res) {
         await page.waitForFunction('window.__chartsReady === true', { timeout: 15000 }).catch(() => {})
       },
     })
-    const htmlEstoque = await renderEstoqueCombustivelHtml(estoque, { pageOffset: totalAbastecimento, grandTotal: totalPaginas })
+    const htmlEstoque = await renderEstoqueCombustivelHtml(estoque, { ...opcoesEstoque, pageOffset: totalAbastecimento, grandTotal: totalPaginas })
     const pdfEstoque = await generatePdf({ html: htmlEstoque, format: 'A4', landscape: true })
 
     const merged = await PDFDocument.create()

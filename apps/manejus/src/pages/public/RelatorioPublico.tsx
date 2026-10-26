@@ -1179,6 +1179,9 @@ export function RelatorioPublico() {
           </div>
         </div>
 
+        {/* Tabelas de lançamentos (detalhamento por máquina e operacional) ficam fora do relatório de combustível */}
+        {relatorioInfo?.tipo !== 'combustivel' && (
+        <>
         {/* Painel 1: Detalhamento por máquina (colunas 1-5) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
           <h2 className="text-sm font-semibold text-gray-900 mb-4">Detalhamento por Máquina/Veículo</h2>
@@ -1246,6 +1249,9 @@ export function RelatorioPublico() {
           </div>
         </div>
 
+        </>
+        )}
+
         {/* Estoque atual de combustível (posição na geração, independe do período) */}
         {/* No relatório combinado a posição dos tanques já aparece na seção de Estoque */}
         {relatorioInfo?.tipo !== 'combustivel' && dados && dados.tanques && dados.tanques.length > 0 && (
@@ -1299,6 +1305,8 @@ export function RelatorioPublico() {
           </div>
         )}
 
+        {relatorioInfo?.tipo !== 'combustivel' && (
+        <>
         {/* Painel 2: Detalhamento operacional (colunas 6-7) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
           <h2 className="text-sm font-semibold text-gray-900 mb-4">Detalhamento Operacional</h2>
@@ -1323,11 +1331,14 @@ export function RelatorioPublico() {
             </table>
           </div>
         </div>
+        </>
+        )}
+
         {/* Estoque de combustível (só no relatório combinado; usa o mesmo período) */}
         {relatorioInfo?.tipo === 'combustivel' && estoque && (
           <section className="space-y-6">
             <h2 className="text-lg font-bold" style={{ color: GREEN_DARK }}>Estoque de Combustível</h2>
-            <EstoqueCombustivelSecao dados={estoque} />
+            <EstoqueCombustivelSecao dados={estoque} mostrarExtrato={false} />
           </section>
         )}
       </main>

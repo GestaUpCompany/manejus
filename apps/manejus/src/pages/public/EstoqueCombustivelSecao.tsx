@@ -32,11 +32,12 @@ function detalhe(m: DadosRelatorioEstoqueCombustivel['movimentacoes'][number]): 
 
 interface Props {
   dados: DadosRelatorioEstoqueCombustivel
+  mostrarExtrato?: boolean
 }
 
 // Blocos do estoque de combustível (KPIs, posição por tanque e extrato).
 // Não busca dados, não tem cabeçalho nem seletor de período: quem usa decide isso.
-export function EstoqueCombustivelSecao({ dados }: Props) {
+export function EstoqueCombustivelSecao({ dados, mostrarExtrato = true }: Props) {
   const tanques = useMemo(() => dados.tanques ?? [], [dados])
   const movimentacoes = useMemo(() => dados.movimentacoes ?? [], [dados])
   const totais = useMemo(() => totaisDosTanques(tanques), [tanques])
@@ -111,7 +112,7 @@ export function EstoqueCombustivelSecao({ dados }: Props) {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {mostrarExtrato && <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100">
           Extrato de movimentações <span className="text-xs font-normal text-gray-400">({movimentacoes.length})</span>
         </h3>
@@ -145,7 +146,7 @@ export function EstoqueCombustivelSecao({ dados }: Props) {
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
       <p className="text-[11px] text-gray-400">
         Valor em estoque = saldo final × custo médio atual do tanque. Saldos inicial e final reconstruídos pelo histórico de lançamentos.
       </p>

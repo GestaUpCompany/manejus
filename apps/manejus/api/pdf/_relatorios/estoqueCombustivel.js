@@ -166,18 +166,19 @@ function extratoTableHtml(movs, total) {
   return `<div class="table-block"><h3 class="table-title">Extrato de movimentações<span>${total} ${total === 1 ? 'lançamento' : 'lançamentos'}</span></h3><table class="ec-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
 }
 
-export async function renderEstoqueCombustivelHtml(input, { pageOffset = 0, grandTotal } = {}) {
+// incluirExtrato: false omite o extrato de movimentações (lançamentos).
+export async function renderEstoqueCombustivelHtml(input, { pageOffset = 0, grandTotal, incluirExtrato = true } = {}) {
   const { fazendaNome, logoGestao, logoFazenda } = input
   const brand = { logoGestao, logoFazenda, fazendaNome }
   const tanques = Array.isArray(input.tanques) ? input.tanques : []
-  const movs = Array.isArray(input.movimentacoes) ? input.movimentacoes : []
+  const movs = incluirExtrato && Array.isArray(input.movimentacoes) ? input.movimentacoes : []
   const periodo = periodoTexto(input)
   const titulo = 'Relatório de Estoque de Combustível'
 
   const tanquesHead = tanques.slice(0, FIRST_PAGE_TANQUES)
   const tanquesResto = chunkArray(tanques.slice(FIRST_PAGE_TANQUES), TANQUES_PER_PAGE).filter((c) => c.length)
   const movChunks = movs.length ? chunkArray(movs, MOVS_PER_PAGE) : []
-  const totalPages = 1 + tanquesResto.length + (movs.length ? movChunks.length : 1)
+  const totalPages = 1 + tanquesResto.length + (!incluirExtrato ? 0 : movs.length ? movChunks.length : 1)
 
   const abaixo = tanques.filter((t) => t.abaixo_limite).length
   const negativos = tanques.filter((t) => t.negativo).length
@@ -214,7 +215,9 @@ export async function renderEstoqueCombustivelHtml(input, { pageOffset = 0, gran
     )
   })
 
-  if (movs.length === 0) {
+  if (!incluirExtrato) {
+    // Sem extrato: a parte termina na posição por tanque
+  } else if (movs.length === 0) {
     pageIndex += 1
     pagesHtml.push(
       pageSection(`

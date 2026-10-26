@@ -463,7 +463,8 @@ function chunkArray(arr, size) {
   return chunks
 }
 
-export async function renderAbastecimentoHtml(input, { pageOffset = 0, grandTotal } = {}) {
+// incluirDetalhes: false omite as tabelas de detalhamento por máquina e operacional (lançamentos).
+export async function renderAbastecimentoHtml(input, { pageOffset = 0, grandTotal, incluirDetalhes = true } = {}) {
   const { titulo, fazendaNome, logoGestao, logoFazenda, filtros, porMaquina, porCombustivel, porOperacao, totalLitros, totalRegistros, detalhesPorMaquina } = input
   const tanques = Array.isArray(input.tanques) ? input.tanques.slice(0, DETAIL_ROWS_PER_PAGE - 1) : []
   const temEstoque = tanques.length > 0
@@ -510,7 +511,7 @@ export async function renderAbastecimentoHtml(input, { pageOffset = 0, grandTota
       : operMergedCount >= detalhesPorMaquinaFmt.length
         ? []
         : chunkArray(detalhesPorMaquinaFmt.slice(operMergedCount), DETAIL_ROWS_PER_PAGE)
-  const totalPages = 2 + estoquePages + chunks1.length + chunks2.length
+  const totalPages = 2 + estoquePages + (incluirDetalhes ? chunks1.length + chunks2.length : 0)
 
   const chartsData = [
     { canvasId: 'chart-maquina', kind: 'vertical', items: porMaquinaFmt, color: '#0F6437' },
@@ -609,7 +610,7 @@ export async function renderAbastecimentoHtml(input, { pageOffset = 0, grandTota
   return htmlDocument({
     title: titulo,
     extraCss: ABASTECIMENTO_CSS,
-    body: `${page1}${page2}${pageEstoque}${detail1Pages}${detail2Pages}`,
+    body: `${page1}${page2}${pageEstoque}${incluirDetalhes ? `${detail1Pages}${detail2Pages}` : ''}`,
     chartJsScript,
     chartsInit: CHARTS_INIT_JS,
     dataJson: { charts: chartsData },
