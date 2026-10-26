@@ -38,12 +38,14 @@ export async function sheetsFromFile(
   return sheetsFromXlsxBlob(file, NEEDED_SHEETS)
 }
 
-export function ctxFor(fazenda: FazendaRef): Record<string, unknown> {
+// nomeExibicao troca só o nome impresso no relatório (ex.: grupo de fazendas);
+// logo e demais dados continuam vindo da fazenda escolhida.
+export function ctxFor(fazenda: FazendaRef, nomeExibicao?: string): Record<string, unknown> {
   return {
     logoSrc: fazenda.logo_url || '/assets/logo-gestaup.png',
     logoGestaup: '/assets/logo-gestaup.png',
     logoFazenda: fazenda.logo_url,
-    fazendaNome: fazenda.nome,
+    fazendaNome: nomeExibicao || fazenda.nome,
     fotoCapa: '/assets/capa-default.png',
   }
 }
@@ -51,12 +53,12 @@ export function ctxFor(fazenda: FazendaRef): Record<string, unknown> {
 export function payloadFromReads(
   reads: Record<string, unknown[]>,
   fazenda: FazendaRef,
-  opts?: { ini?: string; fim?: string; saldoCaixaInicial?: number; anoBaseGiro?: number },
+  opts?: { ini?: string; fim?: string; saldoCaixaInicial?: number; anoBaseGiro?: number; nomeExibicao?: string },
 ): RelatorioPayload {
   const range = computeRange(reads)
   return buildPayload({
     reads,
-    ctx: ctxFor(fazenda),
+    ctx: ctxFor(fazenda, opts?.nomeExibicao),
     defaults: {
       ini: opts?.ini ?? range.min,
       fim: opts?.fim ?? range.max,

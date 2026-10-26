@@ -44,7 +44,7 @@ export function render({ model, ctx }) {
     .legend .sw.b { background: var(--blue); }
   `;
 
-  const dense = L.length > 12;
+  const dense = L.length > 8;
   // períodos longos (>24 meses) não cabem numa linha de tabela: divide em blocos empilhados
   const chunks = L.length > 24
     ? [L.slice(0, Math.ceil(L.length / 2)), L.slice(Math.ceil(L.length / 2))]

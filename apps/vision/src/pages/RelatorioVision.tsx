@@ -153,8 +153,11 @@ export function RelatorioVision() {
   const [dragging, setDragging] = useState(false)
   const [erro, setErro] = useState('')
   const [detect, setDetect] = useState<{ nome: string; arquivo: string } | null>(null)
+  // Nome impresso no relatório. Começa com o nome da planilha e pode ser trocado; logo e demais dados vêm da fazenda escolhida.
+  const [nomeExibicao, setNomeExibicao] = useState('')
 
   const fazenda = useMemo(() => fazendas.find((f) => f.id === fazendaId), [fazendas, fazendaId])
+  const nomeRelatorio = nomeExibicao.trim() || fazenda?.nome || ''
 
   useEffect(() => {
     // RPC porque a RLS de fazendas só expõe as fazendas vinculadas ao usuário.
@@ -192,7 +195,7 @@ export function RelatorioVision() {
       setFazendaId(f.id)
       toast.success(`Fazenda identificada na planilha: ${f.nome}`)
     } else if (detect.nome) {
-      toast.warning(`Não foi possível associar "${detect.nome}" a uma fazenda ativa. Selecione manualmente.`)
+      toast.warning(`A planilha se identifica como "${detect.nome}", que não corresponde a nenhuma fazenda ativa. Selecione a fazenda desejada; o relatório usará o nome escolhido.`)
     }
     setDetect(null)
   }, [detect, fazendaId, fazendas, toast])
@@ -210,7 +213,9 @@ export function RelatorioVision() {
       setIssues(encontrados)
       const nErros = encontrados.filter((i) => i.sev === 'erro').length
       if (nErros) toast.warning(`${nErros} problema(s) grave(s) na planilha — confira abaixo do resumo.`)
-      setDetect({ nome: nomeDaPlanilha(sheets['Cadastros']), arquivo: file.name })
+      const nomePlanilha = nomeDaPlanilha(sheets['Cadastros'])
+      setDetect({ nome: nomePlanilha, arquivo: file.name })
+      setNomeExibicao(nomePlanilha)
       const r = extractReads(sheets)
       const rg = computeRange(r)
       setReads(r)
@@ -284,6 +289,7 @@ export function RelatorioVision() {
       fim: fim || undefined,
       saldoCaixaInicial: Number(saldoCaixa.replace(',', '.')) || 0,
       anoBaseGiro: Number(anoGiro) || undefined,
+      nomeExibicao: nomeExibicao.trim() || undefined,
     })
   }
 
@@ -296,7 +302,7 @@ export function RelatorioVision() {
       const b64 = await payloadToB64(payload)
       const { data, error } = await supabase.rpc('vision_criar_relatorio', {
         p_fazenda_id: fazenda.id,
-        p_titulo: `Relatório Vision — ${fazenda.nome}`,
+        p_titulo: `Relatório Vision — ${nomeRelatorio}`,
         p_config: {
           paginas_ocultas: ocultasEfetivas,
           modo,
@@ -326,7 +332,7 @@ export function RelatorioVision() {
       b64,
       hiddenPages: ocultasEfetivas,
       modo,
-      titulo: `Relatório Vision — ${fazenda.nome}`,
+      titulo: `Relatório Vision — ${nomeRelatorio}`,
       ts: Date.now(),
       preview: true,
     }
@@ -383,7 +389,7 @@ export function RelatorioVision() {
       await baixarPdfRelatorio(payload, {
         hiddenPages: ocultasEfetivas,
         modo,
-        titulo: `Relatorio Vision - ${fazenda.nome}`,
+        titulo: `Relatorio Vision - ${nomeRelatorio}`,
       })
     } catch (e) {
       setErro(`Erro ao gerar PDF: ${e instanceof Error ? e.message : String(e)}`)
@@ -578,6 +584,18 @@ export function RelatorioVision() {
                 <option key={f.id} value={f.id}>{f.nome}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-content mb-1">Nome exibido no relatório</label>
+            <input
+              value={nomeExibicao}
+              onChange={(e) => setNomeExibicao(e.target.value)}
+              placeholder={fazenda?.nome || 'Nome da fazenda'}
+              className="w-full rounded-lg border border-border-base bg-surface-1 px-3 py-2 text-sm text-content-strong focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+            <p className="mt-1 text-xs text-content-muted">
+              Preenchido com o nome da planilha. Pode ser alterado (ex.: nome do grupo de fazendas). Logo e dados vêm da fazenda selecionada.
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-content mb-1">Planilha Vision (.xlsm ou extrato .json)</label>

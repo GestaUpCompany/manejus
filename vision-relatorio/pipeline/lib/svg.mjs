@@ -515,7 +515,7 @@ export function divergingChart({ rows, W = 1184, H = 240 }) {
   const top = 10, bottomAxis = H - 22, labelY = H - 6;
   const n = rows.length;
   const xb = xBand(n, W);
-  const lo = Math.min(0, ...rows.map(r => r.bar));
+  const lo = Math.min(0, ...rows.map(r => r.bar), ...rows.map(r => r.line));
   const hi = Math.max(0, ...rows.map(r => r.bar), ...rows.map(r => r.line));
   const step = Math.pow(10, Math.max(0, Math.floor(Math.log10(hi - lo || 1)) - 1));
   const hiN = ceilTo(hi * 1.06, step) || step;
