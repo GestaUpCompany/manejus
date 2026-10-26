@@ -463,7 +463,7 @@ function chunkArray(arr, size) {
   return chunks
 }
 
-export async function renderAbastecimentoHtml(input) {
+export async function renderAbastecimentoHtml(input, { pageOffset = 0, grandTotal } = {}) {
   const { titulo, fazendaNome, logoGestao, logoFazenda, filtros, porMaquina, porCombustivel, porOperacao, totalLitros, totalRegistros, detalhesPorMaquina } = input
   const tanques = Array.isArray(input.tanques) ? input.tanques.slice(0, DETAIL_ROWS_PER_PAGE - 1) : []
   const temEstoque = tanques.length > 0
@@ -530,7 +530,7 @@ export async function renderAbastecimentoHtml(input) {
         ${chartCard({ canvasId: 'chart-maquina', title: 'Litros por Máquina/Veículo', subtitle: 'Distribuição total no período', hasData: porMaquina.length > 0, height: '120mm' })}
       </div>
     </div>
-    ${renderFooter({ ...period, page: 1, totalPages })}
+    ${renderFooter({ ...period, page: pageOffset + (1), totalPages: grandTotal ?? totalPages })}
   `)
 
   // Página 2: gráficos de Combustível e Operação lado a lado
@@ -541,7 +541,7 @@ export async function renderAbastecimentoHtml(input) {
       ${chartCard({ canvasId: 'chart-combustivel', title: 'Litros por Combustível', subtitle: 'Distribuição por tipo de combustível', hasData: porCombustivel.length > 0, height: '100%' })}
       ${chartCard({ canvasId: 'chart-operacao', title: 'Litros por Operação', subtitle: 'Distribuição por tipo de operação', hasData: porOperacao.length > 0, height: '100%' })}
     </div>
-    ${renderFooter({ ...period, page: 2, totalPages })}
+    ${renderFooter({ ...period, page: pageOffset + (2), totalPages: grandTotal ?? totalPages })}
   `)
 
   // Página de estoque atual dos tanques (só quando há tanques cadastrados)
@@ -551,7 +551,7 @@ export async function renderAbastecimentoHtml(input) {
     ${renderHeader({ ...brand, reportTitle: titulo, section: 'Estoque atual', sectionLabel: 'Tanques' })}
     <p class="section-kicker">Estoque atual de combustível${geradoEmTxt ? ` · posição em ${escapeHtml(geradoEmTxt)}` : ''} · independe do período</p>
     <div class="table-block"><h2 class="table-title">Saldo por tanque <span>${tanques.length} tanque(s)</span></h2>${tanquesTableHtml(tanques)}</div>
-    ${renderFooter({ ...period, page: 3, totalPages })}
+    ${renderFooter({ ...period, page: pageOffset + (3), totalPages: grandTotal ?? totalPages })}
   `)
     : ''
 
@@ -582,7 +582,7 @@ export async function renderAbastecimentoHtml(input) {
         <p class="section-kicker">Detalhamento por máquina</p>
         ${content}
         ${operMerged}
-        ${renderFooter({ ...period, page: 3 + estoquePages + chunkIndex, totalPages })}
+        ${renderFooter({ ...period, page: pageOffset + (3 + estoquePages + chunkIndex), totalPages: grandTotal ?? totalPages })}
       `)
     })
     .join('')
@@ -600,7 +600,7 @@ export async function renderAbastecimentoHtml(input) {
         ${renderHeader({ ...brand, reportTitle: titulo, section: `Operacional${suffix}`, sectionLabel: 'Tabela' })}
         <p class="section-kicker">Operadores e placas</p>
         ${content}
-        ${renderFooter({ ...period, page: 3 + estoquePages + chunks1.length + chunkIndex, totalPages })}
+        ${renderFooter({ ...period, page: pageOffset + (3 + estoquePages + chunks1.length + chunkIndex), totalPages: grandTotal ?? totalPages })}
       `)
     })
     .join('')

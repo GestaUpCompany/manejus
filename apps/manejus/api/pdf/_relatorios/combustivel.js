@@ -1,6 +1,6 @@
 // Relatório de combustível (abastecimento + estoque) em um único PDF.
 // Cada parte é renderizada pelo próprio módulo (abastecimento.js e estoqueCombustivel.js)
-// e as páginas são juntadas com pdf-lib. A numeração "Página X de Y" é de cada parte.
+// e as páginas são juntadas com pdf-lib. A numeração "Página X de Y" é contínua no arquivo inteiro.
 
 import { PDFDocument } from 'pdf-lib'
 import { generatePdf } from '../_shared/puppeteer.js'
@@ -32,7 +32,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const htmlAbastecimento = await renderAbastecimentoHtml(abastecimento)
+    // Numeração contínua: conta as páginas de cada parte no HTML (sem Chromium) e renderiza com o total geral
+    const contarPaginas = (html) => (html.match(/<section class="page">/g) || []).length
+    const totalAbastecimento = contarPaginas(await renderAbastecimentoHtml(abastecimento))
+    const totalEstoque = contarPaginas(await renderEstoqueCombustivelHtml(estoque))
+    const totalPaginas = totalAbastecimento + totalEstoque
+
+    const htmlAbastecimento = await renderAbastecimentoHtml(abastecimento, { grandTotal: totalPaginas })
     const pdfAbastecimento = await generatePdf({
       html: htmlAbastecimento,
       format: 'A4',
@@ -41,7 +47,7 @@ export default async function handler(req, res) {
         await page.waitForFunction('window.__chartsReady === true', { timeout: 15000 }).catch(() => {})
       },
     })
-    const htmlEstoque = await renderEstoqueCombustivelHtml(estoque)
+    const htmlEstoque = await renderEstoqueCombustivelHtml(estoque, { pageOffset: totalAbastecimento, grandTotal: totalPaginas })
     const pdfEstoque = await generatePdf({ html: htmlEstoque, format: 'A4', landscape: true })
 
     const merged = await PDFDocument.create()

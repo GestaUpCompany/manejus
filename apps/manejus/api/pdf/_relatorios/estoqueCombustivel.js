@@ -166,7 +166,7 @@ function extratoTableHtml(movs, total) {
   return `<div class="table-block"><h3 class="table-title">Extrato de movimentações<span>${total} ${total === 1 ? 'lançamento' : 'lançamentos'}</span></h3><table class="ec-table">${tableHeadHtml(cols)}<tbody>${rows}</tbody></table></div>`
 }
 
-export async function renderEstoqueCombustivelHtml(input) {
+export async function renderEstoqueCombustivelHtml(input, { pageOffset = 0, grandTotal } = {}) {
   const { fazendaNome, logoGestao, logoFazenda } = input
   const brand = { logoGestao, logoFazenda, fazendaNome }
   const tanques = Array.isArray(input.tanques) ? input.tanques : []
@@ -198,7 +198,7 @@ export async function renderEstoqueCombustivelHtml(input) {
       ${tanquesTableHtml(tanquesHead, tanques.length, tanquesResto.length === 0, tanques)}
       ${abaixo || negativos ? `<p class="ec-nota">${abaixo ? `${abaixo} ${abaixo === 1 ? 'tanque' : 'tanques'} no limite de alerta ou abaixo. ` : ''}${negativos ? `${negativos} ${negativos === 1 ? 'tanque' : 'tanques'} com saldo negativo (falta lançar entrada); fora do valor em estoque.` : ''}</p>` : ''}
       <p class="ec-nota">Valor em estoque = saldo final × custo médio atual do tanque. Saldos inicial e final reconstruídos pelo histórico de lançamentos.</p>
-      ${footerEstoqueCombustivel(periodo, pageIndex, totalPages)}
+      ${footerEstoqueCombustivel(periodo, pageOffset + pageIndex, grandTotal ?? totalPages)}
     `),
   )
 
@@ -209,7 +209,7 @@ export async function renderEstoqueCombustivelHtml(input) {
         ${renderHeader({ ...brand, reportTitle: titulo })}
         <p class="section-kicker">Posição por tanque (continuação)</p>
         ${tanquesTableHtml(chunk, tanques.length, i === tanquesResto.length - 1, tanques)}
-        ${footerEstoqueCombustivel(periodo, pageIndex, totalPages)}
+        ${footerEstoqueCombustivel(periodo, pageOffset + pageIndex, grandTotal ?? totalPages)}
       `),
     )
   })
@@ -221,7 +221,7 @@ export async function renderEstoqueCombustivelHtml(input) {
         ${renderHeader({ ...brand, reportTitle: titulo })}
         <p class="section-kicker">Movimentação do período</p>
         <p style="font-size:12px;color:#7a8981">Nenhuma movimentação no período.</p>
-        ${footerEstoqueCombustivel(periodo, pageIndex, totalPages)}
+        ${footerEstoqueCombustivel(periodo, pageOffset + pageIndex, grandTotal ?? totalPages)}
       `),
     )
   } else {
@@ -232,7 +232,7 @@ export async function renderEstoqueCombustivelHtml(input) {
           ${renderHeader({ ...brand, reportTitle: titulo })}
           <p class="section-kicker">Movimentação do período</p>
           ${extratoTableHtml(chunk, movs.length)}
-          ${footerEstoqueCombustivel(periodo, pageIndex, totalPages)}
+          ${footerEstoqueCombustivel(periodo, pageOffset + pageIndex, grandTotal ?? totalPages)}
         `),
       )
     })

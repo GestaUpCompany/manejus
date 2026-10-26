@@ -21,6 +21,8 @@ import estoqueHandler from './api/pdf/_relatorios/estoque.js'
 // @ts-ignore
 import estoqueCombustivelHandler from './api/pdf/_relatorios/estoqueCombustivel.js'
 import cantinaHandler from './api/pdf/_relatorios/cantina.js'
+// @ts-ignore
+import combustivelHandler from './api/pdf/_relatorios/combustivel.js'
 import zootecnicoHandler from './api/pdf/_relatorios/zootecnico.js'
 
 function localPdfApi(): Plugin {
@@ -87,6 +89,7 @@ function localPdfApi(): Plugin {
       register('/api/pdf/estoque', estoqueHandler)
       register('/api/pdf/estoqueCombustivel', estoqueCombustivelHandler)
       register('/api/pdf/cantina', cantinaHandler)
+      register('/api/pdf/combustivel', combustivelHandler)
       register('/api/pdf/zootecnico', zootecnicoHandler)
     },
   }
