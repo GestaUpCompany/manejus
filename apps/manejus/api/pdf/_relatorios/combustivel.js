@@ -37,11 +37,14 @@ export default async function handler(req, res) {
     const opcoesAbastecimento = { incluirDetalhes: false }
     const opcoesEstoque = { incluirExtrato: false }
     const contarPaginas = (html) => (html.match(/<section class="page">/g) || []).length
-    const totalAbastecimento = contarPaginas(await renderAbastecimentoHtml(abastecimento, opcoesAbastecimento))
+    // O estoque vem primeiro no arquivo, então a numeração do abastecimento começa depois das páginas dele
     const totalEstoque = contarPaginas(await renderEstoqueCombustivelHtml(estoque, opcoesEstoque))
-    const totalPaginas = totalAbastecimento + totalEstoque
+    const totalAbastecimento = contarPaginas(await renderAbastecimentoHtml(abastecimento, opcoesAbastecimento))
+    const totalPaginas = totalEstoque + totalAbastecimento
 
-    const htmlAbastecimento = await renderAbastecimentoHtml(abastecimento, { ...opcoesAbastecimento, grandTotal: totalPaginas })
+    const htmlEstoque = await renderEstoqueCombustivelHtml(estoque, { ...opcoesEstoque, grandTotal: totalPaginas })
+    const pdfEstoque = await generatePdf({ html: htmlEstoque, format: 'A4', landscape: true })
+    const htmlAbastecimento = await renderAbastecimentoHtml(abastecimento, { ...opcoesAbastecimento, pageOffset: totalEstoque, grandTotal: totalPaginas })
     const pdfAbastecimento = await generatePdf({
       html: htmlAbastecimento,
       format: 'A4',
@@ -50,11 +53,9 @@ export default async function handler(req, res) {
         await page.waitForFunction('window.__chartsReady === true', { timeout: 15000 }).catch(() => {})
       },
     })
-    const htmlEstoque = await renderEstoqueCombustivelHtml(estoque, { ...opcoesEstoque, pageOffset: totalAbastecimento, grandTotal: totalPaginas })
-    const pdfEstoque = await generatePdf({ html: htmlEstoque, format: 'A4', landscape: true })
 
     const merged = await PDFDocument.create()
-    for (const buffer of [pdfAbastecimento, pdfEstoque]) {
+    for (const buffer of [pdfEstoque, pdfAbastecimento]) {
       const doc = await PDFDocument.load(buffer)
       const paginas = await merged.copyPages(doc, doc.getPageIndices())
       for (const pagina of paginas) merged.addPage(pagina)
