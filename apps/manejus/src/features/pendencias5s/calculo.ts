@@ -20,6 +20,54 @@ export interface RegistroPendencia5s {
   naoConformidades?: Record<string, any> | null
 }
 
+/** Medida do plano de ação, gravada em nao_conformidades[chave].plano_acao. */
+export interface MedidaPlano5s {
+  id: string
+  descricao: string
+  responsavel: string | null
+  /** YYYY-MM-DD */
+  prazo: string | null
+  concluida: boolean
+  concluida_em: string | null
+}
+
+export interface PlanoAcao5s {
+  medidas: MedidaPlano5s[]
+  criado_em: string | null
+  atualizado_em: string | null
+}
+
+/** sem_plano: nenhuma medida; atrasado: alguma medida aberta com prazo já vencido; concluido: todas feitas. */
+export type SituacaoPlano5s = 'sem_plano' | 'em_dia' | 'atrasado' | 'concluido'
+
+const texto = (valor: unknown): string | null => (typeof valor === 'string' && valor.trim() ? valor.trim() : null)
+
+/** Lê o plano de uma não conformidade do JSON do banco ou do sync; formato inválido vira null (auditorias antigas não têm o campo). */
+export function lerPlanoAcao5s(evidencia: any): PlanoAcao5s | null {
+  const bruto = evidencia?.plano_acao
+  if (!bruto || !Array.isArray(bruto.medidas)) return null
+  const medidas: MedidaPlano5s[] = bruto.medidas
+    .filter((m: any) => texto(m?.descricao))
+    .map((m: any, i: number) => ({
+      id: texto(m.id) ?? `m${i}`,
+      descricao: texto(m.descricao)!,
+      responsavel: texto(m.responsavel),
+      prazo: texto(m.prazo),
+      concluida: m.concluida === true,
+      concluida_em: texto(m.concluida_em),
+    }))
+  return medidas.length > 0 ? { medidas, criado_em: texto(bruto.criado_em), atualizado_em: texto(bruto.atualizado_em) } : null
+}
+
+/** Situação do plano em `agoraIso` (compara o prazo como data local YYYY-MM-DD). */
+export function situacaoPlano5s(plano: PlanoAcao5s | null, agoraIso: string): SituacaoPlano5s {
+  if (!plano || plano.medidas.length === 0) return 'sem_plano'
+  if (plano.medidas.every((m) => m.concluida)) return 'concluido'
+  const hoje = agoraIso.slice(0, 10)
+  const atrasada = plano.medidas.some((m) => !m.concluida && m.prazo !== null && m.prazo < hoje)
+  return atrasada ? 'atrasado' : 'em_dia'
+}
+
 export interface PendenciaAberta5s {
   chave: string
   /** Não conformidade como afirmação (ex.: "Há material em desuso no local."). */
@@ -27,10 +75,12 @@ export interface PendenciaAberta5s {
   secao: string
   /** Data do primeiro `N` da sequência atual. */
   desde: string
-  /** Data do `N` mais recente (de onde vêm observação e foto). */
+  /** Data do `N` mais recente (de onde vêm observação, foto e plano). */
   ultimaData: string
   observacao: string
   fotoUrl: string | null
+  /** Plano de ação mais recente da sequência (null se nenhum N registrou plano). */
+  planoAcao: PlanoAcao5s | null
   ocorrencias: number
   registroDesdeId: string | null
   registroUltimoId: string | null
@@ -42,6 +92,8 @@ export interface PendenciaResolvida5s {
   secao: string
   abertaEm: string
   resolvidaEm: string
+  /** Último plano de ação registrado antes da resolução. */
+  planoAcao: PlanoAcao5s | null
   registroAbertaId: string | null
   registroResolvidaId: string | null
 }
@@ -90,10 +142,13 @@ export function calcularPendencias5s(registros: RegistroPendencia5s[]): Resultad
           // Um "ainda pendente" sem foto/observação nova não apaga a evidência da ocorrência original
           const observacaoNova = typeof evidencia?.observacao === 'string' ? evidencia.observacao.trim() : ''
           const fotoNova = typeof evidencia?.foto_url === 'string' && evidencia.foto_url ? evidencia.foto_url : null
+          // O plano segue a mesma regra da observação: o mais recente presente vence; sem plano novo, herda o anterior
+          const planoNovo = lerPlanoAcao5s(evidencia)
           const base = {
             ultimaData: registro.data,
             observacao: observacaoNova || aberta?.observacao || '',
             fotoUrl: fotoNova ?? aberta?.fotoUrl ?? null,
+            planoAcao: planoNovo ?? aberta?.planoAcao ?? null,
             registroUltimoId: registro.id ?? null,
           }
           aberta = aberta
@@ -106,6 +161,7 @@ export function calcularPendencias5s(registros: RegistroPendencia5s[]): Resultad
             secao: secao.titulo,
             abertaEm: aberta.desde,
             resolvidaEm: registro.data,
+            planoAcao: aberta.planoAcao,
             registroAbertaId: aberta.registroDesdeId,
             registroResolvidaId: registro.id ?? null,
           })

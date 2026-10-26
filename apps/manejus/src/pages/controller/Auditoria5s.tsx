@@ -1,24 +1,22 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { exportToXLSX, formatDate } from '@gestaup/shared'
-import { Button, Card, Input, CardSkeleton } from '@gestaup/ui'
+import { useSearchParams } from 'react-router-dom'
+import { exportToXLSX } from '@gestaup/shared'
+import { Button, Card, CardSkeleton, EmptyState } from '@gestaup/ui'
 import { AUDITORIA_5S_EXPORT_CONFIG } from '../../utils/exportConfigs'
-import { resultadoRegistro } from '../../features/relatorioAuditoria5s/agregacao'
 import { pendenciasPorSetor } from '../../features/pendencias5s/calculo'
-import { LABEL, SELECT, corNota, corPercentual, textoNota, textoPercentual } from '../../features/relatorioAuditoria5s/apresentacao'
 import { useAuditorias5s } from '../../hooks/useAuditorias5s'
+import { Auditoria5sAbas, type AbaAuditoria } from './Auditoria5sAbas'
+import { Auditoria5sFiltros, type PresetPeriodo } from './Auditoria5sFiltros'
+import { Icone } from './Auditoria5sIcone'
+import { Auditoria5sLista } from './Auditoria5sLista'
 import { Auditoria5sPendencias } from './Auditoria5sPendencias'
 import { Auditoria5sVisaoGeral } from './Auditoria5sVisaoGeral'
 import { Auditoria5sSetor } from './Auditoria5sSetor'
 
 type Aba = 'geral' | 'setor' | 'pendencias' | 'auditorias'
 
-const ABAS: { valor: Aba; rotulo: string }[] = [
-  { valor: 'geral', rotulo: 'Visão geral' },
-  { valor: 'setor', rotulo: 'Por setor' },
-  { valor: 'pendencias', rotulo: 'Pendências' },
-  { valor: 'auditorias', rotulo: 'Auditorias' },
-]
+const ABAS_VALIDAS: Aba[] = ['geral', 'setor', 'pendencias', 'auditorias']
+const ID_BASE = 'auditoria5s'
 
 const PRESETS: { dias: number | null; rotulo: string }[] = [
   { dias: 30, rotulo: '30 dias' },
@@ -35,10 +33,9 @@ const diasAtras = (n: number) => {
 }
 
 export function Auditoria5s() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const abaParam = searchParams.get('aba')
-  const aba: Aba = ABAS.some((a) => a.valor === abaParam) ? (abaParam as Aba) : 'geral'
+  const aba: Aba = ABAS_VALIDAS.includes(abaParam as Aba) ? (abaParam as Aba) : 'geral'
   const setorChave = searchParams.get('setor')
 
   const { registros, setores, fazendaNome, loading, erro } = useAuditorias5s()
@@ -92,9 +89,29 @@ export function Auditoria5s() {
     setSetorLista('')
   }
 
+  const abas: AbaAuditoria<Aba>[] = [
+    { valor: 'geral', rotulo: 'Visão geral', icone: 'visaoGeral' },
+    { valor: 'setor', rotulo: 'Por setor', icone: 'setor' },
+    { valor: 'pendencias', rotulo: 'Pendências', icone: 'pendencias', contagem: pendencias.abertas.length, destaque: true },
+    { valor: 'auditorias', rotulo: 'Auditorias', icone: 'auditorias', contagem: registros.length },
+  ]
+
+  const presetsPeriodo: PresetPeriodo[] = PRESETS.map((p) => ({
+    rotulo: p.rotulo,
+    ativo: p.dias === null ? dataInicio === '' && dataFim === '' : dataInicio === diasAtras(p.dias) && dataFim === '',
+    aplicar: () => {
+      setDataInicio(p.dias === null ? '' : diasAtras(p.dias))
+      setDataFim('')
+    },
+  }))
+
+  // Filtros fora do padrão (12 meses, sem data final, sem responsável); o setor só conta na lista, onde ele existe
+  const filtrosAtivos = (dataInicio !== diasAtras(365) || dataFim !== '' ? 1 : 0) + (responsavelFiltro ? 1 : 0) + (aba === 'auditorias' && setorLista ? 1 : 0)
+  const naLista = aba === 'auditorias'
+
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div aria-busy="true" aria-label="Carregando auditorias" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <CardSkeleton />
         <CardSkeleton />
         <CardSkeleton />
@@ -105,188 +122,116 @@ export function Auditoria5s() {
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
-      <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Auditoria 5S</h2>
+      <header className="space-y-1">
+        <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Auditoria 5S</h2>
+        <p className="text-sm text-content">
+          Conformidade dos setores, pendências e histórico das auditorias{fazendaNome ? ` · ${fazendaNome}` : ''}
+        </p>
+      </header>
 
       {erro && (
-        <Card className="bg-surface-1 p-4 text-sm text-red-600" disableHover>
-          {erro}
-        </Card>
-      )}
-
-      <div role="tablist" aria-label="Visão da auditoria" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-2 p-1 sm:inline-grid sm:grid-cols-4 sm:w-[34rem]">
-        {ABAS.map((op) => (
-          <button
-            key={op.valor}
-            type="button"
-            role="tab"
-            aria-selected={aba === op.valor}
-            onClick={() => irPara(op.valor, op.valor === 'setor' || op.valor === 'pendencias' ? setorChave : null)}
-            className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${aba === op.valor ? 'bg-primary text-white shadow' : 'text-content hover:bg-surface-1'}`}
-          >
-            {op.rotulo}
-          </button>
-        ))}
-      </div>
-
-      {aba !== 'pendencias' && (
-        <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-            <div>
-              <label className={LABEL}>Período</label>
-              <div className="flex flex-wrap gap-1" role="group" aria-label="Períodos rápidos">
-                {PRESETS.map((p) => {
-                  const ativo = p.dias === null ? dataInicio === '' && dataFim === '' : dataInicio === diasAtras(p.dias) && dataFim === ''
-                  return (
-                    <button
-                      key={p.rotulo}
-                      type="button"
-                      aria-pressed={ativo}
-                      onClick={() => {
-                        setDataInicio(p.dias === null ? '' : diasAtras(p.dias))
-                        setDataFim('')
-                      }}
-                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${ativo ? 'bg-primary text-white' : 'bg-surface-2 text-content-strong hover:bg-surface-2/70'}`}
-                    >
-                      {p.rotulo}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-            <div className="sm:w-40">
-              <label className={LABEL}>Data início</label>
-              <Input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="text-sm" />
-            </div>
-            <div className="sm:w-40">
-              <label className={LABEL}>Data fim</label>
-              <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="text-sm" />
-            </div>
-            <div className="sm:w-56">
-              <label className={LABEL}>Responsável</label>
-              <select className={SELECT} value={responsavelFiltro} onChange={(e) => setResponsavelFiltro(e.target.value)}>
-                <option value="">Todos</option>
-                {nomesResponsaveis.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button variant="secondary" onClick={limparFiltros} className="w-full sm:w-auto text-sm">
-              Limpar filtros
-            </Button>
+        <div role="alert" className="flex items-start gap-3 rounded-2xl border-2 border-red-500/40 bg-red-500/10 p-4 text-sm text-red-700 dark:text-red-400">
+          <Icone nome="pendencias" className="mt-0.5 h-5 w-5" />
+          <div>
+            <p className="font-bold">Não foi possível carregar todas as auditorias</p>
+            <p>{erro}</p>
           </div>
-          <p className="mt-3 text-xs text-content-muted">
-            {filtrados.length} de {registros.length} auditorias no período. As pendências mostram sempre o estado atual, sem depender do período.
-          </p>
-        </Card>
+        </div>
       )}
 
-      {aba === 'geral' && (
-        <Auditoria5sVisaoGeral
-          registros={filtrados}
-          setores={setores}
-          pendenciasAbertas={pendencias.abertas}
-          fazendaNome={fazendaNome}
-          onAbrirSetor={(chave) => irPara('setor', chave)}
-          onVerPendencias={(chave) => irPara('pendencias', chave ?? null)}
-        />
-      )}
+      <Auditoria5sAbas
+        abas={abas}
+        ativa={aba}
+        idBase={ID_BASE}
+        rotuloAria="Visão da auditoria"
+        onSelecionar={(valor) => irPara(valor, valor === 'setor' || valor === 'pendencias' ? setorChave : null)}
+      />
 
-      {aba === 'setor' && (
-        <Auditoria5sSetor
-          registrosPeriodo={filtrados}
-          todosRegistros={registros}
-          setores={setores}
-          setorChave={setorChave}
-          pendenciasAbertas={pendencias.abertas}
-          pendenciasResolvidas={pendencias.resolvidas}
-          fazendaNome={fazendaNome}
-          onSelecionar={(chave) => irPara(chave ? 'setor' : 'geral', chave)}
-          onVerPendencias={(chave) => irPara('pendencias', chave)}
-        />
-      )}
+      <div role="tabpanel" id={`${ID_BASE}-painel`} aria-labelledby={`${ID_BASE}-aba-${aba}`} className="space-y-4 sm:space-y-6 min-w-0">
+        {aba !== 'pendencias' && (
+          <Auditoria5sFiltros
+            presets={presetsPeriodo}
+            dataInicio={dataInicio}
+            dataFim={dataFim}
+            onDataInicio={setDataInicio}
+            onDataFim={setDataFim}
+            responsavel={responsavelFiltro}
+            onResponsavel={setResponsavelFiltro}
+            nomesResponsaveis={nomesResponsaveis}
+            nomesSetores={naLista ? nomesSetores : undefined}
+            setor={setorLista}
+            onSetor={setSetorLista}
+            totalFiltrado={naLista ? filtradosLista.length : filtrados.length}
+            total={registros.length}
+            filtrosAtivos={filtrosAtivos}
+            onLimpar={limparFiltros}
+            avisoPendencias={!naLista}
+            acoes={
+              naLista ? (
+                <Button size="sm" onClick={() => exportToXLSX(filtradosLista, AUDITORIA_5S_EXPORT_CONFIG, fazendaNome)} disabled={filtradosLista.length === 0}>
+                  <Icone nome="exportar" className="mr-2 h-4 w-4" />
+                  Exportar XLSX
+                </Button>
+              ) : undefined
+            }
+          />
+        )}
 
-      {aba === 'pendencias' && (
-        <Auditoria5sPendencias registros={registros} fazendaNome={fazendaNome} setorChave={setorChave} onLimparSetor={() => irPara('pendencias')} />
-      )}
+        {aba === 'geral' && (
+          <Auditoria5sVisaoGeral
+            registros={filtrados}
+            setores={setores}
+            pendenciasAbertas={pendencias.abertas}
+            fazendaNome={fazendaNome}
+            onAbrirSetor={(chave) => irPara('setor', chave)}
+            onVerPendencias={(chave) => irPara('pendencias', chave ?? null)}
+          />
+        )}
 
-      {aba === 'auditorias' && (
-        <>
-          <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
-            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-              <div className="sm:w-64">
-                <label className={LABEL}>Setor</label>
-                <select className={SELECT} value={setorLista} onChange={(e) => setSetorLista(e.target.value)}>
-                  <option value="">Todos</option>
-                  {nomesSetores.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button
-                onClick={() => exportToXLSX(filtradosLista, AUDITORIA_5S_EXPORT_CONFIG, fazendaNome)}
-                disabled={filtradosLista.length === 0}
-                className="w-full sm:w-auto text-sm sm:ml-auto"
-              >
-                Exportar XLSX
-              </Button>
-            </div>
-          </Card>
+        {aba === 'setor' && (
+          <Auditoria5sSetor
+            registrosPeriodo={filtrados}
+            todosRegistros={registros}
+            setores={setores}
+            setorChave={setorChave}
+            pendenciasAbertas={pendencias.abertas}
+            pendenciasResolvidas={pendencias.resolvidas}
+            fazendaNome={fazendaNome}
+            onSelecionar={(chave) => irPara(chave ? 'setor' : 'geral', chave)}
+            onVerPendencias={(chave) => irPara('pendencias', chave)}
+          />
+        )}
 
-          {registros.length === 0 ? (
-            <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
-              <p className="text-content-muted">Nenhuma auditoria 5S registrada</p>
+        {aba === 'pendencias' && (
+          <Auditoria5sPendencias registros={registros} fazendaNome={fazendaNome} setorChave={setorChave} onLimparSetor={() => irPara('pendencias')} />
+        )}
+
+        {naLista &&
+          (registros.length === 0 ? (
+            <Card className="bg-surface-1" disableHover>
+              <EmptyState
+                title="Nenhuma auditoria 5S registrada"
+                description="As auditorias feitas no aplicativo de campo aparecem aqui."
+                icon={<Icone nome="auditorias" className="h-6 w-6 text-content-muted" />}
+              />
             </Card>
           ) : filtradosLista.length === 0 ? (
-            <Card className="bg-surface-1 p-4 sm:p-6 text-center" disableHover>
-              <p className="text-content-muted">Nenhuma auditoria encontrada com os filtros aplicados</p>
+            <Card className="bg-surface-1" disableHover>
+              <EmptyState
+                title="Nenhuma auditoria com esses filtros"
+                description="Amplie o período ou limpe os filtros para ver as auditorias."
+                icon={<Icone nome="auditorias" className="h-6 w-6 text-content-muted" />}
+                action={
+                  <Button variant="secondary" size="sm" onClick={limparFiltros}>
+                    Limpar filtros
+                  </Button>
+                }
+              />
             </Card>
           ) : (
-            <Card className="bg-surface-1 overflow-x-auto" disableHover>
-              <h3 className="text-base font-semibold text-content-strong p-4 sm:p-6 pb-3">Auditorias</h3>
-              <table className="min-w-full divide-y divide-border-base">
-                <thead className="bg-surface-2">
-                  <tr>
-                    {['Data', 'Setor', 'Responsável', 'Conformidade', 'Nota', 'C', 'N', '–'].map((h) => (
-                      <th key={h} className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-surface-1 divide-y divide-border-base">
-                  {filtradosLista.map((r) => {
-                    const res = resultadoRegistro(r)
-                    return (
-                      <tr
-                        key={r.id}
-                        onClick={() => navigate(`/controller/checklists/auditoria-5s/${r.id}`)}
-                        className="cursor-pointer hover:bg-surface-2 transition-colors"
-                      >
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{formatDate(r.data)}</td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{r.setor || '-'}</td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{r.responsavel || '-'}</td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm font-semibold" style={{ color: corPercentual(res.percentual) }}>
-                          {textoPercentual(res.percentual)}
-                        </td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm font-semibold" style={{ color: corNota(r.nota_geral) }}>
-                          {textoNota(r.nota_geral)}
-                        </td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{res.conformes}</td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{res.naoConformes}</td>
-                        <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm text-content-strong">{res.naoAplicaveis}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </Card>
-          )}
-        </>
-      )}
+            <Auditoria5sLista registros={filtradosLista} />
+          ))}
+      </div>
     </div>
   )
 }

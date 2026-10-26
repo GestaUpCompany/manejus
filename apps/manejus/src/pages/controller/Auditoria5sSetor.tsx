@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Card } from '@gestaup/ui'
 import { formatDate } from '@gestaup/shared'
-import { SECOES_5S } from '../../features/relatorioAuditoria5s/itens'
 import { notaMedia, resultadoRegistro } from '../../features/relatorioAuditoria5s/agregacao'
 import {
   LIMIAR_AUDITORIA_ANTIGA_DIAS,
@@ -25,7 +24,6 @@ import {
   LABEL,
   SELECT,
   SETA_TENDENCIA,
-  corDaSerie,
   corNota,
   corPercentual,
   corTendencia,
@@ -37,6 +35,7 @@ import {
 } from '../../features/relatorioAuditoria5s/apresentacao'
 import type { RegistroAuditoria5sRow, SetorCadastrado } from '../../hooks/useAuditorias5s'
 import { Auditoria5sPendencias } from './Auditoria5sPendencias'
+import { Auditoria5sPilaresTempo } from './Auditoria5sPilaresTempo'
 
 interface Props {
   /** Auditorias do período e responsável selecionados (todos os setores). */
@@ -90,6 +89,63 @@ function TooltipAuditoria({ active, payload }: { active?: boolean; payload?: { p
   )
 }
 
+interface SerieAuditoriasProps {
+  titulo: string
+  escala: string
+  serie: ReturnType<typeof serieSetor>
+  chave: 'nota' | 'percentual'
+  cor: string
+  dominio: [number, number]
+  ticks: number[]
+  formatar: (v: number) => string
+  referencia?: { valor: number; rotulo: string }
+  onAbrir: (id: string) => void
+}
+
+/** Uma métrica por auditoria, em gráfico próprio: sem eixo duplo, sem disputar a leitura com a outra linha. */
+function SerieAuditorias({ titulo, escala, serie, chave, cor, dominio, ticks, formatar, referencia, onAbrir }: SerieAuditoriasProps) {
+  const temDado = serie.some((p) => p[chave] !== null)
+  const ultimo = [...serie].reverse().find((p) => p[chave] !== null)
+  // Mesmo dia em mais de uma auditoria: o eixo X ganha a ordem (#1, #2), como no mapa de pilares
+  const rotulos = new Map<string, string>()
+  const contagemDoDia = new Map<string, number>()
+  serie.forEach((p) => contagemDoDia.set(rotuloDia(p.data), (contagemDoDia.get(rotuloDia(p.data)) ?? 0) + 1))
+  const vistos = new Map<string, number>()
+  serie.forEach((p) => {
+    const dia = rotuloDia(p.data)
+    const k = (vistos.get(dia) ?? 0) + 1
+    vistos.set(dia, k)
+    rotulos.set(p.id, (contagemDoDia.get(dia) ?? 0) > 1 ? `${dia} #${k}` : dia)
+  })
+  return (
+    <div>
+      <div className="mb-1 flex items-baseline justify-between gap-2">
+        <h4 className="text-sm font-semibold text-content-strong">{titulo}</h4>
+        <span className="text-sm font-bold tabular-nums text-content-strong">{ultimo ? formatar(ultimo[chave] as number) : '-'}</span>
+      </div>
+      <p className="mb-2 text-[11px] text-content-muted">{escala}</p>
+      {!temDado ? (
+        <p className="py-10 text-center text-sm text-content-muted">Sem dados neste período.</p>
+      ) : (
+        <div className="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={serie} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="id" tickFormatter={(id: string) => rotulos.get(id) ?? ''} tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={20} />
+              <YAxis domain={dominio} ticks={ticks} tick={{ fontSize: 11 }} width={40} unit={dominio[1] === 100 ? '%' : ''} />
+              <Tooltip content={<TooltipAuditoria />} />
+              {referencia && (
+                <ReferenceLine y={referencia.valor} stroke={COR_NEUTRA} strokeDasharray="5 4" label={{ value: referencia.rotulo, position: 'insideTopRight', fontSize: 11, fill: COR_NEUTRA }} />
+              )}
+              <Line type="linear" dataKey={chave} name={titulo} stroke={cor} strokeWidth={2.5} connectNulls isAnimationActive={false} dot={(p: any) => <PontoClicavel key={p.index} {...p} stroke={cor} onAbrir={onAbrir} />} activeDot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function Auditoria5sSetor({
   registrosPeriodo,
   todosRegistros,
@@ -103,7 +159,6 @@ export function Auditoria5sSetor({
 }: Props) {
   const navigate = useNavigate()
   const agora = useMemo(() => new Date().toISOString(), [])
-  const [pilaresOcultos, setPilaresOcultos] = useState<string[]>([])
   const [todosItens, setTodosItens] = useState(false)
 
   const opcoes = useMemo(
@@ -221,44 +276,44 @@ export function Auditoria5sSetor({
 
           <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
             <h3 className="text-base sm:text-lg font-semibold text-content-strong">Evolução da nota e da conformidade</h3>
-            <p className="mb-3 text-xs text-content-muted">Um ponto por auditoria. Clique em um ponto para abrir a auditoria.{!temNota ? ' As auditorias deste período não têm nota (registros antigos).' : ''}</p>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={serie} margin={{ right: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="id" tickFormatter={(id: string) => { const p = serie.find((s) => s.id === id); return p ? rotuloDia(p.data) : '' }} tick={{ fontSize: 12 }} />
-                  <YAxis yAxisId="nota" domain={[0, 5]} tick={{ fontSize: 12 }} width={32} />
-                  <YAxis yAxisId="pct" orientation="right" domain={[0, 100]} tick={{ fontSize: 12 }} unit="%" width={44} />
-                  <Tooltip content={<TooltipAuditoria />} />
-                  <Legend />
-                  {mediaFazenda !== null && <ReferenceLine yAxisId="nota" y={mediaFazenda} stroke={COR_NEUTRA} strokeDasharray="5 4" label={{ value: 'média da fazenda', position: 'insideTopLeft', fontSize: 11, fill: COR_NEUTRA }} />}
-                  <Line yAxisId="nota" type="monotone" dataKey="nota" name="Nota (0-5)" stroke={COR_NOTA} strokeWidth={2} connectNulls isAnimationActive={false} dot={(p: any) => <PontoClicavel key={p.index} {...p} onAbrir={abrirAuditoria} />} activeDot={false} />
-                  <Line yAxisId="pct" type="monotone" dataKey="percentual" name="Conformidade (%)" stroke={COR_OK} strokeWidth={2} strokeDasharray="4 2" connectNulls isAnimationActive={false} dot={(p: any) => <PontoClicavel key={p.index} {...p} onAbrir={abrirAuditoria} />} activeDot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+            <p className="mb-4 text-xs text-content-muted">
+              Um ponto por auditoria, cada métrica no seu gráfico. Clique em um ponto para abrir a auditoria.
+              {!temNota ? ' As auditorias deste período não têm nota (registros antigos).' : ''}
+            </p>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <SerieAuditorias
+                titulo="Nota do setor"
+                escala="Escala de 0 a 5"
+                serie={serie}
+                chave="nota"
+                cor={COR_NOTA}
+                dominio={[0, 5]}
+                ticks={[0, 2, 4]}
+                formatar={(v) => textoNota(v)}
+                referencia={mediaFazenda !== null ? { valor: mediaFazenda, rotulo: `fazenda ${textoNota(mediaFazenda)}` } : undefined}
+                onAbrir={abrirAuditoria}
+              />
+              <SerieAuditorias
+                titulo="Conformidade"
+                escala="Escala de 0 a 100%"
+                serie={serie}
+                chave="percentual"
+                cor={COR_OK}
+                dominio={[0, 100]}
+                ticks={[0, 50, 100]}
+                formatar={(v) => textoPercentual(v)}
+                onAbrir={abrirAuditoria}
+              />
             </div>
           </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
-              <h3 className="text-base font-semibold text-content-strong">Pilares ao longo do tempo</h3>
-              <p className="mb-3 text-xs text-content-muted">Clique na legenda para ocultar ou mostrar um pilar.</p>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={pilaresTempo}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="id" tickFormatter={(id: string) => { const p = pilaresTempo.find((s) => s.id === id); return p ? rotuloDia(String(p.data)) : '' }} tick={{ fontSize: 12 }} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} unit="%" width={44} />
-                    <Tooltip labelFormatter={(id) => { const p = pilaresTempo.find((s) => s.id === id); return p ? formatDate(String(p.data)) : '' }} formatter={(v) => (typeof v === 'number' ? `${v}%` : '-')} />
-                    <Legend onClick={(e) => { const k = String((e as { dataKey?: unknown }).dataKey ?? ''); setPilaresOcultos((o) => (o.includes(k) ? o.filter((x) => x !== k) : [...o, k])) }} />
-                    {SECOES_5S.map((s, i) => (
-                      <Line key={s.id} type="monotone" dataKey={s.id} name={s.titulo} stroke={corDaSerie(i)} strokeWidth={2} dot connectNulls hide={pilaresOcultos.includes(s.id)} isAnimationActive={false} />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
+          <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
+            <h3 className="text-base font-semibold text-content-strong">Pilares ao longo do tempo</h3>
+            <p className="mb-3 text-xs text-content-muted">Uma linha por pilar, uma coluna por auditoria. Toque em uma célula para abrir a auditoria.</p>
+            <Auditoria5sPilaresTempo pontos={pilaresTempo} onAbrirAuditoria={abrirAuditoria} />
+          </Card>
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
               <h3 className="text-base font-semibold text-content-strong">Pilares: setor × fazenda</h3>
               <p className="mb-3 text-xs text-content-muted">Auditoria mais recente do setor, média do setor e média da fazenda no período.</p>

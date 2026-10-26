@@ -1,5 +1,38 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Gráficos da Auditoria 5S sem sobreposição (26/10/2026)
+- **Evolução comparada** (Visão geral): linhas sobrepostas viraram pequenos múltiplos (`Auditoria5sPequenosMultiplos.tsx`). Um gráfico por setor, mesma escala (0 a 5 ou 0 a 100%), uma linha colorida e a média da fazenda tracejada. O último valor aparece no cabeçalho. Os chips continuam escolhendo os setores. Linhas retas no lugar das curvas suavizadas, que criavam picos fora dos dados.
+- **Pilares ao longo do tempo** (Setor): linhas com legenda clicável viraram mapa de calor (`Auditoria5sPilaresTempo.tsx`): pilares nas linhas, auditorias nas colunas, valor escrito em cada célula, média por pilar e clique abre a auditoria. Datas repetidas ganham ordem (#1, #2, #3). Removidos o estado `pilaresOcultos` e os imports sem uso.
+- **Evolução da nota e da conformidade** (aba Setor): o gráfico de eixo duplo virou dois gráficos lado a lado (nota 0 a 5 com média da fazenda tracejada; conformidade 0 a 100%), um ponto por auditoria, clicável. Datas repetidas no eixo ganham ordem (#1, #2), igual ao mapa de pilares.
+
+## Dados de teste densos na Auditoria 5S (26/10/2026)
+- **Fazenda de testes** `d649c65e-…`: 30 auditorias em `registros_auditoria_5s` (5 por setor, 6 setores ativos), datas nos últimos ~120 dias. Respostas C/N/NA derivadas do `local_id` (padrão distinto por auditoria), observação nos itens N, nota 2 a 5. Identificáveis por `local_id like 'seed-dens-%'`.
+- **Reversão**: `delete from public.registros_auditoria_5s where fazenda_id = 'd649c65e-16ab-4b77-a84b-df937aa41cc3' and local_id like 'seed-dens-%';` (esperado: 30 linhas).
+- **Incidente**: a primeira versão do insert usava uma subquery não correlacionada para os itens, que foi avaliada uma só vez. Todas as auditorias ficaram iguais (35 N cada). As 30 linhas foram apagadas (com guarda de contagem) e reinseridas com o padrão corrigido.
+
+## Redesenho da Auditoria 5S: Painel e PWA (26/10/2026)
+- **Painel** (`apps/manejus/src/pages/controller/`): `Auditoria5s.tsx` passa a orquestrar `Auditoria5sAbas` (tablist WAI-ARIA com setas/Home/End, contagem de pendências abertas e de auditorias, aba ativa rola para a vista no celular), `Auditoria5sFiltros` (uma barra só: período segmentado, datas, responsável e, na lista, setor e exportar; "Limpar filtros (n)" só com filtro ativo; recolhida atrás de "Filtros" no celular; resultado em `aria-live`) e `Auditoria5sLista` (tabela em `xl`, cartões abaixo; data é link real; conformidade com barra e texto; "22 C · 2 N" com leitura completa para leitor de tela). Ícones em SVG inline (`Auditoria5sIcone.tsx`; o painel não tem biblioteca de ícones). Lógica, URL (`?aba=&setor=`) e exportação XLSX não mudaram.
+- **Contraste**: textos com tons AA nos dois temas (o verde `#10B981` do `apresentacao.ts` segue só nas barras); o link usa `dark:text-green-400` porque `text-primary` some no tema escuro. `text-content-muted` mede 4,36:1 no escuro (abaixo de 4,5): é um token do painel inteiro, não alterado.
+- **PWA** (`Caderneta-Digital-Gesta-Up`): tela de auditoria com respostas Conforme / Não conforme / N/A (ícone + palavra + cor, `radiogroup` com setas), trilha de pilares, barra inferior fixa com progresso e "IR PARA O QUE FALTA", "Restantes: Conforme" por pilar, limpar em dois toques e plano de ação com rótulos visíveis. Componentes em `components/cadernetas/auditoria5s/`; auxiliares em `utils/auditoria5sForm.ts` (com teste). Menu de Checklists no padrão do menu de cadernetas (cartão branco, ícone de 64 px).
+- **Correção**: `getSetoresCached` (PWA) lia só a memória no ramo offline; após recarregar offline a lista de setores ficava vazia. Agora cai para o IndexedDB.
+- **Pendente**: sem teste automatizado de tela no painel (os componentes novos são só de apresentação); leitor de tela real e aparelho físico não foram testados; `ModulosMenuPage` (cadernetas) ainda repete o `alt` do rótulo (leitura dupla).
+
+## Limpeza da Auditoria 5S na fazenda de testes (26/10/2026)
+- **Escopo autorizado**: fazenda de testes `d649c65e-16ab-4b77-a84b-df937aa41cc3`, tabela `registros_auditoria_5s`, todas as linhas, contagem esperada 40, tipo hard delete com backup.
+- **Backup**: `backup.backup_auditoria_5s_20261026` (40 linhas, todas da fazenda de testes).
+- **Resultado**: 40 linhas apagadas. Restantes na fazenda de testes: 0. Pendências somem junto, porque são derivadas das auditorias (não há tabela de pendências).
+- **PWA (aparelho de teste)**: store `auditoria-5s` já estava vazia; rascunho `auditoria-5s` removido (era uma auditoria interrompida, nunca salva). O cache de pendências é só em memória e zera ao recarregar.
+- **Não feito**: 3 fotos em `fotos-registros/d649c65e-…/auditoria-5s/` continuam no storage. `DELETE` direto em `storage.objects` é bloqueado pelo Supabase (erro 42501; a transação foi revertida, nada mudou). Para apagar, é preciso a Storage API.
+- **Não feito**: `setores` da fazenda de testes foram mantidos (cadastro usado por outros módulos).
+- **Reversão**: `insert into public.registros_auditoria_5s select * from backup.backup_auditoria_5s_20261026;`
+
+## Plano de ação por item não conforme na Auditoria 5S (26/10/2026)
+- **Dado**: o plano fica dentro da própria auditoria, em `nao_conformidades[chave].plano_acao` = `{ medidas: [{id, descricao, responsavel, prazo (YYYY-MM-DD), concluida, concluida_em}], criado_em, atualizado_em }`. Sem migration: o JSON é retrocompatível e auditorias antigas seguem sem plano.
+- **Regra**: o plano é opcional. Com "AINDA PENDENTE", o plano anterior vem pré-carregado e editável no registro novo; o mais recente presente vence (igual à observação). Com "RESOLVIDO", o item vira C e a pendência resolvida leva o último plano.
+- **PWA** (`Caderneta-Digital-Gesta-Up`): `frontend/src/utils/pendencias5s.ts` (tipos, `lerPlanoAcao5S`, `situacaoPlano5S`, herança); `frontend/src/components/cadernetas/PlanoAcaoEditor.tsx`; `Auditoria5sPage.tsx` (botão "+ Criar plano de ação" em cada N e em cada pendência "ainda pendente", resumo do plano anterior no cartão da pendência). Testes em `pendencias5s.test.ts` (19 casos).
+- **Painel**: `features/pendencias5s/calculo.ts` espelha a regra (mesmos casos em `planoAcao.test.ts`). `Auditoria5sPendencias.tsx`: coluna "Plano de ação" (situação, medidas concluídas, medidas abertas) e filtro "Sem plano" / "Prazo vencido". `Auditoria5sDetalhes.tsx`: plano de cada N, ou "Sem plano de ação registrado".
+- **Pendente**: o XLSX de pendências não exporta o plano (`PENDENCIAS_5S_EXPORT_CONFIG` não foi alterado). Edição do plano pelo painel não existe (só leitura, como o resto do 5S). Testar o fluxo ponta a ponta na fazenda de testes (auditoria com plano, reauditoria com herança, resolução).
+
 ## Relatório Vision: compras e vendas só com status "Pago" (26/10/2026)
 - `vision-relatorio/pipeline/lib/model.mjs`: `compras` e `vendas` do período passam a incluir só lotes com status "Pago" (`contaCompraVenda`). Transferências entre fazendas continuam sempre incluídas. Afeta p.4/p.5, p.6, p.7, p.18 (@ de entrada/saída) e p.19, além do giro de estoque da p.7.
 - `readVendas` passa a ler o status (coluna F). Payloads antigos de links públicos, sem status, mantêm o comportamento anterior.

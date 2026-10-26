@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Button, Card } from '@gestaup/ui'
 import { exportToXLSX, formatDate } from '@gestaup/shared'
 import { RANKING_SETORES_5S_EXPORT_CONFIG } from '../../utils/exportConfigs'
@@ -37,6 +37,7 @@ import {
 import type { RegistroAuditoria5sRow, SetorCadastrado } from '../../hooks/useAuditorias5s'
 import { Auditoria5sCartaoSetor } from './Auditoria5sCartaoSetor'
 import { Auditoria5sMapaCalor } from './Auditoria5sMapaCalor'
+import { Auditoria5sPequenosMultiplos } from './Auditoria5sPequenosMultiplos'
 
 interface Props {
   /** Auditorias do período e responsável selecionados. */
@@ -242,34 +243,21 @@ export function Auditoria5sVisaoGeral({ registros, setores, pendenciasAbertas, f
 
         {serie.pontos.length === 0 ? (
           <p className="py-8 text-center text-sm text-content-muted">{metrica === 'nota' ? 'Nenhuma auditoria com nota no período.' : 'Sem dados no período.'}</p>
+        ) : ativos.filter((c) => nomePorChave.has(c)).length === 0 ? (
+          <p className="py-8 text-center text-sm text-content-muted">Escolha ao menos um setor acima para ver a evolução.</p>
         ) : (
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={serie.pontos.map((p) => ({ ...p, rotulo: rotuloPeriodo(p.periodo, agrupamento) }))}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="rotulo" tick={{ fontSize: 12 }} />
-                <YAxis domain={metrica === 'nota' ? [0, 5] : [0, 100]} tick={{ fontSize: 12 }} unit={metrica === 'nota' ? '' : '%'} />
-                <Tooltip />
-                <Line type="monotone" name="Média da fazenda" dataKey="media" stroke={COR_NEUTRA} strokeDasharray="5 4" strokeWidth={2} dot={false} connectNulls isAnimationActive={false} />
-                {ativos.filter((c) => nomePorChave.has(c)).map((chave) => (
-                  <Line
-                    key={chave}
-                    type="monotone"
-                    name={nomePorChave.get(chave)}
-                    dataKey={(p: Record<string, unknown>) => p[chave] as number | null}
-                    stroke={coresPorChave.get(chave) ?? COR_NOTA}
-                    strokeWidth={2}
-                    dot
-                    connectNulls
-                    isAnimationActive={false}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          <Auditoria5sPequenosMultiplos
+            pontos={serie.pontos.map((p) => ({ ...p, rotulo: rotuloPeriodo(p.periodo, agrupamento) }))}
+            setores={[...comAuditoria]
+              .filter((l) => ativos.includes(l.chave) && nomePorChave.has(l.chave))
+              .sort((a, b) => a.nome.localeCompare(b.nome))
+              .map((l) => ({ chave: l.chave, nome: nomePorChave.get(l.chave) ?? l.nome, cor: coresPorChave.get(l.chave) ?? COR_NOTA }))}
+            metrica={metrica}
+            unidade={agrupamento === 'mes' ? 'mês' : 'semana'}
+          />
         )}
-        <p className="mt-2 text-xs text-content-muted">
-          Linha cinza tracejada = média da fazenda{mediaFazenda !== null ? ` (${textoNota(mediaFazenda)} no período)` : ''}. Cada ponto é a média das auditorias do setor no {agrupamento === 'mes' ? 'mês' : 'semana'}.
+        <p className="mt-3 text-xs text-content-muted">
+          Cada gráfico é um setor, na mesma escala. A linha tracejada cinza é a média da fazenda{mediaFazenda !== null ? ` (${textoNota(mediaFazenda)} no período)` : ''}. Cada ponto é a média das auditorias do setor no {agrupamento === 'mes' ? 'mês' : 'semana'}.
         </p>
       </Card>
 

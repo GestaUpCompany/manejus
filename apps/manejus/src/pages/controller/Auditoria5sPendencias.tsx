@@ -4,7 +4,7 @@ import { Button, Card, Table, Thead, Tbody, Tr, Th, Td } from '@gestaup/ui'
 import { exportToXLSX, formatDate } from '@gestaup/shared'
 import { PENDENCIAS_5S_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { SECOES_5S } from '../../features/relatorioAuditoria5s/itens'
-import { diasEntre, pendenciasPorSetor, resumoPendencias5s } from '../../features/pendencias5s/calculo'
+import { diasEntre, pendenciasPorSetor, resumoPendencias5s, situacaoPlano5s, type PlanoAcao5s, type SituacaoPlano5s } from '../../features/pendencias5s/calculo'
 
 interface RegistroParaPendencias {
   id: string
@@ -33,6 +33,41 @@ const SELECT =
 
 const textoDias = (dias: number) => (dias === 0 ? 'hoje' : `${dias} ${dias === 1 ? 'dia' : 'dias'}`)
 
+const ROTULO_PLANO: Record<SituacaoPlano5s, { texto: string; classe: string }> = {
+  sem_plano: { texto: 'Sem plano', classe: 'font-semibold text-red-500' },
+  em_dia: { texto: 'Em andamento', classe: 'text-content-strong' },
+  atrasado: { texto: 'Prazo vencido', classe: 'font-semibold text-red-500' },
+  concluido: { texto: 'Medidas concluídas', classe: 'font-semibold text-green-600' },
+}
+
+/** Situação do plano de ação e as medidas ainda abertas (leitura; o plano é editado no PWA). */
+function PlanoCelula({ plano, agora }: { plano: PlanoAcao5s | null; agora: string }) {
+  const situacao = situacaoPlano5s(plano, agora)
+  const { texto, classe } = ROTULO_PLANO[situacao]
+  const abertas = plano?.medidas.filter((m) => !m.concluida) ?? []
+  return (
+    <div className="min-w-[12rem]">
+      <span className={classe}>{texto}</span>
+      {plano && (
+        <span className="block text-xs text-content-muted">
+          {plano.medidas.length - abertas.length}/{plano.medidas.length} medidas concluídas
+        </span>
+      )}
+      {abertas.length > 0 && (
+        <ul className="mt-1 list-disc pl-4 text-xs text-content">
+          {abertas.slice(0, 3).map((m) => (
+            <li key={m.id}>
+              {m.descricao}
+              {m.responsavel ? ` (${m.responsavel})` : ''}
+              {m.prazo ? ` · prazo ${formatDate(m.prazo)}` : ''}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function Kpi({ titulo, valor, destaque }: { titulo: string; valor: string; destaque?: boolean }) {
   return (
     <Card className="bg-surface-1 p-4" disableHover>
@@ -52,6 +87,7 @@ export function Auditoria5sPendencias({ registros, fazendaNome, setorChave = nul
   const [pilarFiltro, setPilarFiltro] = useState('')
   const [setorFiltro, setSetorFiltro] = useState('')
   const [minDias, setMinDias] = useState(0)
+  const [planoFiltro, setPlanoFiltro] = useState<'' | 'sem_plano' | 'atrasado'>('')
   const agora = useMemo(() => new Date().toISOString(), [])
 
   const { abertas: abertasTodas, resolvidas: resolvidasTodas } = useMemo(
@@ -82,9 +118,10 @@ export function Auditoria5sPendencias({ registros, fazendaNome, setorChave = nul
         (p) =>
           (!pilarFiltro || p.secao === pilarFiltro) &&
           (!setorFiltro || p.setor === setorFiltro) &&
-          diasEntre(p.desde, agora) >= minDias
+          diasEntre(p.desde, agora) >= minDias &&
+          (!planoFiltro || situacaoPlano5s(p.planoAcao, agora) === planoFiltro)
       ),
-    [abertas, pilarFiltro, setorFiltro, minDias, agora]
+    [abertas, pilarFiltro, setorFiltro, minDias, planoFiltro, agora]
   )
 
   const recentes = useMemo(() => resolvidas.filter((r) => diasEntre(r.resolvidaEm, agora) <= 30).slice(0, compacto ? 5 : 15), [resolvidas, agora, compacto])
@@ -140,7 +177,7 @@ export function Auditoria5sPendencias({ registros, fazendaNome, setorChave = nul
             Exportar XLSX
           </Button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div>
             <label className={LABEL}>Pilar</label>
             <select className={SELECT} value={pilarFiltro} onChange={(e) => setPilarFiltro(e.target.value)}>
@@ -173,6 +210,14 @@ export function Auditoria5sPendencias({ registros, fazendaNome, setorChave = nul
               ))}
             </select>
           </div>
+          <div>
+            <label className={LABEL}>Plano de ação</label>
+            <select className={SELECT} value={planoFiltro} onChange={(e) => setPlanoFiltro(e.target.value as '' | 'sem_plano' | 'atrasado')}>
+              <option value="">Todos</option>
+              <option value="sem_plano">Sem plano</option>
+              <option value="atrasado">Prazo vencido</option>
+            </select>
+          </div>
         </div>
       </Card>
       )}
@@ -197,6 +242,7 @@ export function Auditoria5sPendencias({ registros, fazendaNome, setorChave = nul
                 <Th>Desde</Th>
                 <Th>Em aberto</Th>
                 <Th>Auditorias</Th>
+                <Th>Plano de ação</Th>
                 <Th>Observação</Th>
                 <Th>Foto</Th>
               </Tr>
@@ -218,6 +264,9 @@ export function Auditoria5sPendencias({ registros, fazendaNome, setorChave = nul
                       <span className={dias >= 7 ? 'font-semibold text-red-500' : dias >= 3 ? 'font-semibold text-amber-500' : ''}>{textoDias(dias)}</span>
                     </Td>
                     <Td>{p.ocorrencias}</Td>
+                    <Td>
+                      <PlanoCelula plano={p.planoAcao} agora={agora} />
+                    </Td>
                     <Td>{p.observacao || '-'}</Td>
                     <Td>
                       {p.fotoUrl ? (
