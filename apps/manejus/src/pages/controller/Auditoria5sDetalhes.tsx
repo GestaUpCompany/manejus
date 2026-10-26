@@ -6,6 +6,7 @@ import { Card, DetailLayout } from '@gestaup/ui'
 import { SECOES_5S } from '../../features/relatorioAuditoria5s/itens'
 import { resultadoRegistro, type RegistroAuditoria5s } from '../../features/relatorioAuditoria5s/agregacao'
 import { chaveSetor } from '../../features/relatorioAuditoria5s/porSetor'
+import { lerPlanoAcao5s } from '../../features/pendencias5s/calculo'
 
 interface RegistroRow extends RegistroAuditoria5s {
   fazenda_id: string
@@ -90,7 +91,10 @@ export function Auditoria5sDetalhes() {
     ? SECOES_5S.flatMap((secao) =>
         secao.itens
           .filter((item) => registro.itens?.[item.chave] === 'N')
-          .map((item) => ({ secao: secao.titulo, item, evidencia: registro.nao_conformidades?.[item.chave] as Record<string, any> | undefined }))
+          .map((item) => {
+            const evidencia = registro.nao_conformidades?.[item.chave] as Record<string, any> | undefined
+            return { secao: secao.titulo, item, evidencia, plano: lerPlanoAcao5s(evidencia) }
+          })
       )
     : []
 
@@ -142,7 +146,7 @@ export function Auditoria5sDetalhes() {
               </p>
             ) : (
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                {naoConformes.map(({ secao, item, evidencia }) => (
+                {naoConformes.map(({ secao, item, evidencia, plano }) => (
                   <div key={item.chave} className="flex gap-3 rounded-xl border border-red-500/30 bg-red-500/5 p-3">
                     {evidencia?.foto_url && (
                       <a href={evidencia.foto_url} target="_blank" rel="noopener noreferrer" className="shrink-0" title="Abrir foto em tamanho real">
@@ -169,6 +173,24 @@ export function Auditoria5sDetalhes() {
                         <p className="mt-1 text-sm text-content">“{evidencia.observacao}”</p>
                       ) : (
                         <p className="mt-1 text-xs italic text-content-muted">Sem observação registrada</p>
+                      )}
+                      {plano ? (
+                        <div className="mt-2 rounded-lg bg-blue-500/5 p-2">
+                          <p className="text-xs font-bold text-blue-800 dark:text-blue-300">
+                            Plano de ação · {plano.medidas.filter((m) => m.concluida).length}/{plano.medidas.length} medidas concluídas
+                          </p>
+                          <ul className="mt-1 space-y-0.5 text-xs text-content">
+                            {plano.medidas.map((m) => (
+                              <li key={m.id} className={m.concluida ? 'text-content-muted line-through' : ''}>
+                                {m.concluida ? '✓' : '○'} {m.descricao}
+                                {m.responsavel ? ` (${m.responsavel})` : ''}
+                                {m.prazo ? ` · prazo ${formatDate(m.prazo)}` : ''}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs italic text-content-muted">Sem plano de ação registrado</p>
                       )}
                     </div>
                   </div>

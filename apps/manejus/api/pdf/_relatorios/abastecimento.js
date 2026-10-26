@@ -184,6 +184,7 @@ const ABASTECIMENTO_CSS = `
 .abast-pill{background:#0b6a42;color:#fff;border-radius:5px;padding:5px 10px;text-align:center;min-width:0;flex:1 1 80px}
 .abast-pill .pill-value{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .abast-pill .pill-label{font-size:10px;opacity:.9;margin-top:1px}
+.sem-filtros{font-size:10px;color:#6b7280;margin-left:auto}
 .abast-body{display:grid;grid-template-columns:40mm 1fr;gap:6px;flex:1;min-height:0}
 .kpi-col{display:flex;flex-direction:column;gap:5px}
 .kpi-col .kpi-card{min-height:0;padding:6px 8px}
@@ -387,7 +388,7 @@ function pillsHtml(filtros) {
     })
   }
   if (pills.length === 0) {
-    return `<div class="pills-row"><div class="abast-pill"><div class="pill-value">Sem filtros (todos os dados)</div><div class="pill-label">Filtros</div></div></div>`
+    return `<div class="pills-row"><span class="sem-filtros">Sem filtros</span></div>`
   }
   return `<div class="pills-row">${pills
     .map((p) => `<div class="abast-pill"><div class="pill-value">${escapeHtml(p.value)}</div><div class="pill-label">${escapeHtml(p.label)}</div></div>`)
