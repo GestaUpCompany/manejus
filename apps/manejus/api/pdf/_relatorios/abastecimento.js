@@ -194,16 +194,17 @@ const ABASTECIMENTO_CSS = `
 .charts-col .chart-card{height:auto}
 .chart-main{height:120mm}
 .chart-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;height:135mm}
-.abast-detail-table th:nth-child(1){width:18%}
+.abast-detail-table th:nth-child(1){width:16%}
 .abast-detail-table th:nth-child(2){width:8%}
 .abast-detail-table th:nth-child(3){width:6%}
-.abast-detail-table th:nth-child(4){width:7%}
-.abast-detail-table th:nth-child(5){width:7%}
-.abast-detail-table th:nth-child(6){width:7%}
-.abast-detail-table th:nth-child(7){width:9%}
-.abast-detail-table th:nth-child(8){width:9%}
-.abast-detail-table th:nth-child(9){width:10%}
-.abast-detail-table th:nth-child(10){width:19%}
+.abast-detail-table th:nth-child(4){width:6%}
+.abast-detail-table th:nth-child(5){width:6%}
+.abast-detail-table th:nth-child(6){width:6%}
+.abast-detail-table th:nth-child(7){width:13%}
+.abast-detail-table th:nth-child(8){width:8%}
+.abast-detail-table th:nth-child(9){width:9%}
+.abast-detail-table th:nth-child(10){width:9%}
+.abast-detail-table th:nth-child(11){width:13%}
 .abast-detail-table th:nth-child(2), .abast-detail-table td:nth-child(2){text-align:center}
 .abast-detail-table td{font-size:12px;padding:6px 5px;line-height:1.25}
 .abast-detail-table th{font-size:11px;padding:6px 5px}
@@ -409,21 +410,25 @@ function kpisHtml(dados) {
 }
 
 function detailTable1Html(detalhes, totalLitros, totalRegistros) {
-  const header = `<thead><tr><th>Máquina/Veículo</th><th>Litros</th><th>% Total</th><th>Nº abast.</th><th>Média (L)</th><th>Maior (L)</th><th>Trabalho</th><th>Consumo</th><th>Período</th><th>Combustíveis</th></tr></thead>`
+  const header = `<thead><tr><th>Máquina/Veículo</th><th>Litros</th><th>% Total</th><th>Nº abast.</th><th>Média (L)</th><th>Maior (L)</th><th>Horím./Odôm.</th><th>Trabalho</th><th>Consumo</th><th>Período</th><th>Combustíveis</th></tr></thead>`
   const rows = detalhes
     .map((d) => {
       const pct = totalLitros > 0 ? (d.totalLitros / totalLitros) * 100 : 0
       const periodo = `${dateShortFmt(d.primeiraData)}-${dateShortFmt(d.ultimaData)}`
+      const leitura = (v) => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+      const horimetro = d.horimetroInicial != null && d.horimetroFinal != null
+        ? `${leitura(d.horimetroInicial)} → ${leitura(d.horimetroFinal)}`
+        : '—'
       const trabalho = d.totalTrabalho != null && d.unidadeTrabalho
         ? `${intFmtLocale(d.totalTrabalho)} ${d.unidadeTrabalho}`
         : '—'
       const consumo = d.consumoMedio != null && d.unidadeTrabalho
         ? `${numFmt(d.consumoMedio, 3)} L/${d.unidadeTrabalho}`
         : '—'
-      return `<tr><td>${escapeHtml(d.maquina)}</td><td class="numeric">${intFmtLocale(d.totalLitros)} L</td><td class="numeric">${numFmt(pct, 1)}%</td><td class="numeric">${intFmtLocale(d.numAbastecimentos)}</td><td class="numeric">${intFmtLocale(d.mediaLitros)}</td><td class="numeric">${intFmtLocale(d.maiorAbastecimento)}</td><td class="numeric">${trabalho}</td><td class="numeric">${consumo}</td><td>${escapeHtml(periodo)}</td><td>${escapeHtml(d.combustiveis.join(', ') || '—')}</td></tr>`
+      return `<tr><td>${escapeHtml(d.maquina)}</td><td class="numeric">${intFmtLocale(d.totalLitros)} L</td><td class="numeric">${numFmt(pct, 1)}%</td><td class="numeric">${intFmtLocale(d.numAbastecimentos)}</td><td class="numeric">${intFmtLocale(d.mediaLitros)}</td><td class="numeric">${intFmtLocale(d.maiorAbastecimento)}</td><td class="numeric">${horimetro}</td><td class="numeric">${trabalho}</td><td class="numeric">${consumo}</td><td>${escapeHtml(periodo)}</td><td>${escapeHtml(d.combustiveis.join(', ') || '—')}</td></tr>`
     })
     .join('')
-  const totalRow = `<tr class="total-row"><td>Total</td><td class="numeric">${intFmtLocale(totalLitros)} L</td><td class="numeric">100%</td><td class="numeric">${intFmtLocale(totalRegistros)}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`
+  const totalRow = `<tr class="total-row"><td>Total</td><td class="numeric">${intFmtLocale(totalLitros)} L</td><td class="numeric">100%</td><td class="numeric">${intFmtLocale(totalRegistros)}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`
   return `<table class="abast-detail-table">${header}<tbody>${rows}${totalRow}</tbody></table>`
 }
 

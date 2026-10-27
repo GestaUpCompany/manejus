@@ -195,6 +195,8 @@ interface DetalheMaquina {
   combustiveis: string[]
   operadores: string[]
   placas: string[]
+  horimetroInicial: number | null
+  horimetroFinal: number | null
   unidadeTrabalho: string | null
   totalTrabalho: number | null
   consumoMedio: number | null
@@ -389,6 +391,8 @@ export function RelatorioPublico() {
       const operadores = Array.from(new Set(regs.map((r) => r.operador).filter((v): v is string => !!v))).sort()
       const placas = Array.from(new Set(regs.map((r) => r.placa).filter((v): v is string => !!v && v.replace(/0/g, '').trim() !== ''))).sort()
       const first = regs[0]
+      const leituras = regs.filter((r) => r.odometro != null)
+      const primeiraLeitura = leituras[0]
 
       // Agregados de trabalho no periodo e consumo por unidade
       const unidadeTrabalho = first?.unidade_trabalho ?? null
@@ -408,6 +412,8 @@ export function RelatorioPublico() {
         combustiveis,
         operadores,
         placas,
+        horimetroInicial: primeiraLeitura ? Number(primeiraLeitura.odometro_anterior ?? primeiraLeitura.odometro) : null,
+        horimetroFinal: leituras.length ? Number(leituras[leituras.length - 1].odometro) : null,
         unidadeTrabalho,
         totalTrabalho: totalTrabalho > 0 ? totalTrabalho : null,
         consumoMedio,
@@ -1195,6 +1201,7 @@ export function RelatorioPublico() {
                   <th className="text-right py-2 px-3 font-medium text-gray-600">Nº abast.</th>
                   <th className="text-right py-2 px-3 font-medium text-gray-600">Média/abast. (L)</th>
                   <th className="text-right py-2 px-3 font-medium text-gray-600">Maior abast. (L)</th>
+                  <th className="text-right py-2 px-3 font-medium text-gray-600">Horímetro/Odômetro (inicial → final)</th>
                   <th className="text-right py-2 px-3 font-medium text-gray-600">Trabalho no período</th>
                   <th className="text-right py-2 px-3 font-medium text-gray-600">Consumo médio</th>
                   <th className="text-center py-2 px-3 font-medium text-gray-600">Período</th>
@@ -1216,6 +1223,11 @@ export function RelatorioPublico() {
                       <td className="py-2 px-3 text-right text-gray-700">{d.numAbastecimentos}</td>
                       <td className="py-2 px-3 text-right text-gray-700">{d.mediaLitros.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</td>
                       <td className="py-2 px-3 text-right text-gray-700">{d.maiorAbastecimento.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</td>
+                      <td className="py-2 px-3 text-right text-gray-700 whitespace-nowrap">
+                        {d.horimetroInicial != null && d.horimetroFinal != null
+                          ? `${d.horimetroInicial.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} → ${d.horimetroFinal.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}`
+                          : '—'}
+                      </td>
                       <td className="py-2 px-3 text-right text-gray-700">
                         {d.totalTrabalho != null && d.unidadeTrabalho
                           ? `${d.totalTrabalho.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${d.unidadeTrabalho}`
@@ -1241,7 +1253,7 @@ export function RelatorioPublico() {
                     <td className="py-2 px-3 text-right text-gray-900">{totalLitros.toLocaleString('pt-BR')} L</td>
                     <td className="py-2 px-3 text-right text-gray-500">100%</td>
                     <td className="py-2 px-3 text-right text-gray-700">{totalRegistros}</td>
-                    <td colSpan={6}></td>
+                    <td colSpan={7}></td>
                   </tr>
                 </tfoot>
               )}
