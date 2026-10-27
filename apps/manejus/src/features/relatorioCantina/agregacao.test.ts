@@ -84,7 +84,7 @@ describe('relatório de cantina: agregação', () => {
     expect(textoCobertura({ saldo_final: 10, cobertura_dias: null })).toBe('Sem consumo')
     expect(textoCobertura({ saldo_final: 0, cobertura_dias: null })).toBe('Sem saldo')
     expect(textoCobertura({ saldo_final: -2, cobertura_dias: 0 })).toBe('Sem saldo')
-    expect(textoCobertura({ saldo_final: 10, cobertura_dias: 800 })).toBe('mais de 1 ano')
+    expect(textoCobertura({ saldo_final: 10, cobertura_dias: 800 })).toBe('1 ano ou mais')
   })
 
   it('rotula a unidade do custo', () => {
