@@ -1,0 +1,3 @@
+ALTER TABLE public.lotes
+  DROP COLUMN IF EXISTS ua_ha,
+  DROP COLUMN IF EXISTS kg_ha;
