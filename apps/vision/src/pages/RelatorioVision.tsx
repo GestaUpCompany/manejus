@@ -59,22 +59,16 @@ const normTokens = (s: string) =>
   new Set(
     s
       .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
       .replace(/[^a-zA-Z0-9]+/g, ' ')
       .toLowerCase()
       .split(/\s+/)
       .filter((t) => t && !STOPWORDS.has(t)),
   )
 
-// Prefixo só vale a partir de 5 caracteres: cobre plural ("semente"/"sementes") e
-// nomes colados ("gesta"/"gestaup") sem transformar "nova" em hit de "Novapec".
-const tokMatch = (a: string, b: string) =>
-  a === b || (a.length >= 5 && b.startsWith(a)) || (b.length >= 5 && a.startsWith(b))
-
-const scoreFazenda = (tf: Set<string>, fonte: Set<string>) => {
-  if (!tf.size) return 0
-  const hits = [...tf].filter((t) => [...fonte].some((s) => tokMatch(t, s))).length
-  return hits / tf.size
-}
+// Só casa quando os nomes têm exatamente as mesmas palavras (sem stopwords).
+const mesmoNome = (a: Set<string>, b: Set<string>) =>
+  a.size > 0 && a.size === b.size && [...a].every((t) => b.has(t))
 
 // O nome da fazenda vem em Cadastros!B3 ("Cadastro de Referências - <nome>")
 // ou na célula logo abaixo do rótulo "Nome Fazenda".
@@ -90,30 +84,15 @@ function nomeDaPlanilha(cad: unknown[][] | undefined): string {
   return ''
 }
 
-// Casa o nome detectado com as fazendas ativas por sobreposição de tokens.
+// Casa o nome detectado com uma fazenda ativa só por correspondência exata.
 // O nome da planilha é a fonte principal; o nome do arquivo só entra se ela falhar.
-// Só aceita se houver um único melhor candidato com >=50% dos tokens presentes.
+// Sem correspondência exata (ou com mais de uma), não sugere nada: o usuário escolhe.
 function detectarFazenda(nomePlanilha: string, nomeArquivo: string, fazendas: Fazenda[]): Fazenda | undefined {
   const fontes = [nomePlanilha, nomeArquivo.replace(/\.[^.]+$/, '')].map(normTokens).filter((s) => s.size)
   for (const fonte of fontes) {
-    let melhor: Fazenda | undefined
-    let melhorScore = 0
-    let empate = false
-    for (const f of fazendas) {
-      const score = scoreFazenda(normTokens(f.nome), fonte)
-      if (score > melhorScore) {
-        melhor = f
-        melhorScore = score
-        empate = false
-      } else if (score === melhorScore && score > 0) {
-        empate = true
-      }
-    }
-    if (melhor && melhorScore >= 0.5) {
-      // Empate na fonte principal = ambíguo: não cai para o nome do arquivo
-      // (ele pode citar outra fazenda, ex.: "Gesta'Up") e deixa a escolha manual.
-      return empate ? undefined : melhor
-    }
+    const achadas = fazendas.filter((f) => mesmoNome(normTokens(f.nome), fonte))
+    if (achadas.length === 1) return achadas[0]
+    if (achadas.length > 1) return undefined
   }
   return undefined
 }
