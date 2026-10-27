@@ -54,7 +54,7 @@ export const REPORT_REGISTRY = {
   cantina: {
     title: 'Relatório de Cantina',
     render: renderCantinaHtml,
-    hasData: (dados) => (dados.itens?.length ?? 0) > 0 || Number(dados.operacao?.registros) > 0 || Number(dados.marmitas?.registros) > 0,
+    hasData: (dados) => (dados.itens?.length ?? 0) > 0 || Number(dados.operacao?.registros) > 0 || Number(dados.marmitas?.registros) > 0 || Number(dados.pratos_feitos?.registros) > 0,
   },
   boletim_rebanho: {
     title: 'Boletim de Rebanho',

@@ -40,9 +40,7 @@ export async function gerarRelatorioCantinaPDFPuppeteer(params: ParametrosRelato
       totais: dados.totais,
       operacao: dados.operacao,
       marmitas: dados.marmitas,
-      qualidade: dados.qualidade,
-      movimentacoes: dados.movimentacoes,
-      movimentacoes_total: dados.movimentacoes_total,
+      pratos_feitos: dados.pratos_feitos,
       abc: Object.fromEntries(classificarABC(dados.itens)),
     }),
   })

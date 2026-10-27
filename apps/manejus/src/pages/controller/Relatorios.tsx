@@ -90,7 +90,7 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
   {
     tipo: 'cantina',
     titulo: 'Cantina',
-    descricao: 'Estoque da cozinha por item (saldo inicial, entradas, baixas e saldo final), refeições servidas, custo por refeição, marmitas e extrato por período.',
+    descricao: 'Estoque da cozinha por item (saldo inicial, entradas, baixas e saldo final), refeições servidas, custo por refeição, marmitas, pratos feitos e extrato por período.',
     icone: '🍽️',
   },
 ]

@@ -87,12 +87,29 @@ export interface MarmitaCantina {
   valor: number
 }
 
+export interface ResumoTipoMarmita {
+  quantidade: number
+  valor: number
+}
+
+export interface EmpresaMarmita {
+  empresa: string
+  quantidade: number
+  valor: number
+}
+
+export type RefeicaoMarmita = 'cafe_manha' | 'lanche' | 'almoco' | 'jantar' | 'nao_informada'
+
 export interface MarmitasCantina {
   registros: number
   quantidade: number
   valor: number
   sem_preco: number
   lista: MarmitaCantina[]
+  /** Só nas marmitas (não nos pratos feitos). Registros antigos, sem divisão, contam como internas. */
+  por_tipo?: { interna: ResumoTipoMarmita; terceirizada: ResumoTipoMarmita }
+  por_refeicao?: Record<RefeicaoMarmita, number>
+  por_empresa?: EmpresaMarmita[]
 }
 
 export interface QualidadeCantina {
@@ -110,6 +127,8 @@ export interface DadosRelatorioCantina {
   totais: TotaisCantina
   operacao: OperacaoCantina
   marmitas: MarmitasCantina
+  /** Mesma estrutura de marmitas, para o modo prato_feito (relatório separado). */
+  pratos_feitos: MarmitasCantina
   qualidade: QualidadeCantina
   movimentacoes: MovimentacaoCantina[]
   movimentacoes_total: number
@@ -142,6 +161,7 @@ export const DADOS_CANTINA_VAZIO: DadosRelatorioCantina = {
     refeicoes_total: 0, custo_baixas: 0, custo_por_refeicao: null,
   },
   marmitas: { registros: 0, quantidade: 0, valor: 0, sem_preco: 0, lista: [] },
+  pratos_feitos: { registros: 0, quantidade: 0, valor: 0, sem_preco: 0, lista: [] },
   qualidade: { registros_sem_itens: 0, itens_sem_controle: 0, nomes_duplicados: 0 },
   movimentacoes: [],
   movimentacoes_total: 0,
@@ -242,12 +262,43 @@ export function ordenarItens(itens: ItemCantina[], campo: CampoOrdenacaoCantina,
 export function textoCobertura(item: Pick<ItemCantina, 'cobertura_dias' | 'saldo_final'>): string {
   if (item.saldo_final <= 0) return 'Sem saldo'
   if (item.cobertura_dias == null) return 'Sem consumo'
-  if (item.cobertura_dias >= 365) return 'mais de 1 ano'
+  if (item.cobertura_dias >= 365) return '1 ano ou mais'
   return `${Math.round(item.cobertura_dias)} d`
 }
 
 export function rotuloUnidadeCusto(item: Pick<ItemCantina, 'unidade'>): string {
   return `R$/${item.unidade || 'un'}`
+}
+
+// Unidades contáveis (unidade, pacote...) saem sem casas decimais, a menos que o valor seja
+// fracionário; medidas contínuas (kg, L) mantêm duas casas. Mesma regra do PDF
+// (api/pdf/_relatorios/cantina.js): manter as duas em sincronia.
+const UNIDADES_CONTINUAS = new Set(['kg', 'g', 'L', 'l', 'ml', 'mL'])
+const PLURAL_UNIDADE: Record<string, string> = {
+  Unidade: 'Unidades', Pacote: 'Pacotes', Caixa: 'Caixas', Saco: 'Sacos', Lata: 'Latas',
+  Garrafa: 'Garrafas', Fardo: 'Fardos', Rolo: 'Rolos', Frasco: 'Frascos',
+}
+
+export function numeroComUnidade(valor: number | null | undefined, unidade: string | null | undefined): string {
+  const n = Number(valor) || 0
+  const casas = (unidade && UNIDADES_CONTINUAS.has(unidade)) || !Number.isInteger(n) ? 2 : 0
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })
+}
+
+export function quantidadeComUnidade(valor: number | null | undefined, unidade: string | null | undefined): string {
+  const u = unidade ?? ''
+  const rotulo = !u || UNIDADES_CONTINUAS.has(u) || Math.abs(Number(valor)) === 1
+    ? u
+    : PLURAL_UNIDADE[u] ?? (u.endsWith('s') ? u : `${u}s`)
+  return `${numeroComUnidade(valor, unidade)}${rotulo ? ` ${rotulo}` : ''}`
+}
+
+// Itens para repor: saldo negativo primeiro, depois quem acaba antes (menor cobertura).
+export function itensParaRepor(itens: ItemCantina[]): ItemCantina[] {
+  const dias = (i: ItemCantina) => (i.cobertura_dias == null ? Number.MAX_SAFE_INTEGER : Number(i.cobertura_dias))
+  return itens
+    .filter((i) => i.negativo || i.em_alerta)
+    .sort((a, b) => (b.negativo ? 1 : 0) - (a.negativo ? 1 : 0) || dias(a) - dias(b))
 }
 
 function gravidade(item: ItemCantina): number {

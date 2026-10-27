@@ -45,7 +45,7 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
   {
     id: 'cantina',
     titulo: 'Cantina',
-    descricao: 'Estoque da cozinha por item no período, refeições servidas, custo por refeição, marmitas e extrato.',
+    descricao: 'Estoque da cozinha por item no período, refeições servidas, custo por refeição, marmitas, pratos feitos e extrato.',
   },
   {
     id: 'boletim_rebanho',

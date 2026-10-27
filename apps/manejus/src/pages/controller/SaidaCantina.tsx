@@ -5,6 +5,8 @@ import { supabase } from '@gestaup/supabase'
 import { Card, Input, EmptyState, PageSkeleton, Table, Thead, Tbody, Tr, Th, Td, SearchInput, FilterToolbar, FilterField } from '@gestaup/ui'
 import { exportToXLSX } from '@gestaup/shared'
 import { ALIMENTACAO_EXPORT_CONFIG } from '../../utils/exportConfigs'
+import { ehModoRefeicaoPronta, rotuloModoCantina, unidadeRefeicaoPronta } from '../../utils/cantinaModo'
+import { divisaoMarmitas, type MarmitasDetalhe } from '../../utils/cantinaMarmitas'
 import { formatDateTime } from '@gestaup/shared'
 import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
 
@@ -25,6 +27,7 @@ interface RegistroAlimentacao {
   numero_refeicoes_jantar?: number
   fornecedor?: string
   quantidade_marmitas?: number
+  marmitas_detalhe?: MarmitasDetalhe | null
   preco_unitario?: number
   destinatario?: string
   quantidade_outros?: string
@@ -179,13 +182,13 @@ export function SaidaCantina() {
                   <div className="flex items-center gap-2">
                     {registro.modo && (
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        registro.modo === 'marmita'
+                        ehModoRefeicaoPronta(registro.modo)
                           ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
                           : registro.modo === 'entrada'
                           ? 'bg-emerald-500/10 text-emerald-700'
                           : 'bg-primary/10 text-primary dark:text-primary-light'
                       }`}>
-                        {registro.modo === 'marmita' ? 'Marmita' : registro.modo === 'entrada' ? 'Entrada' : 'Cantina'}
+                        {rotuloModoCantina(registro.modo)}
                       </span>
                     )}
                     <span
@@ -216,15 +219,15 @@ export function SaidaCantina() {
                       </span>
                     </div>
                   </div>
-                ) : registro.modo === 'marmita' ? (
+                ) : ehModoRefeicaoPronta(registro.modo) ? (
                   <div className="space-y-2 text-xs sm:text-sm">
                     <div className="flex justify-between">
                       <span className="text-content-muted">Fornecedor:</span>
                       <span className="text-content-strong font-medium">{registro.fornecedor || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-content-muted">Qtd. Marmitas:</span>
-                      <span className="text-content-strong font-medium">{registro.quantidade_marmitas || '-'}</span>
+                      <span className="text-content-muted">Qtd. {registro.modo === 'prato_feito' ? 'Pratos' : 'Marmitas'}:</span>
+                      <span className="text-content-strong font-medium">{registro.quantidade_marmitas || '-'}{registro.marmitas_detalhe ? ` (${divisaoMarmitas(registro.marmitas_detalhe)})` : ''}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-content-muted">Preço Unit.:</span>
@@ -304,17 +307,17 @@ export function SaidaCantina() {
                     <Td>{registro.nome_usuario || '-'}</Td>
                     <Td>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        registro.modo === 'marmita'
+                        ehModoRefeicaoPronta(registro.modo)
                           ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
                           : registro.modo === 'entrada'
                           ? 'bg-emerald-500/10 text-emerald-700'
                           : 'bg-primary/10 text-primary dark:text-primary-light'
                       }`}>
-                        {registro.modo === 'marmita' ? 'Marmita' : registro.modo === 'entrada' ? 'Entrada' : 'Cantina'}
+                        {rotuloModoCantina(registro.modo)}
                       </span>
                     </Td>
                     <Td>
-                      {registro.modo === 'marmita'
+                      {ehModoRefeicaoPronta(registro.modo)
                         ? (registro.fornecedor || '-')
                         : registro.modo === 'entrada'
                         ? (registro.quem_recebeu || '-')
@@ -325,9 +328,9 @@ export function SaidaCantina() {
                         <span className="whitespace-nowrap">
                           {Array.isArray(registro.itens_detalhe) ? `${registro.itens_detalhe.length} item(s)` : '-'}
                         </span>
-                      ) : registro.modo === 'marmita' ? (
+                      ) : ehModoRefeicaoPronta(registro.modo) ? (
                         <span className="whitespace-nowrap">
-                          {registro.quantidade_marmitas || 0} marmitas
+                          {registro.quantidade_marmitas || 0} {unidadeRefeicaoPronta(registro.modo)}{registro.marmitas_detalhe ? ` (${divisaoMarmitas(registro.marmitas_detalhe)})` : ''}
                           {registro.preco_unitario ? ` × R$ ${Number(registro.preco_unitario).toFixed(2).replace('.', ',')}` : ''}
                           {registro.destinatario ? ` → ${registro.destinatario}` : ''}
                         </span>

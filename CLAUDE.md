@@ -104,3 +104,4 @@ Este repo controla o schema que o PWA consome; mudanças aqui quebram lá sem er
 - Schema, triggers, policies, functions SQL: `supabase/migrations/` (histórico completo) + MCP do Supabase para inspeção live.
 - Decisões tomadas e débitos: `docs/HISTORICO.md` e `docs/BACKLOG.md` (consulta sob demanda, ver disparadores no AGENTS.md).
 - Specs e planos aprovados: `docs/PLANO_*.md`, `docs/SPEC_*.md`, `docs/ARQUITETURA_*.md`.
+- Módulo comercial (comunicados de venda/compra/transferência, recepção, ordens de serviço, lado Painel e PWA): `../Caderneta-Digital-Gesta-Up/docs/MODULO_COMERCIAL.md` (documento de referência no repo do PWA).

@@ -80,6 +80,7 @@ O histórico de mudanças já aplicadas e o backlog de trabalho pendente estão 
 Quando mencionar qualquer um destes tópicos, ler a seção correspondente em `docs/HISTORICO.md` ou `docs/BACKLOG.md`:
 
 - "bebedouro obrigatório", "fase 2 bebedouros" → `docs/BACKLOG.md` (Pastos ↔ Bebedouros: fase 2)
+- "comunicado de venda", "comunicado de compra", "comunicado de transferência", "ordem de serviço", "OS", "recepção de animais", `ordens_servico`, `os_recebimentos`, `fechar_os_venda`, `conferir_recebimento_transferencia` → `../Caderneta-Digital-Gesta-Up/docs/MODULO_COMERCIAL.md` (documento completo; lado do PWA e do Painel)
 - "WhatsApp", "notificações WhatsApp", "lembretes WhatsApp" → `docs/BACKLOG.md` (Notificações via WhatsApp)
 - "camada 2 do peso", "mini-gráfico de peso", "gráfico de evolução do peso no card" → `docs/BACKLOG.md` (Proveniência do peso: camada 2)
 - "cronologia do rebanho", "faixas de categorias", "faixas de peso", "cronologia evolutiva" → `docs/HISTORICO.md` (Cronologia evolutiva do rebanho)

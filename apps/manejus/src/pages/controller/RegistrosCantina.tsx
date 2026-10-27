@@ -5,6 +5,7 @@ import { supabase } from '@gestaup/supabase'
 import { Button, Card, Input, CardSkeleton } from '@gestaup/ui'
 import { exportToXLSX } from '@gestaup/shared'
 import { CANTINA_EXPORT_CONFIG } from '../../utils/exportConfigs'
+import { ehModoRefeicaoPronta, rotuloModoCantina } from '../../utils/cantinaModo'
 import { formatDateTime } from '@gestaup/shared'
 import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
 
@@ -291,8 +292,8 @@ export function RegistrosCantina() {
                       {formatDateTime(registro.data)}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
-                      <span className={`rounded-full px-2 py-1 text-xs ${registro.modo === 'entrada' ? 'bg-emerald-500/10 text-emerald-700' : registro.modo === 'marmita' ? 'bg-blue-500/10 text-blue-700' : 'bg-primary/10 text-primary'}`}>
-                        {registro.modo === 'entrada' ? 'Entrada' : registro.modo === 'marmita' ? 'Marmita' : 'Cantina'}
+                      <span className={`rounded-full px-2 py-1 text-xs ${registro.modo === 'entrada' ? 'bg-emerald-500/10 text-emerald-700' : ehModoRefeicaoPronta(registro.modo) ? 'bg-blue-500/10 text-blue-700' : 'bg-primary/10 text-primary'}`}>
+                        {rotuloModoCantina(registro.modo)}
                       </span>
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>

@@ -125,7 +125,7 @@ export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
   morte: 'Registros de óbitos e mortes',
   clima: 'Registros de clima e temperatura',
   abastecimento: 'Registros de abastecimento de veículos',
-  cantina: 'Registros de alimentação (cantina e marmita)',
+  cantina: 'Registros de alimentação (cantina, marmita e prato feito)',
   limpeza: 'Registros de limpeza e manutenção',
   'auditoria-5s': 'Auditoria 5S: checklist de utilização, organização, limpeza, padronização e disciplina',
   'operacoes-maquinas': 'Registros de operações de máquinas',

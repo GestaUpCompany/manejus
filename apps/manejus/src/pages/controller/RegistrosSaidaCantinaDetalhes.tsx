@@ -5,6 +5,17 @@ import { supabase } from '@gestaup/supabase'
 import { Button, Card, ConfirmModal, DetailLayout, DetailSection, DetailField, Input, Modal, Select, formatValue, useToast } from '@gestaup/ui'
 import { formatDateTime, toFarmDateOnly, FARM_TIMEZONE } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
+import { ehModoRefeicaoPronta, rotuloModoCantina } from '../../utils/cantinaModo'
+import {
+  detalheParaGrade,
+  paraDetalhe,
+  pendenciaGrade,
+  resumoRefeicoes,
+  totaisDetalhe,
+  type GradeMarmitasForm,
+  type MarmitasDetalhe,
+} from '../../utils/cantinaMarmitas'
+import GradeEdicaoMarmitas from '../../components/cantina/GradeEdicaoMarmitas'
 
 interface RegistroAlimentacao {
   id: string
@@ -25,6 +36,7 @@ interface RegistroAlimentacao {
   quantidade_marmitas?: number
   preco_unitario?: number
   destinatario?: string
+  marmitas_detalhe?: MarmitasDetalhe | null
   itens?: any[]
   observacao?: string
   nome_usuario?: string
@@ -55,11 +67,26 @@ interface FormEdicao {
   quantidade_marmitas: string
   preco_unitario: string
   destinatario: string
+  /** Divisão interna/terceirizada por refeição; nula nos registros antigos (só quantidade total) */
+  grade: GradeMarmitasForm | null
 }
 
 interface SaldoNegativo {
   nome: string
   estoque_atual: number
+}
+
+function MarmitasPorRefeicao({ detalhe }: { detalhe: MarmitasDetalhe }) {
+  const totais = totaisDetalhe(detalhe)
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <DetailField label="Funcionários (interna)" value={resumoRefeicoes(detalhe.interna)} />
+      {detalhe.terceirizadas.map((t) => (
+        <DetailField key={t.empresa} label={`Terceirizada: ${t.empresa}`} value={resumoRefeicoes(t)} />
+      ))}
+      <DetailField label="Total" value={`${totais.internas} int. + ${totais.terceirizadas} terc. = ${totais.geral}`} />
+    </div>
+  )
 }
 
 /** Converte data + hora de parede no fuso da fazenda para ISO UTC. */
@@ -150,7 +177,7 @@ export function RegistrosSaidaCantinaDetalhes() {
   const abrirEdicao = async () => {
     if (!registro) return
     setFormError(null)
-    if (registro.modo !== 'marmita') {
+    if (!ehModoRefeicaoPronta(registro.modo)) {
       const { data, error } = await supabase
         .from('itens_cantina')
         .select('id, nome, unidade_medida')
@@ -175,6 +202,7 @@ export function RegistrosSaidaCantinaDetalhes() {
       quantidade_marmitas: registro.quantidade_marmitas != null ? String(registro.quantidade_marmitas) : '',
       preco_unitario: registro.preco_unitario != null ? String(registro.preco_unitario) : '',
       destinatario: registro.destinatario || '',
+      grade: registro.modo === 'marmita' && registro.marmitas_detalhe ? detalheParaGrade(registro.marmitas_detalhe) : null,
     })
   }
 
@@ -188,11 +216,20 @@ export function RegistrosSaidaCantinaDetalhes() {
       data: farmDateTimeToIso(form.data, form.hora),
       observacao: form.observacao.trim() || null,
     }
-    if (registro.modo === 'marmita') {
+    if (ehModoRefeicaoPronta(registro.modo)) {
       campos.fornecedor = form.fornecedor.trim()
-      campos.quantidade_marmitas = form.quantidade_marmitas === '' ? null : Number(form.quantidade_marmitas)
       campos.preco_unitario = form.preco_unitario === '' ? null : Number(form.preco_unitario)
-      campos.destinatario = form.destinatario.trim()
+      if (form.grade) {
+        const pendencia = pendenciaGrade(form.grade)
+        if (pendencia) {
+          setFormError(pendencia)
+          return
+        }
+        campos.marmitas_detalhe = paraDetalhe(form.grade)
+      } else {
+        campos.quantidade_marmitas = form.quantidade_marmitas === '' ? null : Number(form.quantidade_marmitas)
+        campos.destinatario = form.destinatario.trim()
+      }
     } else {
       campos.itens_detalhe = form.itens.map(i => ({ itemId: i.itemId, quantidade: i.quantidade.replace(',', '.') }))
     }
@@ -252,13 +289,13 @@ export function RegistrosSaidaCantinaDetalhes() {
             {registro!.modo && (
               <div className="flex items-center justify-between gap-3">
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  registro!.modo === 'marmita'
+                  ehModoRefeicaoPronta(registro!.modo)
                     ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
                     : registro!.modo === 'entrada'
                     ? 'bg-emerald-500/10 text-emerald-700'
                     : 'bg-primary/10 text-primary dark:text-primary-light'
                 }`}>
-                  {registro!.modo === 'marmita' ? 'Marmita' : registro!.modo === 'entrada' ? 'Entrada' : 'Cantina'}
+                  {rotuloModoCantina(registro!.modo)}
                 </span>
                 {canManage && editavel && (
                   <div className="flex gap-2">
@@ -277,7 +314,7 @@ export function RegistrosSaidaCantinaDetalhes() {
                   <DetailField label="Quem Recebeu" value={formatValue(registro!.quem_recebeu)} />
                 </div>
               </DetailSection>
-            ) : registro!.modo === 'marmita' ? (
+            ) : ehModoRefeicaoPronta(registro!.modo) ? (
               <>
                 {/* Informações da Marmita */}
                 <DetailSection title="Informações Gerais">
@@ -292,11 +329,16 @@ export function RegistrosSaidaCantinaDetalhes() {
                 {/* Detalhes da Marmita */}
                 <DetailSection title="Detalhes" highlighted>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <DetailField label="Qtd. Marmitas" value={formatValue(registro!.quantidade_marmitas)} />
+                    <DetailField label={registro!.modo === 'prato_feito' ? 'Qtd. Pratos' : 'Qtd. Marmitas'} value={formatValue(registro!.quantidade_marmitas)} />
                     <DetailField label="Preço Unit." value={registro!.preco_unitario ? `R$ ${Number(registro!.preco_unitario).toFixed(2).replace('.', ',')}` : '-'} />
                     <DetailField label="Valor Total" value={(registro!.quantidade_marmitas && registro!.preco_unitario) ? `R$ ${(registro!.quantidade_marmitas * Number(registro!.preco_unitario)).toFixed(2).replace('.', ',')}` : '-'} />
                   </div>
                 </DetailSection>
+                {registro!.modo === 'marmita' && registro!.marmitas_detalhe && (
+                  <DetailSection title="Marmitas por refeição">
+                    <MarmitasPorRefeicao detalhe={registro!.marmitas_detalhe} />
+                  </DetailSection>
+                )}
               </>
             ) : (
               <>
@@ -380,12 +422,13 @@ export function RegistrosSaidaCantinaDetalhes() {
             <Input label="Hora" type="time" value={form.hora} onChange={e => setForm({ ...form, hora: e.target.value })} />
           </div>
 
-          {registro.modo === 'marmita' ? (
+          {ehModoRefeicaoPronta(registro.modo) ? (
             <>
               <Input label="Fornecedor" value={form.fornecedor} onChange={e => setForm({ ...form, fornecedor: e.target.value })} />
-              <Input label="Destinatário" value={form.destinatario} onChange={e => setForm({ ...form, destinatario: e.target.value })} />
+              {form.grade && <GradeEdicaoMarmitas grade={form.grade} onChange={(grade) => setForm({ ...form, grade })} />}
+              {!form.grade && <Input label="Destinatário" value={form.destinatario} onChange={e => setForm({ ...form, destinatario: e.target.value })} />}
               <div className="grid grid-cols-2 gap-3">
-                <Input label="Qtd. marmitas" type="number" min={1} value={form.quantidade_marmitas} onChange={e => setForm({ ...form, quantidade_marmitas: e.target.value })} />
+                {!form.grade && <Input label={registro.modo === 'prato_feito' ? 'Qtd. pratos' : 'Qtd. marmitas'} type="number" min={1} value={form.quantidade_marmitas} onChange={e => setForm({ ...form, quantidade_marmitas: e.target.value })} />}
                 <Input label="Preço unitário" type="number" step="0.01" min={0} value={form.preco_unitario} onChange={e => setForm({ ...form, preco_unitario: e.target.value })} />
               </div>
             </>

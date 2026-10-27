@@ -2998,3 +2998,27 @@ Operação pontual em produção, fazenda d3965505-74d5-4af7-9858-f773d2e8aab3, 
 
 Migration `20261024100000_lote_pasto_edicao_fecha_modulo.sql` (rollback em `supabase/rollbacks/`). Regressão de `0667da1`: sem a RPC, a edição de `lotes.pasto_id` na tela de Lotes não fechava `lote_modulo_historico`. `trg_lotes_pasto_historico` agora fecha o módulo que o lote deixou e abre o do pasto novo (sem reiniciar se for o mesmo módulo); as datas de pasto usam o fuso da fazenda. `trg_sync_lote_modulo_historico` respeita `app.skip_sync_lote_modulo`. O PWA não seta a flag, então não muda. Teste na fazenda de testes (lote ENS-L1, sequência M1 → M1 → M2 → sem módulo → sem pasto, em bloco com rollback): módulo aberto mantém o mesmo id no mesmo módulo, fecha ao trocar de módulo e ao sair para pasto sem módulo; pasto fecha em toda troca; nenhum resíduo.
 Ainda aberto: a desativação do lote (`trg_lote_desativado_libera_local`) zera `pasto_id` em execução aninhada, que o trigger ignora; o histórico de módulo desse caso continua sem fechar.
+
+## Cantina: modo Prato Feito (26/10/2026)
+
+- Migration `20261026160000_cantina_modo_prato_feito.sql` (aplicada com `supabase db push`): CHECK de `registros_alimentacao.modo` passa a aceitar `prato_feito`; RPCs `editar_registro_saida_cantina` e `excluir_registro_saida_cantina` aceitam o modo (campos editáveis iguais aos da marmita); `get_dados_relatorio_cantina` devolve `pratos_feitos` (mesma estrutura de `marmitas`).
+- Telas: helper `utils/cantinaModo.ts` (`ehModoRefeicaoPronta`, `rotuloModoCantina`, `unidadeRefeicaoPronta`) usado em `SaidaCantina`, `RegistrosCantina` e `RegistrosSaidaCantinaDetalhes`. Relatório público ganha a aba "Pratos feitos" (aparece só com registros) e o PDF (`api/pdf/_relatorios/cantina.js`) uma tabela própria, com 6 linhas por tabela quando marmitas e pratos aparecem juntos.
+- O PWA (`SaidaCantinaPage`) grava `modo = 'prato_feito'` com os campos da marmita; ver `docs/HISTORICO.md` do PWA.
+
+## Cantina: marmita interna x terceirizada por refeição (26/10/2026)
+
+- Migration `20261026170000_cantina_marmitas_detalhe.sql` (aplicada com `supabase db push`): coluna `registros_alimentacao.marmitas_detalhe` (jsonb), helper `marmitas_detalhe_resumo` (valida e devolve total e destinatário), trigger `trg_alimentacao_marmitas_detalhe` (recalcula `quantidade_marmitas` e `destinatario`; só modo marmita), `editar_registro_saida_cantina` aceitando `marmitas_detalhe` e `get_dados_relatorio_cantina` com `marmitas.por_tipo`, `por_refeicao` e `por_empresa`.
+- Formato: `{"interna": {cafe_manha, lanche, almoco, jantar}, "terceirizadas": [{empresa, cafe_manha, lanche, almoco, jantar}]}`. Registros antigos (sem detalhe) contam como internos, refeição `nao_informada`.
+- Telas: `RegistrosSaidaCantinaDetalhes` mostra e edita a grade (`components/cantina/GradeEdicaoMarmitas.tsx`); `SaidaCantina` mostra "N int. + M terc."; relatório público (`RelatorioCantinaPublico`) e PDF (`api/pdf/_relatorios/cantina.js`) ganham os três cortes. `utils/cantinaMarmitas.ts` é espelho do arquivo do PWA: manter os dois iguais.
+- O app grava a grade só na fazenda de testes por enquanto; ver `docs/HISTORICO.md` do PWA.
+
+## PDF do relatorio de Cantina enxuto (27/10/2026)
+
+- O PDF passou de ~12 para 2 paginas (3 quando ha muitos itens a repor ou muitas empresas). Pagina 1: KPIs (estoque, compras, consumo, custo por refeicao), itens para repor e refeicoes servidas, mais marmitas (funcionarios x empresas) e pratos feitos quando cabem. Pagina 2: posicao por item numa tabela so (saldo, minimo, cobertura, consumo, valor e classe ABC).
+- Removidos do PDF: extrato de movimentacoes, aviso de divergencia de saldo, nota de saldos reconstruidos, aviso de qualidade dos dados, pagina de curva ABC e lista de registros de marmita. A pagina publica (RelatorioCantinaPublico) nao mudou e segue com tudo isso.
+- O cliente (relatorioCantinaPDFPuppeteer.ts) deixou de enviar movimentacoes e qualidade; o Infografico Mensal usa o mesmo renderizador (api/pdf/_relatorios/cantina.js) e ainda as envia, mas elas sao ignoradas.
+
+## Pagina publica do relatorio de Cantina alinhada ao PDF (27/10/2026)
+
+- A pagina publica (RelatorioCantinaPublico.tsx) segue a mesma estrutura do PDF: KPIs, itens para repor, refeicoes servidas, posicao por item numa tabela so (com ABC, cobertura e consumo), marmitas (funcionarios x empresas) e pratos feitos. Saiu o extrato de movimentacoes, a aba Operacao, os avisos de divergencia e de qualidade dos dados.
+- Unidades: mesma regra do PDF (plural e sem casas em unidades contaveis; kg e L com duas casas). Os helpers ficam em features/relatorioCantina/agregacao.ts, com copia em api/pdf/_relatorios/cantina.js.
