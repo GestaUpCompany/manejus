@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Lotação calculada: UA/ha e kg/ha em pastos e lotes (27/10/2026)
+- **O quê**: `pastos.ua_ha`/`pastos.kg_ha` gravados e mantidos pelo banco a partir do lote que ocupa o pasto; `lotes.ua_ha`/`lotes.kg_ha` espelham a ocupação atual. Na UI, lote e pasto mostram esses campos somente leitura (não são mais digitados nem enviados no submit).
+- **Regra**: mesma da view `v_lote_pasto_ocupacao_atual`: peso = Σ(`quant_atual` × `peso_vivo_atual_kg_cab`) das categorias ativas (fallback `cabecas_entrada` × `peso_vivo_medio_entrada_kg`); UA = peso / 450; `ua_ha` = UA / `area_util_ha`; `kg_ha` = peso / `area_util_ha`. Curral e pasto sem área: NULL.
+- **Migration** `20261027190000_lotacao_ua_ha_kg_ha_calculada` (rollback em `supabase/rollbacks/`): funções `recalcular_lotacao_lote` e `recalcular_lotacao_pasto` (SECURITY DEFINER) e triggers em `lote_pasto_historico`, `lote_categorias` (inclusive o cron diário) e `pastos.area_util_ha`. Aplicada via `db push`, sem backfill.
+- **Pendente**: backfill dos registros existentes ainda não rodou. Sem ele, os valores só aparecem após a próxima mudança em cada ocupação. Exige escolha de escopo (fazenda de testes ou todas) e autorização explícita.
+- **Limite**: o travamento de `lotes.ua_ha/kg_ha` é só de interface; o banco ainda aceita escrita direta.
+- **Arquivos**: `Lotes.tsx`, `Pastos.tsx`.
+
 ## Relatório de Abate (27/10/2026)
 - **O quê**: card "Relatório de Abate" em `Relatorios.tsx` (seção Controle de lotes) abre `RelatorioAbateModal.tsx`: escolhe-se o tipo de saída (Abate e/ou Venda), filtra por situação (Ativo/Desativado) e busca, e marca os lotes (nenhum vem marcado). Sai em **PDF** (`api/pdf/_relatorios/abate.js`, registrado em `[relatorio].js` e no `vite.config.ts`) e **Excel** (7 abas: Resumo, Linha do tempo, Categorias, Peso e GMD, Ocupação, Dietas, Consumo). Sem migration.
 - **Regra de "abatido"**: lote com movimentação de saída `motivo_movimentacao = 'Abate'` ou (`'Saída'` + `subtipo = 'Venda'`), ativo ou não. Lote desativado termina na última saída; lote ativo (venda parcial) segue até hoje. Não há seletor de período: a lista cobre todo o histórico, mais recente primeiro (o padrão de 90 dias escondia lotes mais antigos).

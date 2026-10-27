@@ -168,8 +168,6 @@ export function Lotes() {
     ativo: true,
     pasto_id: '',
     curral_id: '',
-    ua_ha: '',
-    kg_ha: '',
     sistema_producao: '',
     destino: '',
     meta_intervalo_rodeio_dias: '',
@@ -1156,8 +1154,7 @@ export function Lotes() {
       data_liberacao_sisbov: formData.data_liberacao_sisbov || null,
       periodo_liberacao_sisbov: formData.periodo_liberacao_sisbov || null,
       data_embarque_prevista: formData.data_embarque_prevista || null,
-      ua_ha: formData.ua_ha ? parseFloat(formData.ua_ha.replace(',', '.')) : null,
-      kg_ha: formData.kg_ha ? parseFloat(formData.kg_ha.replace(',', '.')) : null,
+      // ua_ha/kg_ha são calculados pelo banco a partir da ocupação: não enviar pelo formulário.
       // formulacao_id do lote é gerenciado pelos fluxos de plano (iniciar/encerrar/migrar).
       // Não enviar pelo formulário para evitar sobrescrever com valor stale.
     }
@@ -1534,8 +1531,6 @@ export function Lotes() {
         ativo: true,
         pasto_id: '',
         curral_id: '',
-        ua_ha: '',
-        kg_ha: '',
         sistema_producao: '',
         destino: '',
         meta_intervalo_rodeio_dias: '',
@@ -1795,8 +1790,6 @@ export function Lotes() {
       ativo: lote.ativo ?? true,
       pasto_id: lote.pasto_id || '',
       curral_id: lote.curral_id || '',
-      ua_ha: lote.ua_ha != null ? String(lote.ua_ha) : '',
-      kg_ha: lote.kg_ha != null ? String(lote.kg_ha) : '',
       sistema_producao: lote.sistema_producao || '',
       destino: lote.destino || '',
       meta_intervalo_rodeio_dias: lote.meta_intervalo_rodeio_dias?.toString() || '',
@@ -1859,8 +1852,6 @@ export function Lotes() {
       ativo: true,
       pasto_id: '',
       curral_id: '',
-      ua_ha: '',
-      kg_ha: '',
       sistema_producao: '',
       destino: '',
       meta_intervalo_rodeio_dias: '',
@@ -2503,26 +2494,26 @@ export function Lotes() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
-                    UA/ha
+                    UA/ha (calculado)
                   </label>
-                  <NumericInput
-                    value={formData.ua_ha}
-                    onChange={(value) => setFormData({ ...formData, ua_ha: value })}
-                    placeholder="UA por hectare"
-                    decimalPlaces={2}
-                    className="w-full"
+                  <Input
+                    type="text"
+                    value={editingLote?.ua_ha != null ? editingLote.ua_ha.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                    readOnly
+                    title="Calculado pelo pasto e pelos animais do lote"
+                    className="border-border-base text-sm bg-surface-2"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
-                    kg/ha
+                    kg/ha (calculado)
                   </label>
-                  <NumericInput
-                    value={formData.kg_ha}
-                    onChange={(value) => setFormData({ ...formData, kg_ha: value })}
-                    placeholder="kg por hectare"
-                    decimalPlaces={2}
-                    className="w-full"
+                  <Input
+                    type="text"
+                    value={editingLote?.kg_ha != null ? editingLote.kg_ha.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                    readOnly
+                    title="Calculado pelo pasto e pelos animais do lote"
+                    className="border-border-base text-sm bg-surface-2"
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-1 xl:col-span-1">

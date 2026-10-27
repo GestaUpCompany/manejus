@@ -18,6 +18,8 @@ interface Pasto {
   area_total_ha?: number
   area_util_porcentagem?: number
   area_util_ha?: number
+  ua_ha?: number | null
+  kg_ha?: number | null
   especie?: string
   altura_entrada_cm?: number
   altura_saida_cm?: number
@@ -910,6 +912,34 @@ export function Pastos() {
                   className="border-border-base focus:border-accent text-sm bg-surface-2"
                 />
               </div>
+              {editingPasto && (
+                <>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                      UA/ha (calculado)
+                    </label>
+                    <Input
+                      type="text"
+                      value={editingPasto.ua_ha != null ? Number(editingPasto.ua_ha).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                      readOnly
+                      title={ocupacaoPorPasto[editingPasto.id]?.lote_nome ? `Calculado a partir do lote ${ocupacaoPorPasto[editingPasto.id].lote_nome}` : 'Sem lote ocupando o pasto'}
+                      className="border-border-base text-sm bg-surface-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                      kg/ha (calculado)
+                    </label>
+                    <Input
+                      type="text"
+                      value={editingPasto.kg_ha != null ? Number(editingPasto.kg_ha).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                      readOnly
+                      title={ocupacaoPorPasto[editingPasto.id]?.lote_nome ? `Calculado a partir do lote ${ocupacaoPorPasto[editingPasto.id].lote_nome}` : 'Sem lote ocupando o pasto'}
+                      className="border-border-base text-sm bg-surface-2"
+                    />
+                  </div>
+                </>
+              )}
               {editingPasto && editingPasto.modulo_nome && (
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
@@ -1207,6 +1237,12 @@ export function Pastos() {
                   )}
                   {pasto.area_util_ha && (
                     <p className="text-sm text-content-muted"><span className="font-medium">Área Útil (ha):</span> {pasto.area_util_ha} ha</p>
+                  )}
+                  {pasto.ua_ha != null && (
+                    <p className="text-sm text-content-muted"><span className="font-medium">UA/ha:</span> {Number(pasto.ua_ha).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  )}
+                  {pasto.kg_ha != null && (
+                    <p className="text-sm text-content-muted"><span className="font-medium">kg/ha:</span> {Number(pasto.kg_ha).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   )}
                   {pasto.especie && (
                     <p className="text-sm text-content-muted"><span className="font-medium">Espécie:</span> {pasto.especie}</p>
