@@ -120,6 +120,8 @@ interface Lote {
   data_liberacao_sisbov?: string | null
   periodo_liberacao_sisbov?: number | null
   data_embarque_prevista?: string | null
+  ua_ha?: number | null
+  kg_ha?: number | null
 }
 
 export function Lotes() {
@@ -166,6 +168,8 @@ export function Lotes() {
     ativo: true,
     pasto_id: '',
     curral_id: '',
+    ua_ha: '',
+    kg_ha: '',
     sistema_producao: '',
     destino: '',
     meta_intervalo_rodeio_dias: '',
@@ -1152,6 +1156,8 @@ export function Lotes() {
       data_liberacao_sisbov: formData.data_liberacao_sisbov || null,
       periodo_liberacao_sisbov: formData.periodo_liberacao_sisbov || null,
       data_embarque_prevista: formData.data_embarque_prevista || null,
+      ua_ha: formData.ua_ha ? parseFloat(formData.ua_ha.replace(',', '.')) : null,
+      kg_ha: formData.kg_ha ? parseFloat(formData.kg_ha.replace(',', '.')) : null,
       // formulacao_id do lote é gerenciado pelos fluxos de plano (iniciar/encerrar/migrar).
       // Não enviar pelo formulário para evitar sobrescrever com valor stale.
     }
@@ -1528,6 +1534,8 @@ export function Lotes() {
         ativo: true,
         pasto_id: '',
         curral_id: '',
+        ua_ha: '',
+        kg_ha: '',
         sistema_producao: '',
         destino: '',
         meta_intervalo_rodeio_dias: '',
@@ -1787,6 +1795,8 @@ export function Lotes() {
       ativo: lote.ativo ?? true,
       pasto_id: lote.pasto_id || '',
       curral_id: lote.curral_id || '',
+      ua_ha: lote.ua_ha != null ? String(lote.ua_ha) : '',
+      kg_ha: lote.kg_ha != null ? String(lote.kg_ha) : '',
       sistema_producao: lote.sistema_producao || '',
       destino: lote.destino || '',
       meta_intervalo_rodeio_dias: lote.meta_intervalo_rodeio_dias?.toString() || '',
@@ -1849,6 +1859,8 @@ export function Lotes() {
       ativo: true,
       pasto_id: '',
       curral_id: '',
+      ua_ha: '',
+      kg_ha: '',
       sistema_producao: '',
       destino: '',
       meta_intervalo_rodeio_dias: '',
@@ -2488,6 +2500,30 @@ export function Lotes() {
                   )}
                   {errors.curral_id && <p className="text-xs text-red-500 mt-1">{errors.curral_id}</p>}
                   {errors.pasto_id && <p className="text-xs text-red-500 mt-1">{errors.pasto_id}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                    UA/ha
+                  </label>
+                  <NumericInput
+                    value={formData.ua_ha}
+                    onChange={(value) => setFormData({ ...formData, ua_ha: value })}
+                    placeholder="UA por hectare"
+                    decimalPlaces={2}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                    kg/ha
+                  </label>
+                  <NumericInput
+                    value={formData.kg_ha}
+                    onChange={(value) => setFormData({ ...formData, kg_ha: value })}
+                    placeholder="kg por hectare"
+                    decimalPlaces={2}
+                    className="w-full"
+                  />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-1 xl:col-span-1">
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">

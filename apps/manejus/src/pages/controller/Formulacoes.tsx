@@ -440,75 +440,28 @@ export function Formulacoes() {
       categoria_inferida_observacao: null,
     }
 
-    let error
-    let savedFormulacaoId: string | null = null
-    if (editingFormulacao) {
-      const { error: updateError } = await supabase
-        .from('formulacoes')
-        .update(data)
-        .eq('id', editingFormulacao.id)
-      error = updateError
-      savedFormulacaoId = editingFormulacao.id
-    } else {
-      const { data: inserted, error: insertError } = await supabase
-        .from('formulacoes')
-        .insert(data)
-        .select('id')
-        .single()
-      error = insertError
-      savedFormulacaoId = inserted?.id || null
-    }
+    // Dieta, insumos e GMD por categoria salvos numa única transação; a RPC
+    // registra uma versão em formulacoes_versoes (histórico da dieta para a
+    // linha de vida do lote). O trigger da junção recalcula os derivados.
+    const { data: rpcId, error } = await supabase.rpc('salvar_formulacao', {
+      p_fazenda_id: fazendaId,
+      p_formulacao_id: editingFormulacao?.id ?? null,
+      p_dados: data,
+      p_insumos: recalculated.map((item) => ({
+        insumo_id: item.insumo_id,
+        formula_teor_ms: item.formula_teor_ms,
+      })),
+      p_categorias_gmd: formData.e_premix
+        ? []
+        : categoriasGmd.map((cat) => ({ categoria: cat.categoria, gmd: cat.gmd })),
+      p_motivo: null,
+    })
+    const savedFormulacaoId: string | null = (rpcId as string | null) ?? null
 
     if (error) {
       console.error('Erro ao salvar formulação:', error)
+      toast.error('Erro ao salvar a formulação.')
     } else {
-      // Sincronizar insumos na tabela de junção (DELETE + INSERT)
-      // O trigger recalcula automaticamente os campos derivados de formulacoes
-      if (savedFormulacaoId) {
-        await supabase
-          .from('formulacao_insumos')
-          .delete()
-          .eq('formulacao_id', savedFormulacaoId)
-
-        if (recalculated.length > 0) {
-          const juncaoRows = recalculated.map((item, idx) => ({
-            formulacao_id: savedFormulacaoId,
-            insumo_id: item.insumo_id,
-            formula_teor_ms: item.formula_teor_ms,
-            ordem: idx,
-          }))
-          const { error: juncaoError } = await supabase
-            .from('formulacao_insumos')
-            .insert(juncaoRows)
-          if (juncaoError) {
-            console.error('Erro ao salvar insumos da formulação:', juncaoError)
-          }
-        }
-
-        // Sincronizar categorias GMD (DELETE + INSERT)
-        if (!formData.e_premix) {
-          await supabase
-            .from('formulacao_categorias_gmd')
-            .delete()
-            .eq('formulacao_id', savedFormulacaoId)
-
-          if (categoriasGmd.length > 0) {
-            const fcgRows = categoriasGmd.map((cat, idx) => ({
-              formulacao_id: savedFormulacaoId,
-              categoria: cat.categoria.toLowerCase().trim(),
-              gmd: cat.gmd,
-              ordem: idx,
-            }))
-            const { error: fcgError } = await supabase
-              .from('formulacao_categorias_gmd')
-              .insert(fcgRows)
-            if (fcgError) {
-              console.error('Erro ao salvar categorias GMD:', fcgError)
-            }
-          }
-        }
-      }
-
       // Upsert do insumo gerado se a formulação é premix
       if (formData.e_premix && savedFormulacaoId) {
         const insumoData = {

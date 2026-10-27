@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import { Card, Input, EmptyState, PageSkeleton, Table, Thead, Tbody, Tr, Th, Td, SearchInput, FilterToolbar, FilterField } from '@gestaup/ui'
-import { exportToXLSX } from '@gestaup/shared'
-import { TRATO_CONFINAMENTO_EXPORT_CONFIG } from '../../utils/exportConfigs'
-import { formatDateTime } from '@gestaup/shared'
+import { exportToXLSXMultiSheet } from '@gestaup/shared'
+import { TRATO_CONFINAMENTO_EXPORT_CONFIG, CONSUMO_CONFINAMENTO_EXPORT_CONFIG } from '../../utils/exportConfigs'
+import { formatDateTime, toFarmDateOnly } from '@gestaup/shared'
 import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
 
 interface RegistroTrato {
@@ -21,6 +21,39 @@ interface RegistroTrato {
   lote?: { nome: string } | null
   nome_usuario?: string | null
   created_at: string
+  curral_id?: string | null
+  lote_id?: string | null
+}
+
+interface ConsumoDia {
+  lote_id: string
+  data: string
+  n_currais: number
+  n_tratos: number
+  kg_ofertado_mn: number
+  kg_consumido_mn: number
+  fator_consumo: number
+  leitura_confirmada: boolean
+  consumo_piso: boolean
+  n_cabecas: number | null
+  peso_vivo_kg: number | null
+  kg_mn_cab_dia: number | null
+  kg_ms_cab_dia: number | null
+  consumo_percent_pv: number | null
+  custo_reais_cab_dia: number | null
+  fora_faixa_pv: boolean
+}
+
+interface OcupacaoCurral {
+  curral_id: string
+  lote_id: string
+  data_inicial: string
+  data_final: string | null
+}
+
+function statusConsumo(c: ConsumoDia): string {
+  if (!c.leitura_confirmada) return 'Provisório (sem leitura de cocho no dia seguinte)'
+  return c.consumo_piso ? 'Confirmado (piso: nota ≤ 0)' : 'Confirmado'
 }
 
 export function TratoConfinamento() {
@@ -33,6 +66,9 @@ export function TratoConfinamento() {
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [consumos, setConsumos] = useState<ConsumoDia[]>([])
+  const [ocupacoes, setOcupacoes] = useState<OcupacaoCurral[]>([])
+  const [lotesNomes, setLotesNomes] = useState<Record<string, string>>({})
 
   useEffect(() => {
     loadRegistros()
@@ -60,6 +96,27 @@ export function TratoConfinamento() {
       setRegistros(data as RegistroTrato[])
     }
 
+    // Dados de apoio da exportação: consumo por lote/dia, ocupação de currais (para tratos sem lote_id) e nomes dos lotes
+    const [consumoRes, ocupRes, lotesRes] = await Promise.all([
+      supabase
+        .from('consumo_confinamento_dia')
+        .select('lote_id, data, n_currais, n_tratos, kg_ofertado_mn, kg_consumido_mn, fator_consumo, leitura_confirmada, consumo_piso, n_cabecas, peso_vivo_kg, kg_mn_cab_dia, kg_ms_cab_dia, consumo_percent_pv, custo_reais_cab_dia, fora_faixa_pv')
+        .eq('fazenda_id', fazendaId)
+        .order('data', { ascending: false }),
+      supabase
+        .from('lote_curral_historico')
+        .select('curral_id, lote_id, data_inicial, data_final')
+        .eq('fazenda_id', fazendaId),
+      supabase.from('lotes').select('id, nome').eq('fazenda_id', fazendaId),
+    ])
+    if (consumoRes.error) console.error('Erro ao buscar consumo do confinamento:', consumoRes.error)
+    else setConsumos((consumoRes.data || []) as ConsumoDia[])
+    if (ocupRes.error) console.error('Erro ao buscar ocupação de currais:', ocupRes.error)
+    else setOcupacoes((ocupRes.data || []) as OcupacaoCurral[])
+    if (!lotesRes.error) {
+      setLotesNomes(Object.fromEntries((lotesRes.data || []).map((l) => [l.id, l.nome])))
+    }
+
     setLoading(false)
   }
 
@@ -85,7 +142,70 @@ export function TratoConfinamento() {
     return <PageSkeleton variant="list" />
   }
 
-  const exportData = filteredRegistros.map((r) => ({ ...r }))
+  const handleExport = () => {
+    const consumoPorLoteDia = new Map(consumos.map((c) => [`${c.lote_id}::${c.data}`, c]))
+
+    // Mesma regra do banco: lote do trato, ou lote que ocupava o curral na data
+    const loteDoTrato = (r: RegistroTrato, dia: string): string | null => {
+      if (r.lote_id) return r.lote_id
+      if (!r.curral_id) return null
+      const ocup = ocupacoes
+        .filter((o) => o.curral_id === r.curral_id && o.data_inicial <= dia && (!o.data_final || o.data_final >= dia))
+        .sort((a, b) => b.data_inicial.localeCompare(a.data_inicial))[0]
+      return ocup?.lote_id ?? null
+    }
+
+    const loteDiasVisiveis = new Set<string>()
+    const tratos = filteredRegistros.map((r) => {
+      const dia = toFarmDateOnly(r.data) || ''
+      const loteId = loteDoTrato(r, dia)
+      const c = loteId ? consumoPorLoteDia.get(`${loteId}::${dia}`) : undefined
+      if (loteId && c) loteDiasVisiveis.add(`${loteId}::${dia}`)
+      return {
+        ...r,
+        consumo_status: c ? statusConsumo(c) : '',
+        consumo_kg_consumido_mn: c?.kg_consumido_mn,
+        consumo_n_cabecas: c?.n_cabecas,
+        consumo_peso_vivo_kg: c?.peso_vivo_kg,
+        consumo_kg_mn_cab_dia: c?.kg_mn_cab_dia,
+        consumo_kg_ms_cab_dia: c?.kg_ms_cab_dia,
+        consumo_percent_pv: c?.consumo_percent_pv,
+        consumo_custo_reais_cab_dia: c?.custo_reais_cab_dia,
+      }
+    })
+
+    const consumoDiario = consumos
+      .filter((c) => loteDiasVisiveis.has(`${c.lote_id}::${c.data}`))
+      .sort((a, b) => b.data.localeCompare(a.data) || (lotesNomes[a.lote_id] || '').localeCompare(lotesNomes[b.lote_id] || ''))
+      .map((c) => ({
+        data: c.data,
+        lote_nome: lotesNomes[c.lote_id] || '',
+        status: statusConsumo(c),
+        n_currais: c.n_currais,
+        n_tratos: c.n_tratos,
+        kg_ofertado_mn: c.kg_ofertado_mn,
+        kg_consumido_mn: c.kg_consumido_mn,
+        fator_consumo: c.fator_consumo,
+        n_cabecas: c.n_cabecas,
+        peso_vivo_kg: c.peso_vivo_kg,
+        kg_mn_cab_dia: c.kg_mn_cab_dia,
+        kg_ms_cab_dia: c.kg_ms_cab_dia,
+        consumo_percent_pv: c.consumo_percent_pv,
+        custo_reais_cab_dia: c.custo_reais_cab_dia,
+        fora_faixa_pv: c.fora_faixa_pv,
+      }))
+
+    exportToXLSXMultiSheet(
+      {
+        tableName: TRATO_CONFINAMENTO_EXPORT_CONFIG.tableName,
+        sheets: [
+          { data: tratos, config: TRATO_CONFINAMENTO_EXPORT_CONFIG },
+          { data: consumoDiario, config: CONSUMO_CONFINAMENTO_EXPORT_CONFIG },
+        ],
+      },
+      fazendaNome,
+    )
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
@@ -94,7 +214,7 @@ export function TratoConfinamento() {
       </div>
 
       <FilterToolbar
-        onExport={() => exportToXLSX(exportData, TRATO_CONFINAMENTO_EXPORT_CONFIG, fazendaNome)}
+        onExport={handleExport}
         exportDisabled={filteredRegistros.length === 0}
         onClear={() => {
           setSearchTerm('')
