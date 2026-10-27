@@ -3022,3 +3022,10 @@ Ainda aberto: a desativação do lote (`trg_lote_desativado_libera_local`) zera 
 
 - A pagina publica (RelatorioCantinaPublico.tsx) segue a mesma estrutura do PDF: KPIs, itens para repor, refeicoes servidas, posicao por item numa tabela so (com ABC, cobertura e consumo), marmitas (funcionarios x empresas) e pratos feitos. Saiu o extrato de movimentacoes, a aba Operacao, os avisos de divergencia e de qualidade dos dados.
 - Unidades: mesma regra do PDF (plural e sem casas em unidades contaveis; kg e L com duas casas). Os helpers ficam em features/relatorioCantina/agregacao.ts, com copia em api/pdf/_relatorios/cantina.js.
+
+## Atividades recentes do dashboard ordenadas pelo lançamento (27/10/2026)
+
+- Problema: `get_recent_activities` ordenava por `data` (data do evento) e pegava 10. Registro lançado com data retroativa (caso típico de sync do PWA) ficava fora do top 10 e não aparecia no dashboard. Na fazenda de testes, 7 de 44 registros ativos estavam nessa situação.
+- Migration `20261027120000_recent_activities_ordena_created_at.sql` (aplicada com `supabase db push`; rollback em `supabase/rollbacks/`): ordena por `created_at DESC`, mantém limite 10, `guard_fazenda` e formato do JSON.
+- `Dashboard.tsx`: a tela exibia 8 itens (`slice(0, 8)`); passou a 10.
+- Pendente, fora desta entrega: `staleTime` de 5 min na query `recent-activities` (só `Lotes.tsx` invalida a chave).

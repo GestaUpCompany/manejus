@@ -499,7 +499,7 @@ export function ControllerDashboard() {
           <h3 className="text-lg font-semibold text-content-strong mb-4">Atividades Recentes</h3>
           <Card className="bg-surface-1 border border-border-subtle">
             <div className="divide-y divide-border-subtle">
-              {(recentActivities ?? []).slice(0, 8).map((activity) => (
+              {(recentActivities ?? []).slice(0, 10).map((activity) => (
                 <button
                   key={activity.id}
                   className="w-full flex items-center gap-4 p-4 hover:bg-surface-2 transition-colors text-left"
