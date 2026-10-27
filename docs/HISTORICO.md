@@ -1,5 +1,16 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Histórico de versões das dietas e dos insumos (27/10/2026)
+- **Problema**: editar uma dieta apagava e reinseria `formulacao_insumos` sem registro; `formulacoes_historico` (migration C) só guarda a linha de `formulacoes`, sem composição; mudança de preço/teor de MS de insumo recalculava as dietas sem rastro. Não dava para saber qual dieta (e com qual composição/custo) o lote consumiu em cada período.
+- **Solução** (migrations `20261027100000_formulacoes_versoes_historico` e `20261027110000_rpc_salvar_formulacao_linha_nutricional`, rollbacks em `supabase/rollbacks/`):
+  - `formulacoes_versoes`: foto append-only por versão (dados da dieta, composição com teor MS e preço do insumo no momento, GMD por categoria, `vigente_desde`/`vigente_ate`, origem, usuário, motivo). Escrita só por `_registrar_versao_formulacao`, com dedupe por hash (salvar sem mudança não cria versão).
+  - `insumos_edicoes`: antes/depois das alterações de insumo (nome, tipo, teor_ms, preco_ton_mn, ativo), gravada por `trigger_registrar_edicao_insumo`, que também gera versão (`alteracao_insumo`) em cada dieta que usa o insumo (roda depois do recálculo existente, por ordem alfabética dos triggers).
+  - RPC `salvar_formulacao`: dieta + insumos + GMD numa transação, registra uma versão (`edicao_dieta`). `Formulacoes.tsx` (`handleSubmit`) passou a usá-la. O upsert do insumo premix continua no front (depois da RPC).
+  - RPC `linha_nutricional_lote(p_fazenda_id, p_lote_id)`: cruza `planos_nutricionais` (data_inicio/data_fim, fuso America/Cuiaba) com as versões vigentes em cada intervalo. UI ainda não existe.
+  - Backfill: versão 1 (`backfill`) de cada formulação existente. Alterações anteriores não são recuperáveis; a trigger legada `trg_snapshot_formulacao` foi mantida.
+- **Tela**: a página `HistoricoDietas.tsx` (menu Confinamento e TIP → Histórico de Dietas) deixou de ser placeholder. Aba "Por dieta" lista as versões com diferenças entre elas (insumos, inclusão, teor de MS, preço, parâmetros, GMD, custo). Aba "Por lote" mostra a linha nutricional do lote via `linha_nutricional_lote`, com troca de dieta destacada.
+- **Limite**: escrita direta por SQL/MCP em `formulacao_insumos`/`formulacoes` não gera versão (só via RPC ou alteração de insumo). Campo de "motivo" no formulário ainda não existe (`p_motivo` vai nulo).
+
 ## Gráficos da Auditoria 5S sem sobreposição (26/10/2026)
 - **Evolução comparada** (Visão geral): linhas sobrepostas viraram pequenos múltiplos (`Auditoria5sPequenosMultiplos.tsx`). Um gráfico por setor, mesma escala (0 a 5 ou 0 a 100%), uma linha colorida e a média da fazenda tracejada. O último valor aparece no cabeçalho. Os chips continuam escolhendo os setores. Linhas retas no lugar das curvas suavizadas, que criavam picos fora dos dados.
 - **Pilares ao longo do tempo** (Setor): linhas com legenda clicável viraram mapa de calor (`Auditoria5sPilaresTempo.tsx`): pilares nas linhas, auditorias nas colunas, valor escrito em cada célula, média por pilar e clique abre a auditoria. Datas repetidas ganham ordem (#1, #2, #3). Removidos o estado `pilaresOcultos` e os imports sem uso.
