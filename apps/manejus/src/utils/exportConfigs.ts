@@ -847,6 +847,7 @@ export const LEITURA_COCHO_EXPORT_CONFIG: TableExportConfig = {
 export const TRATO_CONFINAMENTO_EXPORT_CONFIG: TableExportConfig = {
   tableName: 'registros_oferta_trato',
   sheetName: 'Trato Confinamento',
+  exclude: ['curral_id', 'programacao_id', 'local_id', 'fabrica_confinamento_id', 'vagao_id', 'foto_url'],
   columns: [
     { source: 'data', header: 'Data', format: 'datetime' },
     { source: 'nome_usuario', header: 'Usuário' },
@@ -856,7 +857,37 @@ export const TRATO_CONFINAMENTO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'kg_planejado', header: 'Planejado (kg)', transform: (value) => round2(value) },
     { source: 'kg_ofertado_real', header: 'Ofertado (kg)', transform: (value) => round2(value) },
     { source: 'leitura_cocho_nota', header: 'Nota Cocho', format: 'number' },
-    { source: 'origem', header: 'Origem' }
+    { source: 'origem', header: 'Origem', transform: (value: any) => value === 'pwa' ? 'App' : value },
+    { source: 'consumo_status', header: 'Status do Consumo (lote/dia)' },
+    { source: 'consumo_kg_consumido_mn', header: 'Consumido do Lote no Dia (Kg MN)', transform: (value) => round2(value) },
+    { source: 'consumo_n_cabecas', header: 'Nº Cabeças', format: 'number' },
+    { source: 'consumo_peso_vivo_kg', header: 'Peso Vivo (kg)', transform: (value) => round2(value) },
+    { source: 'consumo_kg_mn_cab_dia', header: 'Consumo (Kg MN/cab/dia)', transform: (value) => round2(value) },
+    { source: 'consumo_kg_ms_cab_dia', header: 'Consumo (Kg MS/cab/dia)', transform: (value) => round2(value) },
+    { source: 'consumo_percent_pv', header: 'Consumo (% PV)', transform: (value) => round2(value) },
+    { source: 'consumo_custo_reais_cab_dia', header: 'Custo (R$/cab/dia)', transform: (value) => round2(value) }
+  ]
+}
+
+export const CONSUMO_CONFINAMENTO_EXPORT_CONFIG: TableExportConfig = {
+  tableName: 'consumo_confinamento_dia',
+  sheetName: 'Consumo Diário',
+  columns: [
+    { source: 'data', header: 'Data da Oferta', format: 'date' },
+    { source: 'lote_nome', header: 'Lote' },
+    { source: 'status', header: 'Status' },
+    { source: 'n_currais', header: 'Nº Currais', format: 'number' },
+    { source: 'n_tratos', header: 'Nº Tratos', format: 'number' },
+    { source: 'kg_ofertado_mn', header: 'Ofertado (Kg MN)', transform: (value) => round2(value) },
+    { source: 'kg_consumido_mn', header: 'Consumido (Kg MN)', transform: (value) => round2(value) },
+    { source: 'fator_consumo', header: 'Fator de Consumo', transform: (value) => round2(value) },
+    { source: 'n_cabecas', header: 'Nº Cabeças', format: 'number' },
+    { source: 'peso_vivo_kg', header: 'Peso Vivo (kg)', transform: (value) => round2(value) },
+    { source: 'kg_mn_cab_dia', header: 'Consumo (Kg MN/cab/dia)', transform: (value) => round2(value) },
+    { source: 'kg_ms_cab_dia', header: 'Consumo (Kg MS/cab/dia)', transform: (value) => round2(value) },
+    { source: 'consumo_percent_pv', header: 'Consumo (% PV)', transform: (value) => round2(value) },
+    { source: 'custo_reais_cab_dia', header: 'Custo (R$/cab/dia)', transform: (value) => round2(value) },
+    { source: 'fora_faixa_pv', header: 'Fora da Faixa de %PV', transform: (value) => value ? 'Sim' : 'Não' }
   ]
 }
 
