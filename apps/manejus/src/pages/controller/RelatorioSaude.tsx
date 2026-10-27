@@ -4,7 +4,7 @@ import { useAuth } from '@gestaup/shared'
 import { Card, Button } from '@gestaup/ui'
 import { supabase } from '@gestaup/supabase'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { getFazendaIdForUser } from '@gestaup/shared'
+import { getFazendaIdForUser, formatDateTime } from '@gestaup/shared'
 
 interface RegistroMorte {
   id: string
@@ -268,7 +268,7 @@ export function RelatorioSaude() {
                 <p className="font-medium text-content-strong">{morte.causa_morte}</p>
                 <p className="text-sm text-content-muted">Lote: {morte.lote}</p>
               </div>
-              <p className="text-sm text-content-muted">{morte.data}</p>
+              <p className="text-sm text-content-muted">{formatDateTime(morte.data)}</p>
             </div>
           ))}
           {mortes.length === 0 && (
@@ -287,7 +287,7 @@ export function RelatorioSaude() {
                 <p className="font-medium text-content-strong">{enfermidade.tratamento}</p>
                 <p className="text-sm text-content-muted">Lote: {enfermidade.lote}</p>
               </div>
-              <p className="text-sm text-content-muted">{enfermidade.data}</p>
+              <p className="text-sm text-content-muted">{formatDateTime(enfermidade.data)}</p>
             </div>
           ))}
           {enfermidades.length === 0 && (
