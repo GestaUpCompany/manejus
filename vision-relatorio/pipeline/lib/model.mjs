@@ -410,9 +410,10 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
       })).sort((a, b) => a.data - b.data),
     })).sort((a, b) => a.categoria.localeCompare(b.categoria)),
   })).sort((a, b) => a.tipo.localeCompare(b.tipo));
-  // Total geral da pivot: médias aritméticas por lote (AVG de M/U/V), não razões de soma
+  // Total geral da pivot: soma das mesmas linhas da pivot (inclui transferências de entrada),
+  // com médias aritméticas por lote (AVG de M/U/V), não razões de soma
   comprasPage.pivotTotal = {
-    cab: comprasPage.cab, at: comprasPage.at, total: comprasPage.total,
+    cab: sum(compras, x => x.cab), at: sum(compras, x => x.at), total: sum(compras, x => x.total),
     pesoMedio: avg(compras, x => x.pesoMedio), rsCab: avg(compras, x => x.rsCab), rsAt: avg(compras, x => x.rsAt),
   };
 
