@@ -79,3 +79,4 @@ vision-relatorio/pipeline/_*
 *.xlsx
 *.xls
 /*.html
+.vercel

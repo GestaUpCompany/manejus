@@ -238,6 +238,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos')
   const [loteDropdownOpen, setLoteDropdownOpen] = useState(false)
   const [exportandoPDF, setExportandoPDF] = useState(false)
+  const [incluirInativos, setIncluirInativos] = useState(false)
   const loteDropdownRef = useRef<HTMLDivElement>(null)
 
   const carregarDados = useCallback(async () => {
@@ -249,6 +250,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
           p_token: token,
           p_data_inicio: dataInicio || null,
           p_data_fim: dataFim || null,
+          p_incluir_inativos: incluirInativos,
         })
 
       if (rpcError) {
@@ -266,7 +268,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [token, dataInicio, dataFim])
+  }, [token, dataInicio, dataFim, incluirInativos])
 
   useEffect(() => {
     carregarDados()
@@ -611,6 +613,15 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
               )}
             </div>
           </div>
+          <label className="mt-3 flex w-fit cursor-pointer items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={incluirInativos}
+              onChange={(e) => setIncluirInativos(e.target.checked)}
+              className="rounded border-gray-300 text-green-600 focus:ring-green-600"
+            />
+            Incluir lotes desativados
+          </label>
           <div className="flex items-center justify-between mt-2">
             <p className="text-xs text-gray-400">
               {lotesFiltrados.length} lote(s) com dados no período selecionado.
