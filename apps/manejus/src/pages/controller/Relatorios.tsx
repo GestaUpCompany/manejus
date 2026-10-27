@@ -9,6 +9,8 @@ import { RelatorioAbateModal } from '../../components/relatorios/RelatorioAbateM
 import { carregarRelatorioZootecnico, gerarExcelZootecnico } from '../../services/relatorioZootecnicoService'
 import { gerarRelatorioZootecnicoPDFPuppeteer } from '../../utils/relatorioZootecnicoPDFPuppeteer'
 
+const FAZENDA_TESTES_ID = 'd649c65e-16ab-4b77-a84b-df937aa41cc3'
+
 interface RelatorioPublico {
   id: string
   tipo: string
@@ -145,6 +147,8 @@ export function Relatorios() {
   const [acessoConfinamento, setAcessoConfinamento] = useState(false)
   const [modalRelatorioGeral, setModalRelatorioGeral] = useState(false)
   const [modalRelatorioAbate, setModalRelatorioAbate] = useState(false)
+  // Em homologação: o relatório de abate só aparece na fazenda de testes
+  const relatorioAbateLiberado = fazendaId === FAZENDA_TESTES_ID
   const [linksAtivos, setLinksAtivos] = useState<RelatorioPublico[]>([])
   const [loading, setLoading] = useState(true)
   const [modalAberto, setModalAberto] = useState(false)
@@ -474,22 +478,24 @@ export function Relatorios() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 rounded-2xl border border-border-base bg-surface-1 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between lg:col-span-5">
-            <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-content-faint">Controle de lotes</p>
-              <h2 className="mt-2 text-lg font-bold text-content-strong">Relatório de Abate</h2>
-              <p className="mt-1 text-sm text-content-muted">
-                Histórico completo do lote e de cada categoria, da criação até a saída por abate ou venda. Escolha quais lotes entram.
-              </p>
+          {relatorioAbateLiberado && (
+            <div className="flex flex-col gap-4 rounded-2xl border border-border-base bg-surface-1 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between lg:col-span-5">
+              <div className="max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-content-faint">Controle de lotes</p>
+                <h2 className="mt-2 text-lg font-bold text-content-strong">Relatório de Abate</h2>
+                <p className="mt-1 text-sm text-content-muted">
+                  Histórico completo do lote e de cada categoria, da criação até a saída por abate ou venda. Escolha quais lotes entram.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalRelatorioAbate(true)}
+                className="shrink-0 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                Montar relatório →
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setModalRelatorioAbate(true)}
-              className="shrink-0 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              Montar relatório →
-            </button>
-          </div>
+          )}
         </section>
       )}
 
@@ -796,7 +802,7 @@ export function Relatorios() {
         />
       )}
 
-      {fazendaId && fazendaNome && (
+      {relatorioAbateLiberado && fazendaId && fazendaNome && (
         <RelatorioAbateModal
           isOpen={modalRelatorioAbate}
           onClose={() => setModalRelatorioAbate(false)}
