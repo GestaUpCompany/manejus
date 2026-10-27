@@ -1,5 +1,14 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Abate (27/10/2026)
+- **O quê**: card "Relatório de Abate" em `Relatorios.tsx` (seção Controle de lotes) abre `RelatorioAbateModal.tsx`: escolhe-se o tipo de saída (Abate e/ou Venda), filtra por situação (Ativo/Desativado) e busca, e marca os lotes (nenhum vem marcado). Sai em **PDF** (`api/pdf/_relatorios/abate.js`, registrado em `[relatorio].js` e no `vite.config.ts`) e **Excel** (7 abas: Resumo, Linha do tempo, Categorias, Peso e GMD, Ocupação, Dietas, Consumo). Sem migration.
+- **Regra de "abatido"**: lote com movimentação de saída `motivo_movimentacao = 'Abate'` ou (`'Saída'` + `subtipo = 'Venda'`), ativo ou não. Lote desativado termina na última saída; lote ativo (venda parcial) segue até hoje. Não há seletor de período: a lista cobre todo o histórico, mais recente primeiro (o padrão de 90 dias escondia lotes mais antigos).
+- **Conteúdo por lote**: KPIs, faixa da vida (uma linha por categoria, saídas e mortes marcadas), gráfico de evolução do peso por categoria, histórico de categorias, pesagens e GMD por período, linha do tempo, ocupação (pastos, currais e módulos), dietas por versão (`linha_nutricional_lote`), mortes por causa e consumo mensal (suplementação e confinamento).
+- **Fontes**: RPC `get_relatorio_lote_ciclo_vida` + consultas em `registros_pesagem`, `lote_curral_historico`, `lote_modulo_historico`, `consumo_confinamento_dia` e `linha_nutricional_lote`. Falha numa fonte extra não derruba o relatório: o lote sai com um aviso. Lógica pura em `src/features/relatorioAbate/agregacao.ts` (20 testes).
+- **Armadilha**: a RPC devolve `cadastro` vazio para lote sem pasto, e todo lote desativado é desvinculado do pasto. Nome, situação, data de criação, sistema e peso de entrada vêm da tabela `lotes` (`relatorioAbateService.ts`). Se um dia a RPC passar a usar `LEFT JOIN` em `pastos`, o contorno vira redundante.
+- **Pesos**: `peso_vivo_atual_kg` das saídas é nulo; o peso de entrada/saída do lote é a média das categorias ponderada pelas cabeças que saíram em cada uma (quando a RPC não pondera).
+- **Verificação**: lotes 2, 3 e 9 da Fazenda Doce Ilusão (só leitura). Pesagens, currais e consumo do confinamento não têm dado nessa fazenda: essas partes foram exercitadas só por teste unitário e PDF sintético, ainda sem validação com dado real.
+
 ## Histórico de versões das dietas e dos insumos (27/10/2026)
 - **Problema**: editar uma dieta apagava e reinseria `formulacao_insumos` sem registro; `formulacoes_historico` (migration C) só guarda a linha de `formulacoes`, sem composição; mudança de preço/teor de MS de insumo recalculava as dietas sem rastro. Não dava para saber qual dieta (e com qual composição/custo) o lote consumiu em cada período.
 - **Solução** (migrations `20261027100000_formulacoes_versoes_historico` e `20261027110000_rpc_salvar_formulacao_linha_nutricional`, rollbacks em `supabase/rollbacks/`):

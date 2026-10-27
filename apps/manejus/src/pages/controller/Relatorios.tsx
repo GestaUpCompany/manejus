@@ -5,6 +5,7 @@ import { supabase } from '@gestaup/supabase'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import { useToast, PageSkeleton, ConfirmModal } from '@gestaup/ui'
 import { RelatorioGeralModal } from '../../components/relatorios/RelatorioGeralModal'
+import { RelatorioAbateModal } from '../../components/relatorios/RelatorioAbateModal'
 import { carregarRelatorioZootecnico, gerarExcelZootecnico } from '../../services/relatorioZootecnicoService'
 import { gerarRelatorioZootecnicoPDFPuppeteer } from '../../utils/relatorioZootecnicoPDFPuppeteer'
 
@@ -143,6 +144,7 @@ export function Relatorios() {
   const [fazendaLogoUrl, setFazendaLogoUrl] = useState<string | null>(null)
   const [acessoConfinamento, setAcessoConfinamento] = useState(false)
   const [modalRelatorioGeral, setModalRelatorioGeral] = useState(false)
+  const [modalRelatorioAbate, setModalRelatorioAbate] = useState(false)
   const [linksAtivos, setLinksAtivos] = useState<RelatorioPublico[]>([])
   const [loading, setLoading] = useState(true)
   const [modalAberto, setModalAberto] = useState(false)
@@ -471,6 +473,23 @@ export function Relatorios() {
               </button>
             </div>
           </div>
+
+          <div className="flex flex-col gap-4 rounded-2xl border border-border-base bg-surface-1 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between lg:col-span-5">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-content-faint">Controle de lotes</p>
+              <h2 className="mt-2 text-lg font-bold text-content-strong">Relatório de Abate</h2>
+              <p className="mt-1 text-sm text-content-muted">
+                Histórico completo do lote e de cada categoria, da criação até a saída por abate ou venda. Escolha quais lotes entram.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setModalRelatorioAbate(true)}
+              className="shrink-0 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              Montar relatório →
+            </button>
+          </div>
         </section>
       )}
 
@@ -771,6 +790,16 @@ export function Relatorios() {
         <RelatorioGeralModal
           isOpen={modalRelatorioGeral}
           onClose={() => setModalRelatorioGeral(false)}
+          fazendaId={fazendaId}
+          fazendaNome={fazendaNome}
+          fazendaLogoUrl={fazendaLogoUrl}
+        />
+      )}
+
+      {fazendaId && fazendaNome && (
+        <RelatorioAbateModal
+          isOpen={modalRelatorioAbate}
+          onClose={() => setModalRelatorioAbate(false)}
           fazendaId={fazendaId}
           fazendaNome={fazendaNome}
           fazendaLogoUrl={fazendaLogoUrl}

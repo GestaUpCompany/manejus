@@ -24,6 +24,8 @@ import cantinaHandler from './api/pdf/_relatorios/cantina.js'
 // @ts-ignore
 import combustivelHandler from './api/pdf/_relatorios/combustivel.js'
 import zootecnicoHandler from './api/pdf/_relatorios/zootecnico.js'
+// @ts-ignore
+import abateHandler from './api/pdf/_relatorios/abate.js'
 
 function localPdfApi(): Plugin {
   return {
@@ -91,6 +93,7 @@ function localPdfApi(): Plugin {
       register('/api/pdf/cantina', cantinaHandler)
       register('/api/pdf/combustivel', combustivelHandler)
       register('/api/pdf/zootecnico', zootecnicoHandler)
+      register('/api/pdf/abate', abateHandler)
     },
   }
 }
