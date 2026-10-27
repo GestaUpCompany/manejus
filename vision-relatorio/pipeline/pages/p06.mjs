@@ -27,6 +27,7 @@ function renderAbate({ model, ctx, v, sufixo, pageNum }) {
     <div class="kpi"><div class="lbl">N° de Cabeças</div><div class="val">${fmtInt(v.cab)} <small>cab</small></div></div>
     <div class="kpi"><div class="lbl">Média R$/@</div><div class="val"><small>R$</small> ${fmt2(v.rsAt)}</div></div>
     <div class="kpi"><div class="lbl">Média R$/kg</div><div class="val"><small>R$</small> ${fmt2(v.rsKg)}</div></div>
+    <div class="kpi"><div class="lbl">Média R$/cab</div><div class="val"><small>R$</small> ${fmt2(v.rsCab)}</div></div>
   </div>`;
 
   if (!v.cab) {

@@ -423,8 +423,8 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     // R$/@ e R$/kg só sobre lotes com valor lançado: lote sem preço (Em Aberto)
     // não deve diluir o indicador com seu peso
     const prec = v.filter(x => x.valorLiq > 0);
-    const atP = sum(prec, x => x.atAbatidas), kgP = sum(prec, x => x.kgFinal);
-    return { cab, at, kg, valor: val, rsAt: atP ? val / atP : 0, rsKg: kgP ? val / kgP : 0 };
+    const atP = sum(prec, x => x.atAbatidas), kgP = sum(prec, x => x.kgFinal), cabP = sum(prec, x => x.cab);
+    return { cab, at, kg, valor: val, rsAt: atP ? val / atP : 0, rsKg: kgP ? val / kgP : 0, rsCab: cabP ? val / cabP : 0 };
   };
   // campo "Frigorífico/Comprador" mistura pessoa jurídica e física; o gráfico de
   // preço × RC% usa só frigoríficos (sufixo societário ou marca conhecida;
@@ -482,6 +482,8 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   const vendasComerciais = vendas.filter(x => !isTransf(x.tipo));
 
   // ---------- p.7 Resumo vendas ----------
+  // R$/cab só sobre lotes com valor lançado (mesmo critério do R$/@)
+  const cabComPreco = sum(vendasComerciais.filter(x => x.valorLiq > 0), x => x.cab);
   const giroDenominador = sum(
     [...estoque.entries()].filter(([k]) => k.startsWith(`${anoBaseGiro}-`))
       .flatMap(([, b]) => b.linhas), l => l.saldoIni);
@@ -489,6 +491,7 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     cab: sum(vendasComerciais, x => x.cab),
     valor: sum(vendasComerciais, x => x.valorLiq),
     giroEstoque: giroDenominador ? sum(vendasComerciais, x => x.cab) / giroDenominador : 0,
+    rsCab: cabComPreco ? sum(vendasComerciais, x => x.valorLiq) / cabComPreco : 0,
     pivot: [...groupBy(vendasComerciais, x => x.tipo)].map(([tipo, gTipo]) => ({
       tipo,
       cab: sum(gTipo, x => x.cab), at: sum(gTipo, x => x.atAbatidas),
