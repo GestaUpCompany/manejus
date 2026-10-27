@@ -3029,3 +3029,11 @@ Ainda aberto: a desativação do lote (`trg_lote_desativado_libera_local`) zera 
 - Migration `20261027120000_recent_activities_ordena_created_at.sql` (aplicada com `supabase db push`; rollback em `supabase/rollbacks/`): ordena por `created_at DESC`, mantém limite 10, `guard_fazenda` e formato do JSON.
 - `Dashboard.tsx`: a tela exibia 8 itens (`slice(0, 8)`); passou a 10.
 - Pendente, fora desta entrega: `staleTime` de 5 min na query `recent-activities` (só `Lotes.tsx` invalida a chave).
+
+## Central de relatórios: layout e exclusão em massa (27/10/2026)
+
+- `pages/controller/Relatorios.tsx`: cabeçalho e cards redesenhados. Os cards viraram uma linha compacta (ícone, nome, descrição de uma linha, uma ação); o estado de link ativo aparece como ponto verde e o link em si fica na lista "Links públicos".
+- A lista de links ficou sem colunas de tipo e data: título, linha de metadados e três ações (Copiar, Desativar/Reativar, Excluir). Títulos exibidos sem o prefixo "Relatório de" e sem o sufixo " - <fazenda>"; o título salvo não muda.
+- Exclusão e desativação em massa: caixa de seleção por linha e no cabeçalho, com barra de ações para os selecionados visíveis. Usa `.in('id', ids)` e passa pela mesma confirmação do caso individual.
+- Estoque dividido em dois cards: "Estoque de Insumos" (escopo `insumos`) e "Estoque de Formulações" (escopo `formulacoes`). Saiu o seletor de escopo do modal e o escopo "Insumos e formulações" deixou de ser criado. Links antigos com `config.escopo = 'todos'` continuam listados, mas não aparecem em nenhum card.
+- Seção de links sem visíveis mostra mensagem de estado vazio em vez de uma tabela sem linhas.

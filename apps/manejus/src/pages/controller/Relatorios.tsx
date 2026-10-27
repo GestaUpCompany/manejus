@@ -24,6 +24,7 @@ interface RelatorioDisponivel {
   descricao: string
   icone: string
   rotaPdf?: string
+  escopo?: 'insumos' | 'formulacoes'
 }
 
 const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
@@ -84,8 +85,16 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
   {
     tipo: 'estoque',
     titulo: 'Estoque de Insumos',
-    descricao: 'Apoio à decisão sobre insumos e formulações: o que repor e quanto comprar, capital parado ou em excesso, cobertura, consumo do período, valor em estoque e curva ABC.',
+    descricao: 'Apoio à decisão sobre insumos: o que repor e quanto comprar, capital parado ou em excesso, cobertura, consumo do período, valor em estoque e curva ABC.',
     icone: '📦',
+    escopo: 'insumos',
+  },
+  {
+    tipo: 'estoque',
+    titulo: 'Estoque de Formulações',
+    descricao: 'Apoio à decisão sobre formulações: o que repor e quanto comprar, capital parado ou em excesso, cobertura, consumo do período, valor em estoque e curva ABC.',
+    icone: '📦',
+    escopo: 'formulacoes',
   },
   {
     tipo: 'cantina',
@@ -95,16 +104,34 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
   },
 ]
 
+// 'todos' é o escopo antigo (insumos e formulações juntos): não é mais criado, mas links antigos ainda o têm
 const ESCOPOS_ESTOQUE = [
   { value: 'todos', label: 'Insumos e formulações' },
   { value: 'insumos', label: 'Somente insumos' },
   { value: 'formulacoes', label: 'Somente formulações' },
 ]
 
-function tituloEstoquePorEscopo(escopo: string, fazendaNome: string | null): string {
-  const nome = escopo === 'insumos' ? 'Insumos' : escopo === 'formulacoes' ? 'Formulações' : 'Insumos e Formulações'
-  const base = `Relatório de Estoque de ${nome}`
+function tituloEstoquePorEscopo(escopo: 'insumos' | 'formulacoes', fazendaNome: string | null): string {
+  const base = `Relatório de Estoque de ${escopo === 'insumos' ? 'Insumos' : 'Formulações'}`
   return fazendaNome ? `${base} - ${fazendaNome}` : base
+}
+
+const ROTULOS_TIPO: Record<string, string> = {
+  estoque: 'Estoque',
+  estoque_combustivel: 'Estoque de Combustível',
+}
+
+function rotuloTipo(tipo: string): string {
+  const rotulo = ROTULOS_TIPO[tipo] ?? RELATORIOS_DISPONIVEIS.find((r) => r.tipo === tipo)?.titulo
+  if (rotulo) return rotulo
+  const texto = tipo.replace(/_/g, ' ')
+  return texto.charAt(0).toUpperCase() + texto.slice(1)
+}
+
+function tituloExibicao(titulo: string, fazendaNome: string | null): string {
+  const sufixo = fazendaNome ? ` - ${fazendaNome}` : ''
+  const semSufixo = sufixo && titulo.endsWith(sufixo) ? titulo.slice(0, -sufixo.length) : titulo
+  return semSufixo.replace(/^Relatório de /, '')
 }
 
 export function Relatorios() {
@@ -121,15 +148,14 @@ export function Relatorios() {
   const [modalAberto, setModalAberto] = useState(false)
   const [relatorioSelecionado, setRelatorioSelecionado] = useState<RelatorioDisponivel | null>(null)
   const [tituloLink, setTituloLink] = useState('')
-  const [tituloSugerido, setTituloSugerido] = useState('')
-  const [escopoEstoque, setEscopoEstoque] = useState('todos')
   const [linkGerado, setLinkGerado] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
   const [diasZootecnico, setDiasZootecnico] = useState(22)
   const [gerandoZootecnico, setGerandoZootecnico] = useState(false)
   const [gerandoZootecnicoPdf, setGerandoZootecnicoPdf] = useState(false)
-  const [confirmAction, setConfirmAction] = useState<{ type: string; id?: string } | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{ type: string; id?: string; ids?: string[] } | null>(null)
+  const [selecionados, setSelecionados] = useState<string[]>([])
 
   useEffect(() => {
     if (user) {
@@ -213,14 +239,12 @@ export function Relatorios() {
 
   const abrirModalGerarLink = (rel: RelatorioDisponivel) => {
     setRelatorioSelecionado(rel)
-    const tituloPadrao = rel.tipo === 'estoque'
-      ? tituloEstoquePorEscopo('todos', fazendaNome)
+    const tituloPadrao = rel.escopo
+      ? tituloEstoquePorEscopo(rel.escopo, fazendaNome)
       : fazendaNome
         ? `Relatório de ${rel.titulo} - ${fazendaNome}`
         : `Relatório de ${rel.titulo}`
     setTituloLink(tituloPadrao)
-    setTituloSugerido(tituloPadrao)
-    setEscopoEstoque('todos')
     setLinkGerado(null)
     setCopiado(false)
     setModalAberto(true)
@@ -236,7 +260,7 @@ export function Relatorios() {
         tipo: relatorioSelecionado.tipo,
         titulo: tituloLink.trim() || relatorioSelecionado.titulo,
         criado_por: user.id,
-        ...(relatorioSelecionado.tipo === 'estoque' ? { config: { escopo: escopoEstoque } } : {}),
+        ...(relatorioSelecionado.escopo ? { config: { escopo: relatorioSelecionado.escopo } } : {}),
       })
       .select('id')
       .single()
@@ -321,10 +345,39 @@ export function Relatorios() {
     }
   }
 
+  const desativarVarios = async (ids: string[]) => {
+    if (!fazendaId) return
+    const { error } = await supabase.from('relatorios_publicos').update({ ativo: false }).in('id', ids)
+    if (error) {
+      console.error('Erro ao desativar links:', error)
+      toast.error('Erro ao desativar links.')
+    } else {
+      setSelecionados([])
+      await carregarLinks(fazendaId)
+    }
+  }
+
+  const excluirVarios = async (ids: string[]) => {
+    if (!fazendaId) return
+    const { error } = await supabase.from('relatorios_publicos').delete().in('id', ids)
+    if (error) {
+      console.error('Erro ao excluir links:', error)
+      toast.error('Erro ao excluir links.')
+    } else {
+      setSelecionados([])
+      await carregarLinks(fazendaId)
+    }
+  }
+
   const handleConfirm = async () => {
     if (!confirmAction) return
-    const { type, id } = confirmAction
+    const { type, id, ids } = confirmAction
     setConfirmAction(null)
+    if (ids) {
+      if (type === 'desativar') await desativarVarios(ids)
+      else await excluirVarios(ids)
+      return
+    }
     if (type === 'desativar' && id) {
       await desativarLinkExec(id)
     } else if (type === 'excluir' && id) {
@@ -333,6 +386,16 @@ export function Relatorios() {
   }
 
   const linksVisiveis = linksAtivos.filter((l) => showInactive || l.ativo)
+  const selecionadosVisiveis = linksVisiveis.filter((l) => selecionados.includes(l.id)).map((l) => l.id)
+  const todosSelecionados = linksVisiveis.length > 0 && selecionadosVisiveis.length === linksVisiveis.length
+
+  const toggleSelecao = (id: string) => {
+    setSelecionados((atual) => (atual.includes(id) ? atual.filter((x) => x !== id) : [...atual, id]))
+  }
+
+  const toggleTodos = () => {
+    setSelecionados(todosSelecionados ? [] : linksVisiveis.map((l) => l.id))
+  }
 
   const relatoriosFiltrados = acessoConfinamento
     ? RELATORIOS_DISPONIVEIS
@@ -343,234 +406,261 @@ export function Relatorios() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div>
-          <h1 className="text-2xl font-bold text-content-strong">Relatórios</h1>
-          <p className="text-content-muted mt-1">
-            Gere relatórios em PDF ou crie links públicos interativos para compartilhar.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-8">
+      <header className="flex flex-col gap-1 border-b border-border-base pb-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-content-faint">Central de relatórios</p>
+        <h1 className="text-3xl font-bold tracking-tight text-content-strong">Relatórios</h1>
+        <p className="max-w-2xl text-sm text-content-muted">
+          Gere PDFs, planilhas ou links públicos interativos para compartilhar com quem não tem login.
+        </p>
+      </header>
 
       {fazendaId && fazendaNome && (
-        <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-green-900 via-green-700 to-blue-900 p-6 text-white shadow-sm">
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-100">Relatório consolidado</p>
-              <h2 className="mt-2 text-2xl font-bold">Infográfico Mensal</h2>
-              <p className="mt-2 text-sm text-green-50">Reúna Abastecimento, Consumo, Bebedouros e Mortes em um único PDF, com período comum, ordem personalizada e capa institucional.</p>
+        <section aria-label="Relatórios consolidados" className="grid gap-4 lg:grid-cols-5">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-900 via-green-800 to-blue-900 p-6 text-white shadow-sm lg:col-span-3">
+            <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full border-[28px] border-white/5" />
+            <div aria-hidden className="pointer-events-none absolute -bottom-14 right-16 h-36 w-36 rounded-full border-[20px] border-white/5" />
+            <div className="relative flex h-full flex-col justify-between gap-6">
+              <div className="max-w-xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-100">Relatório consolidado</p>
+                <h2 className="mt-2 text-2xl font-bold">Infográfico Mensal</h2>
+                <p className="mt-2 text-sm text-green-50/90">
+                  Abastecimento, Consumo, Bebedouros e Mortes em um único PDF, com período comum, ordem personalizada e capa institucional.
+                </p>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setModalRelatorioGeral(true)}
+                  className="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-primary-dark shadow-sm transition-colors hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white dark:bg-surface-1 dark:text-white dark:hover:bg-surface-3"
+                >
+                  Montar relatório →
+                </button>
+              </div>
             </div>
-            <button type="button" onClick={() => setModalRelatorioGeral(true)} className="shrink-0 rounded-lg bg-white text-primary-dark hover:bg-surface-2 px-5 py-3 text-sm font-semibold shadow-sm transition-colors dark:bg-surface-1 dark:text-white dark:hover:bg-surface-3">
-              Montar relatório
-            </button>
           </div>
-        </div>
-      )}
 
-      {fazendaId && fazendaNome && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-surface-3 bg-surface-1 p-5 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-content-strong">Relatório Zootécnico dos Lotes</h2>
-            <p className="mt-1 text-sm text-content-muted">Controle de lotes: veja na tela, baixe em PDF ou Excel: pesos, metas, consumo (geral e por janela), valor de estoque e custo alimentar.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-content">
+          <div className="flex flex-col gap-4 rounded-2xl border border-border-base bg-surface-1 p-6 shadow-sm lg:col-span-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-content-faint">Controle de lotes</p>
+              <h2 className="mt-2 text-lg font-bold text-content-strong">Relatório Zootécnico</h2>
+              <p className="mt-1 text-sm text-content-muted">
+                Pesos, metas, consumo (geral e por janela), valor de estoque e custo alimentar.
+              </p>
+            </div>
+            <label className="flex items-center justify-between gap-3 rounded-lg bg-surface-2 px-3 py-2 text-sm text-content">
               Janela de consumo (dias)
-              <input type="number" min={1} max={365} value={diasZootecnico} onChange={(e) => setDiasZootecnico(Math.max(1, Math.min(365, Number(e.target.value) || 22)))} className="ml-2 w-20 rounded-lg border border-surface-3 bg-surface-1 px-2 py-1" />
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={diasZootecnico}
+                onChange={(e) => setDiasZootecnico(Math.max(1, Math.min(365, Number(e.target.value) || 22)))}
+                className="w-20 rounded-md border border-surface-3 bg-surface-1 px-2 py-1 text-right tabular-nums"
+              />
             </label>
-            <button type="button" onClick={() => navigate(`/controller/relatorios/zootecnico?dias=${diasZootecnico}`)} className="shrink-0 rounded-lg border border-surface-3 px-5 py-2 text-sm font-semibold text-content hover:bg-surface-2">
-              Visualizar
-            </button>
-            <button type="button" disabled={gerandoZootecnicoPdf} onClick={baixarPdfZootecnico} className="shrink-0 rounded-lg border border-surface-3 px-5 py-2 text-sm font-semibold text-content hover:bg-surface-2 disabled:opacity-50">
-              {gerandoZootecnicoPdf ? 'Gerando PDF...' : 'Baixar PDF'}
-            </button>
-            <button type="button" disabled={gerandoZootecnico} onClick={exportarZootecnico} className="shrink-0 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50">
-              {gerandoZootecnico ? 'Gerando...' : 'Exportar Excel'}
-            </button>
+            <div className="mt-auto grid grid-cols-3 gap-2">
+              <button type="button" onClick={() => navigate(`/controller/relatorios/zootecnico?dias=${diasZootecnico}`)} className="rounded-lg border border-surface-3 px-3 py-2 text-sm font-semibold text-content transition-colors hover:bg-surface-2">
+                Visualizar
+              </button>
+              <button type="button" disabled={gerandoZootecnicoPdf} onClick={baixarPdfZootecnico} className="rounded-lg border border-surface-3 px-3 py-2 text-sm font-semibold text-content transition-colors hover:bg-surface-2 disabled:opacity-50">
+                {gerandoZootecnicoPdf ? 'Gerando…' : 'PDF'}
+              </button>
+              <button type="button" disabled={gerandoZootecnico} onClick={exportarZootecnico} className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50">
+                {gerandoZootecnico ? 'Gerando…' : 'Excel'}
+              </button>
+            </div>
           </div>
-        </div>
+        </section>
       )}
-
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setShowInactive(!showInactive)}
-          className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
-            showInactive
-              ? 'bg-primary text-white border-primary hover:bg-primary/90'
-              : 'bg-surface-1 text-content border-surface-3 hover:bg-surface-2'
-          }`}
-        >
-          {showInactive ? (
-            <>
-              <span className="sm:hidden">✓ Mostrando</span>
-              <span className="hidden sm:inline">✓ Mostrando Desativados</span>
-            </>
-          ) : (
-            <>
-              <span className="sm:hidden">Mostrar</span>
-              <span className="hidden sm:inline">Mostrar Desativados</span>
-            </>
-          )}
-        </button>
-      </div>
 
       {/* Relatórios disponíveis */}
-      <div>
-        <h2 className="text-sm font-semibold text-content mb-3 uppercase tracking-wide">Relatórios disponíveis</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      <section aria-labelledby="titulo-disponiveis">
+        <div className="mb-4 flex items-baseline justify-between gap-3">
+          <h2 id="titulo-disponiveis" className="text-lg font-bold text-content-strong">Relatórios com link público</h2>
+          <span className="text-xs tabular-nums text-content-faint">{relatoriosFiltrados.length} disponíveis</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {relatoriosFiltrados.map((rel) => {
-            const linkAtivo = linksAtivos.find((l) => l.tipo === rel.tipo && l.ativo)
+            const linkAtivo = linksAtivos.find(
+              (l) => l.tipo === rel.tipo && l.ativo && (!rel.escopo || l.config?.escopo === rel.escopo)
+            )
             return (
-              <div
-                key={rel.tipo}
-                className="bg-surface-1 rounded-xl shadow-sm border border-border-base p-5 hover:shadow-md transition-shadow flex flex-col"
+              <article
+                key={`${rel.tipo}-${rel.escopo ?? ''}`}
+                className={`flex items-center gap-4 rounded-xl border bg-surface-1 p-4 transition-colors hover:bg-surface-2/60 ${
+                  linkAtivo ? 'border-green-600/40' : 'border-border-base'
+                }`}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="text-3xl">{rel.icone}</div>
-                  {linkAtivo && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-                      Link ativo
-                    </span>
-                  )}
+                <span aria-hidden className="text-2xl">{rel.icone}</span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-content-strong">
+                    {rel.titulo}
+                    {linkAtivo && <span role="img" aria-label="Link ativo" title="Link ativo" className="h-1.5 w-1.5 rounded-full bg-green-500" />}
+                  </h3>
+                  <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-content-muted">{rel.descricao}</p>
                 </div>
-                <h3 className="font-semibold text-content-strong mb-1">{rel.titulo}</h3>
-                <p className="text-sm text-content-muted mb-4 flex-1">{rel.descricao}</p>
-                <div className="flex flex-col gap-2">
-                  {rel.rotaPdf && (
-                    <button
-                      onClick={() => navigate(rel.rotaPdf!)}
-                      className="w-full rounded-lg border border-surface-3 px-3 py-2 text-sm font-medium text-content hover:bg-surface-2 transition-colors"
-                    >
-                      Abrir relatório PDF
-                    </button>
-                  )}
+                <div className="flex shrink-0 flex-col items-end gap-1">
                   {linkAtivo ? (
                     <>
                       <a
                         href={`${window.location.origin}/r/${linkAtivo.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-full rounded-lg bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 transition-colors text-center"
+                        className="text-xs font-semibold text-green-700 hover:text-green-800"
                       >
-                        Abrir link público
+                        Abrir ↗
                       </a>
                       {rel.tipo === 'estoque' && (
                         <button
                           onClick={() => abrirModalGerarLink(rel)}
-                          className="w-full rounded-lg border border-surface-3 px-3 py-2 text-sm font-medium text-content hover:bg-surface-2 transition-colors"
+                          className="text-xs font-medium text-content-muted hover:text-content"
                         >
-                          Gerar novo link
+                          Novo link
                         </button>
                       )}
                     </>
                   ) : (
                     <button
                       onClick={() => abrirModalGerarLink(rel)}
-                      className="w-full rounded-lg bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 transition-colors"
+                      className="rounded-lg border border-green-700 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-700 hover:text-white dark:border-green-500 dark:text-green-400 dark:hover:bg-green-700 dark:hover:text-white"
                     >
-                      Gerar link público
+                      Gerar link
                     </button>
                   )}
                 </div>
-              </div>
+              </article>
             )
           })}
         </div>
-      </div>
+      </section>
 
-      {/* Links ativos */}
-      {linksVisiveis.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-content mb-3 uppercase tracking-wide">
-            Links públicos ({linksAtivos.filter((l) => l.ativo).length} ativos de {linksAtivos.length})
-          </h2>
-          <div className="bg-surface-1 rounded-xl shadow-sm border border-border-base overflow-hidden">
+      {/* Links públicos */}
+      {linksAtivos.length > 0 && (
+        <section aria-labelledby="titulo-links" className="space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <div className="flex items-baseline gap-3">
+              <h2 id="titulo-links" className="text-lg font-bold text-content-strong">Links públicos</h2>
+              <span className="text-xs tabular-nums text-content-faint">
+                {linksAtivos.filter((l) => l.ativo).length} ativos
+              </span>
+            </div>
+            <button
+              type="button"
+              aria-pressed={showInactive}
+              onClick={() => setShowInactive(!showInactive)}
+              className="text-xs font-medium text-content-muted underline-offset-4 hover:text-content hover:underline"
+            >
+              {showInactive ? 'Ocultar desativados' : `Mostrar desativados (${linksAtivos.length - linksAtivos.filter((l) => l.ativo).length})`}
+            </button>
+          </div>
+
+          {selecionadosVisiveis.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-primary/10 px-4 py-2.5 text-sm">
+              <span className="font-medium text-content-strong">{selecionadosVisiveis.length} selecionado(s)</span>
+              <div className="flex items-center gap-4">
+                <button type="button" onClick={() => setConfirmAction({ type: 'desativar', ids: selecionadosVisiveis })} className="font-medium text-amber-600 hover:text-amber-700">
+                  Desativar
+                </button>
+                <button type="button" onClick={() => setConfirmAction({ type: 'excluir', ids: selecionadosVisiveis })} className="font-medium text-red-600 hover:text-red-700">
+                  Excluir
+                </button>
+                <button type="button" onClick={() => setSelecionados([])} className="text-content-muted hover:text-content">
+                  Limpar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {linksVisiveis.length === 0 && (
+            <p className="rounded-xl border border-dashed border-border-base px-4 py-6 text-center text-sm text-content-muted">
+              Nenhum link ativo. Os desativados ficam ocultos até você mostrá-los.
+            </p>
+          )}
+          {linksVisiveis.length > 0 && (
+          <div className="overflow-hidden rounded-xl border border-border-base bg-surface-1">
             <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface-2">
-                <tr>
-                  <th className="text-left py-3 px-4 font-medium text-content-muted">Título</th>
-                  <th className="text-left py-3 px-4 font-medium text-content-muted">Tipo</th>
-                  <th className="text-left py-3 px-4 font-medium text-content-muted">Criado em</th>
-                  <th className="text-left py-3 px-4 font-medium text-content-muted">Status</th>
-                  <th className="text-right py-3 px-4 font-medium text-content-muted">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {linksVisiveis.map((link) => (
-                  <tr key={link.id} className="border-t border-border-subtle hover:bg-surface-2">
-                    <td className="py-3 px-4 text-content-strong font-medium">{link.titulo}</td>
-                    <td className="py-3 px-4 text-content-muted capitalize">
-                      {link.tipo}
-                      {link.tipo === 'estoque' && link.config?.escopo && (
-                        <span className="normal-case text-content-faint">
-                          {` · ${ESCOPOS_ESTOQUE.find((e) => e.value === link.config?.escopo)?.label ?? link.config.escopo}`}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-content-muted">
-                      {new Date(link.criado_em).toLocaleDateString('pt-BR')}
-                    </td>
-                    <td className="py-3 px-4">
-                      {link.ativo ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Ativo
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-2 text-content-muted">
-                          Inativo
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {link.ativo ? (
-                          <>
-                            <button
-                              onClick={() => {
-                                const url = `${window.location.origin}/r/${link.id}`
-                                navigator.clipboard.writeText(url)
-                                toast.success('Link copiado: ' + url)
-                              }}
-                              className="text-xs text-green-700 hover:text-green-800 font-medium"
-                            >
-                              Copiar link
-                            </button>
-                            <button
-                              onClick={() => desativarLink(link.id)}
-                              className="text-xs text-amber-600 hover:text-amber-700 font-medium"
-                            >
-                              Desativar
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => reativarLink(link.id)}
-                              className="text-xs text-green-700 hover:text-green-800 font-medium"
-                            >
-                              Reativar
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => excluirLink(link.id)}
-                          className="text-xs text-red-600 hover:text-red-700 font-medium"
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    </td>
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border-base text-left text-xs uppercase tracking-wide text-content-faint">
+                    <th className="w-10 py-2.5 pl-4">
+                      <input
+                        type="checkbox"
+                        aria-label="Selecionar todos"
+                        checked={todosSelecionados}
+                        onChange={toggleTodos}
+                        className="h-4 w-4 rounded border-surface-3 accent-primary"
+                      />
+                    </th>
+                    <th className="py-2.5 px-3 font-medium">Relatório</th>
+                    <th className="py-2.5 px-3 text-right font-medium">Ações</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border-subtle">
+                  {linksVisiveis.map((link) => {
+                    const escopo = link.tipo === 'estoque' && link.config?.escopo
+                      ? ESCOPOS_ESTOQUE.find((e) => e.value === link.config?.escopo)?.label
+                      : null
+                    const titulo = tituloExibicao(link.titulo, fazendaNome)
+                    const tipoLabel = rotuloTipo(link.tipo)
+                    const mostrarTipo = !titulo.toLowerCase().startsWith(tipoLabel.toLowerCase())
+                    return (
+                      <tr key={link.id} className={`hover:bg-surface-2 ${link.ativo ? '' : 'opacity-60'}`}>
+                        <td className="w-10 py-3 pl-4">
+                          <input
+                            type="checkbox"
+                            aria-label={`Selecionar ${link.titulo}`}
+                            checked={selecionados.includes(link.id)}
+                            onChange={() => toggleSelecao(link.id)}
+                            className="h-4 w-4 rounded border-surface-3 accent-primary"
+                          />
+                        </td>
+                        <td className="py-3 px-3">
+                          <p className="font-medium text-content-strong">{titulo}</p>
+                          <p className="mt-0.5 text-xs text-content-muted">
+                            {[mostrarTipo ? tipoLabel : null, escopo, new Date(link.criado_em).toLocaleDateString('pt-BR')]
+                              .filter(Boolean)
+                              .join(' · ')}
+                            {!link.ativo && <span className="text-content-faint"> · desativado</span>}
+                          </p>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center justify-end gap-4 whitespace-nowrap text-xs font-medium">
+                            {link.ativo && (
+                              <button
+                                onClick={() => {
+                                  const url = `${window.location.origin}/r/${link.id}`
+                                  navigator.clipboard.writeText(url)
+                                  toast.success('Link copiado: ' + url)
+                                }}
+                                className="text-green-700 hover:text-green-800"
+                              >
+                                Copiar
+                              </button>
+                            )}
+                            {link.ativo ? (
+                              <button onClick={() => desativarLink(link.id)} className="text-content-muted hover:text-content">
+                                Desativar
+                              </button>
+                            ) : (
+                              <button onClick={() => reativarLink(link.id)} className="text-green-700 hover:text-green-800">
+                                Reativar
+                              </button>
+                            )}
+                            <button onClick={() => excluirLink(link.id)} className="text-red-600 hover:text-red-700">
+                              Excluir
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
+          )}
+        </section>
       )}
 
 
@@ -619,31 +709,6 @@ export function Relatorios() {
                     className="w-full rounded-lg border border-surface-3 px-3 py-2 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600"
                   />
                 </div>
-
-                {relatorioSelecionado.tipo === 'estoque' && (
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-content mb-1">
-                      Escopo do relatório
-                    </label>
-                    <select
-                      value={escopoEstoque}
-                      onChange={(e) => {
-                        const novo = e.target.value
-                        setEscopoEstoque(novo)
-                        const novaSugestao = tituloEstoquePorEscopo(novo, fazendaNome)
-                        if (!tituloLink.trim() || tituloLink === tituloSugerido) {
-                          setTituloLink(novaSugestao)
-                        }
-                        setTituloSugerido(novaSugestao)
-                      }}
-                      className="w-full rounded-lg border border-surface-3 px-3 py-2 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600 bg-surface-1 text-content"
-                    >
-                      {ESCOPOS_ESTOQUE.map((op) => (
-                        <option key={op.value} value={op.value}>{op.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
 
                 <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <p className="text-xs text-amber-800">
@@ -716,11 +781,15 @@ export function Relatorios() {
         isOpen={confirmAction !== null}
         onClose={() => setConfirmAction(null)}
         onConfirm={handleConfirm}
-        title={confirmAction?.type === 'desativar' ? 'Desativar link público' : 'Excluir link público'}
+        title={
+          confirmAction?.type === 'desativar'
+            ? `Desativar ${confirmAction?.ids ? `${confirmAction.ids.length} links` : 'link público'}`
+            : `Excluir ${confirmAction?.ids ? `${confirmAction.ids.length} links` : 'link público'}`
+        }
         message={
           confirmAction?.type === 'desativar'
-            ? 'Desativar este link público? O relatório não será mais acessível, mas você pode reativá-lo depois.'
-            : 'Excluir este link público? O registro será removido permanentemente e o link deixará de funcionar.'
+            ? 'O relatório deixará de ser acessível pelo link, mas pode ser reativado depois.'
+            : 'O registro será removido permanentemente e o link deixará de funcionar.'
         }
         confirmText={confirmAction?.type === 'desativar' ? 'Desativar' : 'Excluir'}
         variant="danger"
