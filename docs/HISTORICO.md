@@ -61,6 +61,27 @@
 - **Painel**: `features/pendencias5s/calculo.ts` espelha a regra (mesmos casos em `planoAcao.test.ts`). `Auditoria5sPendencias.tsx`: coluna "Plano de ação" (situação, medidas concluídas, medidas abertas) e filtro "Sem plano" / "Prazo vencido". `Auditoria5sDetalhes.tsx`: plano de cada N, ou "Sem plano de ação registrado".
 - **Pendente**: o XLSX de pendências não exporta o plano (`PENDENCIAS_5S_EXPORT_CONFIG` não foi alterado). Edição do plano pelo painel não existe (só leitura, como o resto do 5S). Testar o fluxo ponta a ponta na fazenda de testes (auditoria com plano, reauditoria com herança, resolução).
 
+## Relatório Vision: rótulos verdes do rebanho ilegíveis no Desembolso (28/10/2026)
+- Pedido do usuário (p.10 impressa, `pages/p12.mjs`, "Custo diário por cabeça × rebanho médio"): os rótulos do rebanho médio sumiam ou ficavam claros sobre o topo das barras.
+- `vision-relatorio/pipeline/lib/svg.mjs` (`comboChart`): nova opção `bars.labelAtBase`, que encosta o rótulo da barra na base e libera o topo para a linha. A cor clara do rótulo da linha só vale quando o rótulo inteiro cabe dentro da barra.
+- `pages/p12.mjs` usa `labelAtBase: true`. A mudança em `comboChart` vale para todas as páginas que usam o gráfico combinado (p.13 tem o mesmo gráfico; conferir ao gerar).
+- Quando o ponto do rebanho cai na base da barra, o rótulo da barra volta ao topo (`nearBase`), para não sobrepor o ponto.
+- Rótulo verde da linha agora fica acima do ponto por padrão (abaixo só se faltar espaço em cima), o que evita o choque com o eixo e com a base da barra.
+- Verificado com Santa Cecília Jul–Set (planilha `v. 12.05.2026`, p.10): valores de topo batem com a captura do usuário (R$ 4.809.920,27; R$ 1.813,70; R$ 68,25) e os três rótulos verdes (562, 627, 1.121) ficam legíveis. Arquivos em `vision-relatorio/pipeline/out_santacecilia_jul_set/`. `compose.mjs` ganhou `--pagenum` para fixar o número da página.
+
+## Relatório Vision: N° de Cabeças das vendas com todos os status (28/10/2026)
+- Pedido do usuário: as quantidades totais compradas e vendidas no período devem ignorar o filtro de status (inclusive "Em Aberto"). A compra já estava assim (`cabTodas`, card N° de Animais).
+- `vision-relatorio/pipeline/lib/model.mjs`: `vendasAbateMPage.cabTodas` e `vendasAbateFPage.cabTodas` (abates do sexo no período, sem status) e `vendasPage.cabTodas` (vendas comerciais, sem transferências e sem status). `pages/p06.mjs` e `pages/p07.mjs` usam `cabTodas` no card N° de Cabeças.
+- Continuam só com lotes Pago: R$, @, kg, médias, gráficos, tabelas por empresa e a linha Total Geral da p.07.
+- Conferido na planilha Gentilin: abates M 1.791 (Pago 891), F 281 (Pago 116); resumo 2.142 (Pago 1.007, inclui vivo). Santa Cecília Jul–Set: todas as vendas já eram Pago (172).
+
+## Relatório Vision: N° de Animais da compra com todos os status (28/10/2026)
+- Pedido do usuário: o card "N° de Animais" das páginas de compra (p.04 e p.05) deve somar todas as cabeças do período, inclusive "Em Aberto", batendo com o total da planilha Gentilin (971 + 466 = 1.437). Transferências de entrada continuam fora.
+- `vision-relatorio/pipeline/lib/model.mjs`: novo `comprasPage.cabTodas` (compras não transferência do período, sem filtro de status). `pages/p04.mjs` e `pages/p05.mjs` usam `cabTodas` no card. Médias R$, totais, gráficos e o "Total Geral" da tabela dinâmica da p.05 seguem só com lotes Pago (`compras.cab`, 466).
+- Verificado com a planilha `Vision Versão Slim - 2026 - Grupo Gentilin.xlsm` via `sheetsFromXlsxBlob` + `buildModel` (`cabTodas` = 1437, `cab` = 466). Relatório de conferência em `vision-relatorio/pipeline/out_gentilin/` (p04, p05, p06a, p06b, p07 e `relatorio.pdf`).
+- Pendente: decidir se o gráfico mensal, o gráfico por categoria e a rosca da p.04 também devem usar o total (hoje mostram 466, só Pago).
+- Observação: `run-model.mjs` estoura o heap (8 GB) na planilha Gentilin ao carregar todas as abas; o carregamento por `sheetsFromXlsxBlob` com `NEEDED_SHEETS` funciona.
+
 ## Relatório Vision: compras e vendas só com status "Pago" (26/10/2026)
 - `vision-relatorio/pipeline/lib/model.mjs`: `compras` e `vendas` do período passam a incluir só lotes com status "Pago" (`contaCompraVenda`). Transferências entre fazendas continuam sempre incluídas. Afeta p.4/p.5, p.6, p.7, p.18 (@ de entrada/saída) e p.19, além do giro de estoque da p.7.
 - `readVendas` passa a ler o status (coluna F). Payloads antigos de links públicos, sem status, mantêm o comportamento anterior.

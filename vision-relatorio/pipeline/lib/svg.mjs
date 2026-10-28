@@ -89,6 +89,16 @@ export function comboChart(spec) {
     barTops.push(y);
     if (v > 0) out.push(`<rect x="${f(xb.cx(i) - bw / 2)}" y="${f(y)}" width="${f(bw)}" height="${f(h)}" rx="4" fill="${bars?.color ?? C.blue}" opacity="0.92"/>`);
   }
+  // mesma escala da linha (ver bloco "linha" abaixo), para decidir a posição dos rótulos das barras
+  const lineYOf = (v) => {
+    if (!line) return null;
+    const nums = line.values.filter(x => x != null);
+    const lMn = Math.min(...nums), lMx = Math.max(...nums);
+    const lPad = Math.max((lMx - lMn) * 0.15, Math.abs(lMx) * 0.08, 0.5);
+    const lo = line.domain?.[0] ?? Math.max(lMn >= 0 ? 0 : -Infinity, Math.floor((lMn - lPad) * 10) / 10);
+    const hi = line.domain?.[1] ?? Math.ceil((lMx + lPad) * 10) / 10;
+    return axisY - ((v - lo) / (hi - lo || 1)) * (axisY - topPad);
+  };
   // rótulos das barras — posição resolvida junto com os da linha para evitar colisão
   const placedBar = [];
   const bLbl = bars ? bVals.map((v, i) => {
@@ -101,7 +111,13 @@ export function comboChart(spec) {
     // que a barra vaza para o fundo branco e fica invisível (CONVENCOES)
     const fitsW = labelScale === 1 || lw <= bw;
     if (fitsW && h >= 17 * labelScale && bars.labelInside !== false) {
-      return { y: by(v) + Math.round(15 * labelScale), inside: true, x, txt };
+      // labelAtBase: rótulo da barra encostado na base, liberando o topo para a linha
+      // se o ponto da linha cai na base, o rótulo da barra volta ao topo para não sobrepor
+      const lv = line?.values?.[i];
+      const pyLine = lv == null ? null : lineYOf(lv);
+      const nearBase = pyLine != null && pyLine > axisY - 30 * labelScale;
+      const yIn = bars.labelAtBase && !nearBase ? axisY - Math.round(8 * labelScale) : by(v) + Math.round(15 * labelScale);
+      return { y: yIn, inside: true, x, txt };
     }
     // acima da barra com nível escalonado quando vizinhos colidem
     for (const off of [6, 22, 38]) {
@@ -150,8 +166,9 @@ export function comboChart(spec) {
       const bt = barTops[i];
       const txt = line.labelFmt(v);
       const lw = String(txt).length * (dense ? 4.4 : 5.2) * labelScale;
-      let ty = py + Math.round(16 * labelScale + 1);
-      if (ty > axisY - 8) ty = py - Math.round(10 * labelScale);
+      // padrão acima do ponto (sobre fundo branco ou no topo da barra); abaixo só se faltar espaço em cima
+      let ty = py - Math.round(10 * labelScale);
+      if (ty < 8 * labelScale) ty = py + Math.round(16 * labelScale + 1);
       const bl = bLbl[i];
       if (bl && Math.abs(ty - bl.y) < 12 * labelScale) ty = ty >= py ? bl.y + Math.round(16 * labelScale) : bl.y - Math.round(14 * labelScale);
       // rótulo dentro da barra fica indistinguível do valor dela: sobe acima do
@@ -168,7 +185,8 @@ export function comboChart(spec) {
       // branco só quando o rótulo cabe inteiro dentro da barra; se estreita,
       // fica na cor da linha com halo, legível sobre qualquer fundo
       const fitsBar = lw <= bw - 4;
-      const cls = fitsBar && ty > bt - 4 && ty < axisY - 4 ? 'llbl w' : 'llbl';
+      // cor clara só quando o rótulo inteiro está dentro da barra (no topo, vaza para o fundo branco)
+      const cls = fitsBar && ty - 11 * labelScale > bt && ty < axisY - 4 ? 'llbl w' : 'llbl';
       placed.push({ x: px, y: ty, w: lw });
       if (labelScale !== 1) {
         // mesma técnica do areaChart: halo por cópias brancas deslocadas ±1px.
