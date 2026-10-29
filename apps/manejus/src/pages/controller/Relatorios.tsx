@@ -144,7 +144,6 @@ export function Relatorios() {
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [fazendaNome, setFazendaNome] = useState<string | null>(null)
   const [fazendaLogoUrl, setFazendaLogoUrl] = useState<string | null>(null)
-  const [acessoConfinamento, setAcessoConfinamento] = useState(false)
   const [modalRelatorioGeral, setModalRelatorioGeral] = useState(false)
   const [modalRelatorioAbate, setModalRelatorioAbate] = useState(false)
   // Em homologação: o relatório de abate só aparece na fazenda de testes
@@ -218,12 +217,11 @@ export function Relatorios() {
     if (fid) {
       const { data: fazendaData } = await supabase
         .from('fazendas')
-        .select('nome, logo_url, acesso_confinamento')
+        .select('nome, logo_url')
         .eq('id', fid)
         .maybeSingle()
       setFazendaNome(fazendaData?.nome ?? null)
       setFazendaLogoUrl(fazendaData?.logo_url ?? null)
-      setAcessoConfinamento(fazendaData?.acesso_confinamento ?? false)
       await carregarLinks(fid)
     }
     setLoading(false)
@@ -403,9 +401,8 @@ export function Relatorios() {
     setSelecionados(todosSelecionados ? [] : linksVisiveis.map((l) => l.id))
   }
 
-  const relatoriosFiltrados = acessoConfinamento
-    ? RELATORIOS_DISPONIVEIS
-    : RELATORIOS_DISPONIVEIS.filter((rel) => rel.tipo !== 'tratos')
+  // Relatório de tratos oculto da central por enquanto (a definição fica em RELATORIOS_DISPONIVEIS)
+  const relatoriosFiltrados = RELATORIOS_DISPONIVEIS.filter((rel) => rel.tipo !== 'tratos')
 
   if (loading) {
     return <PageSkeleton variant="list" />

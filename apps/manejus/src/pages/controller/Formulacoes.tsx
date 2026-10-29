@@ -88,12 +88,14 @@ interface DietaInsumoCalc {
 
 function DecimalInput({
   id,
+  nextId,
   value,
   onChange,
   className,
   decimals = 2,
 }: {
   id?: string
+  nextId?: string
   value: number
   onChange: (val: number) => void
   className?: string
@@ -126,6 +128,19 @@ function DecimalInput({
     setRaw(num.toFixed(decimals).replace('.', ','))
   }
 
+  // Enter move o foco para o input de baixo (o blur confirma o valor); na última linha só confirma
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    const proximo = nextId ? (document.getElementById(nextId) as HTMLInputElement | null) : null
+    if (proximo) {
+      proximo.focus()
+      proximo.select()
+    } else {
+      e.currentTarget.blur()
+    }
+  }
+
   return (
     <Input
       id={id}
@@ -134,6 +149,7 @@ function DecimalInput({
       value={raw}
       onChange={handleChange}
       onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
       className={className}
     />
   )
@@ -1286,6 +1302,7 @@ export function Formulacoes() {
                         <td className="p-2 text-center bg-green-500/10">
                           <DecimalInput
                             id={`formula-ms-${idx}`}
+                            nextId={idx < recalculated.length - 1 ? `formula-ms-${idx + 1}` : undefined}
                             value={item.formula_teor_ms}
                             onChange={(val) => handleFormulaChange(idx, val)}
                             className="w-20 text-center border-border-base focus:border-accent py-1"

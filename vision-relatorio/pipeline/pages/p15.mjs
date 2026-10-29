@@ -61,7 +61,7 @@ export function render({ model, ctx }) {
     <div class="kpi"><div class="lbl">Receita Total</div><div class="val"><small>R$</small> ${fmt2(r.total)}</div></div>
     <div class="kpi"><div class="lbl">Faturamento Médio Mensal</div><div class="val"><small>R$</small> ${fmt2(r.mediaMensal)}</div></div>
     <div class="kpi"><div class="lbl">Faturamento por ha</div><div class="val"><small>R$</small> ${fmt2(r.porHa)}</div></div>
-    ${fin ? '' : `<div class="kpi"><div class="lbl">Faturamento por cab.</div><div class="val"><small>R$</small> ${fmt2(r.porCab)}</div></div>`}
+    ${fin ? '' : `<div class="kpi"><div class="lbl">Rebanho Médio</div><div class="val">${fmtInt(model.indices.rebanhoMedio)} <small>cab</small></div></div>`}
   </div>
 
   <div class="chart1">
