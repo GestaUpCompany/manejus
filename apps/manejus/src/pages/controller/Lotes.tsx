@@ -9,6 +9,7 @@ import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plan
 import { PlanoNutricionalMassaModal } from '../../components/plano-nutricional/PlanoNutricionalMassaModal'
 import { RevisarNovoLoteModal } from '../../components/lotes/RevisarNovoLoteModal'
 import { CorrigirPesoModal } from '../../components/lotes/CorrigirPesoModal'
+import { DetalharTropaModal } from '../../components/lotes/DetalharTropaModal'
 import { ImportarLotesModal } from '../../components/lotes/ImportarLotesModal'
 import { LoteCard } from '../../components/lotes/LoteCard'
 import { useIdentificadosPorLote } from '../../hooks/useIdentificadosPorLote'
@@ -18,12 +19,14 @@ import { getFazendaIdForUser } from '@gestaup/shared'
 import { usePastos, useCurrais } from '@gestaup/shared'
 import { exportToXLSXMultiSheet, type ColumnConfig } from '@gestaup/shared'
 import { usaCurral } from '../../utils/lotes'
+import { EQUIDEOS, ESPECIES_EQUIDEOS, isEquideo, isTropaLegada, sexoDoEquideo } from '../../utils/equideos'
 import { SelectPesquisavel } from '../../components/lotes/SelectPesquisavel'
 
 interface LoteCategoria {
   id?: string
   categoria: string
   quant_inicial?: number | null
+  quant_base?: number | null
   data_pesagem?: string | null
   peso_entrada_kg_cab?: number | null
   peso_entrada_arrobas?: number | null
@@ -226,6 +229,7 @@ export function Lotes() {
   } | null>(null)
   const [pendingSubmitData, setPendingSubmitData] = useState<{ loteId: string; recalculatedCategorias: LoteCategoria[] } | null>(null)
   const [corrigirPesoCat, setCorrigirPesoCat] = useState<LoteCategoria | null>(null)
+  const [detalharTropaCat, setDetalharTropaCat] = useState<LoteCategoria | null>(null)
 
   const categoriasOpcoes = useMemo(() => {
     const baseCategorias = [
@@ -236,14 +240,15 @@ export function Lotes() {
       'garrote',
       'novilha',
     ]
+    // Tropa (equídeos) não entra aqui: tem grupo próprio na grade, por espécie e sexo.
     if (formData.destino === 'reprodução') {
-      return [...baseCategorias, 'tourinho', 'touro', 'vaca', 'tropa']
+      return [...baseCategorias, 'tourinho', 'touro', 'vaca']
     }
     if (formData.destino === 'corte') {
-      return [...baseCategorias, 'boi magro', 'boi gordo', 'vaca', 'tropa']
+      return [...baseCategorias, 'boi magro', 'boi gordo', 'vaca']
     }
     // enfermaria ou sem destino: todas as categorias
-    return [...baseCategorias, 'boi magro', 'boi gordo', 'tourinho', 'touro', 'vaca', 'tropa']
+    return [...baseCategorias, 'boi magro', 'boi gordo', 'tourinho', 'touro', 'vaca']
   }, [formData.destino])
 
   const categoriaColors: Record<string, string> = {
@@ -263,6 +268,7 @@ export function Lotes() {
 
   const getCategoriaColor = (categoria: string): string => {
     const normalized = categoria.toLowerCase()
+    if (isEquideo(normalized)) return categoriaColors['tropa']
     return categoriaColors[normalized] || 'border-accent'
   }
 
@@ -367,7 +373,7 @@ export function Lotes() {
         data_meta_projetada: undefined,
         estrategia_nutricional: undefined,
         raca: undefined,
-        sexo: undefined,
+        sexo: sexoDoEquideo(categoria),
         idade: undefined,
         preco_entrada_reais_kg: undefined,
         preco_entrada_reais_arroba: undefined,
@@ -1336,7 +1342,12 @@ export function Lotes() {
         rc_inicial: cat.rc_inicial ? parseFloat(cat.rc_inicial.toString()) : null,
         rc_final: cat.rc_final ? parseFloat(cat.rc_final.toString()) : null,
         rc_atual: cat.rc_atual ? parseFloat(cat.rc_atual.toString()) : null,
-        quant_atual: cat.quant_atual ? parseInt(cat.quant_atual.toString()) : null,
+        // Categoria nova num lote já existente chega sem quant_atual: nasce igual à quantidade inicial.
+        quant_atual: cat.quant_atual
+          ? parseInt(cat.quant_atual.toString())
+          : !categoriaId && cat.quant_inicial
+            ? parseInt(cat.quant_inicial.toString())
+            : null,
         peso_vivo_atual_kg_cab: cat.peso_vivo_atual_kg_cab ? parseFloat(cat.peso_vivo_atual_kg_cab.toString()) : null,
         peso_vivo_atual_arroba_cab: cat.peso_vivo_atual_arroba_cab ? parseFloat(cat.peso_vivo_atual_arroba_cab.toString()) : null,
         producao_atual_arroba_cab: cat.producao_atual_arroba_cab ? parseFloat(cat.producao_atual_arroba_cab.toString()) : null,
@@ -2524,11 +2535,13 @@ export function Lotes() {
                     value={formData.destino}
                     onChange={(e) => {
                       const novoDestino = e.target.value
+                      // Tropa (legada e por espécie) vale em qualquer destino e nunca é descartada na troca.
+                      const categoriasTropa = ['tropa', ...EQUIDEOS.map((e) => e.slug)]
                       const categoriasValidas = novoDestino === 'reprodução'
-                        ? ['bezerro ao pé', 'bezerra ao pé', 'bezerro', 'bezerra', 'garrote', 'novilha', 'tourinho', 'touro', 'vaca', 'tropa']
+                        ? ['bezerro ao pé', 'bezerra ao pé', 'bezerro', 'bezerra', 'garrote', 'novilha', 'tourinho', 'touro', 'vaca', ...categoriasTropa]
                         : novoDestino === 'corte'
-                          ? ['bezerro ao pé', 'bezerra ao pé', 'bezerro', 'bezerra', 'garrote', 'novilha', 'boi magro', 'boi gordo', 'vaca', 'tropa']
-                          : ['bezerro ao pé', 'bezerra ao pé', 'bezerro', 'bezerra', 'garrote', 'novilha', 'boi magro', 'boi gordo', 'tourinho', 'touro', 'vaca', 'tropa']
+                          ? ['bezerro ao pé', 'bezerra ao pé', 'bezerro', 'bezerra', 'garrote', 'novilha', 'boi magro', 'boi gordo', 'vaca', ...categoriasTropa]
+                          : ['bezerro ao pé', 'bezerra ao pé', 'bezerro', 'bezerra', 'garrote', 'novilha', 'boi magro', 'boi gordo', 'tourinho', 'touro', 'vaca', ...categoriasTropa]
                       setFormData({
                         ...formData,
                         destino: novoDestino,
@@ -2632,6 +2645,40 @@ export function Lotes() {
                     )
                   })}
                 </div>
+
+                {/* Tropa: uma categoria por espécie e sexo */}
+                <div className="mt-4 p-3 rounded-lg border border-border-base bg-surface-2">
+                  <p className="text-sm font-semibold text-content-strong mb-2">Tropa</p>
+                  <div className="space-y-2">
+                    {ESPECIES_EQUIDEOS.map((especie) => (
+                      <div key={especie} className="grid grid-cols-[5.5rem_1fr_1fr] items-center gap-2">
+                        <span className="text-xs font-medium text-content-muted">{especie}</span>
+                        {EQUIDEOS.filter((e) => e.especie === especie).map((e) => {
+                          const isSelected = formData.categorias.some(c => c.categoria.toLowerCase() === e.slug)
+                          return (
+                            <button
+                              key={e.slug}
+                              type="button"
+                              onClick={() => handleCategoriaToggle(e.slug)}
+                              className={`px-4 py-2.5 rounded-lg border-2 text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                                isSelected
+                                  ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                                  : 'bg-surface-1 text-content border-border-base hover:border-primary hover:text-primary dark:hover:text-primary-light'
+                              }`}
+                            >
+                              {isSelected && (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                              <span>{e.rotulo}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Dados Específicos por Categoria */}
@@ -2670,7 +2717,28 @@ export function Lotes() {
                           </svg>
                         </button>
                       </div>
-                      
+
+                      {isTropaLegada(cat.categoria) && (
+                        <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-900 dark:text-amber-200">
+                          <p className="font-semibold mb-1">Esta tropa precisa ser dividida por espécie e sexo</p>
+                          <p className="text-xs mb-2">
+                            Agora a tropa é cadastrada por categoria (cavalo, égua, jumento, jumenta, burro e mula), com contagem,
+                            mortes e movimentações separadas. Divida os animais desta tropa entre as categorias novas.
+                          </p>
+                          {cat.id && editingLote ? (
+                            <button
+                              type="button"
+                              onClick={() => setDetalharTropaCat(cat)}
+                              className="px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/80 transition-colors min-h-[44px]"
+                            >
+                              Dividir tropa
+                            </button>
+                          ) : (
+                            <p className="text-xs">Salve o lote para poder dividir a tropa.</p>
+                          )}
+                        </div>
+                      )}
+
                       {/* Conteúdo colapsável */}
                       {expandedCategories.has(cat.categoria) && (
                         <>
@@ -2705,12 +2773,14 @@ export function Lotes() {
                               Sexo <span className="text-red-500">*</span>
                             </label>
                             <select
-                              value={cat.sexo || ''}
+                              value={sexoDoEquideo(cat.categoria) ?? (cat.sexo || '')}
                               onChange={(e) => {
                                 const updatedCategorias = [...formData.categorias]
                                 updatedCategorias[catIndex] = { ...cat, sexo: e.target.value }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
+                              disabled={isEquideo(cat.categoria)}
+                              title={isEquideo(cat.categoria) ? 'O sexo é definido pela categoria' : undefined}
                               required
                               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint"
                             >
@@ -3875,6 +3945,21 @@ export function Lotes() {
               await atualizarCategoriasNoForm(editingLote.id)
               await loadLotes()
             }
+          }}
+        />
+      )}
+
+      {detalharTropaCat && editingLote && (
+        <DetalharTropaModal
+          isOpen={!!detalharTropaCat}
+          onClose={() => setDetalharTropaCat(null)}
+          fazendaId={editingLote.fazenda_id}
+          loteCategoriaId={detalharTropaCat.id!}
+          saldo={detalharTropaCat.quant_base ?? detalharTropaCat.quant_inicial ?? 0}
+          onConvertido={async () => {
+            setDetalharTropaCat(null)
+            await atualizarCategoriasNoForm(editingLote.id)
+            await loadLotes()
           }}
         />
       )}

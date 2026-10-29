@@ -6,6 +6,7 @@ import { Button, Card, Input, CardSkeleton, CardItem, ConfirmModal, useToast } f
 import { useKeyboardShortcuts } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import { contarCabecasPorDieta, type CabecasPorDieta } from '../../utils/cabecasPorDieta'
+import { EQUIDEOS } from '../../utils/equideos'
 
 function fmt(n: number, digits = 2): string {
   return n.toFixed(digits).replace('.', ',')
@@ -61,9 +62,10 @@ interface FormulacaoCategoriaGmd {
   ordem: number
 }
 
+// Tropa por espécie e sexo; a 'tropa' genérica não é mais oferecida (formulações antigas mantêm a linha existente).
 const CATEGORIAS_DISPONIVEIS = [
   'vaca', 'touro', 'boi gordo', 'boi magro', 'garrote',
-  'bezerro', 'bezerra', 'novilha', 'tropa',
+  'bezerro', 'bezerra', 'novilha', ...EQUIDEOS.map((e) => e.slug),
 ]
 
 const CATEGORIAS_CREEP = ['bezerro ao pé', 'bezerra ao pé']
