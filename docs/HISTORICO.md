@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Edição de registros de Pastagens no Painel (29/10/2026)
+- **Tela**: botão "Editar" em `PastagensDetalhes.tsx` (padrão de Suplementação). Campos: data, avaliação do pasto de saída (só quando a saída foi de pasto), escore corporal (`escore_gado`), escore de fezes e nº de pessoas no manejo.
+- **RPC** `editar_registro_pastagens` (migrations `20261029120000_editar_registro_pastagens` e `20261029140000_editar_registro_pastagens_corrige_historico`, rollbacks em `supabase/rollbacks/`): whitelist de campos; papel admin/controller em `usuario_fazenda`; `anon` sem EXECUTE.
+- **Data reajusta o histórico**: `_corrigir_historico_movimento_pastagem` move os carimbos de `lote_pasto_historico`, `lote_modulo_historico` e `lote_curral_historico` do movimento, recalcula desvio e os textos `tempo_ocupacao`/`tempo_vedacao`, e recalcula cabeças/peso só quando a reconstrução reproduz o saldo atual do lote. Recusa quando a data cai fora da janela entre o movimento anterior e o seguinte do lote, é futura, não acha o histórico do movimento ou conflita com outra ocupação de curral.
+- **Bypass das travas**: `proteger_lote_*_historico_update` libera data/cabeças/peso de entrada só com `app.correcao_historico_movimento = 'on'` (definido pela RPC, local à transação); identidade da linha continua protegida.
+- **Fora de escopo**: curral→curral (`registros_curral`), textos `tempo_*` de outros registros que dependem do movimento, e saída do curral num movimento curral→pasto (mantida como foi gravada).
+- **Teste**: na fazenda de testes, edição pela tela (27/10 → 26/10) com a data reajustando as entradas do histórico; recusas e casos de curral ocupado validados em transações com ROLLBACK.
+
 ## Relatório Vision: status de pagamento, R$/kg, R$/cab da p.5 e KPI "Diária média/cab" removido (29/10/2026)
 - **Status de pagamento**: novo parâmetro `statusPgto` (`pagos` padrão, `naoPagos`, `todos`) em `buildModelFromReads` (`vision-relatorio/pipeline/lib/model.mjs`). Vale para compras e vendas (cards de animais, tabelas e totais das p.4–p.7). Transferências seguem sempre incluídas. Escolha na tela de geração (`RelatorioVision.tsx`, salva em `p_config.status_pgto` do link), no seletor da visualização (`web/app.mjs`, também na URL como `status=`) e no PDF e link público.
 - **Card "N° de Animais" / "N° de Cabeças"**: passou a seguir o status escolhido. No padrão (pagos) ele mostra só lotes pagos, e não mais todos os status como antes. Os valores em R$ não mudaram no padrão.
