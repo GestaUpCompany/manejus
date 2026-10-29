@@ -6,6 +6,8 @@ import { Button, Card, Input, CardSkeleton, CardItem, ConfirmModal, useToast } f
 import { useKeyboardShortcuts } from '@gestaup/shared'
 import { getFazendaIdForUser } from '@gestaup/shared'
 import { contarCabecasPorDieta, type CabecasPorDieta } from '../../utils/cabecasPorDieta'
+import { calcularFormulacao } from '../../utils/formulacaoCalculo'
+import { gerarExcelFormulacoes, nomeArquivoFormulacoes } from '../../services/formulacoesExport'
 import { EQUIDEOS } from '../../utils/equideos'
 
 function fmt(n: number, digits = 2): string {
@@ -178,6 +180,9 @@ export function Formulacoes() {
   const [dragHandleIdx, setDragHandleIdx] = useState<number | null>(null)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+  // Formulações marcadas para exportação em planilha (vazio = exporta as filtradas na tela)
+  const [selecionadasExport, setSelecionadasExport] = useState<Set<string>>(new Set())
+  const [exportando, setExportando] = useState(false)
 
   useEffect(() => {
     loadFormulacoes()
@@ -259,45 +264,8 @@ export function Formulacoes() {
     setInsumos(data as InsumoOption[] || [])
   }
 
-  // Calculate all derived fields
-  const calcularFormulacao = (items: DietaInsumoCalc[]): DietaInsumoCalc[] => {
-    // Step 1: Calculate formula_mn_bruta for each item (keep full precision)
-    const withBruta = items.map(item => {
-      const ms = item.teor_ms / 100
-      const mnBruta = ms > 0 ? (item.formula_teor_ms / ms) : 0
-      return { ...item, formula_mn_bruta: mnBruta }
-    })
-
-    // Step 2: Normalize to 100% (keep 4 decimal places for percent)
-    const totalBruta = withBruta.reduce((sum, i) => sum + (i.formula_mn_bruta || 0), 0)
-    const withNormalized = withBruta.map(item => {
-      const mnPercent = totalBruta > 0 ? ((item.formula_mn_bruta || 0) / totalBruta) * 100 : 0
-      return { ...item, formula_mn_percent: mnPercent }
-    })
-
-    // Step 3: Calculate costs and consumption per kg of PV (independent of categoria)
-    const metaPV = parseFloat(formData.consumo_ms_percent_pv) || 0
-    const consumoMSBase = (metaPV / 100)
-    return withNormalized.map(item => {
-      const ms = item.teor_ms / 100
-      const custoTonelada = (item.formula_mn_percent || 0) * item.preco_ton_mn / 100
-      const custoKgMN = custoTonelada / 1000
-      const custoKgMS = ms > 0 ? custoKgMN / ms : 0
-      // Consumo por kg de peso vivo (kg de MS/MN por kg de PV/dia)
-      const consumoMNporKgPV = consumoMSBase * ((item.formula_mn_percent || 0) / 100)
-      const consumoMSporKgPV = consumoMNporKgPV * ms
-      return {
-        ...item,
-        custo_kg_mn: custoKgMN,
-        custo_kg_ms: custoKgMS,
-        consumo_kg_mn_por_kg_pv: consumoMNporKgPV,
-        consumo_kg_ms_por_kg_pv: consumoMSporKgPV,
-      }
-    })
-  }
-
   const recalculated = useMemo(
-    () => calcularFormulacao(selectedInsumos),
+    () => calcularFormulacao(selectedInsumos, parseFloat(formData.consumo_ms_percent_pv) || 0),
     [selectedInsumos, formData.consumo_ms_percent_pv]
   )
 
@@ -793,6 +761,53 @@ export function Formulacoes() {
 
   useKeyboardShortcuts(shortcuts)
 
+  const formulacoesFiltradas = formulacoes.filter((dieta) =>
+    (showInactive || dieta.ativo) &&
+    (premixFilter === 'todos' ||
+     (premixFilter === 'premix' && dieta.e_premix) ||
+     (premixFilter === 'tmr' && !dieta.e_premix)) &&
+    (sistemaFilter === 'todos' ||
+     (sistemaFilter === 'pasto' && !dieta.e_creep && dieta.sistema_producao !== 'Confinamento') ||
+     (sistemaFilter === 'confinamento' && !dieta.e_creep && (dieta.sistema_producao === 'Confinamento' || dieta.sistema_producao == null)) ||
+     (sistemaFilter === 'creep' && dieta.e_creep)) &&
+    (dieta.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     (dieta.tipo && dieta.tipo.toLowerCase().includes(searchTerm.toLowerCase())))
+  )
+
+  const formulacoesParaExportar = selecionadasExport.size > 0
+    ? formulacoes.filter((f) => selecionadasExport.has(f.id))
+    : formulacoesFiltradas
+
+  const toggleSelecionadaExport = (id: string) => {
+    setSelecionadasExport((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const exportarPlanilha = async () => {
+    if (!user || formulacoesParaExportar.length === 0) return
+    setExportando(true)
+    try {
+      const fazendaId = await getFazendaIdForUser(user.id)
+      if (!fazendaId) throw new Error('Fazenda não encontrada para o usuário')
+      const blob = await gerarExcelFormulacoes(fazendaId, formulacoesParaExportar)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = nomeArquivoFormulacoes(formulacoesParaExportar)
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Erro ao exportar formulações:', err)
+      toast.error('Erro ao exportar as formulações.')
+    } finally {
+      setExportando(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -847,6 +862,18 @@ export function Formulacoes() {
             <option value="tmr">Só TMR</option>
             <option value="premix">Só Premix</option>
           </select>
+          <Button
+            variant="secondary"
+            onClick={exportarPlanilha}
+            disabled={exportando || formulacoesParaExportar.length === 0}
+            className="h-10"
+          >
+            {exportando
+              ? 'Exportando...'
+              : selecionadasExport.size > 0
+                ? `Exportar ${selecionadasExport.size} em planilha`
+                : 'Exportar planilha'}
+          </Button>
           <Button onClick={handleNewForm} className="h-10">Nova Formulação</Button>
         </div>
       </div>
@@ -1344,20 +1371,7 @@ export function Formulacoes() {
         </Card>
       ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {formulacoes
-            .filter((dieta) =>
-              (showInactive || dieta.ativo) &&
-              (premixFilter === 'todos' ||
-               (premixFilter === 'premix' && dieta.e_premix) ||
-               (premixFilter === 'tmr' && !dieta.e_premix)) &&
-              (sistemaFilter === 'todos' ||
-               (sistemaFilter === 'pasto' && !dieta.e_creep && dieta.sistema_producao !== 'Confinamento') ||
-               (sistemaFilter === 'confinamento' && !dieta.e_creep && (dieta.sistema_producao === 'Confinamento' || dieta.sistema_producao == null)) ||
-               (sistemaFilter === 'creep' && dieta.e_creep)) &&
-              (dieta.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (dieta.tipo && dieta.tipo.toLowerCase().includes(searchTerm.toLowerCase())))
-            )
-            .map((dieta) => (
+          {formulacoesFiltradas.map((dieta) => (
               <CardItem
                 key={dieta.id}
                 title={dieta.nome}
@@ -1371,6 +1385,18 @@ export function Formulacoes() {
                 status={dieta.ativo}
                 onClick={() => handleEdit(dieta)}
               >
+                <label
+                  className="flex items-center gap-2 text-sm text-content-muted mb-2 cursor-pointer w-fit"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-primary"
+                    checked={selecionadasExport.has(dieta.id)}
+                    onChange={() => toggleSelecionadaExport(dieta.id)}
+                  />
+                  Selecionar para exportar
+                </label>
                 <div className="space-y-1 mb-4 text-sm text-content-muted">
                   {dieta.e_creep && (
                     <p>
