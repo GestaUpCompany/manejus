@@ -629,59 +629,78 @@ export function RelatorioVision() {
             <b className="text-content-strong">{range.max.split('-').reverse().join('/')}</b>.
           </p>
         )}
-        {resumo && (
-          <div className="rounded-lg border border-border-base bg-surface-2 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-content-muted mb-2">
-              Conferência rápida do período selecionado
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1.5 text-sm">
-              {modo === 'completo' && (
-                <>
-                  <span className="text-content-muted">Rebanho final <b className="text-content-strong">{fmtInt(resumo.rebanho)} cab</b></span>
-                  <span className="text-content-muted">Compras <b className="text-content-strong">{fmtInt(resumo.comprasCab)} cab · {fmtRs(resumo.comprasRs)}</b></span>
-                  <span className="text-content-muted">Vendas <b className="text-content-strong">{fmtInt(resumo.vendasCab)} cab · {fmtRs(resumo.vendasRs)}</b></span>
-                </>
-              )}
-              <span className="text-content-muted">Desembolso <b className="text-content-strong">{fmtRs(resumo.desembolso)}</b></span>
-              <span className="text-content-muted">Receitas <b className="text-content-strong">{fmtRs(resumo.receitas)}</b></span>
-              <span className="text-content-muted">Saldo de caixa <b className="text-content-strong">{fmtRs(resumo.caixa)}</b></span>
+        {resumo && (() => {
+          const tiles: { rotulo: string; valor: string; detalhe?: string; tom?: string }[] = [
+            ...(modo === 'completo'
+              ? [
+                  { rotulo: 'Rebanho final', valor: `${fmtInt(resumo.rebanho)} cab` },
+                  { rotulo: 'Compras', valor: fmtRs(resumo.comprasRs), detalhe: `${fmtInt(resumo.comprasCab)} cab` },
+                  { rotulo: 'Vendas', valor: fmtRs(resumo.vendasRs), detalhe: `${fmtInt(resumo.vendasCab)} cab` },
+                ]
+              : []),
+            { rotulo: 'Desembolso', valor: fmtRs(resumo.desembolso) },
+            { rotulo: 'Receitas', valor: fmtRs(resumo.receitas) },
+            {
+              rotulo: 'Saldo de caixa',
+              valor: fmtRs(resumo.caixa),
+              tom: resumo.caixa < 0 ? 'text-red-700' : 'text-green-700',
+            },
+          ]
+          return (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-content-muted mb-2">
+                Conferência rápida do período selecionado
+              </p>
+              <dl className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+                {tiles.map((t) => (
+                  <div key={t.rotulo} className="rounded-lg border border-border-base bg-surface-2 px-3 py-2">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-content-muted">{t.rotulo}</dt>
+                    <dd className={`mt-0.5 text-base font-bold tabular-nums ${t.tom ?? 'text-content-strong'}`}>{t.valor}</dd>
+                    {t.detalhe && <dd className="text-xs tabular-nums text-content-muted">{t.detalhe}</dd>}
+                  </div>
+                ))}
+              </dl>
             </div>
-          </div>
-        )}
+          )
+        })()}
         {issues.length > 0 && (() => {
           const erros = issues.filter((i) => i.sev === 'erro')
           const avisos = issues.filter((i) => i.sev !== 'erro')
           const item = (it: AuditIssue, i: number) => (
             <li
               key={i}
-              className={`rounded-md border-l-4 bg-surface-1 px-3 py-2 text-sm ${
-                it.sev === 'erro' ? 'border-red-400' : 'border-amber-400'
-              }`}
+              className={`rounded-md border-l-4 bg-surface-1 ${it.sev === 'erro' ? 'border-red-400' : 'border-amber-400'}`}
             >
-              <div className="flex flex-wrap items-baseline gap-x-2">
-                <b className="text-content-strong">{it.aba}</b>
-                {it.coluna && (
-                  <span className="text-content-muted">
-                    coluna {it.coluna}
-                    {it.campo ? ` · ${it.campo}` : ''}
+              {/* Resumo sempre visível (o quê e onde); efeito e linhas só ao expandir. Erros já vêm abertos. */}
+              <details open={it.sev === 'erro'} className="group">
+                <summary className="flex cursor-pointer list-none items-start gap-2 px-3 py-2 text-sm [&::-webkit-details-marker]:hidden">
+                  <span aria-hidden className="mt-0.5 text-content-faint transition-transform group-open:rotate-90">▸</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-content-strong">{it.msg}.</span>
+                    <span className="block text-xs text-content-muted">
+                      {it.aba}
+                      {it.coluna ? ` · coluna ${it.coluna}` : ''}
+                      {it.campo ? ` · ${it.campo}` : ''}
+                    </span>
                   </span>
-                )}
-                {it.linhas.length > 0 && (
-                  <span className="text-content-faint text-xs">
-                    {it.linhas.length} linha{it.linhas.length > 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
-              <p className="text-content-strong">{it.msg}.</p>
-              <p className="text-content-muted text-xs mt-0.5">Efeito no relatório: {it.impacto}.</p>
-              {it.linhas.length > 0 && (
-                <details className="mt-1">
-                  <summary className="cursor-pointer text-xs text-primary hover:underline">
-                    Ver linhas do Excel ({it.linhas.length})
-                  </summary>
-                  <p className="mt-1 text-xs text-content-muted font-mono">{fmtLinhas(it.linhas)}</p>
-                </details>
-              )}
+                  {it.linhas.length > 0 && (
+                    <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium tabular-nums text-content-muted">
+                      {it.linhas.length} linha{it.linhas.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </summary>
+                <div className="space-y-1 border-t border-border-base px-3 py-2 pl-7 text-xs text-content-muted">
+                  <p>
+                    <b className="text-content-strong">Efeito no relatório:</b> {it.impacto}.
+                  </p>
+                  {it.linhas.length > 0 && (
+                    <p>
+                      <b className="text-content-strong">Linhas no Excel:</b>{' '}
+                      <span className="font-mono">{fmtLinhas(it.linhas)}</span>
+                    </p>
+                  )}
+                </div>
+              </details>
             </li>
           )
           return (
@@ -816,7 +835,7 @@ export function RelatorioVision() {
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
               {PAGE_IDS.map((id) => {
                 const auto = autoOcultas.has(id)
                 const oculta = ocultasEfetivas.includes(id)
@@ -839,7 +858,7 @@ export function RelatorioVision() {
                       onChange={() => alternarOculta(id)}
                       className={auto && !ocultas.has(id) ? 'accent-amber-600' : 'accent-red-600'}
                     />
-                    <span className="truncate" title={PAGE_TITLES[id]}>
+                    <span className="leading-snug" title={PAGE_TITLES[id]}>
                       <span className="font-semibold">{PAGE_NUMS[id]}</span> {PAGE_TITLES[id]}
                       {auto && <span className="ml-1 text-[10px] font-bold no-underline">· sem dados</span>}
                     </span>

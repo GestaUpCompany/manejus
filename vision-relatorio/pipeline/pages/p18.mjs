@@ -104,7 +104,6 @@ export function render({ model, ctx }) {
     </div>
     <div class="grid4"${fin ? ' style="grid-template-columns:repeat(3,1fr)"' : ''}>
       ${kpi('Desembolso por ha', rs(x.desembolsoHa))}
-      ${fin ? '' : kpi('Desembolso por cab.', rs(x.desembolsoCab))}
       ${kpi('Despesa Média Mensal', rs(x.despesaMediaMensal))}
       ${kpi('Custeio por ha', rs(x.custeioHa))}
       ${fin ? '' : kpi('Custeio por @ Produzida', rs(x.custeioPorAt))}
