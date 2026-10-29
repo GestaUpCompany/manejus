@@ -10,6 +10,7 @@ export { mountRelatorio, buildMergedHtml, PAGE_TITLES, PAGE_NUMS, PAGE_ORDER, PA
 
 // 'financeiro' ignora o rebanho: sem páginas de rebanho nem KPIs por cabeça/@/UA.
 export type ModoRelatorio = 'completo' | 'financeiro'
+export type StatusPgto = 'pagos' | 'naoPagos' | 'todos'
 
 export interface FazendaRef {
   id: string
@@ -77,9 +78,9 @@ export function payloadToB64(payload: RelatorioPayload): Promise<string> {
 // impressão do navegador (que fatiava as páginas e injetava cabeçalho/rodapé).
 export async function baixarPdfRelatorio(
   payload: RelatorioPayload,
-  opts: { hiddenPages?: string[]; modo?: ModoRelatorio; titulo?: string } = {},
+  opts: { hiddenPages?: string[]; modo?: ModoRelatorio; statusPgto?: StatusPgto; titulo?: string } = {},
 ): Promise<void> {
-  const html = buildMergedHtml(payload, { hiddenPages: opts.hiddenPages, modo: opts.modo })
+  const html = buildMergedHtml(payload, { hiddenPages: opts.hiddenPages, modo: opts.modo, statusPgto: opts.statusPgto })
   // compressPayload aceita qualquer valor JSON-serializável: aqui o HTML vira
   // uma string JSON comprimida (o merge de ~2MB baixa para ~300KB no POST).
   const htmlGz = await compressPayload(html)

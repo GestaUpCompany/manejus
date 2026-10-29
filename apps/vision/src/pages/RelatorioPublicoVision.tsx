@@ -38,6 +38,7 @@ export function RelatorioPublicoVision() {
           public: true,
           hiddenPages: (rel.config as { paginas_ocultas?: string[] })?.paginas_ocultas ?? [],
           modo: (rel.config as { modo?: string })?.modo === 'financeiro' ? 'financeiro' : 'completo',
+          statusPgto: (rel.config as { status_pgto?: string })?.status_pgto as 'pagos' | 'naoPagos' | 'todos' | undefined,
           titulo: rel.titulo ?? 'Relatório Vision',
         })
         setEstado('ok')

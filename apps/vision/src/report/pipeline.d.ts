@@ -7,11 +7,11 @@ declare module '*pipeline/web/app.mjs' {
   export function mountRelatorio(
     el: HTMLElement,
     payload: unknown,
-    config?: { public?: boolean; hiddenPages?: string[]; modo?: 'completo' | 'financeiro'; autoPrint?: boolean; titulo?: string; onPdf?: () => void },
+    config?: { public?: boolean; hiddenPages?: string[]; modo?: 'completo' | 'financeiro'; statusPgto?: 'pagos' | 'naoPagos' | 'todos'; autoPrint?: boolean; titulo?: string; onPdf?: () => void },
   ): { apply: (ini: string, fim: string) => void; getRange: () => [string, string] }
   export function buildMergedHtml(
     payload: unknown,
-    config?: { hiddenPages?: string[]; modo?: 'completo' | 'financeiro'; ini?: string; fim?: string },
+    config?: { hiddenPages?: string[]; modo?: 'completo' | 'financeiro'; statusPgto?: 'pagos' | 'naoPagos' | 'todos'; ini?: string; fim?: string },
   ): string
   export function paginasSemDados(model: unknown): string[]
 }
@@ -20,7 +20,7 @@ declare module '*pipeline/lib/model.mjs' {
   export function extractReads(sheets: Record<string, unknown[][]>): Record<string, unknown[]>
   export function buildModelFromReads(
     reads: Record<string, unknown[]>,
-    params?: { ini?: Date; fim?: Date; saldoCaixaInicial?: number; anoBaseGiro?: number; modo?: 'completo' | 'financeiro' },
+    params?: { ini?: Date; fim?: Date; saldoCaixaInicial?: number; anoBaseGiro?: number; modo?: 'completo' | 'financeiro'; statusPgto?: 'pagos' | 'naoPagos' | 'todos' },
   ): {
     meta: Record<string, unknown>
     rebanho: { saldoFinal: number }

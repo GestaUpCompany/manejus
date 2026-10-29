@@ -237,7 +237,11 @@ export function buildModel(sheets, params = {}) {
 // de modo que nenhum cálculo de rebanho ou misto (R$/cab, @, UA) é alimentado.
 const READS_REBANHO_VAZIOS = { estoque: {}, diarias: [], diariasCat: [], comprasAll: [], vendasAll: [], mortesAll: [], nascAll: [] };
 
-export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, anoBaseGiro = 2025, modo = 'completo' } = {}) {
+// Status de pagamento escolhido no relatório (compras e vendas): 'pagos' (padrão),
+// 'naoPagos' (só o que ainda está Em Aberto) ou 'todos'. Ver contaCompraVenda.
+export const STATUS_PGTO = ['pagos', 'naoPagos', 'todos'];
+
+export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, anoBaseGiro = 2025, modo = 'completo', statusPgto = 'pagos' } = {}) {
   const financeiro = modo === 'financeiro';
   if (financeiro) reads = { ...reads, ...READS_REBANHO_VAZIOS };
   // divisão por hectare protegida: sem área cadastrada (Q17) vira 0 em vez de NaN/Infinity
@@ -245,9 +249,14 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   const { cad, diarias, diariasCat, comprasAll, vendasAll, mortesAll, nascAll, desembAll, receitasAll } = reads;
   const estoque = reads.estoque instanceof Map ? reads.estoque : new Map(Object.entries(reads.estoque || {}));
 
-  // Compras e vendas só contam lotes "Pago" (Em Aberto ainda não foi pago). Transferências
-  // são movimentação física e ficam sempre. Status ausente = payload antigo de link público.
-  const contaCompraVenda = (x) => /^tran(s)?f/i.test(x.tipo) || x.status === undefined || /^pago$/i.test(x.status);
+  // Compras e vendas seguem o status escolhido (padrão: só lotes "Pago"; Em Aberto ainda não foi
+  // pago). Transferências são movimentação física e ficam sempre. Status ausente = payload antigo
+  // de link público, tratado como pago.
+  const isPago = (x) => x.status === undefined || /^pago$/i.test(x.status);
+  const contaCompraVenda = (x) => {
+    if (/^tran(s)?f/i.test(x.tipo) || statusPgto === 'todos') return true;
+    return statusPgto === 'naoPagos' ? !isPago(x) : isPago(x);
+  };
   const compras = comprasAll.filter(x => inPeriod(x.data, ini, fim) && contaCompraVenda(x));
   const vendas = vendasAll.filter(x => inPeriod(x.data, ini, fim) && contaCompraVenda(x));
   const vendasAbate = vendas.filter(x => /^abate/i.test(x.tipo));
@@ -374,6 +383,13 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   };
 
   // ---------- p.4/p.5 Compras ----------
+  // R$/cab e R$/kg por grupo de lotes: total ÷ cabeças e total ÷ kg. Lotes sem peso não entram
+  // no R$/kg (senão o total inflaria o indicador); kg e totalKg vêm junto para reagregar por mês.
+  const comprasAgg = (g) => {
+    const cab = sum(g, x => x.cab), total = sum(g, x => x.total);
+    const kg = sum(g, x => x.pesoKg), totalKg = sum(g.filter(x => x.pesoKg > 0), x => x.total);
+    return { kg, totalKg, rsKg: kg ? totalKg / kg : 0, rsCab: cab ? total / cab : 0 };
+  };
   // p.4 conta somente compras de fato (exclui transferências de entrada);
   // o pivot da p.5 continua com todas as linhas (separa por tipo)
   const comprasSo = compras.filter(x => !/^tran(s)?f/i.test(x.tipo));
@@ -394,30 +410,31 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   comprasPage.rsAt = comprasPage.at ? comprasPage.total / comprasPage.at : 0;
   comprasPage.rsKg = comprasPage.kg ? comprasPage.total / comprasPage.kg : 0;
   comprasPage.rsCab = comprasPage.cab ? comprasPage.total / comprasPage.cab : 0;
-  // Cabeças compradas no período, independentemente do status (Em Aberto incluído);
-  // o card N° de Animais usa este total. Médias de R$ seguem só com lotes Pago.
-  comprasPage.cabTodas = sum(comprasAll.filter(x => inPeriod(x.data, ini, fim) && !/^tran(s)?f/i.test(x.tipo)), x => x.cab);
-  // p.5 pivot: tipo → categoria → data; médias são AVG por lote (M, U, V)
+  // Card N° de Animais: cabeças das compras do período (sem transferências) no status escolhido
+  comprasPage.cabTodas = comprasPage.cab;
+  // p.5 pivot: tipo → categoria → data. Peso médio e R$/@ seguem como AVG por lote (M, U, V);
+  // R$/cab e R$/kg são razão de somas (total ÷ cabeças, total ÷ kg) em cada nível
   comprasPage.pivot = [...groupBy(compras, x => x.tipo)].map(([tipo, gTipo]) => ({
     tipo,
     cab: sum(gTipo, x => x.cab), at: sum(gTipo, x => x.at), pesoMedio: avg(gTipo, x => x.pesoMedio),
-    rsCab: avg(gTipo, x => x.rsCab), rsAt: avg(gTipo, x => x.rsAt), total: sum(gTipo, x => x.total),
+    rsAt: avg(gTipo, x => x.rsAt), total: sum(gTipo, x => x.total), ...comprasAgg(gTipo),
     categorias: [...groupBy(gTipo, x => x.categoria)].map(([cat, gCat]) => ({
       categoria: cat,
       cab: sum(gCat, x => x.cab), at: sum(gCat, x => x.at), pesoMedio: avg(gCat, x => x.pesoMedio),
-      rsCab: avg(gCat, x => x.rsCab), rsAt: avg(gCat, x => x.rsAt), total: sum(gCat, x => x.total),
+      rsAt: avg(gCat, x => x.rsAt), total: sum(gCat, x => x.total), ...comprasAgg(gCat),
       lotes: [...groupBy(gCat, x => x.data.getTime())].map(([t, gD]) => ({
         data: new Date(Number(t)), nLotes: gD.length, fornecedor: nomeOuVarios(gD, x => x.fornecedor),
         cab: sum(gD, x => x.cab), at: sum(gD, x => x.at), pesoMedio: avg(gD, x => x.pesoMedio),
-        rsCab: avg(gD, x => x.rsCab), rsAt: avg(gD, x => x.rsAt), total: sum(gD, x => x.total),
+        rsAt: avg(gD, x => x.rsAt), total: sum(gD, x => x.total), ...comprasAgg(gD),
       })).sort((a, b) => a.data - b.data),
     })).sort((a, b) => a.categoria.localeCompare(b.categoria)),
   })).sort((a, b) => a.tipo.localeCompare(b.tipo));
-  // Total geral da pivot: soma das mesmas linhas da pivot (inclui transferências de entrada),
-  // com médias aritméticas por lote (AVG de M/U/V), não razões de soma
+  // Total geral da pivot: soma das mesmas linhas da pivot (inclui transferências de entrada,
+  // que não têm valor). R$/cab e R$/kg vêm só das compras (sem transferências), como na p.4
   comprasPage.pivotTotal = {
     cab: sum(compras, x => x.cab), at: sum(compras, x => x.at), total: sum(compras, x => x.total),
-    pesoMedio: avg(compras, x => x.pesoMedio), rsCab: avg(compras, x => x.rsCab), rsAt: avg(compras, x => x.rsAt),
+    pesoMedio: avg(compras, x => x.pesoMedio), rsAt: avg(compras, x => x.rsAt),
+    rsCab: comprasPage.rsCab, rsKg: comprasAgg(comprasSo).rsKg,
   };
 
   // ---------- p.6 Vendas abate (duas páginas: machos e fêmeas) ----------
@@ -495,25 +512,33 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   const giroDenominador = sum(
     [...estoque.entries()].filter(([k]) => k.startsWith(`${anoBaseGiro}-`))
       .flatMap(([, b]) => b.linhas), l => l.saldoIni);
+  // R$/kg de venda = valor ÷ kg final, só sobre lotes com valor lançado e peso (lote Em Aberto
+  // não dilui o indicador). valorKg e kgKg vêm junto para reagregar por mês.
+  const vendaKg = (g) => {
+    const p = g.filter(x => x.valorLiq > 0 && x.kgFinal > 0);
+    const valorKg = sum(p, x => x.valorLiq), kgKg = sum(p, x => x.kgFinal);
+    return { valorKg, kgKg, rsKg: kgKg ? valorKg / kgKg : 0 };
+  };
   const vendasPage = {
-    // todas as vendas comerciais do período, sem filtro de status (card N° de Cabeças)
-    cabTodas: sum(vendasAll.filter(x => inPeriod(x.data, ini, fim) && !/^tran(s)?f/i.test(x.tipo)), x => x.cab),
+    // cabeças das vendas comerciais do período no status escolhido (card N° de Cabeças)
+    cabTodas: sum(vendasComerciais, x => x.cab),
     cab: sum(vendasComerciais, x => x.cab),
     valor: sum(vendasComerciais, x => x.valorLiq),
     giroEstoque: giroDenominador ? sum(vendasComerciais, x => x.cab) / giroDenominador : 0,
     rsCab: cabComPreco ? sum(vendasComerciais, x => x.valorLiq) / cabComPreco : 0,
+    rsKg: vendaKg(vendasComerciais).rsKg,
     pivot: [...groupBy(vendasComerciais, x => x.tipo)].map(([tipo, gTipo]) => ({
       tipo,
       cab: sum(gTipo, x => x.cab), at: sum(gTipo, x => x.atAbatidas),
-      rsAt: avgPos(gTipo, x => x.rsAt) ?? 0, total: sum(gTipo, x => x.valorLiq),
+      rsAt: avgPos(gTipo, x => x.rsAt) ?? 0, total: sum(gTipo, x => x.valorLiq), ...vendaKg(gTipo),
       categorias: [...groupBy(gTipo, x => x.categoria)].map(([cat, gCat]) => ({
         categoria: cat,
         cab: sum(gCat, x => x.cab), at: sum(gCat, x => x.atAbatidas),
-        rsAt: avgPos(gCat, x => x.rsAt) ?? 0, total: sum(gCat, x => x.valorLiq),
+        rsAt: avgPos(gCat, x => x.rsAt) ?? 0, total: sum(gCat, x => x.valorLiq), ...vendaKg(gCat),
         lotes: [...groupBy(gCat, x => x.data.getTime())].map(([t, gD]) => ({
           data: new Date(Number(t)), comprador: nomeOuVarios(gD, x => x.comprador), nLotes: gD.length,
           cab: sum(gD, x => x.cab), at: sum(gD, x => x.atAbatidas),
-          rsAt: avgPos(gD, x => x.rsAt) ?? 0, total: sum(gD, x => x.valorLiq),
+          rsAt: avgPos(gD, x => x.rsAt) ?? 0, total: sum(gD, x => x.valorLiq), ...vendaKg(gD),
         })).sort((a, b) => a.data - b.data),
       })).sort((a, b) => faixaEtariaKey(a.categoria) - faixaEtariaKey(b.categoria)),
     })),
