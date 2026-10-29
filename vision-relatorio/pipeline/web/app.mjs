@@ -6,7 +6,11 @@
 //     elemento React (rota pública /r/:token ou impressão no painel).
 // config: { public?: boolean (sem botão PDF), hiddenPages?: string[] ('p05'),
 //           autoPrint?: boolean, titulo?: string }
-import { buildModelFromReads } from '../lib/model.mjs';
+import { buildModelFromReads, STATUS_PGTO } from '../lib/model.mjs';
+
+const ROTULO_STATUS = { pagos: 'Pagos', naoPagos: 'Não pagos', todos: 'Todos os status' };
+// status inválido ou ausente volta ao padrão (só lotes pagos)
+const statusValido = (s) => (STATUS_PGTO.includes(s) ? s : 'pagos');
 import { parseISODate } from '../lib/core.mjs';
 import { decompressPayload } from '../lib/payload.mjs';
 import { esc } from '../lib/fmt.mjs';
@@ -176,6 +180,9 @@ export function mountRelatorio(el, payload, config = {}) {
   const qs = new URLSearchParams(location.search);
   let ini = qs.get('ini') || defaults.ini;
   let fim = qs.get('fim') || defaults.fim;
+  // status de pagamento de compras e vendas: o padrão vem do link/PDF; a URL pode sobrescrever
+  const statusDefault = statusValido(config.statusPgto);
+  let statusPgto = statusValido(qs.get('status') || statusDefault);
 
   const sr = el.attachShadow({ mode: 'open' });
   sr.innerHTML = `<style>${SHELL_CSS}</style><div class="vr-root">
@@ -186,6 +193,7 @@ export function mountRelatorio(el, payload, config = {}) {
         <label>De <input type="date" id="ini"></label>
         <label>Até <input type="date" id="fim"></label>
         <select id="preset"></select>
+        <select id="status" title="Status de pagamento das compras e vendas"></select>
         <button id="clear" title="Voltar ao período completo">Limpar</button>
         ${isPublic ? '' : `<button id="print" title="Imprime o relatório (use 'Salvar como PDF' no diálogo)">Baixar PDF</button>`}
       </div>
@@ -197,6 +205,7 @@ export function mountRelatorio(el, payload, config = {}) {
   const iniEl = sr.getElementById('ini');
   const fimEl = sr.getElementById('fim');
   const presetEl = sr.getElementById('preset');
+  const statusEl = sr.getElementById('status');
   const rangeLbl = sr.getElementById('range-lbl');
   const pagesEl = sr.getElementById('pages');
 
@@ -209,10 +218,13 @@ export function mountRelatorio(el, payload, config = {}) {
     for (let y = Number(range.min.slice(0, 4)); y <= Number(range.max.slice(0, 4)); y++) anos.push(y);
     presetEl.innerHTML = `<option value="">Período completo</option>` + anos.map((a) => `<option value="${a}">${a}</option>`).join('');
   }
+  statusEl.innerHTML = STATUS_PGTO.map((s) => `<option value="${s}">${ROTULO_STATUS[s]}</option>`).join('');
+  statusEl.value = statusPgto;
 
   function syncUrl() {
     const q = new URLSearchParams();
     if (ini !== defaults.ini || fim !== defaults.fim) { q.set('ini', ini); q.set('fim', fim); }
+    if (statusPgto !== statusDefault) q.set('status', statusPgto);
     history.replaceState(null, '', location.pathname + (q.size ? '?' + q : ''));
   }
 
@@ -261,7 +273,7 @@ export function mountRelatorio(el, payload, config = {}) {
       ini: parseISODate(ini), fim: parseISODate(fim),
       saldoCaixaInicial: defaults.saldoCaixaInicial ?? 0,
       anoBaseGiro: defaults.anoBaseGiro,
-      modo,
+      modo, statusPgto,
     });
     // Páginas sem nenhum dado no período ficam fora automaticamente (além das
     // ocultadas manualmente). Recalcula a cada filtro: estreitar o período
@@ -299,6 +311,9 @@ export function mountRelatorio(el, payload, config = {}) {
     const y = presetEl.value;
     if (!y) apply(defaults.ini, defaults.fim);
     else apply(`${y}-01-01`, `${y}-12-31`);
+  });
+  statusEl.addEventListener('change', () => {
+    statusPgto = statusValido(statusEl.value); syncUrl(); renderAll();
   });
   sr.getElementById('clear').addEventListener('click', () => apply(defaults.ini, defaults.fim));
   if (!isPublic) sr.getElementById('print').addEventListener('click', () => config.onPdf ? config.onPdf() : window.print());
@@ -361,7 +376,7 @@ export function buildMergedHtml(payload, config = {}) {
     ini: parseISODate(ini), fim: parseISODate(fim),
     saldoCaixaInicial: defaults.saldoCaixaInicial ?? 0,
     anoBaseGiro: defaults.anoBaseGiro,
-    modo,
+    modo, statusPgto: statusValido(config.statusPgto),
   });
   for (const id of paginasSemDados(model)) hidden.add(id);
   // mesma renumeração sequencial do modo interativo (sem buracos na numeração)

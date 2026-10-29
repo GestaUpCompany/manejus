@@ -106,7 +106,6 @@ export function render({ model, ctx }) {
       ${kpi('Desembolso por ha', rs(x.desembolsoHa))}
       ${fin ? '' : kpi('Desembolso por cab.', rs(x.desembolsoCab))}
       ${kpi('Despesa Média Mensal', rs(x.despesaMediaMensal))}
-      ${fin ? '' : kpi('Custo Diária/cab', rs(x.custoDiariaCab))}
       ${kpi('Custeio por ha', rs(x.custeioHa))}
       ${fin ? '' : kpi('Custeio por @ Produzida', rs(x.custeioPorAt))}
       ${kpi('Faturamento por ha', rs(x.faturamentoHa), '', 'g')}

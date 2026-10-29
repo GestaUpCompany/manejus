@@ -18,7 +18,6 @@ const tagOf = (t) => TAG.find(([re]) => re.test(t)) ?? ['', 'x', 'Outros'];
 
 export function render({ model, ctx }) {
   const { meta, desembolso: d } = model;
-  const fin = meta.modo === 'financeiro';
   const crossYear = new Date(meta.ini).getUTCFullYear() !== new Date(meta.fim).getUTCFullYear();
   const mesLbl = (ym) => crossYear ? `${mesAbrev(ym)}/${ym.slice(2, 4)}` : mesAbrev(ym);
 
@@ -70,11 +69,10 @@ export function render({ model, ctx }) {
   `;
 
   const body = `
-  <div class="kpis" style="grid-template-columns:repeat(${fin ? 3 : 4},1fr)">
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
     <div class="kpi"><div class="lbl">Desembolso Total</div><div class="val"><small>R$</small> ${fmt2(d.total)}</div></div>
     <div class="kpi"><div class="lbl">Despesa Média Mensal</div><div class="val"><small>R$</small> ${fmt2(d.mediaMensal)}</div></div>
     <div class="kpi"><div class="lbl">Desembolso Médio por ha</div><div class="val"><small>R$</small> ${fmt2(d.porHa)}</div></div>
-    ${fin ? '' : `<div class="kpi"><div class="lbl">Diária Média/cab</div><div class="val"><small>R$</small> ${fmt2(d.custoDiariaCab)}</div></div>`}
   </div>
 
   <div class="chart1">

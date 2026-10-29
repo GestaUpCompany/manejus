@@ -1,4 +1,4 @@
-// p.5 — Resumo de Compras (pivot Tipo → Categoria → Data; médias aritméticas por lote)
+// p.5 — Resumo de Compras (pivot Tipo → Categoria → Data; médias por lote, R$/cab e R$/kg por razão de somas)
 import { pageShell } from '../lib/shell.mjs';
 import { fmtInt, fmt2, fmtData, ymOf, mesAbrev, kickerPeriodo, esc } from '../lib/fmt.mjs';
 
@@ -6,9 +6,10 @@ const catLabel = (c) => c.replace(' - ', ' · ');
 const money = (v) => v ? fmt2(v) : '—';
 const tds = (r) =>
   `<td>${fmtInt(r.cab)}</td><td>${fmt2(r.at)}</td><td>${fmt2(r.pesoMedio)}</td>` +
-  `<td>${money(r.rsAt)}</td><td>${money(r.rsCab)}</td><td>${money(r.total)}</td>`;
+  `<td>${money(r.rsAt)}</td><td>${money(r.rsCab)}</td><td>${money(r.rsKg)}</td><td>${money(r.total)}</td>`;
 
-// Agrega lotes por mês (fallback quando a pivot estoura a página)
+// Agrega lotes por mês (fallback quando a pivot estoura a página). R$/cab e R$/kg são
+// recalculados sobre o total do mês; peso e R$/@ são médias ponderadas pelo n° de lotes
 const lotesPorMes = (cat) => {
   const byMes = new Map();
   for (const l of cat.lotes) {
@@ -19,11 +20,14 @@ const lotesPorMes = (cat) => {
   return [...byMes.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([k, g]) => {
     const n = g.reduce((a, x) => a + x.nLotes, 0);
     const wavg = (f) => g.reduce((a, x) => a + f(x) * x.nLotes, 0) / n;
+    const sumOf = (f) => g.reduce((a, x) => a + f(x), 0);
+    const cab = sumOf(x => x.cab), total = sumOf(x => x.total);
+    const kg = sumOf(x => x.kg), totalKg = sumOf(x => x.totalKg);
     return {
       label: `${mesAbrev(k)}/${k.slice(2, 4)}`,
-      cab: g.reduce((a, x) => a + x.cab, 0), at: g.reduce((a, x) => a + x.at, 0),
-      total: g.reduce((a, x) => a + x.total, 0),
-      pesoMedio: wavg(x => x.pesoMedio), rsCab: wavg(x => x.rsCab), rsAt: wavg(x => x.rsAt),
+      cab, at: sumOf(x => x.at), total,
+      pesoMedio: wavg(x => x.pesoMedio), rsAt: wavg(x => x.rsAt),
+      rsCab: cab ? total / cab : 0, rsKg: kg ? totalKg / kg : 0,
     };
   });
 };
@@ -80,9 +84,9 @@ export function render({ model, ctx }) {
   <div class="table-wrap">
     <table${dense ? ' class="dense"' : ''}>
       <thead>
-        <tr class="cols"><th>Tipo · Categoria${detail === 'mes' ? ' · Mês' : detail === 'dia' ? ' · Data' : ''}</th><th>N° Cabeças</th><th>Total @</th><th>Peso Médio kg/cab</th><th>Média R$/@</th><th>Média R$/cab</th><th>Total R$</th></tr>
+        <tr class="cols"><th>Tipo · Categoria${detail === 'mes' ? ' · Mês' : detail === 'dia' ? ' · Data' : ''}</th><th>N° Cabeças</th><th>Total @</th><th>Peso Médio kg/cab</th><th>Média R$/@</th><th>Média R$/cab</th><th>R$/kg</th><th>Total R$</th></tr>
       </thead>
-      <tbody>${rows}<tr class="spacer"><td colspan="7"></td></tr><tr class="total"><td class="cat">Total Geral</td>${tds(t)}</tr></tbody>
+      <tbody>${rows}<tr class="spacer"><td colspan="8"></td></tr><tr class="total"><td class="cat">Total Geral</td>${tds(t)}</tr></tbody>
     </table>
   </div>
 
@@ -90,7 +94,7 @@ export function render({ model, ctx }) {
     ? 'Volume alto de compras no período: a tabela foi resumida até o nível de categoria. O detalhe por mês e por lote está disponível no relatório interativo.'
     : detail === 'mes'
       ? 'Lotes agregados por mês para caber na página; médias ponderadas pelo n° de lotes. O detalhe dia a dia está disponível no relatório interativo.'
-      : 'Peso médio, R$/@ e R$/cab são médias aritméticas por lote de compra; para os indicadores ponderados por volume, ver Compra de Animais.'}</div>`;
+      : 'Peso médio e R$/@ são médias aritméticas por lote de compra. R$/cab e R$/kg são total ÷ cabeças e total ÷ kg; no Total Geral excluem as transferências de entrada, como na Compra de Animais.'}</div>`;
 
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),

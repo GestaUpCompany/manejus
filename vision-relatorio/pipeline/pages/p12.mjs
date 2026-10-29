@@ -40,11 +40,10 @@ export function render({ model, ctx }) {
   `;
 
   const body = `
-  <div class="kpis" style="grid-template-columns:repeat(${fin ? 3 : 4},1fr)">
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
     <div class="kpi"><div class="lbl">Desembolso Total</div><div class="val"><small>R$</small> ${fmt2(d.total)}</div></div>
     <div class="kpi"><div class="lbl">Despesa Média Mensal</div><div class="val"><small>R$</small> ${fmt2(d.mediaMensal)}</div></div>
     <div class="kpi"><div class="lbl">Desembolso por ha/mês</div><div class="val"><small>R$</small> ${fmt2(d.porHaMes)}</div></div>
-    ${fin ? '' : `<div class="kpi"><div class="lbl">Custo Diária/cab</div><div class="val"><small>R$</small> ${fmt2(d.custoDiariaCab)}</div></div>`}
   </div>
 
   <div class="chart1">

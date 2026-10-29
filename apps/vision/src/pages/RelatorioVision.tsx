@@ -20,6 +20,7 @@ import {
   sheetsFromFile,
   type FazendaRef,
   type ModoRelatorio,
+  type StatusPgto,
   type RelatorioPayload,
 } from '../report/vision'
 import type { AuditIssue } from '../../../../vision-relatorio/pipeline/lib/audit.mjs'
@@ -42,7 +43,7 @@ interface Fazenda extends FazendaRef {
 interface LinkRow {
   id: string
   titulo: string
-  config: { paginas_ocultas?: string[]; modo?: ModoRelatorio }
+  config: { paginas_ocultas?: string[]; modo?: ModoRelatorio; status_pgto?: StatusPgto }
   criado_em: string
   expira_em: string | null
   ativo: boolean
@@ -116,6 +117,8 @@ export function RelatorioVision() {
   const [anoGiro, setAnoGiro] = useState('')
   // 'financeiro': relatório sem rebanho (planilhas de fazendas sem dados de animais)
   const [modo, setModo] = useState<ModoRelatorio>('completo')
+  // Status de pagamento de compras e vendas (padrão: só lotes pagos)
+  const [statusPgto, setStatusPgto] = useState<StatusPgto>('pagos')
   const [ocultas, setOcultas] = useState<Set<string>>(new Set())
   // Páginas sem dados são ocultadas automaticamente; `desocultas` guarda as
   // que o usuário forçou a exibir mesmo vazias.
@@ -285,6 +288,7 @@ export function RelatorioVision() {
         p_config: {
           paginas_ocultas: ocultasEfetivas,
           modo,
+          status_pgto: statusPgto,
           ini,
           fim,
           saldo_caixa_inicial: Number(saldoCaixa.replace(',', '.')) || 0,
@@ -311,6 +315,7 @@ export function RelatorioVision() {
       b64,
       hiddenPages: ocultasEfetivas,
       modo,
+      statusPgto,
       titulo: `Relatório Vision — ${nomeRelatorio}`,
       ts: Date.now(),
       preview: true,
@@ -355,7 +360,7 @@ export function RelatorioVision() {
     }, 700)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reads, fazendaId, ini, fim, saldoCaixa, anoGiro, ocultas, modo])
+  }, [reads, fazendaId, ini, fim, saldoCaixa, anoGiro, ocultas, modo, statusPgto])
 
   async function baixarPdf() {
     const payload = montarPayload()
@@ -368,6 +373,7 @@ export function RelatorioVision() {
       await baixarPdfRelatorio(payload, {
         hiddenPages: ocultasEfetivas,
         modo,
+        statusPgto,
         titulo: `Relatorio Vision - ${nomeRelatorio}`,
       })
     } catch (e) {
@@ -399,6 +405,7 @@ export function RelatorioVision() {
       await baixarPdfRelatorio(payload, {
         hiddenPages: link.config?.paginas_ocultas ?? [],
         modo: link.config?.modo,
+        statusPgto: link.config?.status_pgto,
         titulo: link.titulo,
       })
     } catch (e) {
@@ -436,6 +443,7 @@ export function RelatorioVision() {
         p_config: {
           paginas_ocultas: ocultasEfetivas,
           modo,
+          status_pgto: statusPgto,
           ini,
           fim,
           saldo_caixa_inicial: Number(saldoCaixa.replace(',', '.')) || 0,
@@ -463,11 +471,12 @@ export function RelatorioVision() {
         saldoCaixaInicial: Number(saldoCaixa.replace(',', '.')) || 0,
         anoBaseGiro: Number(anoGiro) || undefined,
         modo,
+        statusPgto,
       })
     } catch {
       return null
     }
-  }, [reads, ini, fim, saldoCaixa, anoGiro, modo])
+  }, [reads, ini, fim, saldoCaixa, anoGiro, modo, statusPgto])
 
   const resumo = useMemo(() => {
     if (!modelo) return null
@@ -771,6 +780,25 @@ export function RelatorioVision() {
                 Remove as páginas de rebanho e os indicadores por cabeça, @ e UA. Mantém desembolso, custeio, receitas, pareto e fluxo de caixa.
               </p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-content mb-1">Status de pagamento (compras e vendas)</label>
+            <div className="inline-flex rounded-lg border border-border-base overflow-hidden text-sm">
+              {([['pagos', 'Somente pagos'], ['naoPagos', 'Somente não pagos'], ['todos', 'Todos']] as const).map(([v, rotulo]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setStatusPgto(v)}
+                  className={`px-3 py-1.5 ${statusPgto === v ? 'bg-green-700 text-white' : 'bg-surface-1 text-content hover:bg-surface-2'}`}
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-content-muted">
+              Vale para os cards de animais e para as tabelas de compras e vendas. Lotes não pagos entram sem valor em R$ até o pagamento ser lançado.
+            </p>
           </div>
 
           <div>

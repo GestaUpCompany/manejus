@@ -9,9 +9,10 @@ const compradorLabel = (g) => {
 };
 const tds = (r, comp) =>
   `<td class="comp">${esc(comp)}</td><td>${fmtInt(r.cab)}</td><td>${r.at ? fmt2(r.at) : '—'}</td>` +
-  `<td>${r.rsAt ? fmt2(r.rsAt) : '—'}</td><td>${fmt2(r.total)}</td>`;
+  `<td>${r.rsAt ? fmt2(r.rsAt) : '—'}</td><td>${r.rsKg ? fmt2(r.rsKg) : '—'}</td><td>${fmt2(r.total)}</td>`;
 
-// Agrega lotes por mês (fallback quando a pivot estoura a página)
+// Agrega lotes por mês (fallback quando a pivot estoura a página). R$/kg recalculado
+// sobre o mês: soma do valor ÷ soma do kg, só de lotes com valor e peso
 const lotesPorMes = (cat) => {
   const byMes = new Map();
   for (const l of cat.lotes) {
@@ -21,11 +22,13 @@ const lotesPorMes = (cat) => {
   }
   return [...byMes.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([k, g]) => {
     const prec = g.filter(x => x.rsAt > 0);
+    const valorKg = g.reduce((a, x) => a + x.valorKg, 0), kgKg = g.reduce((a, x) => a + x.kgKg, 0);
     return {
     label: `${mesAbrev(k)}/${k.slice(2, 4)}`,
     comprador: compradorLabel(g),
     cab: g.reduce((a, x) => a + x.cab, 0), at: g.reduce((a, x) => a + x.at, 0),
     rsAt: prec.length ? prec.reduce((a, x) => a + x.rsAt, 0) / prec.length : 0,
+    rsKg: kgKg ? valorKg / kgKg : 0,
     total: g.reduce((a, x) => a + x.total, 0),
     };
   });
@@ -82,6 +85,7 @@ export function render({ model, ctx }) {
   const totRow = {
     cab: v.cab, at: allLotes.reduce((a, l) => a + l.at, 0),
     rsAt: allLotes.length ? allLotes.reduce((a, l) => a + l.rsAt, 0) / allLotes.length : null,
+    rsKg: v.rsKg,
     total: v.valor,
   };
 
@@ -102,13 +106,13 @@ export function render({ model, ctx }) {
   <div class="table-wrap">
     <table${dense ? ' class="dense"' : ''}>
       <thead>
-        <tr class="cols"><th>Tipo · Categoria${detail === 'mes' ? ' · Mês' : detail === 'dia' ? ' · Data' : ''}</th><th>Frigorífico / Comprador</th><th>N° Cabeças</th><th>Total @</th><th>Média R$/@</th><th>Total R$</th></tr>
+        <tr class="cols"><th>Tipo · Categoria${detail === 'mes' ? ' · Mês' : detail === 'dia' ? ' · Data' : ''}</th><th>Frigorífico / Comprador</th><th>N° Cabeças</th><th>Total @</th><th>Média R$/@</th><th>R$/kg</th><th>Total R$</th></tr>
       </thead>
-      <tbody>${rows}<tr class="spacer"><td colspan="6"></td></tr><tr class="total"><td class="cat">Total Geral</td>${tds(totRow, 'Vários')}</tr></tbody>
+      <tbody>${rows}<tr class="spacer"><td colspan="7"></td></tr><tr class="total"><td class="cat">Total Geral</td>${tds(totRow, 'Vários')}</tr></tbody>
     </table>
   </div>
 
-  <div class="footnote">${notaDetalhe}Giro de Estoque = cabeças vendidas ÷ soma dos saldos iniciais mensais do ano-base. Média R$/@ é aritmética por lote.</div>`;
+  <div class="footnote">${notaDetalhe}Giro de Estoque = cabeças vendidas ÷ soma dos saldos iniciais mensais do ano-base. Média R$/@ é aritmética por lote; R$/kg é valor ÷ kg final, só lotes com valor lançado.</div>`;
 
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),

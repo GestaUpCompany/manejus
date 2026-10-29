@@ -1,5 +1,14 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório Vision: status de pagamento, R$/kg, R$/cab da p.5 e KPI "Diária média/cab" removido (29/10/2026)
+- **Status de pagamento**: novo parâmetro `statusPgto` (`pagos` padrão, `naoPagos`, `todos`) em `buildModelFromReads` (`vision-relatorio/pipeline/lib/model.mjs`). Vale para compras e vendas (cards de animais, tabelas e totais das p.4–p.7). Transferências seguem sempre incluídas. Escolha na tela de geração (`RelatorioVision.tsx`, salva em `p_config.status_pgto` do link), no seletor da visualização (`web/app.mjs`, também na URL como `status=`) e no PDF e link público.
+- **Card "N° de Animais" / "N° de Cabeças"**: passou a seguir o status escolhido. No padrão (pagos) ele mostra só lotes pagos, e não mais todos os status como antes. Os valores em R$ não mudaram no padrão.
+- **R$/kg**: nova coluna nas tabelas de Resumo de Compras (p.5) e Resumo de Vendas (p.7). Compras: total ÷ kg, só lotes com peso. Vendas: valor ÷ kg final, só lotes com valor lançado.
+- **R$/cab da p.5**: passou de média aritmética por lote para total ÷ cabeças, igual à p.4. No Total Geral exclui transferências de entrada, como a p.4. Peso médio e R$/@ seguem como média por lote.
+- **KPI "Diária média/cab"** removido das p.11 (Desembolso), p.12 (Custos por ha) e p.18 (Índices técnicos). Permanece na p.13 (Custeio).
+- **Teste**: typecheck passou. Lint sem erros (avisos pré-existentes em `apps/manejus`). Conferência visual na prévia com a planilha Vision Versão Slim - 2026 - Grupo Gentilin, período 01/01/2026 a 31/10/2026: p.4 e p.5 mostram R$/cab 3.887,74 nos dois, e o card de animais segue o seletor. Sem mutação de banco.
+- **Ponto de atenção**: no modo "Todos", o R$/cab cai porque há compras não pagas com valor zero que entram no denominador (ex.: 1.811.687,55 ÷ 1.437 cab = 1.260,74). Ainda não foi decidido se deve excluir lotes sem valor do denominador.
+
 ## Relatório Zootécnico: "Data pesagem" mostra a data da última correção de peso (28/10/2026)
 - **Sintoma**: correção de peso pelo botão do CorrigirPesoModal atualizava o peso atual no relatório, mas a "Data pesagem" continuava a data de entrada.
 - **Causa**: `corrigir_peso_categoria` grava a data em `lote_categorias.data_ajuste_peso` e em `peso_correcoes.data_pesagem`, mas o relatório lia `lote_categorias.data_pesagem` (data de entrada, usada no período e na projeção, por isso não foi alterada). `data_ajuste_peso` também não serve: o cron de projeção o move para hoje a cada execução.
