@@ -24,6 +24,7 @@ const ctx = {
   logoGestaup,
   logoFazenda: logoExplicit ? logoSrc : null,
   fazendaNome: opt('nome', 'Fazenda'),
+  pageNum: opt('pagenum', undefined) ? Number(opt('pagenum')) : undefined,
   fotoCapa: opt('capa', path.resolve(root, 'apps/vision/public/assets/capa-default.png')),
   fotoFinal: opt('final', null) ?? undefined,
   capaPos: opt('capa-pos', undefined),

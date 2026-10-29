@@ -93,7 +93,7 @@ export function render({ model, ctx }) {
 
   const body = `
   <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
-    <div class="kpi"><div class="lbl">N° de Cabeças</div><div class="val">${fmtInt(v.cab)} <small>cab</small></div></div>
+    <div class="kpi"><div class="lbl">N° de Cabeças</div><div class="val">${fmtInt(v.cabTodas)} <small>cab</small></div></div>
     <div class="kpi"><div class="lbl">Giro de Estoque</div><div class="val">${fmtPct(v.giroEstoque)}</div></div>
     <div class="kpi"><div class="lbl">Valor Total Líquido</div><div class="val"><small>R$</small> ${fmt2(v.valor)}</div></div>
     <div class="kpi"><div class="lbl">Média R$/cab</div><div class="val"><small>R$</small> ${fmt2(v.rsCab)}</div></div>

@@ -24,6 +24,7 @@ interface LoteRow {
 }
 
 interface CategoriaRow {
+  id: string
   lote_id: string
   categoria: string | null
   raca: string | null
@@ -31,6 +32,7 @@ interface CategoriaRow {
   estrategia_nutricional: string | null
   quant_atual: number | null
   data_pesagem: string | null
+  data_ajuste_peso: string | null
   peso_entrada_kg_cab: number | null
   peso_vivo_atual_kg_cab: number | null
   peso_vivo_meta_kg_cab: number | null
@@ -103,11 +105,11 @@ export async function carregarRelatorioZootecnico(
     return { fazendaNome, janelaInicio, janelaFim, linhas: [], geral }
   }
 
-  const [catRes, pastosRes, formRes, ocupRes, planosRes, curraisRes] = await Promise.all([
+  const [catRes, pastosRes, formRes, ocupRes, planosRes, curraisRes, correcoesRes] = await Promise.all([
     supabase
       .from('lote_categorias')
       .select(
-        'lote_id, categoria, raca, sexo, estrategia_nutricional, quant_atual, data_pesagem, peso_entrada_kg_cab, peso_vivo_atual_kg_cab, peso_vivo_meta_kg_cab, data_meta_projetada, periodo, rc_atual, preco_venda_projetado_reais_arroba, preco_custo_cab, consumo_meta_porcentagem_pesovivo, formulacao_id',
+        'id, lote_id, categoria, raca, sexo, estrategia_nutricional, quant_atual, data_pesagem, data_ajuste_peso, peso_entrada_kg_cab, peso_vivo_atual_kg_cab, peso_vivo_meta_kg_cab, data_meta_projetada, periodo, rc_atual, preco_venda_projetado_reais_arroba, preco_custo_cab, consumo_meta_porcentagem_pesovivo, formulacao_id',
       )
       .in('lote_id', loteIds)
       .eq('ativo', true),
@@ -123,8 +125,9 @@ export async function carregarRelatorioZootecnico(
       .in('lote_id', loteIds)
       .order('data_inicio', { ascending: false, nullsFirst: false }),
     supabase.from('currais').select('nome, lote_id').eq('fazenda_id', fazendaId).is('deleted_at', null).in('lote_id', loteIds),
+    supabase.from('peso_correcoes').select('lote_categoria_id, data_pesagem').eq('fazenda_id', fazendaId).in('lote_id', loteIds),
   ])
-  for (const r of [catRes, pastosRes, formRes, ocupRes, planosRes, curraisRes]) if (r.error) throw r.error
+  for (const r of [catRes, pastosRes, formRes, ocupRes, planosRes, curraisRes, correcoesRes]) if (r.error) throw r.error
 
   const categorias = ((catRes.data ?? []) as CategoriaRow[]).filter((c) => (c.quant_atual ?? 0) > 0)
   const pastos = new Map((pastosRes.data ?? []).map((p) => [p.id as string, p]))
@@ -139,6 +142,15 @@ export async function carregarRelatorioZootecnico(
   const curralDoLote = new Map<string, string>()
   for (const c of curraisRes.data ?? []) if (c.lote_id) curralDoLote.set(c.lote_id as string, c.nome as string)
   const loteMap = new Map(lotes.map((l) => [l.id, l]))
+  // data da última correção de peso (CorrigirPesoModal) = data da pesagem atual. Não usar data_ajuste_peso como
+  // data: o cron de projeção o move para hoje a cada execução. Mas só vale enquanto a correção for a âncora do
+  // peso atual: início de plano zera data_ajuste_peso e sobrescreve o peso, então a data volta a ser a de entrada.
+  const ultimaCorrecao = new Map<string, string>()
+  for (const r of correcoesRes.data ?? []) {
+    const id = r.lote_categoria_id as string
+    const data = r.data_pesagem as string
+    if (!ultimaCorrecao.has(id) || data > ultimaCorrecao.get(id)!) ultimaCorrecao.set(id, data)
+  }
 
   const inicioGeral =
     categorias.map((c) => c.data_pesagem).filter((d): d is string => !!d).sort()[0] ?? somarDias(janelaFim, -365)
@@ -163,7 +175,7 @@ export async function carregarRelatorioZootecnico(
         sexo: c.sexo,
         estrategia: c.estrategia_nutricional,
         cabecas: c.quant_atual ?? 0,
-        dataPesagem: c.data_pesagem,
+        dataPesagem: (c.data_ajuste_peso && ultimaCorrecao.get(c.id)) || c.data_pesagem,
         pesoEntradaKg: num(c.peso_entrada_kg_cab),
         pesoAtualKg: num(c.peso_vivo_atual_kg_cab),
         pesoMetaKg: num(c.peso_vivo_meta_kg_cab),

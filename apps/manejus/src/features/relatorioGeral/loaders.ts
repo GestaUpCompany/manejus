@@ -46,6 +46,8 @@ interface RegistroAbastecimento {
   data: string
   operador?: string
   placa?: string
+  odometro?: number | null
+  odometro_anterior?: number | null
   trabalho_periodo?: number | null
   unidade_trabalho?: string | null
 }
@@ -118,6 +120,8 @@ async function carregarAbastecimento(
     const totalLitros = itens.reduce((soma, item) => soma + item.litros, 0)
     const totalTrabalho = itens.reduce((soma, item) => soma + Number(item.trabalho_periodo ?? 0), 0)
     const datas = itens.map((item) => item.data).filter(Boolean).sort()
+    const leituras = itens.filter((item) => item.odometro != null)
+    const primeiraLeitura = leituras[0]
     return {
       maquina,
       marca: itens[0]?.marca,
@@ -131,6 +135,8 @@ async function carregarAbastecimento(
       combustiveis: [...new Set(itens.map((item) => item.combustivel).filter(Boolean))].sort(),
       operadores: [...new Set(itens.map((item) => item.operador).filter((v): v is string => Boolean(v)))].sort(),
       placas: [...new Set(itens.map((item) => item.placa).filter((v): v is string => Boolean(v)))].sort(),
+      horimetroInicial: primeiraLeitura ? Number(primeiraLeitura.odometro_anterior ?? primeiraLeitura.odometro) : null,
+      horimetroFinal: leituras.length ? Number(leituras[leituras.length - 1].odometro) : null,
       unidadeTrabalho: itens[0]?.unidade_trabalho ?? null,
       totalTrabalho: totalTrabalho > 0 ? totalTrabalho : null,
       consumoMedio: totalTrabalho > 0 ? totalLitros / totalTrabalho : null,

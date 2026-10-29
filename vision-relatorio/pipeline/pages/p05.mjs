@@ -73,7 +73,7 @@ export function render({ model, ctx }) {
   const t = compras.pivotTotal;
   const body = `
   <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
-    <div class="kpi"><div class="lbl">N° de Animais</div><div class="val">${fmtInt(compras.cab)} <small>cab</small></div></div>
+    <div class="kpi"><div class="lbl">N° de Animais</div><div class="val">${fmtInt(compras.cabTodas)} <small>cab</small></div></div>
     <div class="kpi"><div class="lbl">Total da Compra</div><div class="val"><small>R$</small> ${fmt2(compras.total)}</div></div>
   </div>
 

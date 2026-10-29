@@ -1,5 +1,6 @@
 import { supabase } from '@gestaup/supabase'
 import { usaCurral } from '../utils/lotes'
+import { EQUIDEOS, sexoDoEquideo } from '../utils/equideos'
 
 // ============================================================================
 // Importação de lotes + categorias via planilha-modelo (aba única, 1 linha por
@@ -23,7 +24,8 @@ export const CATEGORIAS = [
   'tourinho',
   'touro',
   'vaca',
-  'tropa',
+  // Tropa: uma categoria por espécie e sexo (ver utils/equideos.ts)
+  ...EQUIDEOS.map((e) => e.slug),
 ] as const
 export const SEXOS = ['macho', 'fêmea'] as const
 
@@ -336,6 +338,8 @@ export function validarLinhas(linhas: LinhaBruta[], ctx: ContextoImportacao): Re
       const catCanon = CATEGORIA_MAP.get(norm(v['categoria']))
       if (!norm(v['categoria'])) {
         erros.push('Categoria é obrigatória')
+      } else if (!catCanon && norm(v['categoria']) === 'tropa') {
+        erros.push('Tropa é cadastrada por espécie e sexo: use cavalo, égua, jumento, jumenta, burro ou mula')
       } else if (!catCanon) {
         erros.push(`Categoria "${str(v['categoria'])}" inválida`)
       } else if (categoriasVistas.has(norm(catCanon))) {
@@ -371,6 +375,16 @@ export function validarLinhas(linhas: LinhaBruta[], ctx: ContextoImportacao): Re
         const s = SEXO_MAP.get(norm(v['sexo']))
         if (!s) erros.push('Sexo inválido (use: macho ou fêmea)')
         else sexoCanon = s
+      }
+
+      // Equídeos: o sexo vem da categoria (cavalo = macho, égua = fêmea...); planilha divergente é erro.
+      const sexoEquideo = sexoDoEquideo(catCanon ?? '')
+      if (sexoEquideo) {
+        if (sexoCanon && sexoCanon !== sexoEquideo) {
+          erros.push(`Sexo "${sexoCanon}" não confere com a categoria "${catCanon}" (${sexoEquideo})`)
+        } else {
+          sexoCanon = sexoEquideo
+        }
       }
 
       if (erros.length > 0) {

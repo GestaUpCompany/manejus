@@ -394,6 +394,9 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   comprasPage.rsAt = comprasPage.at ? comprasPage.total / comprasPage.at : 0;
   comprasPage.rsKg = comprasPage.kg ? comprasPage.total / comprasPage.kg : 0;
   comprasPage.rsCab = comprasPage.cab ? comprasPage.total / comprasPage.cab : 0;
+  // Cabeças compradas no período, independentemente do status (Em Aberto incluído);
+  // o card N° de Animais usa este total. Médias de R$ seguem só com lotes Pago.
+  comprasPage.cabTodas = sum(comprasAll.filter(x => inPeriod(x.data, ini, fim) && !/^tran(s)?f/i.test(x.tipo)), x => x.cab);
   // p.5 pivot: tipo → categoria → data; médias são AVG por lote (M, U, V)
   comprasPage.pivot = [...groupBy(compras, x => x.tipo)].map(([tipo, gTipo]) => ({
     tipo,
@@ -450,6 +453,11 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
   };
   const vendasAbateMPage = aggVendasAbate(vendasAbate.filter(x => /^m/i.test(x.sexo)));
   const vendasAbateFPage = aggVendasAbate(vendasAbate.filter(x => /^f/i.test(x.sexo)));
+  // Cabeças abatidas no período sem filtro de status (card N° de Cabeças); R$ seguem só com Pago
+  const cabVendasTodas = (pred) => sum(
+    vendasAll.filter(x => inPeriod(x.data, ini, fim) && /^abate/i.test(x.tipo) && pred(x)), x => x.cab);
+  vendasAbateMPage.cabTodas = cabVendasTodas(x => /^m/i.test(x.sexo));
+  vendasAbateFPage.cabTodas = cabVendasTodas(x => /^f/i.test(x.sexo));
 
   // ---------- p.6/p.7 Transferências entre fazendas ----------
   // Entrada: "Transf/Tranf Entrada" na Compra_Gado; saída: "Transf Saída" na
@@ -488,6 +496,8 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     [...estoque.entries()].filter(([k]) => k.startsWith(`${anoBaseGiro}-`))
       .flatMap(([, b]) => b.linhas), l => l.saldoIni);
   const vendasPage = {
+    // todas as vendas comerciais do período, sem filtro de status (card N° de Cabeças)
+    cabTodas: sum(vendasAll.filter(x => inPeriod(x.data, ini, fim) && !/^tran(s)?f/i.test(x.tipo)), x => x.cab),
     cab: sum(vendasComerciais, x => x.cab),
     valor: sum(vendasComerciais, x => x.valorLiq),
     giroEstoque: giroDenominador ? sum(vendasComerciais, x => x.cab) / giroDenominador : 0,

@@ -22,6 +22,8 @@ export interface DetalheMaquinaPDF {
   combustiveis: string[]
   operadores: string[]
   placas: string[]
+  horimetroInicial?: number | null
+  horimetroFinal?: number | null
 }
 
 export interface FiltrosAtivos {

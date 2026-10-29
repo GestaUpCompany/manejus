@@ -20,7 +20,7 @@ export function render({ model, ctx }) {
     W: 1184, H: 208, labelScale: 1.3,
     bars: {
       values: d.mensal.map(m => m.custoDiariaCab),
-      color: C.blue, labelFmt: (v) => `R$ ${fmt2(v)}`, labelInside: true,
+      color: C.blue, labelFmt: (v) => `R$ ${fmt2(v)}`, labelInside: true, labelAtBase: true,
     },
     line: {
       values: d.mensal.map(m => m.rebMedio || null),
