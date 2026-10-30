@@ -1,5 +1,16 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Itens do Almoxarifado em Cadastros Auxiliares: unidade, mínimo e controle de estoque (30/10/2026)
+- **Problema**: a aba Cadastros Auxiliares → Operacional → Itens do Almoxarifado só tinha Nome e Classificação. Unidade, estoque mínimo e "controla estoque" só existiam em `ItensAlmoxarifado.tsx`, página que tinha rota (`/controller/itens-almoxarifado`) mas nenhum link no app, então não dava para ativar o controle de estoque de um item pela interface.
+- **Solução**: a aba ganhou os campos `unidade` (obrigatória, padrão `un`), `estoque_minimo` (numérico, padrão 0) e `controla_estoque` (padrão Sim), com a conversão boolean/numérico no salvamento, igual à da Cantina. A regra da página antiga foi copiada: a unidade fica bloqueada (com o aviso "Item com estoque ou movimentações não pode trocar de unidade") quando `estoque_atual` ≠ 0 ou há movimentação não excluída em `movimentacoes_almoxarifado`. Os campos aceitam `defaultValue` e `numeric` na configuração das abas; o card mostra Sim/Não em campos booleanos.
+- **Página antiga removida**: `ItensAlmoxarifado.tsx`, o import e a rota em `App.tsx`. Não havia outra referência no repo.
+- **Testes na fazenda de testes (`d649c65e-…`)**: item "Alicate" passou de Não para Sim e voltou para Não; Teste PWA Remedio, Mangueira e Furadeira abrem com a unidade bloqueada e o Alicate com a unidade editável; item novo abre com Unidade, mínimo 0 e controle Sim (sem salvar). Suíte do manejus: 624/624.
+
+## Estoque da Farmácia: lotes, validade e plural da unidade (30/10/2026)
+- **Lote e validade no card**: cada medicamento lista os lotes com saldo (vence primeiro), com lote, validade e saldo. Selos "Lote vencido" e "Lote a vencer" (`DIAS_ALERTA_VALIDADE` = 60 dias, em `features/estoqueFarmacia/logica.ts`). O Histórico mostra lote e validade no detalhe.
+- **Premissa**: a baixa não grava o lote; o saldo por lote é calculado atribuindo as saídas ao lote que vence primeiro (FEFO). Estorno devolve ao lote de vencimento mais próximo; ajuste que aumenta o saldo entra sem lote. Rastreio exato exigiria a baixa informar o lote (mudança no PWA e no banco).
+- **Plural**: quantidades acima de 1 mostram dose/frasco/caixa no plural (`unidadeNaQuantidade`); mL, L, g, kg e un não mudam. Botões do card em grade de 3 colunas no celular.
+
 ## Ajuste de quantidade por categoria no lote (30/10/2026)
 - **Problema**: lançamentos errados ou faltantes deixavam a quantidade de uma categoria diferente da realidade, e a única saída era mexer nas movimentações. Editar `quant_atual` direto não servia: `calculate_quant_atual` recalcula a partir dos movimentos e desfaz qualquer UPDATE no contador.
 - **Solução**: motivo novo `Ajuste` em `registros_movimentacao`. Aumento grava `tipo_entrada = Ajuste`; redução grava `tipo_saida = Ajuste`; `lote_origem_id` é sempre o lote e `lote_destino_id` fica nulo, então nenhuma soma existente (entrada, saída, transferência, entrevero) captura o ajuste por engano. O ajuste entra em `calculate_quant_atual`, então recálculos não o desfazem, e o soft-delete reverte o saldo.

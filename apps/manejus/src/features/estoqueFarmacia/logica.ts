@@ -66,6 +66,13 @@ export const UNIDADES_ESTOQUE = ['un', 'dose', 'frasco', 'caixa', 'mL', 'L', 'g'
 export const UNIDADES_DIRETAS = ['mL', 'L', 'g', 'kg']
 export const UNIDADES_CONTEUDO = ['mL', 'mg']
 
+// Plural só para as unidades de contagem; mL, L, g, kg e un ficam iguais.
+const PLURAL_UNIDADE: Record<string, string> = { dose: 'doses', frasco: 'frascos', caixa: 'caixas' }
+
+export function unidadeNaQuantidade(unidade: string, quantidade: number): string {
+  return Math.abs(quantidade) > 1 ? (PLURAL_UNIDADE[unidade] ?? unidade) : unidade
+}
+
 export type ModoBaixaEnfermaria = 'direta' | 'embalagem' | 'sem_conversao'
 
 // Espelha farmacia_dose_para_estoque (banco): mL/L/g/kg convertem direto; as demais precisam do conteúdo da embalagem.
@@ -181,6 +188,76 @@ export function valorDoMovimento(m: Pick<MovimentoFarmacia, 'quantidade' | 'cust
   if (m.valor_total != null) return num(m.valor_total)
   if (m.custo_unitario == null) return null
   return num(m.quantidade) * num(m.custo_unitario)
+}
+
+// Prazo de alerta de vencimento: 60 dias dá tempo de usar ou devolver o lote antes do vencimento
+// (vacinas e antibióticos costumam ter validade de 1 a 2 anos; 30 dias é curto demais para planejar).
+export const DIAS_ALERTA_VALIDADE = 60
+
+export interface LoteFarmacia {
+  chave: string
+  lote: string | null
+  validade: string | null
+  saldo: number
+}
+
+export type SituacaoValidade = 'vencido' | 'vence_em_breve' | 'ok' | 'sem_validade'
+
+export function diasAteVencer(validade: string, hoje: string): number {
+  return Math.round((Date.parse(`${validade}T00:00:00Z`) - Date.parse(`${hoje}T00:00:00Z`)) / 86_400_000)
+}
+
+export function situacaoValidade(validade: string | null, hoje: string): { situacao: SituacaoValidade; dias: number | null } {
+  if (!validade) return { situacao: 'sem_validade', dias: null }
+  const dias = diasAteVencer(validade, hoje)
+  if (dias < 0) return { situacao: 'vencido', dias }
+  if (dias <= DIAS_ALERTA_VALIDADE) return { situacao: 'vence_em_breve', dias }
+  return { situacao: 'ok', dias }
+}
+
+const ordemFefo = (a: LoteFarmacia, b: LoteFarmacia) =>
+  (a.validade ?? '9999-12-31').localeCompare(b.validade ?? '9999-12-31') || a.chave.localeCompare(b.chave)
+
+// Saldo por lote a partir do ledger. Baixa não guarda lote, então a saída é atribuída
+// pelo vencimento mais próximo primeiro (FEFO), que é o critério que a farmácia segue na prática.
+// Estorno devolve ao lote de vencimento mais próximo ainda conhecido; ajuste que aumenta o saldo
+// entra sem lote. Os lotes vencidos e os com saldo zerado ficam de fora.
+export function lotesComSaldo(movimentos: MovimentoFarmacia[]): LoteFarmacia[] {
+  const ordenados = [...movimentos].sort(
+    (a, b) => a.data.localeCompare(b.data) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id),
+  )
+  const lotes = new Map<string, LoteFarmacia>()
+  const adicionar = (lote: string | null, validade: string | null, qtd: number) => {
+    const chave = `${lote ?? ''}|${validade ?? ''}`
+    const atual = lotes.get(chave) ?? { chave, lote, validade, saldo: 0 }
+    atual.saldo += qtd
+    lotes.set(chave, atual)
+  }
+  const consumir = (qtd: number) => {
+    let resto = qtd
+    for (const l of [...lotes.values()].filter((x) => x.saldo > 0).sort(ordemFefo)) {
+      const usa = Math.min(l.saldo, resto)
+      l.saldo -= usa
+      resto -= usa
+      if (resto <= 0) break
+    }
+  }
+  for (const m of ordenados) {
+    const qtd = num(m.quantidade)
+    if (m.tipo_movimentacao === 'entrada') adicionar(m.lote_produto, m.validade, qtd)
+    else if (m.tipo_movimentacao === 'baixa') consumir(qtd)
+    else if (m.tipo_movimentacao === 'estorno') {
+      const primeiro = [...lotes.values()].sort(ordemFefo)[0]
+      if (primeiro) primeiro.saldo += qtd
+      else adicionar(null, null, qtd)
+    } else {
+      const total = [...lotes.values()].reduce((s, l) => s + l.saldo, 0)
+      const diff = qtd - total
+      if (diff < 0) consumir(-diff)
+      else if (diff > 0) adicionar(null, null, diff)
+    }
+  }
+  return [...lotes.values()].filter((l) => l.saldo > 0.0005).sort(ordemFefo)
 }
 
 export interface FormEntrada {

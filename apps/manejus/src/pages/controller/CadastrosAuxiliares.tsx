@@ -17,7 +17,7 @@ interface TabConfig {
   singular?: string
   gender?: 'm' | 'f'
   table: string
-  fields: { name: string; label: string; required?: boolean; placeholder?: string; options?: { label: string; value: string }[]; showIf?: (formData: Record<string, string>) => boolean }[]
+  fields: { name: string; label: string; required?: boolean; placeholder?: string; options?: { label: string; value: string }[]; defaultValue?: string; numeric?: boolean; showIf?: (formData: Record<string, string>) => boolean }[]
   searchPlaceholder: string
   statusField?: 'ativo' | 'status'
   orderBy?: string
@@ -142,6 +142,16 @@ const tabs: TabConfig[] = [
         { value: 'Lubrificantes', label: 'Lubrificantes' },
         { value: 'EPI', label: 'EPI' },
         { value: 'Materiais de Construção', label: 'Materiais de Construção' },
+      ] },
+      { name: 'unidade', label: 'Unidade de medida', required: true, defaultValue: 'un', options: [
+        { value: 'un', label: 'Unidade' }, { value: 'kg', label: 'kg' }, { value: 'g', label: 'g' },
+        { value: 'L', label: 'Litro' }, { value: 'mL', label: 'mL' }, { value: 'm', label: 'Metro' },
+        { value: 'cx', label: 'Caixa' }, { value: 'pct', label: 'Pacote' }, { value: 'par', label: 'Par' }, { value: 'kit', label: 'Kit' },
+      ] },
+      { name: 'estoque_minimo', label: 'Estoque mínimo', defaultValue: '0', numeric: true },
+      { name: 'controla_estoque', label: 'Controlar este item no estoque?', defaultValue: 'true', options: [
+        { value: 'true', label: 'Sim' },
+        { value: 'false', label: 'Não' },
       ] },
     ],
     searchPlaceholder: 'Buscar item...',
@@ -427,6 +437,8 @@ export function CadastrosAuxiliares() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<{ tab: string; id: string } | null>(null)
   const [showRbacAlertModal, setShowRbacAlertModal] = useState(false)
+  // Itens do almoxarifado: unidade não troca quando o item já tem saldo ou movimentação
+  const [unidadeBloqueada, setUnidadeBloqueada] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
@@ -751,9 +763,12 @@ export function CadastrosAuxiliares() {
 
   const getInitialFormData = (tab: TabConfig): Record<string, string> => {
     const data: Record<string, string> = {}
-    tab.fields.forEach((f) => (data[f.name] = ''))
+    tab.fields.forEach((f) => (data[f.name] = f.defaultValue ?? ''))
     return data
   }
+
+  // Campo ainda não tocado cai no valor padrão da configuração (formData inicial da aba é vazio)
+  const valorDoCampo = (f: TabConfig['fields'][number], formData: Record<string, string>) => formData[f.name] ?? f.defaultValue ?? ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -776,15 +791,16 @@ export function CadastrosAuxiliares() {
     const tab = tabs.find((t) => t.key === activeTab)!
     const data: any = { fazenda_id: fazendaId }
     tab.fields.forEach((f) => {
-      const value = state.formData[f.name]
+      const value = valorDoCampo(f, state.formData)
       data[f.name] = value || null
     })
 
-    // itens_cantina: boolean/numérico com NOT NULL, converter explicitamente
-    if (activeTab === 'itens-cantina') {
-      data.controla_estoque = state.formData.controla_estoque === 'true'
-      const minimo = String(state.formData.estoque_minimo || '').replace(',', '.')
-      data.estoque_minimo = minimo && !isNaN(Number(minimo)) ? Number(minimo) : 0
+    // itens_cantina e itens_almoxarifado: boolean/numérico com NOT NULL, converter explicitamente
+    if (activeTab === 'itens-cantina' || activeTab === 'itens-almoxarifado') {
+      const controla = tab.fields.find((f) => f.name === 'controla_estoque')!
+      data.controla_estoque = valorDoCampo(controla, state.formData) === 'true'
+      const minimo = String(state.formData.estoque_minimo ?? tab.fields.find((f) => f.name === 'estoque_minimo')?.defaultValue ?? '').replace(',', '.')
+      data.estoque_minimo = minimo && !isNaN(Number(minimo)) && Number(minimo) >= 0 ? Number(minimo) : 0
     }
 
     // Converter capacidade_kg de formatado para número puro
@@ -876,6 +892,7 @@ export function CadastrosAuxiliares() {
         : 'Erro ao salvar. Verifique se já não existe um registro com este nome.')
     } else {
       setFuncionarioErrors({})
+      setUnidadeBloqueada(false)
       setTabStates((prev) => ({
         ...prev,
         [activeTab]: {
@@ -919,6 +936,16 @@ export function CadastrosAuxiliares() {
       })
     }
 
+    setUnidadeBloqueada(false)
+    if (activeTab === 'itens-almoxarifado') {
+      supabase
+        .from('movimentacoes_almoxarifado')
+        .select('id', { count: 'exact', head: true })
+        .eq('item_id', item.id)
+        .is('deleted_at', null)
+        .then(({ count }) => setUnidadeBloqueada(Number(item.estoque_atual || 0) !== 0 || (count || 0) > 0))
+    }
+
     setTabStates((prev) => ({
       ...prev,
       [activeTab]: {
@@ -933,6 +960,7 @@ export function CadastrosAuxiliares() {
   const handleCancel = () => {
     const tab = tabs.find((t) => t.key === activeTab)!
     setFuncionarioErrors({})
+    setUnidadeBloqueada(false)
     setFuncionarioRbac({
       acessa_app: false,
       pin: '',
@@ -1785,9 +1813,16 @@ export function CadastrosAuxiliares() {
                           <option key={setor.id} value={setor.id}>{setor.nome}</option>
                         ))}
                       </select>
+                    ) : activeTab === 'itens-almoxarifado' && field.name === 'unidade' && state.editingItem && unidadeBloqueada ? (
+                      <>
+                        <div className="w-full px-3 py-2 border border-surface-3 rounded-md min-h-[44px] flex items-center bg-surface-2 text-content-muted">
+                          {field.options?.find((o) => o.value === state.formData.unidade)?.label || state.formData.unidade}
+                        </div>
+                        <p className="text-xs text-content-faint mt-1">Item com estoque ou movimentações não pode trocar de unidade. Cadastre um novo item.</p>
+                      </>
                     ) : field.options ? (
                       <select
-                        value={state.formData[field.name] || ''}
+                        value={valorDoCampo(field, state.formData)}
                         onChange={(e) => setFormField(field.name, e.target.value)}
                         required={field.required}
                         className="w-full px-3 py-2 border border-surface-3 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-surface-1"
@@ -1813,8 +1848,9 @@ export function CadastrosAuxiliares() {
                       />
                     ) : (
                       <Input
-                        type="text"
-                        value={state.formData[field.name] || ''}
+                        type={field.numeric ? 'number' : 'text'}
+                        {...(field.numeric ? { min: '0', step: '0.001' } : {})}
+                        value={valorDoCampo(field, state.formData)}
                         onChange={(e) => setFormField(field.name, e.target.value)}
                         required={field.required}
                         placeholder={field.placeholder}
@@ -2063,14 +2099,16 @@ export function CadastrosAuxiliares() {
                 subtitle={
                   <div className="flex flex-col gap-0.5">
                     {currentTab.fields
-                      .filter((f) => !['nome', 'nome_comercial'].includes(f.name) && item[f.name])
+                      .filter((f) => !['nome', 'nome_comercial'].includes(f.name) && (item[f.name] || f.name === 'controla_estoque'))
                       .map((f) => (
                         <span key={f.name}>
                           {f.label}: {f.name === 'setor_id'
                             ? setores.find(s => s.id === item[f.name])?.nome || item[f.name]
                             : f.name === 'capacidade_kg'
                               ? formatIntWithThousands(String(item[f.name]))
-                              : item[f.name]
+                              : typeof item[f.name] === 'boolean'
+                                ? (item[f.name] ? 'Sim' : 'Não')
+                                : item[f.name]
                           }
                         </span>
                       ))}
