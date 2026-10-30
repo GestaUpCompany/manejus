@@ -6,6 +6,8 @@ interface FilterToolbarProps {
   title?: string
   onExport?: () => void
   exportDisabled?: boolean
+  onPrint?: () => void
+  printDisabled?: boolean
   onClear?: () => void
   clearDisabled?: boolean
   children: ReactNode
@@ -22,6 +24,8 @@ export function FilterToolbar({
   title = 'Filtros',
   onExport,
   exportDisabled,
+  onPrint,
+  printDisabled,
   onClear,
   clearDisabled,
   children,
@@ -32,7 +36,7 @@ export function FilterToolbar({
 
   return (
     <Card className={`bg-surface-1 p-4 sm:p-6 ${className}`} disableHover>
-      {(title || onExport || onClear) && (
+      {(title || onExport || onPrint || onClear) && (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           {title && <h3 className="text-base sm:text-lg font-semibold text-content-strong">{title}</h3>}
           <div className="flex gap-2 w-full sm:w-auto">
@@ -44,6 +48,16 @@ export function FilterToolbar({
                 className="w-full sm:w-auto text-sm"
               >
                 Limpar Filtros
+              </Button>
+            )}
+            {onPrint && (
+              <Button
+                variant="secondary"
+                onClick={onPrint}
+                disabled={printDisabled}
+                className="w-full sm:w-auto text-sm"
+              >
+                Imprimir
               </Button>
             )}
             {onExport && (

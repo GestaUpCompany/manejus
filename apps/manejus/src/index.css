@@ -259,9 +259,91 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   display: none;
 }
 
+/* Lista filtrada — impressão (Carregamento de Vagão e Trato) */
+.lista-print-root {
+  display: none;
+}
+
 @media print {
-  body > *:not(.trato-print-root) {
+  body > *:not(.trato-print-root):not(.lista-print-root) {
     display: none !important;
+  }
+
+  .lista-print-root {
+    display: block;
+    font-family: Arial, sans-serif;
+    color: #1a1a1a;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .lista-print-brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9pt;
+    margin-bottom: 2mm;
+  }
+
+  .lista-print-brand-side {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .lista-print-brand img {
+    height: 6mm;
+    max-width: 30mm;
+    object-fit: contain;
+  }
+
+  .lista-print-root h1 {
+    font-size: 13pt;
+    font-weight: bold;
+    text-align: center;
+    margin: 0 0 2mm;
+  }
+
+  .lista-print-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8.5pt;
+    font-weight: bold;
+    background: #d9e2f3;
+    padding: 1mm 2mm;
+    margin-bottom: 2mm;
+  }
+
+  .lista-print-root table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+  }
+
+  .lista-print-root th,
+  .lista-print-root td {
+    border: 1px solid #a6a6a6;
+    padding: 0.8mm 1.2mm;
+    line-height: 1.2;
+  }
+
+  .lista-print-root thead th {
+    background: #0f6437;
+    color: #ffffff;
+    font-weight: bold;
+  }
+
+  .lista-print-root thead {
+    display: table-header-group;
+  }
+
+  .lista-print-root tbody tr {
+    break-inside: avoid;
+  }
+
+  .lista-print-root tfoot td {
+    background: #d9e2f3;
+    font-weight: bold;
   }
 
   .trato-print-root {
