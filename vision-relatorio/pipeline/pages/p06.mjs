@@ -23,8 +23,9 @@ function renderAbate({ model, ctx, v, sufixo, pageNum }) {
   `;
 
   const kpis = `
-  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+  <div class="kpis" style="grid-template-columns:repeat(5,1fr)">
     <div class="kpi"><div class="lbl">N° de Cabeças</div><div class="val">${fmtInt(v.cabTodas)} <small>cab</small></div></div>
+    <div class="kpi"><div class="lbl">Valor Líquido</div><div class="val"><small>R$</small> ${fmt2(v.valor)}</div></div>
     <div class="kpi"><div class="lbl">Média R$/@</div><div class="val"><small>R$</small> ${fmt2(v.rsAt)}</div></div>
     <div class="kpi"><div class="lbl">Média R$/kg</div><div class="val"><small>R$</small> ${fmt2(v.rsKg)}</div></div>
     <div class="kpi"><div class="lbl">Média R$/cab</div><div class="val"><small>R$</small> ${fmt2(v.rsCab)}</div></div>

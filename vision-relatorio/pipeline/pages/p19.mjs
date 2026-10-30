@@ -74,11 +74,12 @@ export function render({ model, ctx }) {
       + `<tr class="total"><td>Total</td><td class="num">${fmtInt(v.cab)}</td><td class="num">${fmt2(v.valor)}</td><td class="num">100%</td></tr>`;
 
     body = `
-  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+  <div class="kpis" style="grid-template-columns:repeat(5,1fr)">
     <div class="kpi"><div class="lbl">Nº de Cabeças</div><div class="val">${fmtInt(v.cab)}</div></div>
     <div class="kpi"><div class="lbl">Valor Líquido</div><div class="val"><small>R$</small> ${fmt2(v.valor)}</div></div>
     <div class="kpi"><div class="lbl">Média R$/@</div><div class="val"><small>R$</small> ${fmt2(v.rsAt)}</div></div>
     <div class="kpi"><div class="lbl">Média R$/kg PV</div><div class="val"><small>R$</small> ${fmt2(v.rsKg)}</div></div>
+    <div class="kpi"><div class="lbl">Média R$/cab</div><div class="val"><small>R$</small> ${fmt2(v.rsCab)}</div></div>
   </div>
 
   <div class="chart1">
