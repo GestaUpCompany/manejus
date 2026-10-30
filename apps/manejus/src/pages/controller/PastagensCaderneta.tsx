@@ -17,8 +17,10 @@ interface RegistroPastagens {
   manejador?: string
   lote?: string
   pasto_saida?: string
+  curral_saida?: string
   avaliacao_saida?: number
   pasto_entrada?: string
+  curral_entrada?: string
   avaliacao_entrada?: number
   vaca?: number
   touro?: number
@@ -28,6 +30,18 @@ interface RegistroPastagens {
   novilha?: number
   sync_status?: string
   created_at: string
+}
+
+/** Local de saída: o pasto, ou o curral (marcado) quando a saída foi de curral */
+function localSaida(registro: RegistroPastagens): string {
+  if (registro.pasto_saida) return registro.pasto_saida
+  return registro.curral_saida ? `${registro.curral_saida} (curral)` : '-'
+}
+
+/** Local de entrada: o pasto, ou o curral (marcado) quando a entrada foi em curral */
+function localEntrada(registro: RegistroPastagens): string {
+  if (registro.pasto_entrada) return registro.pasto_entrada
+  return registro.curral_entrada ? `${registro.curral_entrada} (curral)` : '-'
 }
 
 export function PastagensCaderneta() {
@@ -82,8 +96,10 @@ export function PastagensCaderneta() {
       (registro.manejador && registro.manejador.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.pasto_saida && registro.pasto_saida.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.curral_saida && registro.curral_saida.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.avaliacao_saida && registro.avaliacao_saida.toString().includes(searchTerm.toLowerCase())) ||
       (registro.pasto_entrada && registro.pasto_entrada.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.curral_entrada && registro.curral_entrada.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.avaliacao_entrada && registro.avaliacao_entrada.toString().includes(searchTerm.toLowerCase())) ||
       (registro.vaca && registro.vaca.toString().includes(searchTerm.toLowerCase())) ||
       (registro.touro && registro.touro.toString().includes(searchTerm.toLowerCase())) ||
@@ -226,16 +242,16 @@ export function PastagensCaderneta() {
                       <span className="text-content-strong font-medium">{registro.lote || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-content-muted">Pasto Saída:</span>
-                      <span className="text-content-strong font-medium">{registro.pasto_saida || '-'}</span>
+                      <span className="text-content-muted">Saída:</span>
+                      <span className="text-content-strong font-medium">{localSaida(registro)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-content-muted">Aval. Saída:</span>
                       <span className="text-content-strong font-medium">{registro.avaliacao_saida || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-content-muted">Pasto Entrada:</span>
-                      <span className="text-content-strong font-medium">{registro.pasto_entrada || '-'}</span>
+                      <span className="text-content-muted">Entrada:</span>
+                      <span className="text-content-strong font-medium">{localEntrada(registro)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-content-muted">Aval. Entrada:</span>
@@ -265,9 +281,9 @@ export function PastagensCaderneta() {
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Manejador</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Lote</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Pasto Saída</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Saída</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Aval. Saída</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Pasto Entrada</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Entrada</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Aval. Entrada</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Total Animais</th>
                 </tr>
@@ -293,13 +309,13 @@ export function PastagensCaderneta() {
                         {registro.lote || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
-                        {registro.pasto_saida || '-'}
+                        {localSaida(registro)}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.avaliacao_saida || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
-                        {registro.pasto_entrada || '-'}
+                        {localEntrada(registro)}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {registro.avaliacao_entrada || '-'}
