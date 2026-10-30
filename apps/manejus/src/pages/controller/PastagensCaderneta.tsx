@@ -30,6 +30,48 @@ interface RegistroPastagens {
   novilha?: number
   sync_status?: string
   created_at: string
+  /** Tabela de origem: movimentos curral→curral vêm de registros_curral */
+  origem?: 'pastagens' | 'curral'
+  total_animais?: number
+}
+
+/** Registro da caderneta de curral (curral→curral), que não tem as colunas de categoria nem de avaliação de pasto */
+interface RegistroCurral {
+  id: string
+  fazenda_id: string
+  nome_usuario: string | null
+  data: string
+  manejador: string | null
+  lote: string | null
+  curral_saida: string | null
+  curral_entrada: string | null
+  total_animais: number | null
+  sync_status: string | null
+  created_at: string
+}
+
+/** Converte um registro de curral para a linha da lista, junto com os de pastagens */
+function registroCurralParaLinha(registro: RegistroCurral): RegistroPastagens {
+  return {
+    id: registro.id,
+    fazenda_id: registro.fazenda_id,
+    nome_usuario: registro.nome_usuario ?? undefined,
+    data: registro.data,
+    manejador: registro.manejador ?? undefined,
+    lote: registro.lote ?? undefined,
+    curral_saida: registro.curral_saida ?? undefined,
+    curral_entrada: registro.curral_entrada ?? undefined,
+    sync_status: registro.sync_status ?? undefined,
+    created_at: registro.created_at,
+    origem: 'curral',
+    total_animais: registro.total_animais ?? 0,
+  }
+}
+
+/** Total de animais: o curral guarda o total direto; o pasto soma as categorias */
+function totalAnimaisDo(registro: RegistroPastagens): number {
+  if (registro.origem === 'curral') return registro.total_animais ?? 0
+  return (registro.vaca || 0) + (registro.touro || 0) + (registro.bezerro || 0) + (registro.boi_magro || 0) + (registro.garrote || 0) + (registro.novilha || 0)
 }
 
 /** Local de saída: o pasto, ou o curral (marcado) quando a saída foi de curral */
@@ -70,27 +112,36 @@ export function PastagensCaderneta() {
     const fazendaId = vinculos[0].fazenda_id
     getFazendaNome(fazendaId).then(setFazendaNome)
 
-    const query = supabase
-      .from('registros_pastagens')
-      .select('*')
-      .eq('fazenda_id', fazendaId)
-      .is('deleted_at', null)
-      .order('data', { ascending: false })
-      .order('created_at', { ascending: false })
+    // Movimentos pasto↔curral e pasto↔pasto ficam em registros_pastagens; curral↔curral, em registros_curral
+    const [pastagens, curral] = await Promise.all([
+      supabase
+        .from('registros_pastagens')
+        .select('*')
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+        .order('data', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('registros_curral')
+        .select('*')
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+        .order('data', { ascending: false })
+        .order('created_at', { ascending: false }),
+    ])
 
-    const { data, error } = await query
+    if (pastagens.error) console.error('Erro ao buscar registros de pastagens:', pastagens.error)
+    if (curral.error) console.error('Erro ao buscar registros de curral:', curral.error)
 
-    if (error) {
-      console.error('Erro ao buscar registros de pastagens:', error)
-    } else {
-      setRegistros(data as RegistroPastagens[])
-    }
+    const linhasPastagens = (pastagens.data ?? []) as RegistroPastagens[]
+    const linhasCurral = ((curral.data ?? []) as RegistroCurral[]).map(registroCurralParaLinha)
+    setRegistros([...linhasPastagens, ...linhasCurral])
 
     setLoading(false)
   }
 
   const filteredRegistros = registros.filter((registro) => {
-    const totalAnimais = (registro.vaca || 0) + (registro.touro || 0) + (registro.bezerro || 0) + (registro.boi_magro || 0) + (registro.garrote || 0) + (registro.novilha || 0)
+    const totalAnimais = totalAnimaisDo(registro)
 
     const matchesSearch =
       (registro.manejador && registro.manejador.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -203,13 +254,13 @@ export function PastagensCaderneta() {
           {/* Mobile Card View */}
           <div className="sm:hidden space-y-3">
             {filteredRegistros.map((registro) => {
-              const totalAnimais = (registro.vaca || 0) + (registro.touro || 0) + (registro.bezerro || 0) + (registro.boi_magro || 0) + (registro.garrote || 0) + (registro.novilha || 0)
+              const totalAnimais = totalAnimaisDo(registro)
 
               return (
                 <Card
                   key={registro.id}
                   className="p-4"
-                  onClick={() => navigate(`/controller/cadernetas/pastagens/${registro.id}`)}
+                  onClick={registro.origem === 'curral' ? undefined : () => navigate(`/controller/cadernetas/pastagens/${registro.id}`)}
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
@@ -290,13 +341,13 @@ export function PastagensCaderneta() {
               </thead>
               <tbody className="bg-surface-1 divide-y divide-border-base">
                 {filteredRegistros.map((registro) => {
-                  const totalAnimais = (registro.vaca || 0) + (registro.touro || 0) + (registro.bezerro || 0) + (registro.boi_magro || 0) + (registro.garrote || 0) + (registro.novilha || 0)
+                  const totalAnimais = totalAnimaisDo(registro)
 
                   return (
                     <tr
                       key={registro.id}
-                      onClick={() => navigate(`/controller/cadernetas/pastagens/${registro.id}`)}
-                      className="cursor-pointer hover:bg-surface-2 transition-colors"
+                      onClick={registro.origem === 'curral' ? undefined : () => navigate(`/controller/cadernetas/pastagens/${registro.id}`)}
+                      className={registro.origem === 'curral' ? 'hover:bg-surface-2 transition-colors' : 'cursor-pointer hover:bg-surface-2 transition-colors'}
                     >
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {formatDate(registro.data)}
