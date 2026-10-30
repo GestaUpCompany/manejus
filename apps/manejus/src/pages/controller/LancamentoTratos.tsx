@@ -396,7 +396,6 @@ export function LancamentoTratos() {
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Cab.</th>
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Trato anterior</th>
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-center">Leitura</th>
-                  <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Previsto</th>
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">kg/cab/dia</th>
                   {Array.from({ length: quantidadeTratos }, (_, index) => <th key={index} colSpan={2} className="border border-border-base px-3 py-2 text-center">{index + 1}º Trato</th>)}
                   <th rowSpan={2} className="border border-border-base px-3 py-2 text-right">Total previsto</th>
@@ -421,7 +420,6 @@ export function LancamentoTratos() {
                     <td className="border border-border-base px-3 py-3 text-right">{linha.quantidadeCabecas ?? '—'}</td>
                     <td className="border border-border-base px-3 py-3 text-right">{formatarNumero(linha.tratoAnteriorKg)}</td>
                     <td className="border border-border-base px-3 py-3 text-center">{linha.leituraDia ?? '—'}{linha.ajusteLeituraPct != null ? ` (${linha.ajusteLeituraPct > 0 ? '+' : ''}${linha.ajusteLeituraPct}%)` : ''}</td>
-                    <td className="border border-border-base px-3 py-3 text-right font-semibold">{linha.kgBaseDia == null ? <span className="text-xs font-medium text-amber-600 dark:text-amber-400">a definir</span> : formatarNumero(linha.kgBaseDia)}</td>
                     <td className="border border-border-base px-3 py-3 text-right">{formatarNumero(linha.consumoKgCabDia, 2)}</td>
                     {linha.tratos.map((trato) => (
                       <Fragment key={trato.ordemTrato}>
