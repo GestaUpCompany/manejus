@@ -10,11 +10,14 @@ import {
   divergenciaDeSaldo,
   emAlerta,
   filtrarEOrdenar,
+  lotesComSaldo,
   movimentoEditavel,
   movimentosComSaldo,
   semCusto,
   sinalMovimento,
+  situacaoValidade,
   totaisDaTela,
+  unidadeNaQuantidade,
   validarAjuste,
   validarConteudoObrigatorio,
   validarEntrada,
@@ -22,6 +25,8 @@ import {
   type FormAjuste,
   type FormEntrada,
   type ItemEstoqueFarmacia,
+  type LoteFarmacia,
+  type SituacaoValidade,
   UNIDADES_CONTEUDO,
   UNIDADES_DIRETAS,
   UNIDADES_ESTOQUE,
@@ -35,6 +40,39 @@ const hojeLocal = () => new Date().toLocaleDateString('en-CA')
 
 const COLUNAS_ITEM = 'id,nome_comercial,sku,tipo,unidade,estoque_atual,estoque_minimo,custo_unitario,custo_total_estoque,controla_estoque,conteudo_por_unidade,conteudo_unidade'
 const COLUNAS_MOVIMENTO = 'id,medicamento_id,tipo_movimentacao,quantidade,custo_unitario,valor_total,data,origem,fornecedor,nota_fiscal,lote_produto,validade,observacao,unidade,registro_origem_id,created_at'
+const TAMANHO_PAGINA = 1000
+
+// Todo o ledger da fazenda (paginado), para montar os lotes de cada medicamento no card.
+async function buscarMovimentosFarmacia(fazendaId: string): Promise<MovimentoFarmacia[]> {
+  const linhas: MovimentoFarmacia[] = []
+  for (let de = 0; ; de += TAMANHO_PAGINA) {
+    const { data, error } = await supabase
+      .from('movimentacoes_farmacia')
+      .select(COLUNAS_MOVIMENTO)
+      .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
+      .order('id')
+      .range(de, de + TAMANHO_PAGINA - 1)
+    if (error) throw new Error(error.message)
+    const pagina = (data as MovimentoFarmacia[]) || []
+    linhas.push(...pagina)
+    if (pagina.length < TAMANHO_PAGINA) return linhas
+  }
+}
+
+const rotuloValidade = (situacao: SituacaoValidade, dias: number | null) => {
+  if (situacao === 'vencido') return 'Vencido'
+  if (situacao === 'vence_em_breve') return dias === 0 ? 'Vence hoje' : `Vence em ${dias}d`
+  return null
+}
+
+const CORES_VALIDADE: Partial<Record<SituacaoValidade, string>> = {
+  vencido: 'bg-red-500/10 text-red-700 dark:text-red-300',
+  vence_em_breve: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+}
+
+// Botões de ação do card: grade de 3 colunas no celular (alvo de toque de 36px), linha no desktop.
+const BOTAO_ACAO = 'inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors'
 
 const moeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const numero = (v: number, casas = 3) => v.toLocaleString('pt-BR', { maximumFractionDigits: casas })
@@ -55,6 +93,7 @@ export function EstoqueFarmacia() {
   const [fazendaNome, setFazendaNome] = useState<string | null>(null)
   const [itens, setItens] = useState<ItemEstoqueFarmacia[]>([])
   const [consumoMes, setConsumoMes] = useState(0)
+  const [movimentos, setMovimentos] = useState<MovimentoFarmacia[]>([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [busca, setBusca] = useState('')
@@ -78,7 +117,7 @@ export function EstoqueFarmacia() {
     if (!fazendaId) return
     setLoading(true)
     const inicioDoMes = `${hojeLocal().slice(0, 8)}01`
-    const [itensRes, consumoRes] = await Promise.all([
+    const [itensRes, consumoRes, movimentosRes] = await Promise.all([
       supabase.from('medicamentos').select(COLUNAS_ITEM).eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome_comercial'),
       supabase
         .from('movimentacoes_farmacia')
@@ -87,12 +126,17 @@ export function EstoqueFarmacia() {
         .in('tipo_movimentacao', ['baixa', 'estorno'])
         .gte('data', inicioDoMes)
         .is('deleted_at', null),
+      buscarMovimentosFarmacia(fazendaId).then(
+        (dados) => ({ dados, erro: null as string | null }),
+        (e: Error) => ({ dados: [] as MovimentoFarmacia[], erro: e.message }),
+      ),
     ])
     if (itensRes.error) setErro(itensRes.error.message)
     else if (consumoRes.error) setErro(consumoRes.error.message)
-    else setErro(null)
+    else setErro(movimentosRes.erro)
     setItens((itensRes.data as ItemEstoqueFarmacia[]) || [])
     setConsumoMes(consumoDoMes((consumoRes.data as MovimentoFarmacia[]) || [], inicioDoMes))
+    setMovimentos(movimentosRes.dados)
     setLoading(false)
   }, [fazendaId])
 
@@ -112,6 +156,16 @@ export function EstoqueFarmacia() {
   const categorias = useMemo(() => [...new Set(itens.map((i) => i.tipo))].sort(), [itens])
   const visiveis = useMemo(() => filtrarEOrdenar(itens, busca, tipo), [itens, busca, tipo])
   const itensControlados = useMemo(() => itens.filter((i) => i.controla_estoque), [itens])
+  const lotesPorItem = useMemo(() => {
+    const porItem = new Map<string, MovimentoFarmacia[]>()
+    for (const m of movimentos) porItem.set(m.medicamento_id, [...(porItem.get(m.medicamento_id) ?? []), m])
+    const hoje = hojeLocal()
+    const resultado = new Map<string, Array<LoteFarmacia & { situacao: SituacaoValidade; dias: number | null }>>()
+    for (const [itemId, movs] of porItem) {
+      resultado.set(itemId, lotesComSaldo(movs).map((l) => ({ ...l, ...situacaoValidade(l.validade, hoje) })))
+    }
+    return resultado
+  }, [movimentos])
 
   const abrirModal = (tipo: 'entrada' | 'ajuste', itemId = '') => {
     setErroForm(null)
@@ -313,37 +367,46 @@ export function EstoqueFarmacia() {
             const saldo = Number(item.estoque_atual)
             const alerta = emAlerta(item)
             const editandoEste = editandoMinimoId === item.id
+            const lotes = lotesPorItem.get(item.id) ?? []
+            const lotesVencidos = lotes.filter((l) => l.situacao === 'vencido').length
+            const lotesAVencer = lotes.filter((l) => l.situacao === 'vence_em_breve').length
             return (
               <Card key={item.id} className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
-                <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
-                  <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
-                    <p className="font-semibold text-content-strong truncate">{item.nome_comercial}</p>
-                    <p className="text-xs text-content-muted truncate">{item.tipo}{item.controla_estoque ? ` · ${item.unidade}` : ''}{item.sku ? ` · SKU ${item.sku}` : ''}</p>
+                <div className="flex flex-col gap-3 mb-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-content-strong break-words">{item.nome_comercial}</p>
+                    <p className="text-xs text-content-muted break-words">{item.tipo}{item.controla_estoque ? ` · ${item.unidade}` : ''}{item.sku ? ` · SKU ${item.sku}` : ''}</p>
                   </div>
-                  <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
-                    {alerta && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 dark:text-red-300">{saldo < 0 ? 'Negativo' : 'Alerta'}</span>
-                    )}
-                    {semCusto(item) && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-700">Sem custo</span>}
+                  {(alerta || semCusto(item) || lotes.some((l) => l.situacao === 'vencido' || l.situacao === 'vence_em_breve')) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {alerta && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 dark:text-red-300">{saldo < 0 ? 'Negativo' : 'Alerta'}</span>
+                      )}
+                      {lotesVencidos > 0 && <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CORES_VALIDADE.vencido}`}>{lotesVencidos === 1 ? 'Lote vencido' : `${lotesVencidos} lotes vencidos`}</span>}
+                      {lotesAVencer > 0 && <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CORES_VALIDADE.vence_em_breve}`}>{lotesAVencer === 1 ? 'Lote a vencer' : `${lotesAVencer} lotes a vencer`}</span>}
+                      {semCusto(item) && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-700">Sem custo</span>}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
                     {item.controla_estoque ? (
                       <>
                         <button
                           onClick={() => { setEditandoMinimoId(item.id); setValorMinimoEditando(String(Number(item.estoque_minimo)).replace('.', ',')) }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary dark:text-primary-light transition-colors hover:bg-primary/10"
+                          className={`${BOTAO_ACAO} border-primary/30 bg-primary/10 text-primary dark:text-primary-light hover:bg-primary/20`}
                           title="Editar estoque mínimo"
                         >
                           Editar
                         </button>
                         <button
                           onClick={() => abrirModal('ajuste', item.id)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300 transition-colors hover:bg-amber-500/20"
+                          className={`${BOTAO_ACAO} border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20`}
                           title="Ajustar saldo atual"
                         >
                           Ajustar
                         </button>
                         <button
                           onClick={() => abrirHistorico(item)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-border-base bg-surface-2 px-2.5 py-1 text-xs font-semibold text-content transition-colors hover:bg-surface-2"
+                          className={`${BOTAO_ACAO} border-border-base bg-surface-2 text-content hover:bg-surface-3`}
                           title="Ver histórico"
                         >
                           Histórico
@@ -352,7 +415,7 @@ export function EstoqueFarmacia() {
                     ) : (
                       <button
                         onClick={() => { setErroForm(null); setAtivacao({ item, modo: 'ativar', unidade: item.unidade, minimo: '0', conteudo: '', conteudoUn: 'mL' }) }}
-                        className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary dark:text-primary-light transition-colors hover:bg-primary/10"
+                        className={`${BOTAO_ACAO} col-span-3 border-primary/30 bg-primary/10 text-primary dark:text-primary-light hover:bg-primary/20`}
                       >
                         Ativar controle
                       </button>
@@ -366,7 +429,7 @@ export function EstoqueFarmacia() {
                     <>
                   <div className="flex justify-between text-sm">
                     <span className="text-content-muted">Saldo atual</span>
-                    <span className={`font-semibold ${saldo < 0 ? 'text-red-500' : 'text-content-strong'}`}>{numero(saldo)} {item.unidade}</span>
+                    <span className={`font-semibold ${saldo < 0 ? 'text-red-500' : 'text-content-strong'}`}>{numero(saldo)} {unidadeNaQuantidade(item.unidade, saldo)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-content-muted">Custo médio</span>
@@ -409,13 +472,33 @@ export function EstoqueFarmacia() {
                         </button>
                       </div>
                     ) : (
-                      <span className="font-medium text-content">{Number(item.estoque_minimo) > 0 ? `${numero(Number(item.estoque_minimo))} ${item.unidade}` : '—'}</span>
+                      <span className="font-medium text-content">{Number(item.estoque_minimo) > 0 ? `${numero(Number(item.estoque_minimo))} ${unidadeNaQuantidade(item.unidade, Number(item.estoque_minimo))}` : '—'}</span>
                     )}
+                  </div>
+                  <div className="mt-2 border-t border-border-base pt-2 space-y-1.5">
+                    <p className="text-xs text-content-muted">Lotes em estoque (vence primeiro)</p>
+                    {lotes.length === 0 ? (
+                      <p className="text-sm text-content-muted">Nenhum lote com saldo.</p>
+                    ) : lotes.map((l) => {
+                      const rotulo = rotuloValidade(l.situacao, l.dias)
+                      return (
+                        <div key={l.chave} className="flex justify-between items-center gap-2 text-sm">
+                          <span className="min-w-0 truncate text-content">
+                            {l.lote ?? 'Sem lote'}
+                            <span className="text-content-muted"> · {l.validade ? `val. ${dataBR(l.validade)}` : 'sem validade'}</span>
+                          </span>
+                          <span className="flex items-center gap-2 whitespace-nowrap">
+                            {rotulo && <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium ${CORES_VALIDADE[l.situacao]}`}>{rotulo}</span>}
+                            <span className="font-semibold text-content-strong">{numero(l.saldo)} {unidadeNaQuantidade(item.unidade, l.saldo)}</span>
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
                     </>
                   )}
                   {item.controla_estoque && (
-                    <div className="flex justify-between items-center gap-2 text-sm">
+                    <div className="flex flex-wrap justify-between items-center gap-x-2 gap-y-1 pt-2 text-sm">
                       <span className="text-content-muted">Baixa da Enfermaria</span>
                       <span className="flex items-center gap-2 text-right">
                         <span className={modoBaixaEnfermaria(item) === 'sem_conversao' ? 'text-amber-700' : 'text-content'}>{rotuloBaixaEnfermaria(item)}</span>
@@ -562,8 +645,8 @@ export function EstoqueFarmacia() {
                         <td className="py-2 pr-3 whitespace-nowrap">{dataBR(m.data)}</td>
                         <td className="py-2 pr-3 font-medium">{ROTULO_TIPO[m.tipo_movimentacao] ?? m.tipo_movimentacao}</td>
                         <td className="py-2 pr-3 text-content-muted">{ROTULO_ORIGEM[m.origem ?? ''] ?? m.origem ?? 'Manual'}</td>
-                        <td className="py-2 pr-3 text-content-muted">{[m.fornecedor, m.observacao].filter(Boolean).join(' · ') || '—'}</td>
-                        <td className={`py-2 pr-3 text-right whitespace-nowrap ${m.variacao < 0 ? 'text-red-600' : ''}`}>{sinal} {numero(qtd)} {m.unidade || historico.item.unidade}</td>
+                        <td className="py-2 pr-3 text-content-muted">{[m.fornecedor, m.lote_produto && `Lote ${m.lote_produto}`, m.validade && `val. ${dataBR(m.validade)}`, m.observacao].filter(Boolean).join(' · ') || '—'}</td>
+                        <td className={`py-2 pr-3 text-right whitespace-nowrap ${m.variacao < 0 ? 'text-red-600' : ''}`}>{sinal} {numero(qtd)} {unidadeNaQuantidade(m.unidade || historico.item.unidade, qtd)}</td>
                         <td className="py-2 pr-3 text-right">{m.custo_unitario == null ? '—' : moeda(Number(m.custo_unitario))}</td>
                         <td className={`py-2 text-right font-semibold ${m.saldo_apos < 0 ? 'text-red-600' : ''}`}>{numero(m.saldo_apos)}</td>
                       </tr>

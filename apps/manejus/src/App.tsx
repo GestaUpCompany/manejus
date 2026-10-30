@@ -146,7 +146,6 @@ const RelatorioSaude = laz(() => import('./pages/controller/RelatorioSaude'), 'R
 const MaquinasVeiculos = laz(() => import('./pages/controller/MaquinasVeiculos'), 'MaquinasVeiculos')
 const Setores = laz(() => import('./pages/controller/Setores'), 'Setores')
 const Locais = laz(() => import('./pages/controller/Locais'), 'Locais')
-const ItensAlmoxarifado = laz(() => import('./pages/controller/ItensAlmoxarifado'), 'ItensAlmoxarifado')
 const Implementos = laz(() => import('./pages/controller/Implementos'), 'Implementos')
 const TratamentosMaternidade = laz(() => import('./pages/controller/TratamentosMaternidade'), 'TratamentosMaternidade')
 const Individuos = laz(() => import('./pages/controller/Individuos'), 'Individuos')
@@ -1097,16 +1096,6 @@ function App() {
               <ControllerRoute>
                 <ControllerLayout>
                   <Locais />
-                </ControllerLayout>
-              </ControllerRoute>
-            }
-          />
-          <Route
-            path="/controller/itens-almoxarifado"
-            element={
-              <ControllerRoute>
-                <ControllerLayout>
-                  <ItensAlmoxarifado />
                 </ControllerLayout>
               </ControllerRoute>
             }
