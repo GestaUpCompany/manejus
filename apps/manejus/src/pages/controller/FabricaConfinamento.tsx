@@ -7,6 +7,7 @@ import { exportToXLSX } from '@gestaup/shared'
 import { FABRICA_CONFINAMENTO_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '@gestaup/shared'
 import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
+import { RelatorioListaImpressao } from '../../components/RelatorioListaImpressao'
 
 interface RegistroFabricaConfinamento {
   id: string
@@ -90,6 +91,28 @@ export function FabricaConfinamento() {
 
   const exportData = filteredRegistros.map((r) => ({ ...r }))
 
+  const fmtKg = (n: number) => Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+  const periodoImpressao = [
+    dataInicio || dataFim ? `Período: ${dataInicio ? formatDate(dataInicio) : '…'} a ${dataFim ? formatDate(dataFim) : '…'}` : 'Todos os períodos',
+    searchTerm ? `Busca: ${searchTerm}` : '',
+  ].filter(Boolean).join(' · ')
+  const linhasImpressao = filteredRegistros.map((r) => [
+    formatDate(r.data),
+    r.nome_usuario || '-',
+    vagaoLabel(r.vagao),
+    r.formulacao?.nome || '-',
+    `${r.ordem_trato}º · ${r.tipo}`,
+    fmtKg(r.total_previsto),
+    fmtKg(r.total_produzido),
+    r.concluido ? 'Concluído' : 'Em aberto',
+  ])
+  const rodapeImpressao = [
+    'Total', '', '', '', '',
+    fmtKg(filteredRegistros.reduce((s, r) => s + Number(r.total_previsto || 0), 0)),
+    fmtKg(filteredRegistros.reduce((s, r) => s + Number(r.total_produzido || 0), 0)),
+    '',
+  ]
+
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -99,6 +122,8 @@ export function FabricaConfinamento() {
       <FilterToolbar
         onExport={() => exportToXLSX(exportData, FABRICA_CONFINAMENTO_EXPORT_CONFIG, fazendaNome)}
         exportDisabled={filteredRegistros.length === 0}
+        onPrint={() => window.print()}
+        printDisabled={filteredRegistros.length === 0}
         onClear={() => {
           setSearchTerm('')
           setDataInicio('')
@@ -224,6 +249,23 @@ export function FabricaConfinamento() {
               </Tbody>
             </Table>
           </Card>
+          <RelatorioListaImpressao
+            titulo="Caderneta de Carregamento Vagão"
+            fazendaNome={fazendaNome}
+            periodo={periodoImpressao}
+            colunas={[
+              { titulo: 'Data' },
+              { titulo: 'Usuário' },
+              { titulo: 'Vagão' },
+              { titulo: 'Formulação' },
+              { titulo: 'Trato' },
+              { titulo: 'Previsto (kg)', alinhamento: 'right' },
+              { titulo: 'Produzido (kg)', alinhamento: 'right' },
+              { titulo: 'Status' },
+            ]}
+            linhas={linhasImpressao}
+            rodape={rodapeImpressao}
+          />
         </>
       )}
     </div>

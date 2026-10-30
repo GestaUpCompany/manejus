@@ -5,8 +5,9 @@ import { supabase } from '@gestaup/supabase'
 import { Card, Input, EmptyState, PageSkeleton, Table, Thead, Tbody, Tr, Th, Td, SearchInput, FilterToolbar, FilterField } from '@gestaup/ui'
 import { exportToXLSXMultiSheet } from '@gestaup/shared'
 import { TRATO_CONFINAMENTO_EXPORT_CONFIG, CONSUMO_CONFINAMENTO_EXPORT_CONFIG } from '../../utils/exportConfigs'
-import { formatDateTime, toFarmDateOnly } from '@gestaup/shared'
+import { formatDate, formatDateTime, toFarmDateOnly } from '@gestaup/shared'
 import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
+import { RelatorioListaImpressao } from '../../components/RelatorioListaImpressao'
 
 interface RegistroTrato {
   id: string
@@ -207,6 +208,24 @@ export function TratoConfinamento() {
     )
   }
 
+  const fmtKg = (n?: number | null) => (n != null ? Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '-')
+  const somaKg = (campo: 'kg_planejado' | 'kg_ofertado_real') =>
+    fmtKg(filteredRegistros.reduce((s, r) => s + Number(r[campo] || 0), 0))
+  const periodoImpressao = [
+    dataInicio || dataFim ? `Período: ${dataInicio ? formatDate(dataInicio) : '…'} a ${dataFim ? formatDate(dataFim) : '…'}` : 'Todos os períodos',
+    searchTerm ? `Busca: ${searchTerm}` : '',
+  ].filter(Boolean).join(' · ')
+  const linhasImpressao = filteredRegistros.map((r) => [
+    formatDateTime(r.data),
+    r.nome_usuario || '-',
+    r.curral?.nome || '-',
+    r.lote?.nome || '-',
+    `${r.ordem_trato}º`,
+    fmtKg(r.kg_planejado),
+    fmtKg(r.kg_ofertado_real),
+    String(r.leitura_cocho_nota ?? '-'),
+  ])
+
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -216,6 +235,8 @@ export function TratoConfinamento() {
       <FilterToolbar
         onExport={handleExport}
         exportDisabled={filteredRegistros.length === 0}
+        onPrint={() => window.print()}
+        printDisabled={filteredRegistros.length === 0}
         onClear={() => {
           setSearchTerm('')
           setDataInicio('')
@@ -343,6 +364,23 @@ export function TratoConfinamento() {
               </Tbody>
             </Table>
           </Card>
+          <RelatorioListaImpressao
+            titulo="Caderneta de Trato"
+            fazendaNome={fazendaNome}
+            periodo={periodoImpressao}
+            colunas={[
+              { titulo: 'Data' },
+              { titulo: 'Usuário' },
+              { titulo: 'Curral' },
+              { titulo: 'Lote' },
+              { titulo: 'Trato' },
+              { titulo: 'Planejado (kg)', alinhamento: 'right' },
+              { titulo: 'Ofertado (kg)', alinhamento: 'right' },
+              { titulo: 'Nota Cocho', alinhamento: 'center' },
+            ]}
+            linhas={linhasImpressao}
+            rodape={['Total', '', '', '', '', somaKg('kg_planejado'), somaKg('kg_ofertado_real'), '']}
+          />
         </>
       )}
     </div>
