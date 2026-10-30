@@ -2,6 +2,9 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
+## Ajuste de quantidade: histórico aberto não recarrega (30/10/2026)
+- **O que falta**: depois de um ajuste pelo modal "Ajustar quantidades", a timeline "Histórico de Movimentação" do formulário de edição do lote continua mostrando os dados de quando o formulário foi aberto. Só aparece o ajuste ao fechar e reabrir o lote. Causa: `onAjustado` em `Lotes.tsx` recarrega categorias e lista, mas não `setMovimentacaoData` (preenchido em `handleEdit`). Chamar `handleEdit` de novo resolve, mas reinicia o formulário e pode descartar edições não salvas; a correção certa é um recarregamento só da timeline.
+
 ## Tela Estoque → Cantina: o que ficou de fora (2026-10-20)
 
 - **Editar, excluir ou estornar lançamento manual** (entrada e ajuste do painel): a tela só insere. O tipo `estorno` existe no banco e no recálculo, mas nenhuma tela o usa. Lançamentos vindos do app (`registro_origem_id`) são regerados pelo trigger e devem ser corrigidos nas telas de Entrada/Saída Cantina.

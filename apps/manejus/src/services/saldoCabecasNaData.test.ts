@@ -34,6 +34,12 @@ describe('efeitoMovimentacao', () => {
     expect(efeitoMovimentacao(mov({ motivo_movimentacao: 'Entrevero' }), LOTE)).toBe(-10)
   })
 
+  it('conta Ajuste como entrada ou saída conforme tipo_entrada/tipo_saida', () => {
+    expect(efeitoMovimentacao(mov({ motivo_movimentacao: 'Ajuste', tipo_entrada: 'Ajuste' }), LOTE)).toBe(10)
+    expect(efeitoMovimentacao(mov({ motivo_movimentacao: 'Ajuste', tipo_saida: 'Ajuste' }), LOTE)).toBe(-10)
+    expect(efeitoMovimentacao(mov({ motivo_movimentacao: 'Ajuste', tipo_entrada: 'Ajuste' }), OUTRO)).toBe(0)
+  })
+
   it('ignora entrada de Novo Lote no destino', () => {
     expect(efeitoMovimentacao(mov({ lote_destino_id: OUTRO, tipo_entrada: 'Transferência', subtipo: 'Novo Lote' }), OUTRO)).toBe(0)
   })

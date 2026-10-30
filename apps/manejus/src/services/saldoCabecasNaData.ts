@@ -45,6 +45,10 @@ export function efeitoMovimentacao(m: MovimentacaoSaldo, loteId: string): number
   let efeito = 0
   if (m.lote_origem_id === loteId) {
     if (motivo === 'Entrada') efeito += n
+    if (motivo === 'Ajuste') {
+      if (m.tipo_entrada === 'Ajuste') efeito += n
+      else if (m.tipo_saida === 'Ajuste') efeito -= n
+    }
     const saidaSimples =
       (SAIDAS_SIMPLES.includes(motivo || '') || (motivo === 'Entrevero' && !m.lote_destino_id)) && !m.tipo_saida
     const saidaTransf =

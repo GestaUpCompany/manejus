@@ -1,0 +1,3 @@
+-- O Postgres não remove valores de enum (ALTER TYPE ... DROP VALUE não existe). Reverter a 20261030100000 é deixar o
+-- valor 'Ajuste' sem uso: rode antes o rollback da 20261030110000 e faça soft-delete (deleted_at) de qualquer
+-- registro com motivo_movimentacao = 'Ajuste'. Nenhuma ação de schema é necessária.

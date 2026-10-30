@@ -9,6 +9,7 @@ import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plan
 import { PlanoNutricionalMassaModal } from '../../components/plano-nutricional/PlanoNutricionalMassaModal'
 import { RevisarNovoLoteModal } from '../../components/lotes/RevisarNovoLoteModal'
 import { CorrigirPesoModal } from '../../components/lotes/CorrigirPesoModal'
+import { AjustarQuantidadeModal } from '../../components/lotes/AjustarQuantidadeModal'
 import { DetalharTropaModal } from '../../components/lotes/DetalharTropaModal'
 import { ImportarLotesModal } from '../../components/lotes/ImportarLotesModal'
 import { LoteCard } from '../../components/lotes/LoteCard'
@@ -230,6 +231,7 @@ export function Lotes() {
   const [pendingSubmitData, setPendingSubmitData] = useState<{ loteId: string; recalculatedCategorias: LoteCategoria[] } | null>(null)
   const [corrigirPesoCat, setCorrigirPesoCat] = useState<LoteCategoria | null>(null)
   const [detalharTropaCat, setDetalharTropaCat] = useState<LoteCategoria | null>(null)
+  const [isAjusteQuantidadeOpen, setIsAjusteQuantidadeOpen] = useState(false)
 
   const categoriasOpcoes = useMemo(() => {
     const baseCategorias = [
@@ -1626,9 +1628,13 @@ export function Lotes() {
       // Para Entrada, o lote_origem_id é o lote que recebe (destino), então é sempre 'entrada'
       // Para outros motivos, lote_origem_id === lote.id significa que o lote é a origem (saída)
       const isEntrada = r.motivo_movimentacao === 'Entrada'
-      const tipo_movimentacao = isEntrada
-        ? 'entrada'
-        : r.lote_origem_id === lote.id ? 'saida' : 'entrada'
+      // Ajuste de quantidade: o sentido vem de tipo_entrada/tipo_saida (lote_origem_id é sempre o lote)
+      const isAjuste = r.motivo_movimentacao === 'Ajuste'
+      const tipo_movimentacao = isAjuste
+        ? (r.tipo_entrada === 'Ajuste' ? 'entrada' : 'saida')
+        : isEntrada
+          ? 'entrada'
+          : r.lote_origem_id === lote.id ? 'saida' : 'entrada'
       return {
         ...r,
         type: 'movimentacao',
@@ -1637,6 +1643,7 @@ export function Lotes() {
         quantidade: r.numero_cabecas,
         peso_kg: r.peso_vivo_atual_kg,
         observacoes: [
+          isAjuste ? 'Ajuste de quantidade' : null,
           r.subtipo ? `Subtipo: ${r.subtipo}` : null,
           isEntrada
             ? (r.raca || null)
@@ -2694,7 +2701,14 @@ export function Lotes() {
                       <p className="text-sm text-red-700 dark:text-red-300">{errors.peso_atual}</p>
                     </div>
                   )}
-                  <h4 className="text-lg font-semibold text-content-strong mb-4">Dados por Categoria</h4>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <h4 className="text-lg font-semibold text-content-strong">Dados por Categoria</h4>
+                    {editingLote && (
+                      <Button type="button" size="sm" variant="secondary" onClick={() => setIsAjusteQuantidadeOpen(true)}>
+                        Ajustar quantidades
+                      </Button>
+                    )}
+                  </div>
                   {formData.categorias.map((cat, catIndex) => (
                     <div key={catIndex} className="mb-10 p-6 bg-surface-1 rounded-xl border-2 border-surface-3 shadow-md">
                       <div className="flex items-center justify-between mb-4">
@@ -3945,6 +3959,22 @@ export function Lotes() {
               await atualizarCategoriasNoForm(editingLote.id)
               await loadLotes()
             }
+          }}
+        />
+      )}
+
+      {editingLote && (
+        <AjustarQuantidadeModal
+          isOpen={isAjusteQuantidadeOpen}
+          onClose={() => setIsAjusteQuantidadeOpen(false)}
+          fazendaId={editingLote.fazenda_id}
+          loteId={editingLote.id}
+          loteNome={editingLote.nome}
+          usuarioId={user?.id}
+          usuarioEmail={user?.email}
+          onAjustado={async () => {
+            await atualizarCategoriasNoForm(editingLote.id)
+            await loadLotes()
           }}
         />
       )}
