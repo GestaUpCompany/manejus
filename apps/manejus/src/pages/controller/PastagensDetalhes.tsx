@@ -24,6 +24,10 @@ interface RegistroPastagens {
   pasto_entrada_area_util?: string
   pasto_entrada_especie?: string
   tempo_vedacao?: string
+  curral_saida?: string
+  curral_entrada?: string
+  movimentacao_status?: string
+  movimentacao_erro?: string
   vaca?: number
   touro?: number
   bezerro?: number
@@ -269,6 +273,10 @@ export function PastagensDetalhes() {
 
   const totalAnimais = (registro?.vaca || 0) + (registro?.touro || 0) + (registro?.bezerro || 0) + (registro?.boi_magro || 0) + (registro?.garrote || 0) + (registro?.novilha || 0)
 
+  // Registros antigos não têm curral: sem curral gravado, o lado é tratado como pasto
+  const isCurralSaida = !registro?.pasto_saida && !!registro?.curral_saida
+  const isCurralEntrada = !registro?.pasto_entrada && !!registro?.curral_entrada
+
   const actions = (
     <Button variant="primary" onClick={handleStartEdit} className="text-sm">
       Editar
@@ -299,30 +307,43 @@ export function PastagensDetalhes() {
                 </div>
               </DetailSection>
 
-              {/* Movimentação de Pasto */}
-              <DetailSection title="Movimentação de Pasto">
+              {/* Movimentação: cada lado pode ser pasto ou curral */}
+              <DetailSection title="Movimentação">
+                {registro!.movimentacao_status === 'recusada' && (
+                  <div className="mb-4 bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
+                    Movimento não aplicado ao histórico de ocupação: {registro!.movimentacao_erro || 'motivo não informado'}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Pasto Saída */}
+                  {/* Saída */}
                   <div className="bg-surface-2 p-4 rounded-lg">
-                    <h4 className="font-medium text-content-strong mb-3">Pasto Saída</h4>
+                    <h4 className="font-medium text-content-strong mb-3">{isCurralSaida ? 'Curral Saída' : 'Pasto Saída'}</h4>
                     <div className="space-y-2">
-                      <DetailField label="Pasto" value={formatValue(registro!.pasto_saida)} />
-                      <DetailField label="Área Útil" value={formatValue(registro!.pasto_saida_area_util)} />
-                      <DetailField label="Espécie" value={formatValue(registro!.pasto_saida_especie)} />
-                      <DetailField label="Avaliação" value={formatValue(registro!.avaliacao_saida)} />
-                      <DetailField label="Tempo de Ocupação" value={formatValue(registro!.tempo_ocupacao)} />
+                      <DetailField label={isCurralSaida ? 'Curral' : 'Pasto'} value={formatValue(isCurralSaida ? registro!.curral_saida : registro!.pasto_saida)} />
+                      {!isCurralSaida && (
+                        <>
+                          <DetailField label="Área Útil" value={formatValue(registro!.pasto_saida_area_util)} />
+                          <DetailField label="Espécie" value={formatValue(registro!.pasto_saida_especie)} />
+                          <DetailField label="Avaliação" value={formatValue(registro!.avaliacao_saida)} />
+                          <DetailField label="Tempo de Ocupação" value={formatValue(registro!.tempo_ocupacao)} />
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  {/* Pasto Entrada */}
+                  {/* Entrada */}
                   <div className="bg-surface-2 p-4 rounded-lg">
-                    <h4 className="font-medium text-content-strong mb-3">Pasto Entrada</h4>
+                    <h4 className="font-medium text-content-strong mb-3">{isCurralEntrada ? 'Curral Entrada' : 'Pasto Entrada'}</h4>
                     <div className="space-y-2">
-                      <DetailField label="Pasto" value={formatValue(registro!.pasto_entrada)} />
-                      <DetailField label="Área Útil" value={formatValue(registro!.pasto_entrada_area_util)} />
-                      <DetailField label="Espécie" value={formatValue(registro!.pasto_entrada_especie)} />
-                      <DetailField label="Avaliação" value={formatValue(registro!.avaliacao_entrada)} />
-                      <DetailField label="Tempo de Vedação" value={formatValue(registro!.tempo_vedacao)} />
+                      <DetailField label={isCurralEntrada ? 'Curral' : 'Pasto'} value={formatValue(isCurralEntrada ? registro!.curral_entrada : registro!.pasto_entrada)} />
+                      {!isCurralEntrada && (
+                        <>
+                          <DetailField label="Área Útil" value={formatValue(registro!.pasto_entrada_area_util)} />
+                          <DetailField label="Espécie" value={formatValue(registro!.pasto_entrada_especie)} />
+                          <DetailField label="Avaliação" value={formatValue(registro!.avaliacao_entrada)} />
+                          <DetailField label="Tempo de Vedação" value={formatValue(registro!.tempo_vedacao)} />
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
