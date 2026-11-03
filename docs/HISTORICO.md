@@ -3151,3 +3151,7 @@ Ainda aberto: a desativação do lote (`trg_lote_desativado_libera_local`) zera 
 - Exclusão e desativação em massa: caixa de seleção por linha e no cabeçalho, com barra de ações para os selecionados visíveis. Usa `.in('id', ids)` e passa pela mesma confirmação do caso individual.
 - Estoque dividido em dois cards: "Estoque de Insumos" (escopo `insumos`) e "Estoque de Formulações" (escopo `formulacoes`). Saiu o seletor de escopo do modal e o escopo "Insumos e formulações" deixou de ser criado. Links antigos com `config.escopo = 'todos'` continuam listados, mas não aparecem em nenhum card.
 - Seção de links sem visíveis mostra mensagem de estado vazio em vez de uma tabela sem linhas.
+
+### Consumo do confinamento: plano vigente na data e barra CMS em matéria seca — 2026-11-03
+
+Relato da Santa Cecília (Baias 4 e 5): %PV alto em 24 e 25/10. `recalc_consumo_confinamento_dia` e `calc_cabecas_peso_lote_em` usavam o plano ativo no momento do recálculo; editar um trato antigo depois da troca de dieta (27/10) aplicava a dieta e o GMD novos ao dia antigo. Migration `20261103220000_consumo_confinamento_plano_vigente.sql` cria `fn_plano_vigente_lote_em` e passa as duas funções a usar o plano vigente na data, com peso calculado dia a dia pelo GMD de cada plano. O recálculo usa o teor de MS atual da formulação, não o da época. A barra "CMS" do relatório mostrava matéria natural e passou a mostrar `trato_kg_ms_cab_dia`.
