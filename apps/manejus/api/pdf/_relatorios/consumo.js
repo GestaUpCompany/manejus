@@ -110,7 +110,7 @@ const CHARTS_INIT_JS = `
     if (!dados.length) { maybeDone(); return }
 
     var temLeitura = dados.some(function(d){return d.leitura_cocho != null})
-    var maxCms = Math.max.apply(null, dados.map(function(d){return d.trato_kg_cab_dia}).concat([1]))
+    var maxCms = Math.max.apply(null, dados.map(function(d){return d.trato_kg_ms_cab_dia || 0}).concat([1]))
     var maxPv = Math.max.apply(null, dados.map(function(d){return d.consumo_percent_pv}).concat([1]))
     // A Leitura de Cocho (eixo y2, oculto) ocupa uma faixa própria no topo da área do
     // gráfico (90% a 98% da altura), longe dos rótulos de CMS e %PV, que ficam embaixo.
@@ -133,7 +133,7 @@ const CHARTS_INIT_JS = `
         datasets: [
           {
             label: 'CMS (kg/cab/dia)',
-            data: dados.map(function(d){return d.trato_kg_cab_dia}),
+            data: dados.map(function(d){return d.trato_kg_ms_cab_dia}),
             backgroundColor: BLUE_BAR,
             borderRadius: 4,
             borderSkipped: false,
@@ -305,6 +305,7 @@ const CHARTS_INIT_JS = `
           // CMS: acima da barra; se não houver espaço, dentro dela (texto branco)
           ctx.font = 'bold 13px Arial, sans-serif'
           tratoMeta.data.forEach(function(bar, j) {
+            if (tratoDataset.data[j] == null) return
             var value = Number(tratoDataset.data[j]).toFixed(2)
             var y = place(bar.x, bar.y, value, 13, [-8, -24, -40, -56])
             if (y != null) drawText(value, bar.x, y, DARK_TEXT, 'rgba(255,255,255,0.9)', 3)

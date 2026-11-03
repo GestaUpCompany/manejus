@@ -47,7 +47,7 @@ export function SaidaInsumos() {
 
     const { data, error } = await supabase
       .from('registros_saida_insumos')
-      .select('*, formulacao:formulacoes(nome), saida_insumos_itens(id)')
+      .select('*, formulacao:formulacoes!registros_saida_insumos_formulacao_id_fkey(nome), saida_insumos_itens(id)')
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
       .order('data_producao', { ascending: false })

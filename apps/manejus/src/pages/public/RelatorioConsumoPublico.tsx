@@ -873,14 +873,14 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                           />
                           <Bar
                             yAxisId="left"
-                            dataKey="trato_kg_cab_dia"
+                            dataKey="trato_kg_ms_cab_dia"
                             name="CMS (kg/cab/dia)"
                             fill={BLUE_BAR}
                             radius={[4, 4, 0, 0]}
                             barSize={30}
                           >
                             <LabelList
-                              dataKey="trato_kg_cab_dia"
+                              dataKey="trato_kg_ms_cab_dia"
                               content={CmsLabel}
                             />
                           </Bar>
