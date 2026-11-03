@@ -5,6 +5,7 @@ import { supabase } from '@gestaup/supabase'
 import { Button, Card, Input, CardSkeleton } from '@gestaup/ui'
 import { exportToXLSX } from '@gestaup/shared'
 import { SUPLEMENTACAO_EXPORT_CONFIG } from '../../utils/exportConfigs'
+import { exportarAuditoriaProducaoConsumo, diasNoIntervalo, MAX_DIAS_AUDITORIA } from '../../services/auditoriaProducaoConsumoExport'
 import { formatDate, toFarmDateOnly } from '@gestaup/shared'
 import { getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
 
@@ -58,6 +59,49 @@ export function Suplementacao() {
   const [loteDropdownOpen, setLoteDropdownOpen] = useState(false)
   const loteDropdownRef = useRef<HTMLDivElement>(null)
   const [composicoesFormulacoes, setComposicoesFormulacoes] = useState<Record<string, { nome: string; mn_percent: number }[]>>({})
+
+  const [auditoriaInicio, setAuditoriaInicio] = useState('')
+  const [auditoriaFim, setAuditoriaFim] = useState('')
+  const [exportandoAuditoria, setExportandoAuditoria] = useState(false)
+  const [erroAuditoria, setErroAuditoria] = useState<string | null>(null)
+
+  const diasAuditoria = auditoriaInicio && auditoriaFim ? diasNoIntervalo(auditoriaInicio, auditoriaFim) : 0
+  const msgPeriodoAuditoria = !auditoriaInicio
+    ? { tipo: 'info' as const, texto: 'Selecione a data inicial para liberar o botão. Para um único dia, basta a data inicial.' }
+    : diasAuditoria < 1
+      ? { tipo: 'erro' as const, texto: 'A data final não pode ser anterior à data inicial.' }
+      : diasAuditoria > MAX_DIAS_AUDITORIA
+        ? { tipo: 'erro' as const, texto: `Período muito longo: no máximo ${MAX_DIAS_AUDITORIA} dias por planilha (selecionado: ${diasAuditoria}).` }
+        : {
+            tipo: 'ok' as const,
+            texto: diasAuditoria === 1
+              ? `Planilha de ${formatDate(auditoriaInicio)}.`
+              : `Planilha de ${formatDate(auditoriaInicio)} a ${formatDate(auditoriaFim)} (${diasAuditoria} dias).`,
+          }
+  const auditoriaPronta = msgPeriodoAuditoria.tipo === 'ok'
+
+  const handleAuditoriaInicio = (valor: string) => {
+    setAuditoriaInicio(valor)
+    setErroAuditoria(null)
+    // Data final acompanha a inicial enquanto estiver vazia ou antes dela: o caso comum é um único dia.
+    if (valor && (!auditoriaFim || auditoriaFim < valor)) setAuditoriaFim(valor)
+  }
+
+  const handleExportarAuditoria = async () => {
+    if (!user || !auditoriaPronta) return
+    setExportandoAuditoria(true)
+    setErroAuditoria(null)
+    try {
+      const fazendaId = await getFazendaIdForUser(user.id)
+      if (!fazendaId) throw new Error('Fazenda não encontrada para o usuário.')
+      await exportarAuditoriaProducaoConsumo(fazendaId, auditoriaInicio, auditoriaFim, fazendaNome)
+    } catch (err) {
+      console.error('Erro ao gerar auditoria produção × consumo:', err)
+      setErroAuditoria('Não foi possível gerar a planilha. Tente novamente.')
+    } finally {
+      setExportandoAuditoria(false)
+    }
+  }
 
   useEffect(() => {
     loadRegistros()
@@ -256,6 +300,62 @@ export function Suplementacao() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Caderneta de Suplementação</h2>
       </div>
+
+      <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
+        <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+          <div className="min-w-0 lg:flex-1">
+            <h3 className="text-base sm:text-lg font-semibold text-content-strong">Auditoria produção × consumo</h3>
+            <p className="text-xs sm:text-sm text-content mt-1">
+              Planilha que compara o que a Produção Fábrica fez com o consumo registrado nesta caderneta (kg no cocho),
+              por formulação, destino e insumo. <strong className="font-semibold">Escolha a data</strong> para gerar.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 lg:flex-none">
+            <div className="min-w-0">
+              <label htmlFor="auditoria-inicio" className="block text-xs sm:text-sm font-medium text-content mb-1">
+                Data inicial <span className="text-red-600 dark:text-red-400" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="auditoria-inicio"
+                type="date"
+                required
+                value={auditoriaInicio}
+                onChange={(e) => handleAuditoriaInicio(e.target.value)}
+                className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm bg-surface-1 border-surface-3"
+              />
+            </div>
+            <div className="min-w-0">
+              <label htmlFor="auditoria-fim" className="block text-xs sm:text-sm font-medium text-content mb-1">Data final</label>
+              <input
+                id="auditoria-fim"
+                type="date"
+                value={auditoriaFim}
+                min={auditoriaInicio || undefined}
+                onChange={(e) => { setAuditoriaFim(e.target.value); setErroAuditoria(null) }}
+                className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm bg-surface-1 border-surface-3"
+              />
+            </div>
+          </div>
+          <Button
+            onClick={handleExportarAuditoria}
+            disabled={!auditoriaPronta || exportandoAuditoria}
+            className="w-full lg:w-auto text-sm min-h-[44px] whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+          >
+            {exportandoAuditoria ? 'Gerando planilha...' : 'Gerar planilha de auditoria'}
+          </Button>
+        </div>
+        <p
+          role="status"
+          aria-live="polite"
+          className={`mt-3 text-xs sm:text-sm ${
+            erroAuditoria || msgPeriodoAuditoria.tipo === 'erro'
+              ? 'text-red-600 dark:text-red-400'
+              : msgPeriodoAuditoria.tipo === 'ok' ? 'text-content-strong' : 'text-content'
+          }`}
+        >
+          {erroAuditoria || msgPeriodoAuditoria.texto}
+        </p>
+      </Card>
 
       <Card className="bg-surface-1 p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
