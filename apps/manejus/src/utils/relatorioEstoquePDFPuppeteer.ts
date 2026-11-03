@@ -14,6 +14,8 @@ export interface ParametrosRelatorioEstoque {
   fazendaNome: string
   fazendaLogoUrl?: string | null
   dados: DadosRelatorioEstoque
+  // Dieta usada no filtro da tela, para o PDF dizer que é um recorte.
+  dietaNome?: string | null
 }
 
 // O cliente envia os dados da RPC mais a curva ABC e as decisões (situação por
@@ -23,7 +25,7 @@ export interface ParametrosRelatorioEstoque {
 export async function gerarRelatorioEstoquePDFPuppeteer(
   params: ParametrosRelatorioEstoque,
 ): Promise<Blob> {
-  const { fazendaNome, fazendaLogoUrl, dados } = params
+  const { fazendaNome, fazendaLogoUrl, dados, dietaNome } = params
 
   const [logoGestao, logoFazenda] = await Promise.all([
     carregarLogo('/images/manejus360.png'),
@@ -44,6 +46,7 @@ export async function gerarRelatorioEstoquePDFPuppeteer(
       data_fim: dados.data_fim ?? null,
       tem_periodo: dados.tem_periodo ?? false,
       escopo: dados.escopo,
+      dieta_nome: dietaNome ?? null,
       itens: dados.itens,
       totais: dados.totais,
       abc: Object.fromEntries(abc),

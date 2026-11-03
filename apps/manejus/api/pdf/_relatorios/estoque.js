@@ -68,6 +68,9 @@ const ESTOQUE_CSS = `
 .est-table td,.est-table th{font-size:10.5px}
 .est-table th.num,.est-table td.num{text-align:right}
 .est-neg{color:#c94d46;font-weight:700}
+.est-nome{display:block;font-weight:600;color:#14281d}
+.est-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
+.est-tags .est-tag{margin-left:0}
 .est-tag{display:inline-block;font-size:9px;font-weight:700;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle}
 .est-tag-min{background:#fdf3e3;color:#9a6b17;border:1px solid #eedcae}
 .est-tag-neg{background:#fdf6f5;color:#c94d46;border:1px solid #efd8d6}
@@ -143,11 +146,13 @@ function textoCobertura(item) {
 }
 
 function tagsItem(item) {
-  return [
+  const tags = [
     item.em_alerta ? '<span class="est-tag est-tag-min">abaixo do mínimo</span>' : '',
     item.negativo ? '<span class="est-tag est-tag-neg">saldo negativo</span>' : '',
     item.sem_custo ? '<span class="est-tag est-tag-min">sem custo</span>' : '',
   ].join('')
+  // Etiquetas numa linha própria abaixo do nome: o nome nunca disputa espaço com elas.
+  return tags ? `<span class="est-tags">${tags}</span>` : ''
 }
 
 function classeHtml(abc, item) {
@@ -171,7 +176,7 @@ function motivoRepor(item, lim) {
 function linhaItem(item, comPeriodo, abc, situacoes) {
   const saldo = comPeriodo ? saldoDe(item) : item.estoque_atual
   const saldoCls = item.negativo ? 'num est-neg' : 'num'
-  const nome = `<td>${escapeHtml(item.nome)}${tagsItem(item)}</td><td>${escapeHtml(item.tipo || '—')}</td><td>${classeHtml(abc, item)}</td><td>${situacaoHtml(situacoes, item)}</td>`
+  const nome = `<td><span class="est-nome">${escapeHtml(item.nome)}</span>${tagsItem(item)}</td><td>${escapeHtml(item.tipo || '—')}</td><td>${classeHtml(abc, item)}</td><td>${situacaoHtml(situacoes, item)}</td>`
   const minimo = item.estoque_minimo > 0 ? moneyFmt(item.estoque_minimo) : '—'
   const custo = `<td class="num">${item.sem_custo ? '—' : moneyFmt(item.custo_unitario)}</td><td class="num"><strong>${reais(item.valor_estoque)}</strong></td>`
   if (!comPeriodo) {
@@ -213,38 +218,25 @@ function posicaoTableHtml(linhas, comPeriodo, total, nota) {
 
 // ---------- Blocos de decisão ----------
 
-// O que a compra (ou a produção) cobre: o estoque mínimo ou os dias de consumo alvo.
-function criterioCompra(item, sugestao, lim) {
-  if (!sugestao.criterio) return ''
-  const verbo = sugestao.acao === 'producao' ? 'produzir ' : ''
-  if (sugestao.criterio === 'cobertura') return `${verbo}para ${lim.alvo} dias de consumo`
-  const apos = sugestao.coberturaApos != null ? ` · cobre ${Math.round(sugestao.coberturaApos)} d` : ''
-  return `${verbo}para o mínimo (${moneyFmt(item.estoque_minimo)} ${item.unidade || 'kg'})${apos}`
-}
-
 function nomeComTipo(item) {
   return `${escapeHtml(item.nome)}${item.item_tipo === 'formulacao' ? '<span class="est-tag est-tag-info">formulação</span>' : ''}`
 }
 
 // Tabela de "repor agora" e "programar compra": mesma forma, só muda o título.
-function sugestaoTableHtml({ titulo, linhas, comPeriodo, lim, totalValor, nota }) {
+function sugestaoTableHtml({ titulo, linhas, comPeriodo, lim, nota }) {
   const totalItens = linhas.length
-  const temProducao = linhas.some((l) => l.sugestao.acao === 'producao')
-  const colCompra = temProducao ? 'Compra ou produção' : 'Compra sugerida'
   const cols = comPeriodo
-    ? [['Item', '20%'], ['Motivo', '17%'], ['Saldo', '10%', 'num'], ['Consumo/dia', '9%', 'num'], ['Cobertura', '8%', 'num'], ['Esgota em', '9%'], [colCompra, '18%', 'num'], ['Valor estimado', '9%', 'num']]
-    : [['Item', '26%'], ['Motivo', '22%'], ['Saldo', '13%', 'num'], ['Mínimo', '11%', 'num'], [colCompra, '17%', 'num'], ['Valor estimado', '11%', 'num']]
-  const rows = linhas.map(({ item, sugestao }) => {
+    ? [['Item', '30%'], ['Motivo', '24%'], ['Saldo', '14%', 'num'], ['Consumo/dia', '11%', 'num'], ['Cobertura', '10%', 'num'], ['Esgota em', '11%']]
+    : [['Item', '38%'], ['Motivo', '28%'], ['Saldo', '18%', 'num'], ['Mínimo', '16%', 'num']]
+  const rows = linhas.map(({ item }) => {
     const un = unidadeDe(item)
     const saldo = `<td class="${item.negativo ? 'num est-neg' : 'num'}">${moneyFmt(saldoDe(item))} ${un}</td>`
-    const criterio = criterioCompra(item, sugestao, lim)
-    const compra = `<td class="num"><strong>${sugestao.quantidade > 0 ? `${moneyFmt(sugestao.quantidade)} ${un}` : '—'}</strong>${criterio ? `<span class="est-sub">${escapeHtml(criterio)}</span>` : ''}</td><td class="num">${item.sem_custo || sugestao.valor <= 0 ? '—' : reais(sugestao.valor)}</td>`
     if (!comPeriodo) {
-      return `<tr><td>${nomeComTipo(item)}</td><td>${escapeHtml(motivoRepor(item, lim))}</td>${saldo}<td class="num">${item.estoque_minimo > 0 ? moneyFmt(item.estoque_minimo) : '—'}</td>${compra}</tr>`
+      return `<tr><td>${nomeComTipo(item)}</td><td>${escapeHtml(motivoRepor(item, lim))}</td>${saldo}<td class="num">${item.estoque_minimo > 0 ? moneyFmt(item.estoque_minimo) : '—'}</td></tr>`
     }
-    return `<tr><td>${nomeComTipo(item)}</td><td>${escapeHtml(motivoRepor(item, lim))}</td>${saldo}<td class="num">${num(item.consumo_medio_dia)}</td><td class="num">${textoCobertura(item)}</td><td>${item.data_esgotamento ? dateFmt(item.data_esgotamento) : '—'}</td>${compra}</tr>`
+    return `<tr><td>${nomeComTipo(item)}</td><td>${escapeHtml(motivoRepor(item, lim))}</td>${saldo}<td class="num">${num(item.consumo_medio_dia)}</td><td class="num">${textoCobertura(item)}</td><td>${item.data_esgotamento ? dateFmt(item.data_esgotamento) : '—'}</td></tr>`
   }).join('')
-  return `<div class="table-block"><h3 class="table-title">${escapeHtml(titulo)}<span>${totalItens} ${pl(totalItens, 'item', 'itens')} · compra estimada de insumos ${reais(totalValor)}</span></h3><table class="est-table">${tableHeadHtml(cols, nota)}<tbody>${rows}</tbody></table></div>`
+  return `<div class="table-block"><h3 class="table-title">${escapeHtml(titulo)}<span>${totalItens} ${pl(totalItens, 'item', 'itens')}</span></h3><table class="est-table">${tableHeadHtml(cols, nota)}<tbody>${rows}</tbody></table></div>`
 }
 
 // Tabela de capital parado e de estoque alto: mesma forma, só muda o título.
@@ -310,13 +302,10 @@ function glossarioHtml(comPeriodo, lim) {
       ['Parado', 'Tem saldo e valor em estoque, mas nenhuma saída no período. É dinheiro sem giro e vale conferir o motivo.'],
       ['Estoque alto', `Cobertura acima de ${lim.alta} dias no ritmo do período. Informação, não alarme: compra em lote, safra e entressafra justificam estoque maior. Serve para conferir se é intencional.`],
       ['Cobertura', 'Quantos dias o saldo final do item dura no consumo médio diário do período (saldo ÷ consumo por dia). É calculada por item: não existe uma cobertura única do estoque, porque cada item gira num ritmo.'],
+      ['Consumo médio por dia', 'Total de saídas do item no período selecionado ÷ número de dias do período (do primeiro ao último dia, inclusive). Itens sem saída no período ficam sem média. Mudar as datas do relatório recalcula a média.'],
       ['Giro', 'Consumo do período em R$ ÷ valor médio em estoque. Quanto maior, menos tempo o dinheiro fica parado.'],
-      ['Compra sugerida', `Quantidade que leva o item ao maior entre o estoque mínimo e ${lim.alvo} dias de consumo no ritmo do período. Abaixo de cada quantidade, o relatório diz qual critério a definiu e, quando é o mínimo, quantos dias a compra cobre.`],
-      ['Produção (formulações)', 'Formulação é produzida na fábrica, não comprada. A quantidade é de produção e não entra nos valores em R$ de compra.'],
       ['Variação do valor', 'Compara o valor atual com o do início do período, que é aproximado: saldo inicial × custo médio atual.'],
-    ] : [
-      ['Compra sugerida', 'Quantidade necessária para chegar ao estoque mínimo cadastrado.'],
-    ]),
+    ] : []),
     ['Curva ABC', 'Classifica os itens pelo valor em estoque acumulado: A até 80%, B até 95%, C o restante. Itens sem saldo positivo ou sem custo ficam fora.'],
     ['Valor em estoque', `Saldo ${comPeriodo ? 'final ' : ''}× custo médio atual do item. Saldo negativo vale 0 e item sem custo vale 0, o que subestima o total.`],
   ]
@@ -334,7 +323,8 @@ export async function renderEstoqueHtml(input) {
   const lim = decisao.limites ?? { ruptura: 15, alvo: 30, alta: 90 }
   const situacoes = decisao.situacoes ?? {}
   const comPeriodo = input.tem_periodo === true
-  const periodo = periodoTexto(input)
+  const dietaNome = typeof input.dieta_nome === 'string' ? input.dieta_nome.trim() : ''
+  const periodo = `${periodoTexto(input)}${dietaNome ? ` · Dieta: ${dietaNome}` : ''}`
   const rodape = comPeriodo ? `Estoque de insumos · ${periodo}` : `Posição do estoque em ${dateFmt(gerado_em)}`
 
   const porChave = new Map(itens.map((i) => [chave(i), i]))
@@ -349,7 +339,6 @@ export async function renderEstoqueHtml(input) {
   const programar = comItem(decisao.programar)
   const parados = (decisao.parados ?? []).map((k) => porChave.get(k)).filter(Boolean)
   const altos = (decisao.altos ?? []).map((k) => porChave.get(k)).filter(Boolean)
-  const valorDe = (lista) => lista.reduce((s, r) => s + r.sugestao.valor, 0)
   const temAbc = itens.some((i) => i.valor_estoque > 0)
 
   const { contagem, capital } = resumo
@@ -392,9 +381,9 @@ export async function renderEstoqueHtml(input) {
     resumo.negativos > 0 && comPeriodo ? `${resumo.negativos} ${pl(resumo.negativos, 'saldo negativo', 'saldos negativos')} (falta lançar entrada ou ajuste)` : '',
     resumo.comAjuste > 0 ? `${resumo.comAjuste} ${pl(resumo.comAjuste, 'item teve', 'itens tiveram')} ajuste manual de saldo no período` : '',
   ].filter(Boolean)
-  const leituraHtml = `<div class="insight-box"><span class="insight-label">${comPeriodo ? 'Leitura do período' : 'Leitura da posição'}</span><ul class="est-leitura">${(decisao.leitura ?? []).map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>${qualidade.length ? `<p class="est-nota" style="margin-top:3mm">Qualidade dos dados: ${escapeHtml(qualidade.join(' · '))}.</p>` : ''}</div>`
+  const leituraHtml = `<div class="insight-box"><span class="insight-label">${comPeriodo ? 'Leitura do período' : 'Leitura da posição'}</span><ul class="est-leitura">${(decisao.leitura ?? []).map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>${comPeriodo ? `<p class="est-nota" style="margin-top:3mm"><strong>Como a média é calculada:</strong> consumo médio por dia = total de saídas do item no período (${escapeHtml(periodoTexto(input))}) ÷ número de dias do período, contando o primeiro e o último dia. A cobertura é o saldo final ÷ essa média; itens sem saída no período ficam sem média.</p>` : ''}${qualidade.length ? `<p class="est-nota" style="margin-top:3mm">Qualidade dos dados: ${escapeHtml(qualidade.join(' · '))}.</p>` : ''}</div>`
 
-  const notaCompra = `Compra sugerida = ${comPeriodo ? `a quantidade que leva o item ao maior entre o estoque mínimo e ${lim.alvo} dias de consumo no ritmo do período; abaixo de cada quantidade está o critério que a definiu` : 'a quantidade necessária para chegar ao estoque mínimo cadastrado'}.${[...repor, ...programar].some((r) => r.sugestao.acao === 'producao') ? ' Formulações são produzidas: a quantidade é de produção e não entra nos valores em R$.' : ''} Ordenado do mais urgente ao menos urgente.`
+  const notaCompra = 'Do mais urgente ao menos urgente.'
   const notaProgramar = `Itens com cobertura entre ${lim.ruptura} e ${lim.alvo} dias: ainda sem risco imediato, mas abaixo da meta de ${lim.alvo} dias. Programe a compra considerando o prazo de entrega do fornecedor.`
   const notaParado = 'Parado: tem saldo e valor, mas não teve nenhuma saída no período. Vale conferir o motivo: item abandonado, comprado a mais ou sazonal.'
   const notaAlto = `Cobertura acima de ${lim.alta} dias. Não é necessariamente um problema: compra em lote, safra e entressafra justificam estoque maior. Serve para conferir se é intencional.`
@@ -417,8 +406,8 @@ export async function renderEstoqueHtml(input) {
     flowBlock(leituraHtml, secResumo),
 
     temDecisao ? flowBlock(flowIntro('Decisões: o que fazer com cada item', ''), { ...secDecisao, keepNext: true }) : '',
-    repor.length ? flowTable(sugestaoTableHtml({ titulo: 'Repor agora', linhas: repor, comPeriodo, lim, totalValor: valorDe(repor), nota: notaCompra }), secDecisao) : '',
-    comPeriodo && programar.length ? flowTable(sugestaoTableHtml({ titulo: 'Programar compra', linhas: programar, comPeriodo, lim, totalValor: valorDe(programar), nota: notaProgramar }), secDecisao) : '',
+    repor.length ? flowTable(sugestaoTableHtml({ titulo: 'Repor agora', linhas: repor, comPeriodo, lim, nota: notaCompra }), secDecisao) : '',
+    comPeriodo && programar.length ? flowTable(sugestaoTableHtml({ titulo: 'Programar compra', linhas: programar, comPeriodo, lim, nota: notaProgramar }), secDecisao) : '',
     comPeriodo && parados.length ? flowTable(capitalTableHtml({ titulo: 'Capital parado', linhas: parados, valorEstoque: resumo.valorEstoque, situacoes, nota: notaParado }), secDecisao) : '',
     comPeriodo && altos.length ? flowTable(capitalTableHtml({ titulo: 'Estoque alto (informativo)', linhas: altos, valorEstoque: resumo.valorEstoque, situacoes, nota: notaAlto }), secDecisao) : '',
 
