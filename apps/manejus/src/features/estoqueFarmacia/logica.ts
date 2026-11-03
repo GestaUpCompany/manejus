@@ -62,8 +62,8 @@ export const ROTULO_ORIGEM: Record<string, string> = {
 
 const num = (v: unknown) => Number(v) || 0
 
-export const UNIDADES_ESTOQUE = ['un', 'dose', 'frasco', 'caixa', 'mL', 'L', 'g', 'kg']
-export const UNIDADES_DIRETAS = ['mL', 'L', 'g', 'kg']
+// Estoque de farmácia sempre em frascos inteiros; o conteúdo da embalagem (mL/mg) é só informativo.
+export const UNIDADE_ESTOQUE = 'frasco'
 export const UNIDADES_CONTEUDO = ['mL', 'mg']
 
 // Plural só para as unidades de contagem; mL, L, g, kg e un ficam iguais.
@@ -71,21 +71,6 @@ const PLURAL_UNIDADE: Record<string, string> = { dose: 'doses', frasco: 'frascos
 
 export function unidadeNaQuantidade(unidade: string, quantidade: number): string {
   return Math.abs(quantidade) > 1 ? (PLURAL_UNIDADE[unidade] ?? unidade) : unidade
-}
-
-export type ModoBaixaEnfermaria = 'direta' | 'embalagem' | 'sem_conversao'
-
-// Espelha farmacia_dose_para_estoque (banco): mL/L/g/kg convertem direto; as demais precisam do conteúdo da embalagem.
-export function modoBaixaEnfermaria(item: Pick<ItemEstoqueFarmacia, 'unidade' | 'conteudo_por_unidade' | 'conteudo_unidade'>): ModoBaixaEnfermaria {
-  if (UNIDADES_DIRETAS.includes(item.unidade)) return 'direta'
-  return num(item.conteudo_por_unidade) > 0 && item.conteudo_unidade ? 'embalagem' : 'sem_conversao'
-}
-
-export function rotuloBaixaEnfermaria(item: Pick<ItemEstoqueFarmacia, 'unidade' | 'conteudo_por_unidade' | 'conteudo_unidade'>): string {
-  const modo = modoBaixaEnfermaria(item)
-  if (modo === 'direta') return `Automática (em ${item.unidade})`
-  if (modo === 'embalagem') return `Automática (${num(item.conteudo_por_unidade).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${item.conteudo_unidade} por ${item.unidade})`
-  return 'Defina o conteúdo da embalagem'
 }
 
 // Saldo negativo ou no mínimo/abaixo; só itens com controle de estoque.
@@ -110,7 +95,6 @@ export interface TotaisTela {
   controlados: number
   em_alerta: number
   sem_custo: number
-  sem_conversao: number
   valor_total: number
 }
 
@@ -120,8 +104,6 @@ export function totaisDaTela(itens: ItemEstoqueFarmacia[]): TotaisTela {
     controlados: controlados.length,
     em_alerta: controlados.filter(emAlerta).length,
     sem_custo: controlados.filter(semCusto).length,
-    // Controlados que a Enfermaria não consegue converter em baixa (sem conteúdo da embalagem)
-    sem_conversao: controlados.filter((i) => modoBaixaEnfermaria(i) === 'sem_conversao').length,
     valor_total: controlados.reduce((s, i) => s + valorDoItem(i), 0),
   }
 }
@@ -287,19 +269,25 @@ function numeroValido(texto: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+// Frascos inteiros: sem fração (nem vírgula decimal).
+function inteiroValido(texto: string): number | null {
+  const t = texto.trim()
+  return /^\d+$/.test(t) ? Number(t) : null
+}
+
 export type ResultadoValidacao<T> = { ok: true; valores: T } | { ok: false; erro: string }
 
 export function validarEntrada(form: FormEntrada): ResultadoValidacao<{ quantidade: number; custo: number }> {
   if (!form.itemId) return { ok: false, erro: 'Selecione o medicamento.' }
-  const quantidade = numeroValido(form.quantidade)
-  if (quantidade == null || quantidade <= 0) return { ok: false, erro: 'Informe uma quantidade maior que zero.' }
+  const quantidade = inteiroValido(form.quantidade)
+  if (quantidade == null || quantidade <= 0) return { ok: false, erro: 'Informe um número inteiro de frascos maior que zero.' }
   const custo = numeroValido(form.custo)
   if (custo == null || custo <= 0) return { ok: false, erro: 'Informe o custo unitário (maior que zero).' }
   if (!DATA_ISO.test(form.data)) return { ok: false, erro: 'Informe a data da entrada.' }
   return { ok: true, valores: { quantidade, custo } }
 }
 
-// Conteúdo por embalagem é opcional: vazio significa "sem baixa automática da Enfermaria".
+// Conteúdo por frasco é opcional e informativo (não interfere no saldo).
 export function validarConteudo(conteudo: string): ResultadoValidacao<{ conteudo: number | null }> {
   if (conteudo.trim() === '') return { ok: true, valores: { conteudo: null } }
   const n = numeroValido(conteudo)
@@ -307,24 +295,10 @@ export function validarConteudo(conteudo: string): ResultadoValidacao<{ conteudo
   return { ok: true, valores: { conteudo: n } }
 }
 
-// Ao ativar o controle, unidades que não são mL/L/g/kg precisam do conteúdo da embalagem para a Enfermaria baixar.
-export function validarConteudoObrigatorio(
-  unidade: string,
-  conteudo: string,
-  conteudoUn: string,
-): ResultadoValidacao<{ conteudo: number | null }> {
-  if (UNIDADES_DIRETAS.includes(unidade)) return validarConteudo(conteudo)
-  if (conteudo.trim() === '') return { ok: false, erro: `Informe o conteúdo por ${unidade} (ex.: 500 mL por frasco) para a Enfermaria dar baixa automática.` }
-  const n = numeroValido(conteudo)
-  if (n == null || n <= 0) return { ok: false, erro: 'Informe o conteúdo da embalagem maior que zero.' }
-  if (!UNIDADES_CONTEUDO.includes(conteudoUn)) return { ok: false, erro: 'Escolha mL ou mg para o conteúdo da embalagem.' }
-  return { ok: true, valores: { conteudo: n } }
-}
-
 export function validarAjuste(form: FormAjuste): ResultadoValidacao<{ saldo: number }> {
   if (!form.itemId) return { ok: false, erro: 'Selecione o medicamento.' }
-  const saldo = numeroValido(form.saldo)
-  if (saldo == null || saldo < 0) return { ok: false, erro: 'Informe o novo saldo (zero ou maior).' }
+  const saldo = inteiroValido(form.saldo)
+  if (saldo == null) return { ok: false, erro: 'Informe o novo saldo em frascos inteiros (zero ou maior).' }
   if (!form.observacao.trim()) return { ok: false, erro: 'Informe o motivo do ajuste.' }
   if (!DATA_ISO.test(form.data)) return { ok: false, erro: 'Informe a data do ajuste.' }
   return { ok: true, valores: { saldo } }

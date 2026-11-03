@@ -4,16 +4,13 @@ import {
   divergenciaDeSaldo,
   emAlerta,
   filtrarEOrdenar,
-  modoBaixaEnfermaria,
   movimentoEditavel,
   movimentosComSaldo,
-  rotuloBaixaEnfermaria,
   semCusto,
   sinalMovimento,
   totaisDaTela,
   validarAjuste,
   validarConteudo,
-  validarConteudoObrigatorio,
   validarEntrada,
   valorDoItem,
   valorDoMovimento,
@@ -62,16 +59,7 @@ describe('estoque da farmacia: alertas e totais', () => {
       item({ estoque_atual: 5, custo_unitario: 0, estoque_minimo: 8 }),
       item({ estoque_atual: 100, custo_unitario: 9, controla_estoque: false }),
     ])
-    expect(totais).toEqual({ controlados: 3, em_alerta: 2, sem_custo: 1, sem_conversao: 0, valor_total: 20 })
-  })
-
-  it('conta controlados sem conversão para a Enfermaria (frasco sem conteúdo)', () => {
-    const totais = totaisDaTela([
-      item({ unidade: 'frasco', conteudo_por_unidade: null, conteudo_unidade: null }),
-      item({ unidade: 'frasco', conteudo_por_unidade: 500, conteudo_unidade: 'mL' }),
-      item({ unidade: 'dose', conteudo_por_unidade: null, conteudo_unidade: null, controla_estoque: false }),
-    ])
-    expect(totais.sem_conversao).toBe(1)
+    expect(totais).toEqual({ controlados: 3, em_alerta: 2, sem_custo: 1, valor_total: 20 })
   })
 
   it('filtra por busca sem acento e classificação, com alertas primeiro', () => {
@@ -129,11 +117,13 @@ describe('estoque da farmacia: extrato', () => {
 })
 
 describe('estoque da farmacia: formulários', () => {
-  const entrada = { itemId: 'i1', quantidade: '2,5', custo: '10.50', fornecedor: '', notaFiscal: '', lote: '', validade: '', observacao: '', data: '2026-10-20' }
+  const entrada = { itemId: 'i1', quantidade: '2', custo: '10.50', fornecedor: '', notaFiscal: '', lote: '', validade: '', observacao: '', data: '2026-10-20' }
   const ajuste = { itemId: 'i1', saldo: '0', observacao: 'Inventário', data: '2026-10-20' }
 
-  it('valida a entrada e aceita vírgula decimal', () => {
-    expect(validarEntrada(entrada)).toEqual({ ok: true, valores: { quantidade: 2.5, custo: 10.5 } })
+  it('valida a entrada em frascos inteiros (custo aceita decimal)', () => {
+    expect(validarEntrada(entrada)).toEqual({ ok: true, valores: { quantidade: 2, custo: 10.5 } })
+    expect(validarEntrada({ ...entrada, custo: '10,5' })).toEqual({ ok: true, valores: { quantidade: 2, custo: 10.5 } })
+    for (const quantidade of ['2,5', '2.5', '0,5', '-1']) expect(validarEntrada({ ...entrada, quantidade }).ok).toBe(false)
     expect(validarEntrada({ ...entrada, itemId: '' }).ok).toBe(false)
     expect(validarEntrada({ ...entrada, quantidade: '0' }).ok).toBe(false)
     expect(validarEntrada({ ...entrada, quantidade: 'abc' }).ok).toBe(false)
@@ -145,44 +135,20 @@ describe('estoque da farmacia: formulários', () => {
   it('valida o ajuste: saldo zero vale, motivo é obrigatório', () => {
     expect(validarAjuste(ajuste)).toEqual({ ok: true, valores: { saldo: 0 } })
     expect(validarAjuste({ ...ajuste, saldo: '-1' }).ok).toBe(false)
+    expect(validarAjuste({ ...ajuste, saldo: '2,5' }).ok).toBe(false)
+    expect(validarAjuste({ ...ajuste, saldo: '7' })).toEqual({ ok: true, valores: { saldo: 7 } })
     expect(validarAjuste({ ...ajuste, saldo: '' }).ok).toBe(false)
     expect(validarAjuste({ ...ajuste, observacao: '  ' }).ok).toBe(false)
     expect(validarAjuste({ ...ajuste, itemId: '' }).ok).toBe(false)
   })
 })
 
-describe('baixa da Enfermaria (conversão de dose)', () => {
-  it('mL, L, g e kg convertem direto', () => {
-    for (const unidade of ['mL', 'L', 'g', 'kg']) {
-      expect(modoBaixaEnfermaria({ unidade, conteudo_por_unidade: null, conteudo_unidade: null })).toBe('direta')
-    }
-  })
-
-  it('frasco com conteúdo definido baixa pela embalagem; sem conteúdo não converte', () => {
-    expect(modoBaixaEnfermaria({ unidade: 'frasco', conteudo_por_unidade: 500, conteudo_unidade: 'mL' })).toBe('embalagem')
-    expect(modoBaixaEnfermaria({ unidade: 'frasco', conteudo_por_unidade: null, conteudo_unidade: null })).toBe('sem_conversao')
-    expect(rotuloBaixaEnfermaria({ unidade: 'frasco', conteudo_por_unidade: 500, conteudo_unidade: 'mL' })).toBe('Automática (500 mL por frasco)')
-    expect(rotuloBaixaEnfermaria({ unidade: 'dose', conteudo_por_unidade: null, conteudo_unidade: null })).toBe('Defina o conteúdo da embalagem')
-  })
-
-  it('valida o conteúdo da embalagem (opcional, maior que zero)', () => {
+describe('conteúdo do frasco (informativo)', () => {
+  it('valida o conteúdo (opcional, maior que zero)', () => {
     expect(validarConteudo('')).toEqual({ ok: true, valores: { conteudo: null } })
     expect(validarConteudo('500,5')).toEqual({ ok: true, valores: { conteudo: 500.5 } })
     expect(validarConteudo('0').ok).toBe(false)
     expect(validarConteudo('abc').ok).toBe(false)
-  })
-
-  it('exige o conteúdo ao ativar controle em unidade de embalagem', () => {
-    expect(validarConteudoObrigatorio('frasco', '', 'mL').ok).toBe(false)
-    expect(validarConteudoObrigatorio('dose', '  ', 'mL').ok).toBe(false)
-    expect(validarConteudoObrigatorio('caixa', '0', 'mL').ok).toBe(false)
-    expect(validarConteudoObrigatorio('frasco', '500', 'mL')).toEqual({ ok: true, valores: { conteudo: 500 } })
-    expect(validarConteudoObrigatorio('un', '10', 'g').ok).toBe(false)
-  })
-
-  it('unidade direta (mL, L, g, kg) não exige conteúdo', () => {
-    expect(validarConteudoObrigatorio('mL', '', 'mL')).toEqual({ ok: true, valores: { conteudo: null } })
-    expect(validarConteudoObrigatorio('kg', '', 'mL')).toEqual({ ok: true, valores: { conteudo: null } })
   })
 })
 
