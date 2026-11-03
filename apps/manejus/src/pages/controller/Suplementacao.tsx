@@ -106,6 +106,8 @@ export function Suplementacao() {
   useEffect(() => {
     loadRegistros()
     loadLotes()
+    // loadRegistros/loadLotes são recriadas a cada render; o efeito só deve rodar quando o usuário muda
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   useEffect(() => {
@@ -676,8 +678,16 @@ export function Suplementacao() {
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                         {formatDate(registro.data)}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      <td
+                        className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong max-w-[120px] truncate"
+                        title={registro.nome_usuario || undefined}
+                      >
+                        {registro.nome_usuario || '-'}
+                      </td>
+                      <td
+                        className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong max-w-[120px] truncate"
+                        title={registro.tratador || undefined}
+                      >
                         {registro.tratador || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
