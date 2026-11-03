@@ -84,7 +84,7 @@ const CADERNETA_EXPORTS: CadernetaExportEntry[] = [
   },
   {
     config: SAIDA_INSUMOS_EXPORT_CONFIG,
-    select: '*, formulacao:formulacoes(nome), saida_insumos_itens(id)',
+    select: '*, formulacao:formulacoes!registros_saida_insumos_formulacao_id_fkey(nome), saida_insumos_itens(id)',
     orderBy: 'data_producao',
   },
   {
