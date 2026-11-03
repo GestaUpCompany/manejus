@@ -1,0 +1,2 @@
+-- Rollback de 20261103180000_relatorio_estoque_dietas: reaplicar a funcao de 20261020180000_relatorio_estoque_periodo.sql
+-- (bloco CREATE OR REPLACE FUNCTION public.get_dados_relatorio_estoque).

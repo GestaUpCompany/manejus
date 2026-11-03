@@ -88,14 +88,14 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
   {
     tipo: 'estoque',
     titulo: 'Estoque de Insumos',
-    descricao: 'Apoio à decisão sobre insumos: o que repor e quanto comprar, capital parado ou em excesso, cobertura, consumo do período, valor em estoque e curva ABC.',
+    descricao: 'Apoio à decisão sobre insumos: o que repor, capital parado ou em excesso, cobertura, consumo médio do período, valor em estoque e curva ABC, com filtro por dieta.',
     icone: '📦',
     escopo: 'insumos',
   },
   {
     tipo: 'estoque',
     titulo: 'Estoque de Formulações',
-    descricao: 'Apoio à decisão sobre formulações: o que repor e quanto comprar, capital parado ou em excesso, cobertura, consumo do período, valor em estoque e curva ABC.',
+    descricao: 'Apoio à decisão sobre formulações: o que repor, capital parado ou em excesso, cobertura, consumo médio do período, valor em estoque e curva ABC, com filtro por dieta.',
     icone: '📦',
     escopo: 'formulacoes',
   },

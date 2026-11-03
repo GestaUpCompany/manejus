@@ -34,9 +34,7 @@ import {
   listaProgramar,
   listaRepor,
   resumirDecisao,
-  sugestaoReposicao,
   type SituacaoItem,
-  type SugestaoReposicao,
 } from '../../features/relatorioEstoque/decisao'
 import { plural } from '../../features/relatorioPastagens/agregacao'
 
@@ -113,15 +111,6 @@ function motivoRepor(item: ItemEstoque): string {
     : `Cobertura de ${cobertura} d (meta de ${COBERTURA_ALVO_DIAS} d)`
 }
 
-// O que a compra (ou a produção) cobre: o estoque mínimo ou os dias de consumo alvo.
-function criterioCompra(item: ItemEstoque, sug: SugestaoReposicao): string {
-  if (!sug.criterio) return ''
-  const verbo = sug.acao === 'producao' ? 'produzir ' : ''
-  if (sug.criterio === 'cobertura') return `${verbo}para ${COBERTURA_ALVO_DIAS} dias de consumo`
-  const apos = sug.coberturaApos != null ? ` · cobre ${Math.round(sug.coberturaApos)} d` : ''
-  return `${verbo}para o mínimo (${formatarNumero(item.estoque_minimo)} ${item.unidade || 'kg'})${apos}`
-}
-
 function PilulaSituacao({ situacao }: { situacao: SituacaoItem }) {
   return (
     <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={COR_SITUACAO[situacao]}>
@@ -151,6 +140,7 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
   const [dados, setDados] = useState<DadosRelatorioEstoque | null>(null)
   const [grupoAtivo, setGrupoAtivo] = useState<ItemTipoEstoque>('insumo')
   const [aba, setAba] = useState<AbaDecisao | null>(null)
+  const [dietaId, setDietaId] = useState('')
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState<FiltroEstoque>('todos')
   const [campo, setCampo] = useState<CampoOrdenacaoEstoque>('valor_estoque')
@@ -194,7 +184,17 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
     [itens, grupoDoEscopo],
   )
   const grupoEfetivo = gruposPresentes.some((g) => g.key === grupoAtivo) ? grupoAtivo : (gruposPresentes[0]?.key ?? 'insumo')
-  const itensGrupo = useMemo(() => itensPorGrupo(itens, grupoEfetivo), [itens, grupoEfetivo])
+  // Filtro por dieta: a formulação escolhida e os insumos que entram nela.
+  const dietasDisponiveis = useMemo(() => {
+    const mapa = new Map<string, string>()
+    itens.forEach((i) => i.dietas?.forEach((d) => mapa.set(d.id, d.nome)))
+    return [...mapa.entries()].map(([id, nome]) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+  }, [itens])
+  const dietaEfetiva = dietasDisponiveis.some((d) => d.id === dietaId) ? dietaId : ''
+  const itensGrupo = useMemo(
+    () => itensPorGrupo(itens, grupoEfetivo).filter((i) => !dietaEfetiva || i.dietas?.some((d) => d.id === dietaEfetiva)),
+    [itens, grupoEfetivo, dietaEfetiva],
+  )
   // Resumo, listas de decisão e curva ABC acompanham a aba de grupo; busca/filtro só mexem na tabela.
   const abc = useMemo(() => classificarABC(itens), [itens])
   const dias = useMemo(
@@ -256,7 +256,8 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
       const blob = await gerarRelatorioEstoquePDFPuppeteer({
         fazendaNome: relatorioInfo?.fazenda_nome ?? '',
         fazendaLogoUrl: relatorioInfo?.fazenda_logo_url,
-        dados,
+        dietaNome: dietasDisponiveis.find((d) => d.id === dietaEfetiva)?.nome ?? null,
+        dados: dietaEfetiva ? { ...dados, itens: itens.filter((i) => i.dietas?.some((d) => d.id === dietaEfetiva)) } : dados,
       })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -276,10 +277,10 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
     }
   }
 
-  const cabecalho = (rotulo: string, campoOrdem: CampoOrdenacaoEstoque | null, alinhar: 'left' | 'right' = 'right') => (
+  const cabecalho = (rotulo: string, campoOrdem: CampoOrdenacaoEstoque | null, alinhar: 'left' | 'right' = 'right', fixa = false) => (
     <th
       key={rotulo}
-      className={`py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap ${alinhar === 'left' ? 'text-left' : 'text-right'} ${campoOrdem ? 'cursor-pointer select-none hover:text-gray-800' : ''}`}
+      className={`py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap ${fixa ? 'sticky left-0 z-[1] bg-gray-50' : ''} ${alinhar === 'left' ? 'text-left' : 'text-right'} ${campoOrdem ? 'cursor-pointer select-none hover:text-gray-800' : ''}`}
       onClick={campoOrdem ? () => alternarOrdenacao(campoOrdem) : undefined}
       aria-sort={campoOrdem && campo === campoOrdem ? (direcao === 'asc' ? 'ascending' : 'descending') : undefined}
     >
@@ -307,9 +308,6 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
   // Tabela de "repor agora" e "programar compra": mesma forma, só muda o título e a nota.
   const renderSugestoes = (titulo: string, destaque: string, lista: ItemEstoque[], nota: string) => {
     if (lista.length === 0) return null
-    const temProducao = lista.some((i) => i.item_tipo === 'formulacao')
-    const colCompra = temProducao ? 'Compra ou produção' : 'Compra sugerida'
-    const valorTotal = lista.reduce((s, i) => s + sugestaoReposicao(i).valor, 0)
     return (
       <div key={titulo} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100">
@@ -319,12 +317,11 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             {cabecalhoSimples(comPeriodo
-              ? [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Consumo/dia', 'right'], ['Cobertura', 'right'], ['Esgota em', 'right'], [colCompra, 'right'], ['Valor estimado', 'right']]
-              : [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Mínimo', 'right'], [colCompra, 'right'], ['Valor estimado', 'right']])}
+              ? [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Consumo/dia', 'right'], ['Cobertura', 'right'], ['Esgota em', 'right']]
+              : [['Item', 'left'], ['Motivo', 'left'], ['Saldo', 'right'], ['Mínimo', 'right']])}
             <tbody>
               {lista.map((item) => {
                 const un = item.unidade || 'kg'
-                const sug = sugestaoReposicao(item)
                 return (
                   <tr key={chaveItem(item)} className="border-b border-gray-100 last:border-0">
                     <td className="py-2.5 px-3 font-medium text-gray-900">
@@ -337,21 +334,10 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
                     {comPeriodo && <td className="py-2.5 px-3 text-right text-gray-600 whitespace-nowrap">{textoCobertura(item)}</td>}
                     {comPeriodo && <td className="py-2.5 px-3 text-right text-gray-600 whitespace-nowrap">{formatarData(item.data_esgotamento)}</td>}
                     {!comPeriodo && <td className="py-2.5 px-3 text-right text-gray-600">{item.estoque_minimo > 0 ? formatarNumero(item.estoque_minimo) : '—'}</td>}
-                    <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                      <span className="font-semibold text-gray-900">{sug.quantidade > 0 ? `${formatarNumero(sug.quantidade)} ${un}` : '—'}</span>
-                      {sug.criterio && <span className="block text-[11px] text-gray-400">{criterioCompra(item, sug)}</span>}
-                    </td>
-                    <td className="py-2.5 px-3 text-right text-gray-700">{item.sem_custo || sug.valor <= 0 ? '—' : formatarMoeda(sug.valor)}</td>
                   </tr>
                 )
               })}
             </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-gray-200 bg-green-50/40">
-                <td className="py-2.5 px-3 font-semibold text-gray-900" colSpan={comPeriodo ? 7 : 5}>Compra estimada de insumos</td>
-                <td className="py-2.5 px-3 text-right font-bold" style={{ color: GREEN_DARK }}>{formatarMoeda(valorTotal)}</td>
-              </tr>
-            </tfoot>
           </table>
         </div>
         <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-gray-100">{nota}</p>
@@ -359,7 +345,7 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
     )
   }
 
-  const notaCompra = `Compra sugerida = ${comPeriodo ? `a quantidade que leva o item ao maior entre o estoque mínimo e ${COBERTURA_ALVO_DIAS} dias de consumo no ritmo do período; abaixo de cada quantidade está o critério que a definiu` : 'a quantidade necessária para chegar ao estoque mínimo cadastrado'}. Formulações são produzidas: a quantidade é de produção e não entra nos valores em R$. Do mais urgente ao menos urgente.`
+  const notaCompra = 'Do mais urgente ao menos urgente.'
 
   const renderRepor = () => {
     const blocos = [
@@ -424,7 +410,7 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              {cabecalho('Item', 'nome', 'left')}
+              {cabecalho('Item', 'nome', 'left', true)}
               {cabecalho('Tipo', null, 'left')}
               {cabecalho('ABC', null, 'left')}
               {cabecalho('Situação', null, 'left')}
@@ -444,13 +430,17 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
               const unidade = item.unidade || 'kg'
               return (
                 <tr key={chaveItem(item)} className="border-b border-gray-100 last:border-0">
-                  <td className="py-2.5 px-3">
-                    <span className="font-medium text-gray-900">{item.nome}</span>
-                    {item.negativo && (
-                      <span className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: '#fdf6f5', color: RED }}>saldo negativo</span>
-                    )}
-                    {item.sem_custo && (
-                      <span className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: '#fdf3e3', color: GOLD }}>sem custo</span>
+                  <td className="sticky left-0 z-[1] min-w-[200px] max-w-[280px] bg-white py-2.5 px-3 shadow-[1px_0_0_#e5e7eb]">
+                    <p className="font-semibold text-gray-900 leading-snug">{item.nome}</p>
+                    {(item.negativo || item.sem_custo) && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {item.negativo && (
+                          <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: '#fdf6f5', color: RED }}>saldo negativo</span>
+                        )}
+                        {item.sem_custo && (
+                          <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: '#fdf3e3', color: GOLD }}>sem custo</span>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td className="py-2.5 px-3 text-gray-500">{item.tipo || '—'}</td>
@@ -640,6 +630,19 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
                 </label>
               </>
             )}
+            {dietasDisponiveis.length > 0 && (
+              <label className="flex items-center gap-1">
+                Dieta
+                <select
+                  value={dietaEfetiva}
+                  onChange={(e) => setDietaId(e.target.value)}
+                  className="rounded border border-gray-300 bg-white px-2 py-1 max-w-[220px]"
+                >
+                  <option value="">Todas</option>
+                  {dietasDisponiveis.map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                </select>
+              </label>
+            )}
             {dados?.escopo === 'todos' && (
               <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
                 {GRUPOS_ESTOQUE.map((g) => (
@@ -682,6 +685,12 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
               <ul className="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
                 {leitura.map((frase) => <li key={frase}>{frase}</li>)}
               </ul>
+              {comPeriodo && (
+                <p className="mt-2 text-xs text-gray-500">
+                  <strong>Como a média é calculada:</strong> consumo médio por dia = total de saídas do item entre {formatarData(dados?.data_inicio)} e {formatarData(dados?.data_fim ?? dados?.gerado_em)}
+                  {dias ? ` (${dias} ${plural(dias, 'dia', 'dias')}, contando o primeiro e o último)` : ''} ÷ número de dias do período. A cobertura é o saldo final ÷ essa média, e itens sem saída no período ficam sem média. Mudar as datas recalcula tudo.
+                </p>
+              )}
               {(resumo.semCusto > 0 || (comPeriodo && resumo.negativos > 0) || resumo.comAjuste > 0) && (
                 <p className="mt-2 text-xs text-gray-400">
                   Qualidade dos dados:{' '}
@@ -824,7 +833,6 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
                 {comPeriodo && <div><dt className="font-semibold text-gray-800">Produção (formulações)</dt><dd>Formulação é produzida na fábrica, não comprada. A quantidade é de produção e não entra nos valores em R$ de compra.</dd></div>}
                 {comPeriodo && <div><dt className="font-semibold text-gray-800">Cobertura</dt><dd>Quantos dias o saldo final do item dura no consumo médio diário do período. É calculada por item: cada um gira num ritmo, então não existe uma cobertura única do estoque.</dd></div>}
                 {comPeriodo && <div><dt className="font-semibold text-gray-800">Giro</dt><dd>Consumo do período em R$ ÷ valor médio em estoque. Quanto maior, menos tempo o dinheiro fica parado.</dd></div>}
-                <div><dt className="font-semibold text-gray-800">Compra sugerida</dt><dd>{comPeriodo ? `Quantidade que leva o item ao maior entre o estoque mínimo e ${COBERTURA_ALVO_DIAS} dias de consumo no ritmo do período. Abaixo de cada quantidade, o relatório diz qual critério a definiu e, quando é o mínimo, quantos dias a compra cobre.` : 'Quantidade necessária para chegar ao estoque mínimo cadastrado.'}</dd></div>
                 <div><dt className="font-semibold text-gray-800">Valor em estoque</dt><dd>Saldo {comPeriodo ? 'final ' : ''}× custo médio atual. Saldo negativo vale 0 e item sem custo vale 0, o que subestima o total.</dd></div>
               </dl>
             </details>

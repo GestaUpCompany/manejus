@@ -20,6 +20,9 @@ export type ClasseABC = 'A' | 'B' | 'C'
 
 export interface ItemEstoque {
   item_tipo: ItemTipoEstoque
+  item_id?: string
+  // Dietas (formulações ativas) em que o item entra; ausente em respostas antigas da RPC.
+  dietas?: { id: string; nome: string }[]
   nome: string
   tipo: string | null
   unidade: string | null
