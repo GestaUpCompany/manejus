@@ -1,0 +1,2 @@
+-- Rollback: volta para a versão de 20261027120000 (só maternidade, enfermaria e rodeio).
+-- Aplicar o conteúdo de supabase/migrations/20261027120000_recent_activities_ordena_created_at.sql.

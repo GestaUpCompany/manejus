@@ -89,10 +89,33 @@ export function useRecentActivities(userId: string | undefined) {
 
       const activities = (data as { activities: { id: string; type: string; title: string; data: string }[] }).activities
 
-      const typePaths: Record<string, string> = {
+      // Só maternidade, enfermaria e rodeio têm tela de detalhe; as demais levam à lista da caderneta.
+      const detailPaths: Record<string, string> = {
         Maternidade: '/controller/cadernetas/maternidade',
         Enfermaria: '/controller/cadernetas/enfermaria',
         Rodeio: '/controller/cadernetas/rodeio',
+      }
+      const listPaths: Record<string, string> = {
+        Pastagens: '/controller/cadernetas/pastagens',
+        'Suplementação': '/controller/cadernetas/suplementacao',
+        Bebedouros: '/controller/cadernetas/bebedouros',
+        'Movimentação': '/controller/cadernetas/movimentacao',
+        Morte: '/controller/cadernetas/morte',
+        Pesagem: '/controller/cadernetas/pesagem',
+        'Leitura de cocho': '/controller/cadernetas/leitura-cocho',
+        Trato: '/controller/cadernetas/trato-confinamento',
+        'Fábrica de confinamento': '/controller/cadernetas/fabrica-confinamento',
+        'Manejo de curral': '/controller/cadernetas/manejo-curral',
+        Clima: '/controller/cadernetas/clima',
+        Limpeza: '/controller/cadernetas/limpeza',
+        Problemas: '/controller/cadernetas/problemas',
+        'Operações de máquinas': '/controller/cadernetas/operacoes-maquinas',
+        'Manutenção de máquinas': '/controller/cadernetas/manutencao-maquinas',
+        Abastecimento: '/controller/cadernetas/abastecimento',
+        Almoxarifado: '/controller/cadernetas/almoxarifado',
+        Cantina: '/controller/cadernetas/alimentacao',
+        'Entrada de insumos': '/controller/cadernetas/entrada-insumos',
+        'Saída de insumos': '/controller/cadernetas/saida-insumos',
       }
 
       return activities.map(a => ({
@@ -100,7 +123,7 @@ export function useRecentActivities(userId: string | undefined) {
         type: a.type,
         title: a.title,
         date: formatDateTime(a.data),
-        path: `${typePaths[a.type]}/${a.id}`,
+        path: detailPaths[a.type] ? `${detailPaths[a.type]}/${a.id}` : (listPaths[a.type] ?? '/controller'),
       }))
     },
   })
