@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, getFazendaIdForUser, getFazendaNome } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
-import { Button, Card, CardSkeleton, Input, Modal, Select } from '@gestaup/ui'
+import { Button, Card, CardSkeleton, EmptyState, Input, Modal, Select } from '@gestaup/ui'
 import {
   ROTULO_ORIGEM,
   ROTULO_TIPO,
@@ -99,6 +99,7 @@ export function EstoqueCantina() {
   const categorias = useMemo(() => [...new Set(itens.map((i) => i.classificacao))].sort(), [itens])
   const visiveis = useMemo(() => filtrarEOrdenar(itens, busca, classificacao), [itens, busca, classificacao])
   const itensControlados = useMemo(() => itens.filter((i) => i.controla_estoque), [itens])
+  const itensEmAlerta = useMemo(() => itens.filter(emAlerta), [itens])
 
   const abrirModal = (tipo: 'entrada' | 'ajuste', itemId = '') => {
     setErroForm(null)
@@ -190,17 +191,24 @@ export function EstoqueCantina() {
     : null
 
   if (loading && itens.length === 0) {
-    return <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div>
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
+    <div className="space-y-4 sm:space-y-6 min-w-0">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-content-strong">Estoque da Cantina</h2>
-          {fazendaNome && <p className="text-sm text-content-muted">{fazendaNome}</p>}
+          {fazendaNome && <p className="text-sm text-content-muted mt-1">{fazendaNome}</p>}
         </div>
-        <div className="flex flex-wrap gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-none">
           <Button variant="secondary" onClick={() => navigate('/controller/cadastros-auxiliares')}>Cadastrar itens</Button>
           <Button variant="secondary" onClick={() => navigate('/controller/relatorios')}>Relatório de Cantina</Button>
           <Button variant="secondary" onClick={() => abrirModal('ajuste')}>Ajuste</Button>
@@ -208,27 +216,45 @@ export function EstoqueCantina() {
         </div>
       </div>
 
-      {erro && <Card className="p-4 bg-red-500/10"><p className="text-sm text-red-700">{erro}</p></Card>}
+      {erro && (
+        <div className="bg-red-500/10 border border-red-300 rounded-xl p-4">
+          <p className="text-sm text-red-700 dark:text-red-300">{erro}</p>
+          <button onClick={() => setErro(null)} className="text-xs text-red-500 underline mt-1">Fechar</button>
+        </div>
+      )}
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="p-4" disableHover>
-          <p className="text-xs text-content-muted">Itens controlados</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold break-words">{totais.controlados}</p>
+      {/* KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch">
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Itens Controlados</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">{totais.controlados}</p>
         </Card>
-        <Card className="p-4" disableHover>
-          <p className="text-xs text-content-muted">Itens em alerta</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold text-amber-600 break-words">{totais.em_alerta}</p>
-          {totais.sem_custo > 0 && <p className="text-[11px] text-content-muted">{totais.sem_custo} sem custo</p>}
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Itens em Alerta</p>
+          <p className={`text-base sm:text-lg xl:text-xl font-bold mt-1 ${totais.em_alerta > 0 ? 'text-amber-600' : 'text-content-strong'}`}>{totais.em_alerta}</p>
+          {totais.sem_custo > 0 && <p className="text-[11px] text-content-muted mt-0.5">{totais.sem_custo} sem custo</p>}
         </Card>
-        <Card className="p-4" disableHover>
-          <p className="text-xs text-content-muted">Valor em estoque</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold break-words">{moeda(totais.valor_total)}</p>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Valor em Estoque</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">{moeda(totais.valor_total)}</p>
         </Card>
-        <Card className="p-4" disableHover>
-          <p className="text-xs text-content-muted">Consumo no mês</p>
-          <p className="text-base sm:text-lg xl:text-xl font-bold break-words">{moeda(consumoMes)}</p>
+        <Card className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+          <p className="text-xs sm:text-sm text-content-muted font-medium">Consumo do Mês</p>
+          <p className="text-base sm:text-lg xl:text-xl font-bold text-content-strong mt-1">{moeda(consumoMes)}</p>
         </Card>
       </div>
+
+      {/* Alerta de itens baixos */}
+      {itensEmAlerta.length > 0 && (
+        <div className="bg-red-500/10 border border-red-300 rounded-xl p-4">
+          <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+            {itensEmAlerta.length} item(ns) com estoque baixo:
+          </p>
+          <p className="text-xs text-red-500 mt-1">
+            {itensEmAlerta.map((i) => i.nome).join(', ')}
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
         <div className="sm:w-72">
@@ -239,50 +265,106 @@ export function EstoqueCantina() {
         </div>
       </div>
 
-      {visiveis.length === 0 ? (
-        <Card className="p-8 text-center" disableHover>
-          <p className="text-content-muted">
-            {itens.length === 0 ? 'Nenhum item da cantina cadastrado.' : 'Nenhum item para o filtro escolhido.'}
-          </p>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {visiveis.map((item) => {
-            const saldo = Number(item.estoque_atual)
-            const alerta = emAlerta(item)
-            return (
-              <Card key={item.id} className="p-4" disableHover>
-                <div className="flex justify-between gap-2">
-                  <div>
-                    <h3 className="font-semibold text-content-strong">{item.nome}</h3>
-                    <p className="text-xs text-content-muted">{item.classificacao} · {item.unidade_medida}</p>
+      {/* Itens */}
+      <div>
+        <h3 className="text-base sm:text-lg font-semibold text-content-strong mb-3">Itens</h3>
+        {visiveis.length === 0 ? (
+          <Card className="bg-surface-1 p-6" disableHover>
+            {itens.length === 0 ? (
+              <EmptyState
+                title="Nenhum item da cantina cadastrado"
+                description="Cadastre os itens da cantina para controlar o estoque."
+                action={<Button onClick={() => navigate('/controller/cadastros-auxiliares')}>Cadastrar itens</Button>}
+              />
+            ) : (
+              <EmptyState title="Nenhum item para o filtro escolhido" />
+            )}
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4">
+            {visiveis.map((item) => {
+              const saldo = Number(item.estoque_atual)
+              const alerta = emAlerta(item)
+              const minimo = Number(item.estoque_minimo)
+              return (
+                <Card key={item.id} className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
+                  <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
+                    <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
+                      <p className="font-semibold text-content-strong truncate">{item.nome}</p>
+                      <p className="text-xs text-content-muted truncate">{item.classificacao} · {item.unidade_medida}</p>
+                    </div>
+                    <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
+                      {alerta && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 dark:text-red-300">
+                          {saldo < 0 ? 'Saldo negativo' : 'Alerta'}
+                        </span>
+                      )}
+                      {semCusto(item) && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                          Sem custo
+                        </span>
+                      )}
+                      {!item.controla_estoque && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-500/10 text-content-muted">
+                          Sem controle de estoque
+                        </span>
+                      )}
+                      {item.controla_estoque && (
+                        <>
+                          <button
+                            onClick={() => abrirModal('entrada', item.id)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary dark:text-primary-light transition-colors hover:bg-primary/10"
+                            title="Registrar entrada"
+                          >
+                            Entrada
+                          </button>
+                          <button
+                            onClick={() => abrirHistorico(item)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-border-base bg-surface-2 px-2.5 py-1 text-xs font-semibold text-content transition-colors hover:bg-surface-2"
+                            title="Ver histórico"
+                          >
+                            Histórico
+                          </button>
+                          <button
+                            onClick={() => abrirModal('ajuste', item.id)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300 transition-colors hover:bg-amber-500/10"
+                            title="Ajustar saldo"
+                          >
+                            Ajustar
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    {alerta && <span className="text-xs rounded-full px-2 py-1 bg-amber-500/10 text-amber-700">{saldo < 0 ? 'Saldo negativo' : 'Abaixo do mínimo'}</span>}
-                    {semCusto(item) && <span className="text-xs rounded-full px-2 py-1 bg-blue-500/10 text-blue-700">Sem custo</span>}
-                    {!item.controla_estoque && <span className="text-xs rounded-full px-2 py-1 bg-gray-500/10 text-content-muted">Sem controle de estoque</span>}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-content-muted">Saldo atual</span>
+                      <span className={`font-semibold ${saldo < 0 ? 'text-red-600' : 'text-content-strong'}`}>
+                        {numero(saldo)} {item.unidade_medida}{saldo < 0 ? ' (reconciliar)' : ''}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-content-muted">Custo médio</span>
+                      <span className="text-content">{moeda(Number(item.custo_unitario))}/{item.unidade_medida}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-content-muted">Valor em estoque</span>
+                      <span className="font-semibold text-content-strong">{moeda(valorDoItem(item))}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-content-muted">Alerta abaixo de</span>
+                      <span className="text-content">{minimo > 0 ? `${numero(minimo)} ${item.unidade_medida}` : '—'}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-4 space-y-1 text-sm">
-                  <div className="flex justify-between"><span className="text-content-muted">Saldo</span><strong className={saldo < 0 ? 'text-red-600' : ''}>{numero(saldo)} {item.unidade_medida}</strong></div>
-                  <div className="flex justify-between"><span className="text-content-muted">Custo médio</span><span>{moeda(Number(item.custo_unitario))}</span></div>
-                  <div className="flex justify-between"><span className="text-content-muted">Mínimo</span><span>{Number(item.estoque_minimo) > 0 ? `${numero(Number(item.estoque_minimo))} ${item.unidade_medida}` : '—'}</span></div>
-                  <div className="flex justify-between"><span className="text-content-muted">Valor</span><strong>{moeda(valorDoItem(item))}</strong></div>
-                </div>
-                {item.controla_estoque ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => abrirModal('entrada', item.id)}>Entrada</Button>
-                    <Button size="sm" variant="secondary" onClick={() => abrirModal('ajuste', item.id)}>Ajuste</Button>
-                    <Button size="sm" variant="secondary" onClick={() => abrirHistorico(item)}>Histórico</Button>
-                  </div>
-                ) : (
-                  <p className="mt-4 text-xs text-content-muted">Ative "Controla Estoque" no cadastro do item para registrar movimentos.</p>
-                )}
-              </Card>
-            )
-          })}
-        </div>
-      )}
+                  {!item.controla_estoque && (
+                    <p className="mt-3 text-xs text-content-muted">Ative "Controla Estoque" no cadastro do item para registrar movimentos.</p>
+                  )}
+                </Card>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       <Modal isOpen={modal === 'entrada'} onClose={() => setModal(null)} title="Registrar entrada">
         <div className="space-y-3">
