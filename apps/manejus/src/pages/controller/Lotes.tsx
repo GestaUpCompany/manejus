@@ -2428,9 +2428,9 @@ export function Lotes() {
             {/* Identificação Básica */}
             <div className="border-t pt-4">
               <h4 className="text-lg font-semibold text-content-strong mb-4">Identificação Básica</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
-                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2">
+                <div className="col-span-1 sm:col-span-1 xl:col-span-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2 sm:min-h-[2.5rem]">
                     Nome <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -2462,15 +2462,15 @@ export function Lotes() {
                     <p className="text-xs text-red-500 mt-1">{errors.nome}</p>
                   )}
                 </div>
-                <div className="col-span-1 sm:col-span-1 lg:col-span-1 xl:col-span-1">
-                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                <div className="col-span-1 sm:col-span-1">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2 sm:min-h-[2.5rem]">
                     Sistema de Produção <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.sistema_producao}
                     onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}
                     required
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border-2 border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint text-sm sm:text-base"
                   >
                     <option value="">Selecione</option>
                     <option value="Cria">Cria</option>
@@ -2483,7 +2483,7 @@ export function Lotes() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2 sm:min-h-[2.5rem]">
                     {usaCurral(formData.sistema_producao) ? 'Curral' : 'Pasto'} <span className="text-red-500">*</span>
                   </label>
                   {usaCurral(formData.sistema_producao) ? (
@@ -2511,7 +2511,7 @@ export function Lotes() {
                   {errors.pasto_id && <p className="text-xs text-red-500 mt-1">{errors.pasto_id}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2 sm:min-h-[2.5rem]">
                     UA/ha (calculado)
                   </label>
                   <Input
@@ -2523,7 +2523,7 @@ export function Lotes() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2 sm:min-h-[2.5rem]">
                     kg/ha (calculado)
                   </label>
                   <Input
@@ -2534,8 +2534,8 @@ export function Lotes() {
                     className="border-border-base text-sm bg-surface-2"
                   />
                 </div>
-                <div className="col-span-1 sm:col-span-1 lg:col-span-1 xl:col-span-1">
-                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                <div className="col-span-1 sm:col-span-1">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2 sm:min-h-[2.5rem]">
                     Destino <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -2558,7 +2558,7 @@ export function Lotes() {
                       })
                     }}
                     required
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border-2 border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint text-sm sm:text-base"
                   >
                     <option value="">Selecione</option>
                     <option value="corte">Abate</option>
@@ -2586,8 +2586,8 @@ export function Lotes() {
                     </div>
                   )}
                 </div>
-                <div className="col-span-1 sm:col-span-1 lg:col-span-1 xl:col-span-1">
-                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
+                <div className="col-span-1 sm:col-span-1">
+                  <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2 sm:min-h-[2.5rem]">
                     Meta de Intervalo de Rodeio (dias)
                   </label>
                   <NumericInput
@@ -2761,7 +2761,7 @@ export function Lotes() {
                         <h6 className={`text-sm font-bold text-content-strong mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)}`}>
                           Identificação
                         </h6>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2">
                           <div>
                             <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Raça <span className="text-red-500">*</span>
@@ -2774,7 +2774,7 @@ export function Lotes() {
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
                               required
-                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint"
+                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border-2 border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint text-sm sm:text-base"
                             >
                               <option value="">Selecione</option>
                               {racas.map((raca) => (
@@ -2796,7 +2796,7 @@ export function Lotes() {
                               disabled={isEquideo(cat.categoria)}
                               title={isEquideo(cat.categoria) ? 'O sexo é definido pela categoria' : undefined}
                               required
-                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint"
+                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border-2 border-border-base rounded-lg focus:outline-none focus:border-accent bg-surface-1 text-content-strong placeholder-content-faint text-sm sm:text-base"
                             >
                               <option value="">Selecione</option>
                               <option value="macho">Macho</option>
@@ -2828,7 +2828,7 @@ export function Lotes() {
                         <h6 className={`text-sm font-bold text-content-strong mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)}`}>
                           Quantidade e Datas
                         </h6>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2">
                           <div className="col-span-1">
                             <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Quant. Inicial (cab){!cat.id && <span className="text-red-500">*</span>}
@@ -2881,7 +2881,7 @@ export function Lotes() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2 mt-2">
                           <div>
                             <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Peso Entrada (kg/cab) <span className="text-red-500">*</span>
@@ -2930,8 +2930,8 @@ export function Lotes() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
-                          <div className="col-span-1 sm:col-span-2 lg:col-span-4 xl:col-span-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2 mt-2">
+                          <div className="col-span-1 sm:col-span-2 xl:col-span-4 2xl:col-span-5">
                             <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Plano Nutricional <span className="text-red-500">*</span>
                             </label>
@@ -3100,7 +3100,7 @@ export function Lotes() {
                         {/* Atual */}
                         <div className="mb-4">
                           <span className="text-sm font-bold text-content mb-2 block border-b border-surface-3 pb-1">Atual</span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2">
                             <div>
                               <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Peso Vivo Atual (kg/cab)
@@ -3198,7 +3198,7 @@ export function Lotes() {
                         {/* Meta */}
                         <div className="mb-4">
                           <span className="text-sm font-bold text-content mb-2 block border-b border-surface-3 pb-1">Meta</span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2">
                             <div>
                               <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Peso Vivo Meta (kg/cab)
@@ -3240,7 +3240,7 @@ export function Lotes() {
                                 className="bg-surface-2 border-border-base focus:border-accent opacity-60"
                               />
                             </div>
-                            <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+                            <div className="col-span-1 sm:col-span-1 xl:col-span-2">
                               <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Produção Projetada (@/cab)
                               </label>
@@ -3252,7 +3252,7 @@ export function Lotes() {
                                 className="bg-surface-2 border-border-base focus:border-accent opacity-60"
                               />
                             </div>
-                            <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+                            <div className="col-span-1 sm:col-span-1 xl:col-span-2">
                               <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Venda Total Projetada (@/Lote/Categoria)
                               </label>
@@ -3265,7 +3265,7 @@ export function Lotes() {
                               />
                             </div>
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2 mt-2">
                             <div>
                               <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                                 Data Meta Projetada
@@ -3298,7 +3298,7 @@ export function Lotes() {
                         <h6 className={`text-sm font-bold text-content-strong mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)}`}>
                           Financeiro
                         </h6>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2">
                           <div>
                             <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Preço Entrada (R$/kg)
@@ -3352,7 +3352,7 @@ export function Lotes() {
                               className="border-border-base focus:border-accent opacity-60"
                             />
                           </div>
-                          <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+                          <div className="col-span-1 sm:col-span-1 xl:col-span-2">
                             <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Custo Operacional (R$/cab/dia)
                             </label>
@@ -3370,7 +3370,7 @@ export function Lotes() {
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2 mt-2">
                           <div>
                             <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Custo Frete (R$/cab)
@@ -3422,7 +3422,7 @@ export function Lotes() {
                               className="border-border-base focus:border-accent"
                             />
                           </div>
-                          <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+                          <div className="col-span-1 sm:col-span-1 xl:col-span-2">
                             <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                               Custo Identificação/Rastreabilidade (R$/cab)
                             </label>
@@ -3471,7 +3471,7 @@ export function Lotes() {
                         {/* Calculated Prices */}
                         <div className="mt-4 p-4 bg-surface-2 rounded-lg border-l-4 border-primary">
                           <h6 className="text-sm font-semibold text-content-strong mb-3">Preços Sugeridos de Venda</h6>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2">
                             <div>
                               <label className="block text-xs font-medium text-content mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Preço Custo (R$/@)
@@ -3525,7 +3525,7 @@ export function Lotes() {
                                 className="bg-surface-2 border-green-300 focus:border-green-500 opacity-90 font-semibold text-green-700 dark:text-green-300"
                               />
                             </div>
-                            <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+                            <div className="col-span-1 sm:col-span-1 xl:col-span-2">
                               <label className="block text-xs font-medium text-green-700 dark:text-green-300 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Faturamento Projetado (R$/Lote/Categoria)
                               </label>
@@ -3689,7 +3689,7 @@ export function Lotes() {
             {/* Informações Administrativas */}
             <div className="border-t pt-4">
               <h4 className="text-lg font-semibold text-content-strong mb-4">Informações Administrativas</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2">
                 <div>
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Produtor Rural
@@ -3702,7 +3702,7 @@ export function Lotes() {
                     className="border-border-base focus:border-accent"
                   />
                 </div>
-                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+                <div className="col-span-1 sm:col-span-1 xl:col-span-2">
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Propriedade de Origem
                   </label>
@@ -3726,7 +3726,7 @@ export function Lotes() {
                     className="border-border-base focus:border-accent"
                   />
                 </div>
-                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+                <div className="col-span-1 sm:col-span-1 xl:col-span-2">
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Mês de Competência
                   </label>
@@ -3743,8 +3743,8 @@ export function Lotes() {
             {/* SISBOV e Logística */}
             <div className="border-t pt-4">
               <h4 className="text-lg font-semibold text-content-strong mb-4">SISBOV e Logística</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
-                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-2">
+                <div className="col-span-1 sm:col-span-1 xl:col-span-2">
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Data Liberação SISBOV
                   </label>
@@ -3755,7 +3755,7 @@ export function Lotes() {
                     className="border-border-base focus:border-accent"
                   />
                 </div>
-                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+                <div className="col-span-1 sm:col-span-1 xl:col-span-2">
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Período Liberação SISBOV
                   </label>
@@ -3768,7 +3768,7 @@ export function Lotes() {
                     className="border-border-base focus:border-accent opacity-60"
                   />
                 </div>
-                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+                <div className="col-span-1 sm:col-span-1 xl:col-span-2">
                   <label className="block text-sm font-medium text-content mb-1 leading-tight line-clamp-2">
                     Data Embarque Prevista
                   </label>
