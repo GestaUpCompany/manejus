@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Período (dias) do relatório zootécnico: contado desde o primeiro plano do lote (05/11/2026)
+
+- **Sintoma**: na Mirandópolis, 19 categorias apareciam com período 15 no relatório zootécnico, embora os lotes tivessem entrado entre junho e outubro.
+- **Causa**: `update_dados_lotes()` (migration `20261023160000`) calculava `periodo` com `GREATEST(início do plano vigente, entrada)`. Em 21/10/2026 todos os lotes ganharam plano novo, então o início do plano vigente passou a ser 21/10 (15 dias em 05/11). Toda troca de plano/dieta zerava o contador.
+- **Correção**: migration `20261105130000_periodo_categoria_desde_primeiro_plano`. `periodo` = dias desde `GREATEST(MIN(data_inicio) dos planos do lote, entrada da categoria)`, com entrada = `COALESCE(data_pesagem, created_at)`. Peso, GMD, notificações (que usam o plano vigente) e bezerro ao pé não mudam. Rollback: `supabase/rollbacks/20261105130000_..._rollback.sql`.
+- **Efeito**: vale para todas as fazendas; o valor corrige quando o cron `update_dados_lotes` rodar de novo. Esperado na Mirandópolis: ex. TIP LOTE 12 = 100 dias, TIP LOTE 17 = 146.
+
 ## Farmácia: correção de lote e validade de frascos em estoque (05/11/2026)
 
 - **Tela**: botão "Corrigir" em cada linha de "Lotes em estoque" (`EstoqueFarmacia.tsx`): quantos frascos, lote, validade e observação.
@@ -7,6 +14,16 @@
 - **Lógica**: `lotesComSaldo` move os frascos limitado ao saldo da origem naquele ponto; `movimentosComSaldo` usa variação zero.
 - **Limitação**: não há desfazer pela tela; reverte-se com outra correção. Baixa continua sem lote gravado (FEFO), então corrigir validade pode mudar de qual lote as próximas baixas saem.
 - **Verificação**: typecheck, 631 testes e build ok; E2E na tela com controller da fazenda de testes (validação, divisão de lote, correção em cadeia, histórico, saldo e custo inalterados). Lançamentos de teste excluídos logicamente.
+
+## Unificação da Fazenda Paraíso na Fazenda Pioneira: migração dos dados (04/11/2026)
+
+Operação de dados autorizada pelo usuário, feita por pedido do cliente (estoque e insumos compartilhados). A Pioneira (`696a1a83-5c92-445d-afff-afa6aaca0de1`) é a fazenda principal; a Paraíso (`2b69e220-6c81-41d0-b855-4e2baeffb1bb`) segue ativa até a virada dos aparelhos e será desativada, sem exclusão, com autorização própria.
+
+- **Movido (`fazenda_id`):** 10 `pastos`, 2 `lotes` (LOTE 01 e LOTE 02, nomes mantidos por decisão do usuário), 5 `pluviometros` e 4 `registros_rodeio`. Total: 21 linhas. `lote_categorias` e `lote_pasto_historico` seguem pelo ID.
+- **Conferência:** Pioneira com 18 pastos, 15 lotes, 11 pluviômetros, 41 rodeios e 823 cabeças (708 + 115); Paraíso zerada nessas tabelas; nenhum lote com pasto de outra fazenda.
+- **Não movido:** cadastros da Paraíso (raças, causas de morte, tratamentos, faixas, preços etc.), `audit_log`, `peoes` e `usuario_fazenda`. A raça "Guacho" existe só na Paraíso.
+- **Backup e reversão:** `backup.unif_paraiso_{pastos,lotes,pluviometros,registros_rodeio}_20261104` guardam as linhas originais; para reverter, devolver o `fazenda_id` pelos IDs dessas tabelas. Registros lançados depois da migração precisam ser separados à parte.
+- **Pendente:** virada dos aparelhos e do gestor da Paraíso para a Pioneira, monitoramento de registros com o ID antigo e desativação da Paraíso.
 
 ## Itens do Almoxarifado em Cadastros Auxiliares: unidade, mínimo e controle de estoque (30/10/2026)
 - **Problema**: a aba Cadastros Auxiliares → Operacional → Itens do Almoxarifado só tinha Nome e Classificação. Unidade, estoque mínimo e "controla estoque" só existiam em `ItensAlmoxarifado.tsx`, página que tinha rota (`/controller/itens-almoxarifado`) mas nenhum link no app, então não dava para ativar o controle de estoque de um item pela interface.
@@ -3171,3 +3188,7 @@ Correção do peso (migration `20261103230000_calc_peso_plano_antigo_sem_salto.s
 Complemento (migration `20261103233000_calc_peso_sem_gmd_no_plano_atual.sql`): se a dieta atual não tem GMD para a categoria, o peso de dias antigos sem peso próprio volta a usar o peso atual, como antes de 03/11.
 
 Teor e custo da data (migration `20261103240000_consumo_confinamento_teor_da_data.sql`): `recalc_consumo_confinamento_dia` passa a buscar teor de MS e custo em `fn_formulacao_valores_em`, que lê `formulacoes_historico` (linha como era antes de cada alteração) e cai no valor atual se não houver registro posterior à data. **Depende de `trg_snapshot_formulacao`: não remover esse gatilho.** `formulacoes_versoes` não serve para isso, porque a versão 1 traz o valor de 27/10/2026 com vigência desde a criação da dieta. Linhas gravadas não mudam. Pendente: 206 linhas da Jacamim (dias até 07/10, calculados em 13/10) com teor diferente do histórico, aguardando a fazenda confirmar se a mudança da "16/09 RECRIA" (43,61% para 68,86% em 23/10) foi correção de cadastro.
+
+## 04/11/2026 — kg_planejado 1000× maior em registros de trato (Pioneira)
+
+Causa: no PWA, `syncService.ts` passava `kgPlanejado` (string de número JS, ex. "1283.625") por `normalizarNumero`, que lê "um ponto + 3 dígitos" como milhar pt-BR (virava 1.283.625). Só atingia valores com exatamente 3 casas decimais. Correção no PWA: números JS vão direto por `Number()`. Dados: 14 registros de `registros_oferta_trato` da Pioneira (`696a1a83-5c92-445d-afff-afa6aaca0de1`, 30/10 a 04/11, usuário LUCAS APARECIDO) divididos por 1000. Backup com os valores originais em `backup.backup_kg_planejado_pioneira_20261104` (colunas `id`, `kg_planejado`); para reverter, copiar `kg_planejado` de volta por `id`. Não corrigido: LOTE 08, 30/10, trato 2 (planejado 885, real 1), provável digitação.
