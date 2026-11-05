@@ -20,9 +20,11 @@ import {
   unidadeNaQuantidade,
   validarAjuste,
   validarEntrada,
+  validarReclassificacao,
   valorDoItem,
   type FormAjuste,
   type FormEntrada,
+  type FormReclassificacao,
   type ItemEstoqueFarmacia,
   type LoteFarmacia,
   type SituacaoValidade,
@@ -35,7 +37,7 @@ import {
 const hojeLocal = () => new Date().toLocaleDateString('en-CA')
 
 const COLUNAS_ITEM = 'id,nome_comercial,sku,tipo,unidade,estoque_atual,estoque_minimo,custo_unitario,custo_total_estoque,controla_estoque,conteudo_por_unidade,conteudo_unidade'
-const COLUNAS_MOVIMENTO = 'id,medicamento_id,tipo_movimentacao,quantidade,custo_unitario,valor_total,data,origem,fornecedor,nota_fiscal,lote_produto,validade,observacao,unidade,registro_origem_id,created_at'
+const COLUNAS_MOVIMENTO = 'id,medicamento_id,tipo_movimentacao,quantidade,custo_unitario,valor_total,data,origem,fornecedor,nota_fiscal,lote_produto,validade,lote_origem,validade_origem,observacao,unidade,registro_origem_id,created_at'
 const TAMANHO_PAGINA = 1000
 
 // Todo o ledger da fazenda (paginado), para montar os lotes de cada medicamento no card.
@@ -103,6 +105,7 @@ export function EstoqueFarmacia() {
   const [salvandoMinimo, setSalvandoMinimo] = useState(false)
   const [formEntrada, setFormEntrada] = useState<FormEntrada>(formEntradaVazio)
   const [formAjuste, setFormAjuste] = useState<FormAjuste>(formAjusteVazio)
+  const [reclassificacao, setReclassificacao] = useState<{ item: ItemEstoqueFarmacia; origem: LoteFarmacia; form: FormReclassificacao } | null>(null)
   const [erroForm, setErroForm] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [historico, setHistorico] = useState<HistoricoAberto | null>(null)
@@ -221,6 +224,36 @@ export function EstoqueFarmacia() {
       await carregar()
     } catch (e) {
       setErroForm(e instanceof Error ? e.message : 'Erro ao salvar o ajuste.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const salvarReclassificacao = async () => {
+    if (!reclassificacao || !fazendaId) return
+    const { item, origem, form } = reclassificacao
+    const v = validarReclassificacao(form, origem)
+    if (!v.ok) return setErroForm(v.erro)
+    setSubmitting(true)
+    try {
+      const { error } = await supabase.from('movimentacoes_farmacia').insert({
+        fazenda_id: fazendaId,
+        medicamento_id: item.id,
+        tipo_movimentacao: 'reclassificacao',
+        quantidade: v.valores.quantidade,
+        origem: 'painel_reclassificacao',
+        lote_produto: v.valores.lote,
+        validade: v.valores.validade,
+        lote_origem: origem.lote,
+        validade_origem: origem.validade,
+        observacao: form.observacao.trim() || null,
+        data: hojeLocal(),
+      })
+      if (error) return setErroForm(error.message)
+      setReclassificacao(null)
+      await carregar()
+    } catch (e) {
+      setErroForm(e instanceof Error ? e.message : 'Erro ao salvar a correção.')
     } finally {
       setSubmitting(false)
     }
@@ -477,6 +510,13 @@ export function EstoqueFarmacia() {
                           <span className="flex items-center gap-2 whitespace-nowrap">
                             {rotulo && <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium ${CORES_VALIDADE[l.situacao]}`}>{rotulo}</span>}
                             <span className="font-semibold text-content-strong">{numero(l.saldo)} {unidadeNaQuantidade(item.unidade, l.saldo)}</span>
+                            <button
+                              onClick={() => { setErroForm(null); setReclassificacao({ item, origem: l, form: { quantidade: String(l.saldo), lote: l.lote ?? '', validade: l.validade ?? '', observacao: '' } }) }}
+                              className="text-xs font-semibold text-primary dark:text-primary-light underline"
+                              title="Corrigir lote e validade destes frascos"
+                            >
+                              Corrigir
+                            </button>
                           </span>
                         </div>
                       )
@@ -558,6 +598,25 @@ export function EstoqueFarmacia() {
         </div>
       </Modal>
 
+      <Modal isOpen={!!reclassificacao} onClose={() => setReclassificacao(null)} title={reclassificacao ? `Corrigir lote e validade: ${reclassificacao.item.nome_comercial}` : 'Corrigir lote e validade'}>
+        {reclassificacao && (
+          <div className="space-y-3">
+            <p className="text-sm text-content-muted">
+              Hoje: {reclassificacao.origem.lote ?? 'sem lote'} · {reclassificacao.origem.validade ? `val. ${dataBR(reclassificacao.origem.validade)}` : 'sem validade'} · {numero(reclassificacao.origem.saldo)} {unidadeNaQuantidade(reclassificacao.item.unidade, reclassificacao.origem.saldo)}. O saldo total e o custo não mudam.
+            </p>
+            <Input label="Quantos frascos" inputMode="numeric" value={reclassificacao.form.quantidade} onChange={(e) => setReclassificacao({ ...reclassificacao, form: { ...reclassificacao.form, quantidade: e.target.value } })} />
+            <Input label="Lote" value={reclassificacao.form.lote} onChange={(e) => setReclassificacao({ ...reclassificacao, form: { ...reclassificacao.form, lote: e.target.value } })} />
+            <Input label="Validade" type="date" value={reclassificacao.form.validade} onChange={(e) => setReclassificacao({ ...reclassificacao, form: { ...reclassificacao.form, validade: e.target.value } })} />
+            <Input label="Observação" value={reclassificacao.form.observacao} onChange={(e) => setReclassificacao({ ...reclassificacao, form: { ...reclassificacao.form, observacao: e.target.value } })} />
+            {erroForm && <p className="text-sm text-red-700">{erroForm}</p>}
+            <div className="flex gap-2 pt-2">
+              <Button onClick={salvarReclassificacao} disabled={submitting}>{submitting ? 'Salvando...' : 'Salvar'}</Button>
+              <Button variant="secondary" onClick={() => setReclassificacao(null)} disabled={submitting}>Cancelar</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       <Modal isOpen={!!ativacao} onClose={() => setAtivacao(null)} title={ativacao ? `${ativacao.modo === 'ativar' ? 'Ativar controle' : 'Conteúdo da embalagem'}: ${ativacao.item.nome_comercial}` : 'Ativar controle'}>
         {ativacao && (
           <div className="space-y-3">
@@ -615,7 +674,9 @@ export function EstoqueFarmacia() {
                         <td className="py-2 pr-3 whitespace-nowrap">{dataBR(m.data)}</td>
                         <td className="py-2 pr-3 font-medium">{ROTULO_TIPO[m.tipo_movimentacao] ?? m.tipo_movimentacao}</td>
                         <td className="py-2 pr-3 text-content-muted">{ROTULO_ORIGEM[m.origem ?? ''] ?? m.origem ?? 'Manual'}</td>
-                        <td className="py-2 pr-3 text-content-muted">{[m.fornecedor, m.lote_produto && `Lote ${m.lote_produto}`, m.validade && `val. ${dataBR(m.validade)}`, m.observacao].filter(Boolean).join(' · ') || '—'}</td>
+                        <td className="py-2 pr-3 text-content-muted">{m.tipo_movimentacao === 'reclassificacao'
+                          ? `De ${m.lote_origem ?? 'sem lote'} · ${m.validade_origem ? `val. ${dataBR(m.validade_origem)}` : 'sem validade'} para ${m.lote_produto ?? 'sem lote'} · ${m.validade ? `val. ${dataBR(m.validade)}` : 'sem validade'}${m.observacao ? ` · ${m.observacao}` : ''}`
+                          : [m.fornecedor, m.lote_produto && `Lote ${m.lote_produto}`, m.validade && `val. ${dataBR(m.validade)}`, m.observacao].filter(Boolean).join(' · ') || '—'}</td>
                         <td className={`py-2 pr-3 text-right whitespace-nowrap ${m.variacao < 0 ? 'text-red-600' : ''}`}>{sinal} {numero(qtd)} {unidadeNaQuantidade(m.unidade || historico.item.unidade, qtd)}</td>
                         <td className="py-2 pr-3 text-right">{m.custo_unitario == null ? '—' : moeda(Number(m.custo_unitario))}</td>
                         <td className={`py-2 text-right font-semibold ${m.saldo_apos < 0 ? 'text-red-600' : ''}`}>{numero(m.saldo_apos)}</td>

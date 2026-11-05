@@ -2,7 +2,7 @@
 // O saldo e o custo médio de medicamentos são recalculados pelo trigger do
 // banco (recalcular_estoque_farmacia) a cada lançamento em movimentacoes_farmacia:
 // entrada soma e refaz o custo médio ponderado, baixa e estorno subtraem, ajuste
-// define o saldo absoluto. A tela só valida o formulário e insere o lançamento.
+// define o saldo absoluto, reclassificação só muda lote/validade (não mexe no saldo). A tela só valida o formulário e insere o lançamento.
 
 export interface ItemEstoqueFarmacia {
   id: string
@@ -19,7 +19,7 @@ export interface ItemEstoqueFarmacia {
   conteudo_unidade?: string | null
 }
 
-export type TipoMovimentoFarmacia = 'entrada' | 'baixa' | 'ajuste' | 'estorno'
+export type TipoMovimentoFarmacia = 'entrada' | 'baixa' | 'ajuste' | 'estorno' | 'reclassificacao'
 
 export interface MovimentoFarmacia {
   id: string
@@ -34,6 +34,8 @@ export interface MovimentoFarmacia {
   nota_fiscal: string | null
   lote_produto: string | null
   validade: string | null
+  lote_origem?: string | null
+  validade_origem?: string | null
   observacao: string | null
   unidade: string | null
   registro_origem_id: string | null
@@ -50,11 +52,13 @@ export const ROTULO_TIPO: Record<TipoMovimentoFarmacia, string> = {
   baixa: 'Baixa',
   ajuste: 'Ajuste',
   estorno: 'Estorno',
+  reclassificacao: 'Lote/validade',
 }
 
 export const ROTULO_ORIGEM: Record<string, string> = {
   painel_entrada: 'Entrada manual',
   painel_ajuste: 'Ajuste manual',
+  painel_reclassificacao: 'Correção manual',
   pwa_farmacia: 'Aplicativo',
   enfermaria: 'Enfermaria',
   estoque_inicial: 'Estoque inicial',
@@ -120,9 +124,10 @@ export function filtrarEOrdenar(itens: ItemEstoqueFarmacia[], busca: string, tip
     .sort((a, b) => Number(emAlerta(b)) - Number(emAlerta(a)) || a.nome_comercial.localeCompare(b.nome_comercial, 'pt-BR'))
 }
 
-export function sinalMovimento(m: Pick<MovimentoFarmacia, 'tipo_movimentacao' | 'quantidade'>): { sinal: '+' | '−' | '='; qtd: number } {
+export function sinalMovimento(m: Pick<MovimentoFarmacia, 'tipo_movimentacao' | 'quantidade'>): { sinal: '+' | '−' | '=' | '⇄'; qtd: number } {
   const qtd = num(m.quantidade)
   if (m.tipo_movimentacao === 'ajuste') return { sinal: '=', qtd }
+  if (m.tipo_movimentacao === 'reclassificacao') return { sinal: '⇄', qtd }
   if (m.tipo_movimentacao === 'entrada') return { sinal: '+', qtd }
   return { sinal: '−', qtd }
 }
@@ -137,7 +142,7 @@ export function movimentosComSaldo(movimentos: MovimentoFarmacia[]): MovimentoCo
   let saldo = 0
   return ordenados.map((m) => {
     const { sinal, qtd } = sinalMovimento(m)
-    const variacao = sinal === '=' ? qtd - saldo : sinal === '+' ? qtd : -qtd
+    const variacao = sinal === '⇄' ? 0 : sinal === '=' ? qtd - saldo : sinal === '+' ? qtd : -qtd
     saldo += variacao
     return { ...m, variacao, saldo_apos: saldo }
   })
@@ -203,7 +208,8 @@ const ordemFefo = (a: LoteFarmacia, b: LoteFarmacia) =>
 // Saldo por lote a partir do ledger. Baixa não guarda lote, então a saída é atribuída
 // pelo vencimento mais próximo primeiro (FEFO), que é o critério que a farmácia segue na prática.
 // Estorno devolve ao lote de vencimento mais próximo ainda conhecido; ajuste que aumenta o saldo
-// entra sem lote. Os lotes vencidos e os com saldo zerado ficam de fora.
+// entra sem lote. Reclassificação move frascos entre lotes, limitada ao saldo da origem naquele ponto
+// (uma baixa retroativa pode ter reduzido a origem). Os lotes vencidos e os com saldo zerado ficam de fora.
 export function lotesComSaldo(movimentos: MovimentoFarmacia[]): LoteFarmacia[] {
   const ordenados = [...movimentos].sort(
     (a, b) => a.data.localeCompare(b.data) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id),
@@ -228,6 +234,14 @@ export function lotesComSaldo(movimentos: MovimentoFarmacia[]): LoteFarmacia[] {
     const qtd = num(m.quantidade)
     if (m.tipo_movimentacao === 'entrada') adicionar(m.lote_produto, m.validade, qtd)
     else if (m.tipo_movimentacao === 'baixa') consumir(qtd)
+    else if (m.tipo_movimentacao === 'reclassificacao') {
+      const origem = lotes.get(`${m.lote_origem ?? ''}|${m.validade_origem ?? ''}`)
+      const move = Math.min(origem?.saldo ?? 0, qtd)
+      if (origem && move > 0) {
+        origem.saldo -= move
+        adicionar(m.lote_produto, m.validade, move)
+      }
+    }
     else if (m.tipo_movimentacao === 'estorno') {
       const primeiro = [...lotes.values()].sort(ordemFefo)[0]
       if (primeiro) primeiro.saldo += qtd
@@ -293,6 +307,28 @@ export function validarConteudo(conteudo: string): ResultadoValidacao<{ conteudo
   const n = numeroValido(conteudo)
   if (n == null || n <= 0) return { ok: false, erro: 'Informe o conteúdo da embalagem maior que zero (ou deixe vazio).' }
   return { ok: true, valores: { conteudo: n } }
+}
+
+export interface FormReclassificacao {
+  quantidade: string
+  lote: string
+  validade: string
+  observacao: string
+}
+
+export function validarReclassificacao(
+  form: FormReclassificacao,
+  origem: Pick<LoteFarmacia, 'lote' | 'validade' | 'saldo'>,
+): ResultadoValidacao<{ quantidade: number; lote: string | null; validade: string | null }> {
+  const quantidade = inteiroValido(form.quantidade)
+  if (quantidade == null || quantidade <= 0) return { ok: false, erro: 'Informe um número inteiro de frascos maior que zero.' }
+  if (quantidade > origem.saldo) return { ok: false, erro: `Este lote tem só ${origem.saldo} em estoque.` }
+  const lote = form.lote.trim() || null
+  const validade = form.validade || null
+  if (!lote && !validade) return { ok: false, erro: 'Informe o lote ou a validade.' }
+  if (validade && !DATA_ISO.test(validade)) return { ok: false, erro: 'Informe uma validade válida.' }
+  if (lote === origem.lote && validade === origem.validade) return { ok: false, erro: 'Altere o lote ou a validade.' }
+  return { ok: true, valores: { quantidade, lote, validade } }
 }
 
 export function validarAjuste(form: FormAjuste): ResultadoValidacao<{ saldo: number }> {
