@@ -1,7 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@gestaup/supabase'
 import { getFazendaIdForUser } from '@gestaup/shared'
-import { formatDateTime } from '@gestaup/shared'
+import { formatDateTime, getDayBoundsInTimezone, toFarmDateOnly } from '@gestaup/shared'
+import {
+  saldoCategoriaEm,
+  type CategoriaSaldo,
+  type MovimentacaoSaldo,
+  type MorteSaldo,
+  type NascimentoSaldo,
+} from '../services/saldoCabecasNaData'
 
 async function getFazendaId(userId: string): Promise<string | null> {
   return getFazendaIdForUser(userId)
@@ -72,6 +79,124 @@ export function useRebanhoFaixaEtaria(userId: string | undefined) {
       if (error) throw error
 
       return (data as RebanhoFaixaEtariaItem[]) ?? []
+    },
+  })
+}
+
+export type RebanhoFaixaEtariaNaData = {
+  itens: RebanhoFaixaEtariaItem[]
+  primeiraData: string | null
+}
+
+function faixaDaIdade(meses: number | null): string {
+  if (meses == null) return 'sem_idade'
+  if (meses <= 4) return '0-4'
+  if (meses <= 12) return '5-12'
+  if (meses <= 24) return '13-24'
+  if (meses <= 36) return '25-36'
+  return '36+'
+}
+
+function sexoPadrao(sexo: string | null): string {
+  const s = (sexo || '').trim().toLowerCase()
+  if (s === 'fêmea' || s === 'femea') return 'Fêmea'
+  if (s === 'macho') return 'Macho'
+  return 'Indefinido'
+}
+
+// Meses inteiros entre duas datas AAAA-MM-DD (negativo se `fim` < `inicio`).
+function mesesEntre(inicio: string, fim: string): number {
+  const [ai, mi, di] = inicio.split('-').map(Number)
+  const [af, mf, df] = fim.split('-').map(Number)
+  let meses = (af - ai) * 12 + (mf - mi)
+  if (meses > 0 && df < di) meses -= 1
+  if (meses < 0 && df > di) meses += 1
+  return meses
+}
+
+type CategoriaFaixa = CategoriaSaldo & {
+  sexo: string | null
+  idade: number | null
+  idade_data_ref: string | null
+}
+
+// Rebanho por faixa etária e sexo ao fim de `data` (AAAA-MM-DD). Saldo reconstituído
+// do saldo atual desfazendo movimentações, mortes e nascimentos posteriores; idade
+// na data = idade do cadastro + meses decorridos desde a data de referência da idade.
+export function useRebanhoFaixaEtariaNaData(userId: string | undefined, data: string, hoje: string) {
+  return useQuery({
+    queryKey: ['rebanho-faixa-etaria-na-data', userId, data],
+    enabled: !!userId && !!data && data < hoje,
+    queryFn: async (): Promise<RebanhoFaixaEtariaNaData> => {
+      const fazendaId = await getFazendaId(userId!)
+      if (!fazendaId) return { itens: [], primeiraData: null }
+      const instante = getDayBoundsInTimezone(data).end
+
+      const { data: lotes, error: lotesErr } = await supabase
+        .from('lotes')
+        .select('id, created_at')
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+      if (lotesErr) throw lotesErr
+      const listaLotes = (lotes ?? []) as { id: string; created_at: string | null }[]
+      const loteIds = listaLotes.map((l) => l.id)
+      const primeiraData =
+        listaLotes
+          .map((l) => toFarmDateOnly(l.created_at))
+          .filter((d): d is string => !!d)
+          .sort()[0] ?? null
+      if (loteIds.length === 0) return { itens: [], primeiraData }
+      const lista = loteIds.join(',')
+
+      const [cats, movs, mortes, nasc] = await Promise.all([
+        supabase
+          .from('lote_categorias')
+          .select('lote_id, categoria, quant_atual, quant_inicial, ativo, created_at, data_fim, sexo, idade, idade_data_ref')
+          .in('lote_id', loteIds)
+          .or(`data_fim.is.null,data_fim.gte.${instante}`),
+        supabase
+          .from('registros_movimentacao')
+          .select('data, lote_origem_id, lote_destino_id, categoria, numero_cabecas, motivo_movimentacao, tipo_saida, tipo_entrada, subtipo')
+          .or(`lote_origem_id.in.(${lista}),lote_destino_id.in.(${lista})`)
+          .gte('data', instante)
+          .is('deleted_at', null),
+        supabase
+          .from('registros_morte')
+          .select('data, lote_id, categoria')
+          .in('lote_id', loteIds)
+          .gte('data', instante)
+          .is('deleted_at', null),
+        supabase
+          .from('registros_maternidade')
+          .select('data, lote_id, sexo, tipo_parto')
+          .in('lote_id', loteIds)
+          .gte('data', instante)
+          .is('deleted_at', null),
+      ])
+      for (const r of [cats, movs, mortes, nasc]) if (r.error) throw r.error
+
+      const movimentacoes = (movs.data ?? []) as MovimentacaoSaldo[]
+      const mortesLista = (mortes.data ?? []) as MorteSaldo[]
+      const nascimentos = (nasc.data ?? []) as NascimentoSaldo[]
+
+      const acumulado = new Map<string, RebanhoFaixaEtariaItem>()
+      for (const c of (cats.data ?? []) as CategoriaFaixa[]) {
+        const cabecas = saldoCategoriaEm(c.lote_id, c, instante, movimentacoes, mortesLista, nascimentos)
+        if (cabecas <= 0) continue
+        const idade =
+          c.idade == null
+            ? null
+            : c.idade_data_ref
+              ? Math.max(0, c.idade + mesesEntre(c.idade_data_ref, data))
+              : c.idade
+        const faixa = faixaDaIdade(idade)
+        const sexo = sexoPadrao(c.sexo)
+        const chave = `${faixa}|${sexo}`
+        const atual = acumulado.get(chave)
+        if (atual) atual.cabecas += cabecas
+        else acumulado.set(chave, { faixa, sexo, cabecas })
+      }
+      return { itens: [...acumulado.values()], primeiraData }
     },
   })
 }
