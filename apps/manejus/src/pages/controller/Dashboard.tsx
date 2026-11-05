@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@gestaup/shared'
+import { useAuth, toFarmDateOnly } from '@gestaup/shared'
 import { Card, Button, ErrorState, PageSkeleton } from '@gestaup/ui'
 import { CADERNETA_IMAGES, CADERNETA_TITLES } from '../../types/images'
-import { useFazenda, useDashboardStats, useGadoStats, useRecentActivities, useFormulacoesBackfillAlert, useRebanhoFaixaEtaria } from '../../hooks/useDashboardQueries'
+import { useFazenda, useDashboardStats, useGadoStats, useRecentActivities, useFormulacoesBackfillAlert, useRebanhoFaixaEtaria, useRebanhoFaixaEtariaNaData } from '../../hooks/useDashboardQueries'
 import type { RebanhoFaixaEtariaItem } from '../../hooks/useDashboardQueries'
 import { gruposDaFazenda } from '../../utils/cadernetas'
 
@@ -103,6 +104,72 @@ function RebanhoFaixaEtariaTable({ itens }: { itens: RebanhoFaixaEtariaItem[] })
         </tfoot>
       </table>
     </Card>
+  )
+}
+
+function RebanhoFaixaEtariaSecao({
+  userId,
+  itensAtuais,
+}: {
+  userId: string | undefined
+  itensAtuais: RebanhoFaixaEtariaItem[]
+}) {
+  const hoje = toFarmDateOnly(new Date().toISOString()) ?? new Date().toISOString().slice(0, 10)
+  const [data, setData] = useState(hoje)
+  const { data: historico, isFetching, isError, refetch } = useRebanhoFaixaEtariaNaData(userId, data, hoje)
+
+  const passado = data < hoje
+  const primeira = historico?.primeiraData ?? null
+  const antesDosRegistros = passado && !!primeira && data < primeira
+  const formatar = (d: string) => d.split('-').reverse().join('/')
+  const itens = passado ? historico?.itens : itensAtuais
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-content-strong">Rebanho por Faixa Etária</h3>
+          <p className="text-xs text-content-faint">
+            {passado
+              ? `Saldo em ${formatar(data)}, calculado a partir dos registros de movimentação, mortes e nascimentos lançados até hoje.`
+              : 'Saldo atual em cabeças, pela idade de cada categoria do lote, atualizada automaticamente todo dia a partir da idade e da data informadas no cadastro. Escolha uma data para ver o saldo em outro dia.'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={data}
+            max={hoje}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v && v <= hoje) setData(v)
+            }}
+            className="px-3 py-2 text-sm rounded-lg border border-border-subtle bg-surface-1 text-content"
+            aria-label="Data do saldo"
+          />
+          {passado && (
+            <Button variant="secondary" className="text-xs" onClick={() => setData(hoje)}>
+              Hoje
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {isError ? (
+        <Card className="bg-surface-1 p-4 border border-border-subtle text-sm text-content">
+          Não foi possível calcular o saldo nesta data.{' '}
+          <button className="underline" onClick={() => refetch()}>Tentar novamente</button>
+        </Card>
+      ) : antesDosRegistros ? (
+        <Card className="bg-surface-1 p-4 border border-border-subtle text-sm text-content">
+          Os registros desta fazenda começam em {formatar(primeira!)}. Antes dessa data, o saldo não está disponível.
+        </Card>
+      ) : passado && isFetching && !itens ? (
+        <Card className="bg-surface-1 p-4 border border-border-subtle text-sm text-content-muted">Calculando…</Card>
+      ) : (
+        <RebanhoFaixaEtariaTable itens={itens ?? []} />
+      )}
+    </div>
   )
 }
 
@@ -414,13 +481,7 @@ export function ControllerDashboard() {
 
       {/* Rebanho por Faixa Etária e Sexo */}
       {(rebanhoFaixaEtaria ?? []).length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold text-content-strong">Rebanho por Faixa Etária</h3>
-          <p className="text-xs text-content-faint mb-4">
-            Saldo atual em cabeças, pela idade de cada categoria do lote, atualizada automaticamente todo dia a partir da idade e da data informadas no cadastro.
-          </p>
-          <RebanhoFaixaEtariaTable itens={rebanhoFaixaEtaria ?? []} />
-        </div>
+        <RebanhoFaixaEtariaSecao userId={user?.id} itensAtuais={rebanhoFaixaEtaria ?? []} />
       )}
 
       {/* Animais por Lote */}

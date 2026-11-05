@@ -21,10 +21,31 @@ export interface MorteSaldo {
   categoria: string | null
 }
 
+// Nascimentos (registros_maternidade) entram no saldo das categorias
+// "bezerro ao pé" (Macho) e "bezerra ao pé" (Fêmea), exceto aborto/natimorto.
+export interface NascimentoSaldo {
+  data: string
+  lote_id: string | null
+  sexo: string | null
+  tipo_parto: string[] | null
+}
+
+function semAcento(texto: string | null): string {
+  return (texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
+function nascimentoContaNoSaldo(n: NascimentoSaldo, categoria: string | null): boolean {
+  const cat = semAcento(categoria)
+  const sexoEsperado = cat === 'bezerro ao pe' ? 'Macho' : cat === 'bezerra ao pe' ? 'Fêmea' : null
+  if (!sexoEsperado || n.sexo !== sexoEsperado) return false
+  return !(n.tipo_parto || []).some((t) => t === 'Aborto' || t === 'Natimorto')
+}
+
 export interface CategoriaSaldo {
   lote_id: string
   categoria: string | null
   quant_atual: number | string | null
+  quant_inicial?: number | string | null
   peso_vivo_atual_kg_cab?: number | string | null
   ativo?: boolean | null
   created_at?: string | null
@@ -75,17 +96,18 @@ function categoriaVigenteEm(item: CategoriaSaldo, instante: number): boolean {
 }
 
 // Saldo da categoria no instante: desfaz tudo que ocorreu nele ou depois.
-function saldoCategoriaEm(
+export function saldoCategoriaEm(
   loteId: string,
   item: CategoriaSaldo,
   instante: string,
   movimentacoes: MovimentacaoSaldo[],
-  mortes: MorteSaldo[]
+  mortes: MorteSaldo[],
+  nascimentos: NascimentoSaldo[] = []
 ): number {
   const alvo = Date.parse(instante)
   if (!categoriaVigenteEm(item, alvo)) return 0
   const cat = chave(item.categoria)
-  let saldo = Number(item.quant_atual) || 0
+  let saldo = Number(item.quant_atual ?? item.quant_inicial) || 0
   for (const m of movimentacoes) {
     if (chave(m.categoria) !== cat || Date.parse(m.data) < alvo) continue
     saldo -= efeitoMovimentacao(m, loteId)
@@ -93,6 +115,10 @@ function saldoCategoriaEm(
   for (const morte of mortes) {
     if (morte.lote_id !== loteId || chave(morte.categoria) !== cat || Date.parse(morte.data) < alvo) continue
     saldo += 1
+  }
+  for (const n of nascimentos) {
+    if (n.lote_id !== loteId || Date.parse(n.data) < alvo || !nascimentoContaNoSaldo(n, item.categoria)) continue
+    saldo -= 1
   }
   return Math.max(0, saldo)
 }
