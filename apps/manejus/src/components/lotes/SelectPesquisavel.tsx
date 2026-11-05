@@ -108,7 +108,7 @@ export function SelectPesquisavel({ options, value, onChange, placeholder = 'Sel
         onClick={() => setAberto((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={aberto}
-        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border rounded-lg focus:outline-none focus:border-accent ${error ? 'border-red-400' : 'border-border-base'} bg-surface-1 text-left flex items-center justify-between gap-2`}
+        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border-2 rounded-lg text-sm sm:text-base focus:outline-none focus:border-accent ${error ? 'border-red-400' : 'border-border-base'} bg-surface-1 text-left flex items-center justify-between gap-2`}
       >
         <span className={`truncate ${selecionada ? 'text-content-strong' : 'text-content-faint'}`}>{selecionada ? selecionada.label : placeholder}</span>
         <svg className={`w-4 h-4 shrink-0 text-content-faint transition-transform ${aberto ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

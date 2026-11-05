@@ -34,17 +34,20 @@ function LoteFiltersComponent({
 }: LoteFiltersProps) {
   return (
     <>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <h2 className="text-2xl font-bold text-content-strong">Lotes</h2>
-        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-          <Input
-            type="text"
-            placeholder="Buscar por lote, pasto ou curral..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="flex-1 border-border-base focus:border-accent h-10"
-          />
-          <div className="flex gap-2 sm:gap-2">
+        <div className="flex flex-col xl:flex-row xl:items-center gap-2 w-full xl:w-auto">
+          {/* Abaixo de xl a busca ocupa a linha toda e os botões quebram linha embaixo; em xl ficam lado a lado */}
+          <div className="w-full xl:w-64">
+            <Input
+              type="text"
+              placeholder="Buscar por lote, pasto ou curral..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="border-border-base focus:border-accent h-10"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
             <Button onClick={onNewLote} className="h-10 flex-1 sm:flex-none">Novo Lote</Button>
             <Button onClick={onImport} className="h-10 flex-1 sm:flex-none">
               Importar Planilha

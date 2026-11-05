@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Farmácia: correção de lote e validade de frascos em estoque (05/11/2026)
+
+- **Tela**: botão "Corrigir" em cada linha de "Lotes em estoque" (`EstoqueFarmacia.tsx`): quantos frascos, lote, validade e observação.
+- **Banco**: migration `20261105120000_farmacia_reclassificacao_lote`: tipo `reclassificacao` e colunas `lote_origem`/`validade_origem`. `recalcular_estoque_farmacia` ignora esse tipo, então saldo e custo não mudam.
+- **Lógica**: `lotesComSaldo` move os frascos limitado ao saldo da origem naquele ponto; `movimentosComSaldo` usa variação zero.
+- **Limitação**: não há desfazer pela tela; reverte-se com outra correção. Baixa continua sem lote gravado (FEFO), então corrigir validade pode mudar de qual lote as próximas baixas saem.
+- **Verificação**: typecheck, 631 testes e build ok; E2E na tela com controller da fazenda de testes (validação, divisão de lote, correção em cadeia, histórico, saldo e custo inalterados). Lançamentos de teste excluídos logicamente.
+
 ## Itens do Almoxarifado em Cadastros Auxiliares: unidade, mínimo e controle de estoque (30/10/2026)
 - **Problema**: a aba Cadastros Auxiliares → Operacional → Itens do Almoxarifado só tinha Nome e Classificação. Unidade, estoque mínimo e "controla estoque" só existiam em `ItensAlmoxarifado.tsx`, página que tinha rota (`/controller/itens-almoxarifado`) mas nenhum link no app, então não dava para ativar o controle de estoque de um item pela interface.
 - **Solução**: a aba ganhou os campos `unidade` (obrigatória, padrão `un`), `estoque_minimo` (numérico, padrão 0) e `controla_estoque` (padrão Sim), com a conversão boolean/numérico no salvamento, igual à da Cantina. A regra da página antiga foi copiada: a unidade fica bloqueada (com o aviso "Item com estoque ou movimentações não pode trocar de unidade") quando `estoque_atual` ≠ 0 ou há movimentação não excluída em `movimentacoes_almoxarifado`. Os campos aceitam `defaultValue` e `numeric` na configuração das abas; o card mostra Sim/Não em campos booleanos.

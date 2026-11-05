@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DIAS_ALERTA_VALIDADE, lotesComSaldo, situacaoValidade, unidadeNaQuantidade, type MovimentoFarmacia } from './logica'
+import { DIAS_ALERTA_VALIDADE, lotesComSaldo, movimentosComSaldo, sinalMovimento, situacaoValidade, unidadeNaQuantidade, validarReclassificacao, type MovimentoFarmacia } from './logica'
 
 describe('plural da unidade na quantidade', () => {
   it('pluraliza só acima de 1 e só unidades de contagem', () => {
@@ -64,5 +64,42 @@ describe('validade dos lotes', () => {
     expect(lotesComSaldo([...base, mov({ tipo_movimentacao: 'ajuste', quantidade: 3 })])[0].saldo).toBe(3)
     const sobra = lotesComSaldo([...base, mov({ tipo_movimentacao: 'ajuste', quantidade: 7 })])
     expect(sobra.map((l) => [l.lote, l.saldo])).toEqual([['A1', 5], [null, 2]])
+  })
+})
+
+describe('reclassificação de lote e validade', () => {
+  const entrada = () => mov({ tipo_movimentacao: 'entrada', quantidade: 13 })
+  const rec = (quantidade: number, p: Partial<MovimentoFarmacia> = {}) =>
+    mov({ tipo_movimentacao: 'reclassificacao', quantidade, lote_origem: null, validade_origem: null, lote_produto: 'L1', validade: '2027-02-28', ...p })
+
+  it('move parte do saldo para o novo lote, sem mudar o total', () => {
+    const lotes = lotesComSaldo([entrada(), rec(5)])
+    expect(lotes.map((l) => [l.lote, l.saldo])).toEqual([['L1', 5], [null, 8]])
+  })
+
+  it('soma ao lote de destino que já existe', () => {
+    const lotes = lotesComSaldo([entrada(), mov({ tipo_movimentacao: 'entrada', quantidade: 1, lote_produto: 'L1', validade: '2027-02-28' }), rec(5)])
+    expect(lotes.map((l) => [l.lote, l.saldo])).toEqual([['L1', 6], [null, 8]])
+  })
+
+  it('nunca move mais do que a origem tem naquele ponto', () => {
+    expect(lotesComSaldo([mov({ tipo_movimentacao: 'entrada', quantidade: 3 }), rec(5)]).map((l) => [l.lote, l.saldo])).toEqual([['L1', 3]])
+    expect(lotesComSaldo([rec(5)])).toEqual([])
+  })
+
+  it('não altera o saldo do histórico', () => {
+    const r = movimentosComSaldo([entrada(), rec(5)])
+    expect(r[1].variacao).toBe(0)
+    expect(r[1].saldo_apos).toBe(13)
+    expect(sinalMovimento({ tipo_movimentacao: 'reclassificacao', quantidade: 5 })).toEqual({ sinal: '⇄', qtd: 5 })
+  })
+
+  it('valida quantidade, destino e mudança real', () => {
+    const origem = { lote: null, validade: null, saldo: 13 }
+    const f = (quantidade: string, lote = 'L1', validade = '') => validarReclassificacao({ quantidade, lote, validade, observacao: '' }, origem)
+    expect(f('5')).toEqual({ ok: true, valores: { quantidade: 5, lote: 'L1', validade: null } })
+    for (const q of ['0', '1,5', '14', '']) expect(f(q).ok).toBe(false)
+    expect(f('5', ' ').ok).toBe(false)
+    expect(validarReclassificacao({ quantidade: '1', lote: 'A', validade: '', observacao: '' }, { lote: 'A', validade: null, saldo: 2 }).ok).toBe(false)
   })
 })
