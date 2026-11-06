@@ -2,6 +2,15 @@
 
 Este arquivo lista trabalho pendente no Painel Web. Um chat novo deve consultar este arquivo para saber o que ainda falta fazer e o que já foi decidido mas não implementado.
 
+## Relatório de mortalidade: rebanho histórico do período como denominador (melhoria opcional, 06/11/2026)
+
+- **Contexto**: desde 06/11/2026 a taxa de mortalidade é do período selecionado (mortes do período ÷ rebanho ATUAL, `rebanho_total` = `lote_categorias.quant_atual`). O refinamento avaliado e adiado foi usar o rebanho do próprio período (média início/fim ou saldo no fim), mais fiel para meses passados em fazendas com giro alto de lotes.
+- **Viabilidade**: existe base. `calculate_quant_em(lote_id, categoria, p_ate)` (mesma regra do relatório de consumo) reconstrói o saldo de uma categoria num instante passado. A implementação seria somá-la por categoria ativa de todos os lotes da fazenda dentro da RPC `get_dados_relatorio_morte`, com guard `created_at < p_ate` para neutralizar o bug latente de categoria criada depois do instante. `lote_pasto_historico` não serve (só carimbos de ocupação, sem série diária de saldo).
+- **Precisão e limites**: exata para categorias sem recategorização no intervalo e com `quant_inicial`/movimentações consistentes. Erros conhecidos: recategorização in-place devolve o saldo congelado em `quant_base` para datas anteriores à recategorização; categorias inativas históricas são ignoradas (consistente com o atual, mas perde saldo de períodos que cruzam encerramentos); depende da qualidade do histórico de cadastro.
+- **Custo**: 2 chamadas por categoria ativa (início e fim), cerca de 7 queries cada; fazenda grande passa de 1.400 queries por relatório, incluindo o público anônimo. Latência de segundos.
+- **Decisão**: não implementar agora. O ganho sobre o denominador atual é marginal na maioria das fazendas (rebanho estável mês a mês). Reavaliar se surgir caso concreto de distorção (usuário aponta taxa de mês passado errada porque o rebanho mudou muito desde então). Se for fazer, preferir "rebanho no fim do período" (metade do custo) à média início/fim, salvo se quisermos seguir o padrão exato do relatório de consumo.
+- **Disparadores**: "taxa de mortalidade do mês", "rebanho do período", "taxa de mortalidade errada", "denominador da taxa de mortalidade".
+
 ## Ajuste de quantidade: histórico aberto não recarrega (30/10/2026)
 - **O que falta**: depois de um ajuste pelo modal "Ajustar quantidades", a timeline "Histórico de Movimentação" do formulário de edição do lote continua mostrando os dados de quando o formulário foi aberto. Só aparece o ajuste ao fechar e reabrir o lote. Causa: `onAjustado` em `Lotes.tsx` recarrega categorias e lista, mas não `setMovimentacaoData` (preenchido em `handleEdit`). Chamar `handleEdit` de novo resolve, mas reinicia o formulário e pode descartar edições não salvas; a correção certa é um recarregamento só da timeline.
 

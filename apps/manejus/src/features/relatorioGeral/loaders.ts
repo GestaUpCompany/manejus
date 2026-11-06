@@ -56,8 +56,6 @@ interface DadosMorteRpc {
   linhas: LinhaMorte[]
   resumo: ResumoMorte
   rebanho_total?: number
-  total_mortes_geral?: number
-  taxa_mortalidade_geral?: number | null
   pastos_geo?: PastoGeo[]
 }
 
@@ -311,13 +309,12 @@ async function carregarMortes(
       if (item.valor === 'S') diagnosticos.set(chave, (diagnosticos.get(chave) ?? 0) + 1)
     }
   }
-  const totalMortesGeral = dados.total_mortes_geral ?? linhas.length
-  const taxaMortalidade = dados.taxa_mortalidade_geral ?? (dados.rebanho_total ? (totalMortesGeral / dados.rebanho_total) * 100 : null)
+  const taxaMortalidade = dados.resumo?.taxa_mortalidade ?? (dados.rebanho_total ? (linhas.length / dados.rebanho_total) * 100 : null)
   const insights: string[] = []
   if (!linhas.length) {
     insights.push('Nenhuma morte registrada no período selecionado.')
   } else {
-    if (taxaMortalidade != null) insights.push(`A taxa de mortalidade acumulada é de ${formatarNumero(taxaMortalidade, 2)}% (${totalMortesGeral} ${totalMortesGeral === 1 ? 'morte registrada' : 'mortes registradas'} em um rebanho de ${dados.rebanho_total} cabeças).`)
+    if (taxaMortalidade != null) insights.push(`A taxa de mortalidade no período selecionado é de ${formatarNumero(taxaMortalidade, 2)}% (${linhas.length} ${linhas.length === 1 ? 'morte registrada' : 'mortes registradas'} no período, em um rebanho de ${dados.rebanho_total} cabeças).`)
     if (porCausa[0]) insights.push(`A causa principal foi ${porCausa[0].label} (${porCausa[0].valor} ${porCausa[0].valor === 1 ? 'caso' : 'casos'}, ${formatarNumero((porCausa[0].valor / linhas.length) * 100, 0)}% do total).`)
     if (porCategoria[0]) insights.push(`A categoria mais afetada foi ${porCategoria[0].label} com ${porCategoria[0].valor} ${porCategoria[0].valor === 1 ? 'morte' : 'mortes'}.`)
     if (porLote[0] && porLote.length > 1) insights.push(`O lote mais afetado foi ${porLote[0].label} com ${porLote[0].valor} ${porLote[0].valor === 1 ? 'morte' : 'mortes'}.`)
