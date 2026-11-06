@@ -90,8 +90,6 @@ interface DadosRelatorioMorte {
   fazenda_logo_url?: string | null
   timezone?: string
   rebanho_total?: number
-  total_mortes_geral?: number
-  taxa_mortalidade_geral?: number | null
   lotes_disponiveis: LoteDisponivel[]
   causas_disponiveis: string[]
   categorias_disponiveis: string[]
@@ -268,11 +266,11 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
   const loteMaisAfetado = porLote[0] ?? null
   const categoriaMaisAfetada = porCategoria[0] ?? null
 
-  // === KPIs derivados: taxa de mortalidade histórica (todo o rebanho/ período,
-  // independente dos filtros de data) e impacto financeiro ===
+  // === KPIs derivados: taxa de mortalidade do período selecionado (mortes do
+  // período ÷ rebanho atual) e impacto financeiro ===
   const rebanhoTotal = dados?.rebanho_total ?? 0
-  const totalMortesGeral = dados?.total_mortes_geral ?? dados?.linhas?.length ?? totalMortes
-  const taxaMortalidade = dados?.taxa_mortalidade_geral ?? (rebanhoTotal > 0 ? (totalMortesGeral / rebanhoTotal) * 100 : null)
+  const totalMortesPeriodo = dados?.linhas?.length ?? totalMortes
+  const taxaMortalidade = dados?.resumo?.taxa_mortalidade ?? (rebanhoTotal > 0 ? (totalMortesPeriodo / rebanhoTotal) * 100 : null)
 
   // === Impacto financeiro calculado no frontend com preços por categoria ===
   const impactoFinanceiro = useMemo(() => {
@@ -342,9 +340,9 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
     const partes: string[] = []
     if (totalMortes === 0) return 'Nenhuma morte registrada no período selecionado.'
 
-    // Taxa de mortalidade histórica (todo o período, não o recorte dos filtros)
+    // Taxa de mortalidade do período selecionado (não inclui meses anteriores)
     if (taxaMortalidade != null) {
-      partes.push(`A taxa de mortalidade acumulada é de ${formatarNumero(taxaMortalidade, 2)}% (${formatarInteiro(totalMortesGeral)} ${totalMortesGeral === 1 ? 'morte registrada' : 'mortes registradas'} em um rebanho de ${formatarInteiro(rebanhoTotal)} cabeças).`)
+      partes.push(`A taxa de mortalidade no período selecionado é de ${formatarNumero(taxaMortalidade, 2)}% (${formatarInteiro(totalMortesPeriodo)} ${totalMortesPeriodo === 1 ? 'morte registrada' : 'mortes registradas'} no período, em um rebanho de ${formatarInteiro(rebanhoTotal)} cabeças).`)
     }
 
     // Causa principal
@@ -379,7 +377,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
     }
 
     return partes.join(' ')
-  }, [totalMortes, totalMortesGeral, taxaMortalidade, rebanhoTotal, causaMaisFrequente, causaMaisFrequenteCount, porCategoria, porLote, loteMaisAfetado, porPasto, perdaEstimada, pesoTotalPerdido])
+  }, [totalMortes, totalMortesPeriodo, taxaMortalidade, rebanhoTotal, causaMaisFrequente, causaMaisFrequenteCount, porCategoria, porLote, loteMaisAfetado, porPasto, perdaEstimada, pesoTotalPerdido])
 
   // === Gráfico de mortes por lote ===
   const dadosGraficoLote = useMemo(() => porLote.slice(0, 12), [porLote])
@@ -739,7 +737,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
                 </p>
                 <p className="text-xs text-gray-600 mt-1">Taxa de mortalidade</p>
                 <p className="text-[10px] text-gray-400 mt-1">
-                  Acumulada{rebanhoTotal > 0 ? ` · rebanho: ${formatarInteiro(rebanhoTotal)} cabeças` : ''}
+                  No período{rebanhoTotal > 0 ? ` · rebanho: ${formatarInteiro(rebanhoTotal)} cabeças` : ''}
                 </p>
               </div>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">

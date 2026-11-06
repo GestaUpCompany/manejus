@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de mortalidade: taxa passa a ser do período selecionado (06/11/2026)
+
+- **Sintoma**: a "Taxa de mortalidade" do relatório público e do relatório geral usava `taxa_mortalidade_geral` da RPC, calculada com todas as mortes do histórico ÷ rebanho atual, ignorando o período dos date pickers.
+- **Correção**: `RelatorioMortePublico.tsx` e `features/relatorioGeral/loaders.ts` passam a usar `resumo.taxa_mortalidade` (mortes do período filtrado ÷ rebanho atual, já calculado pela RPC `get_dados_relatorio_morte`). Os campos `total_mortes_geral`/`taxa_mortalidade_geral` foram removidos dos tipos do front; a RPC continua devolvendo-os sem uso. Rótulos "Acumulada"/"acumulada" trocados por "No período"/"no período selecionado" no KPI da página pública, no insight e no PDF (`api/pdf/_relatorios/morte.js`).
+- **Verificação**: typecheck e 631 testes ok. Na fazenda de testes (mortes em ago=7, set=12, out=5; rebanho=513), a RPC devolve `taxa_mortalidade` 1,36% para agosto e 2,34% para setembro, contra 4,68% do acumulado. Sem migration: a RPC já calculava a taxa do período.
+- **Fora de escopo**: o denominador continua sendo o rebanho atual (`lote_categorias.quant_atual`), não o efetivo do mês. Se for pedida taxa com rebanho histórico do período, exige reconstrução de saldo por data (ver `services/saldoCabecasNaData.ts` e `calculate_quant_em`).
+
 ## Período (dias) do relatório zootécnico: contado desde o primeiro plano do lote (05/11/2026)
 
 - **Sintoma**: na Mirandópolis, 19 categorias apareciam com período 15 no relatório zootécnico, embora os lotes tivessem entrado entre junho e outubro.

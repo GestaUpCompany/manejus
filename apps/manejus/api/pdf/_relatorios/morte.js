@@ -482,7 +482,7 @@ export async function renderMorteHtml(input, { incluirMapa = false } = {}) {
     <div class="insight-box"><span class="insight-label">Análise do período</span>${escapeHtml(insights)}</div>
     <div class="kpi-grid">
       ${kpi(intFmt(resumo.total_mortes), 'Total de mortes', 'No período selecionado')}
-      ${kpi(resumo.taxa_mortalidade != null ? `${numFmt(resumo.taxa_mortalidade)}%` : '—', 'Taxa de mortalidade', resumo.rebanho_total ? `Acumulada · rebanho: ${intFmt(resumo.rebanho_total)} cabeças` : 'Acumulada', 'gold')}
+      ${kpi(resumo.taxa_mortalidade != null ? `${numFmt(resumo.taxa_mortalidade)}%` : '—', 'Taxa de mortalidade', resumo.rebanho_total ? `No período · rebanho: ${intFmt(resumo.rebanho_total)} cabeças` : 'No período', 'gold')}
       ${kpi(lotePrincipal ? lotePrincipal[0] : '—', 'Lote mais afetado', loteSub)}
       ${kpi(numFmt(resumo.peso_medio, 1), 'Peso médio', 'kg por animal')}
     </div>
