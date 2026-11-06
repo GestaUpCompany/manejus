@@ -7,7 +7,11 @@ const DATE_FIELDS = ['diarias', 'diariasCat', 'comprasAll', 'vendasAll', 'mortes
 // Nota: Date.prototype.toJSON roda antes de qualquer replacer, então as datas
 // serializam como ISO completo ('2026-03-15T00:00:00.000Z'). O revive cobre isso.
 
-// Range do slicer: datas de eventos + blocos de estoque (diárias projetadas ficam fora).
+// Range do slicer: datas de eventos realizados. Os blocos de Estoque vão até
+// 2035 por projeção da planilha e NÃO entram no range — caso contrário o
+// período default do relatório vira uma década e todas as médias mensais
+// saem erradas. Se não houver nenhum evento datado, cai para os blocos de
+// estoque como fallback (fazenda só com rebanho).
 export function computeRange(reads) {
   let min = '9999-12-31', max = '0000-01-01';
   const bump = (s) => { if (s) { if (s < min) min = s; if (s > max) max = s; } };
@@ -17,7 +21,9 @@ export function computeRange(reads) {
       bump(d);
     }
   }
-  for (const k of Object.keys(reads.estoque ?? {})) bump(`${k}-01`);
+  if (min === '9999-12-31') {
+    for (const k of Object.keys(reads.estoque ?? {})) bump(`${k}-01`);
+  }
   return { min, max };
 }
 
