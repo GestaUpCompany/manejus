@@ -136,6 +136,7 @@ export function useRebanhoFaixaEtariaNaData(userId: string | undefined, data: st
         .from('lotes')
         .select('id, created_at')
         .eq('fazenda_id', fazendaId)
+        .eq('ativo', true)
         .is('deleted_at', null)
       if (lotesErr) throw lotesErr
       const listaLotes = (lotes ?? []) as { id: string; created_at: string | null }[]

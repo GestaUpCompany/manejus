@@ -277,39 +277,58 @@ export function areaChart({ labels, values, W = 1184, H = 190, color = C.green, 
   const linePts = pts.map(p => p.map(f).join(',')).join(' ');
   out.push(`<path d="M${f(first[0])},${axisY} L${linePts.replaceAll(' ', ' L')} L${f(last[0])},${axisY} Z" fill="url(#${gid})"/>`);
   out.push(`<polyline points="${linePts}" fill="none" stroke="${color}" stroke-width="3" stroke-linejoin="round"/>`);
-  // densidade de rótulos por largura estimada; máximo sempre rotulado; anti-colisão por proximidade
+  // densidade de rótulos por largura estimada; máximo sempre rotulado; anti-colisão por proximidade.
+  // Posição resolvida dinamicamente: cada ponto disputa candidatos em leque
+  // (níveis acima e abaixo do ponto, com deslize horizontal para escapar do
+  // vizinho). Quem sobrar vai para faixas extras dentro da área, varridas da
+  // base para o topo — nenhum rótulo é descartado.
   const maxV = Math.max(...values, 0);
   const fsV = f((dense ? 8 : 10.5) * labelScale, 1);
   const cw = (dense ? 4.8 : 6.4) * labelScale;
-  const lblW = Math.max(...values.filter(v => v != null).map(v => labelFmt(v).length), 1) * cw + 10;
-  const placed = [];
-  const tryLabel = (i) => {
-    const [x, y] = pts[i];
-    const tx = Math.min(Math.max(x, lblW / 2), W - lblW / 2);
+  const wOf = (v) => String(labelFmt(v)).length * cw + 10;
+  const placed = []; // {x, y, w}
+  const hit = (x, y, w) => placed.some(p =>
+    Math.abs(p.x - x) < (p.w + w) / 2 * 0.92 && Math.abs(p.y - y) < 13 * labelScale);
+  const emit = (i, tx, ly) => {
     const txt = esc(labelFmt(values[i]));
-    // níveis escalonados: colisão no nível junto ao ponto sobe para uma linha
-    // mais alta; último recurso é abaixo do ponto, dentro da área
-    for (const off of [10, 27, -19]) {
-      const ly = y - Math.round(off * labelScale);
-      if (ly < 8 * labelScale || ly > axisY - 6 * labelScale) continue;
-      if (placed.some(p => Math.abs(p[0] - tx) < lblW * 0.92 && Math.abs(p[1] - ly) < 14 * labelScale)) continue;
-      placed.push([tx, ly]);
-      if (labelScale === 1) {
-        out.push(`<text class="vlbl h${dense ? ' dense' : ''}" x="${f(tx)}" y="${f(ly)}" text-anchor="middle">${txt}</text>`);
-        return;
-      }
-      // halo sem stroke: cópias brancas deslocadas ±1px por trás. O stroke branco
-      // da classe `.h` vaza para o miolo dos glifos na rasterização do PDF
-      // (texto vazado), e cópia ampliada por scale vira "sombra" visível.
-      const base = `text-anchor="middle" font-family="Archivo" font-size="${fsV}" font-weight="600"`;
-      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-        out.push(`<text x="${f(tx + dx)}" y="${f(ly + dy)}" ${base} fill="#fff">${txt}</text>`);
-      }
-      out.push(`<text x="${f(tx)}" y="${f(ly)}" ${base} fill="${C.blue}">${txt}</text>`);
+    if (labelScale === 1) {
+      out.push(`<text class="vlbl h${dense ? ' dense' : ''}" x="${f(tx)}" y="${f(ly)}" text-anchor="middle">${txt}</text>`);
       return;
     }
+    // halo sem stroke: cópias brancas deslocadas ±1px por trás. O stroke branco
+    // da classe `.h` vaza para o miolo dos glifos na rasterização do PDF
+    // (texto vazado), e cópia ampliada por scale vira "sombra" visível.
+    const base = `text-anchor="middle" font-family="Archivo" font-size="${fsV}" font-weight="600"`;
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      out.push(`<text x="${f(tx + dx)}" y="${f(ly + dy)}" ${base} fill="#fff">${txt}</text>`);
+    }
+    out.push(`<text x="${f(tx)}" y="${f(ly)}" ${base} fill="${C.blue}">${txt}</text>`);
+  };
+  const inBounds = (x, y, w) => x >= w / 2 && x <= W - w / 2 && y >= 8 * labelScale && y <= axisY - 6 * labelScale;
+  // candidatos de um ponto: níveis escalonados acima (preferidos) e abaixo
+  // (dentro da área preenchida), cada um com deslize horizontal ±0.3 do slot
+  const yCands = (y) => [
+    ...[10, 26, 42, 58, 74].map(off => y - off * labelScale),
+    ...[16, 32, 48].map(off => y + off * labelScale),
+  ];
+  const xCands = (x, w) => [x, x - xb.step * 0.3, x + xb.step * 0.3]
+    .map(tx => Math.min(Math.max(tx, w / 2), W - w / 2));
+  const tryLabel = (i) => {
+    const [x, y] = pts[i];
+    const w = wOf(values[i]);
+    for (const ly of yCands(y)) {
+      if (ly < 8 * labelScale || ly > axisY - 6 * labelScale) continue;
+      for (const tx of xCands(x, w)) {
+        if (hit(tx, ly, w)) continue;
+        placed.push({ x: tx, y: ly, w });
+        emit(i, tx, ly);
+        return true;
+      }
+    }
+    return false;
   };
   const iMax = values.indexOf(maxV);
+  const pending = [];
   for (let i = 0; i < n; i++) {
     const v = values[i];
     if (!Number.isFinite(v)) continue;
@@ -318,7 +337,41 @@ export function areaChart({ labels, values, W = 1184, H = 190, color = C.green, 
   if (maxV > 0 && iMax >= 0) tryLabel(iMax);
   for (let i = 0; i < n; i++) {
     if (!Number.isFinite(values[i]) || i === iMax) continue;
-    tryLabel(i);
+    if (!tryLabel(i)) pending.push(i);
+  }
+  // fallback: faixas extras dentro da área, da base para o topo; em cada faixa
+  // o rótulo procura a posição horizontal mais próxima do seu ponto
+  if (pending.length) {
+    const laneYs = [];
+    for (let ly = axisY - 12 * labelScale; ly >= topPad + 6; ly -= 15 * labelScale) laneYs.push(ly);
+    for (const i of pending) {
+      const [x] = pts[i];
+      const w = wOf(values[i]);
+      const xs = [];
+      for (let k = 0; k * w * 0.55 < W; k++) {
+        xs.push(x - k * w * 0.55, x + k * w * 0.55);
+      }
+      let done = false;
+      for (const ly of laneYs) {
+        if (ly < 8 * labelScale || ly > axisY - 6 * labelScale) continue;
+        for (const tx of xs) {
+          const cx = Math.min(Math.max(tx, w / 2), W - w / 2);
+          if (!inBounds(cx, ly, w) || hit(cx, ly, w)) continue;
+          placed.push({ x: cx, y: ly, w });
+          emit(i, cx, ly);
+          done = true;
+          break;
+        }
+        if (done) break;
+      }
+      // último recurso: emite mesmo sobrepondo, porque rótulo ausente é pior
+      // que rótulo apertado (o halo mantém a leitura)
+      if (!done) {
+        const ly = axisY - 12 * labelScale;
+        const tx = Math.min(Math.max(x, w / 2), W - w / 2);
+        emit(i, tx, ly);
+      }
+    }
   }
   for (let i = 0; i < n; i++) {
     out.push(`<text class="axis${dense ? ' dense' : ''}" x="${f(xb.cx(i))}" y="${labelY}" text-anchor="middle">${esc(labels[i])}</text>`);
