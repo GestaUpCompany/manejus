@@ -1,0 +1,5 @@
+-- Rollback: volta ao corpo vigente em 20260923130000 (sem o COALESCE para peso_entrada_kg_cab).
+-- Reaplicar a definição de iniciar_plano_lote de supabase/migrations/20260923130000_enfermaria_gmd_desconto_e_enforce_formulacao.sql
+-- (bloco "iniciar_plano_lote", linhas 24 em diante). As duas linhas alteradas por esta migration voltam a ser:
+--   v_peso_inicio := v_cat.peso_vivo_atual_kg_cab;
+-- (nos dois ramos, retroativo e normal).
