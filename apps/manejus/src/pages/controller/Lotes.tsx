@@ -763,18 +763,18 @@ export function Lotes() {
     nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(), [])
 
   // Cache de lotes da fazenda para verificação de nome (evita query a cada tecla)
-  const lotesCacheRef = useRef<{ fazendaId: string; lotes: { id: string; nome: string }[]; ts: number } | null>(null)
+  const lotesCacheRef = useRef<{ fazendaId: string; lotes: { id: string; nome: string; ativo: boolean }[]; ts: number } | null>(null)
   const LOTES_CACHE_TTL = 30000 // 30s
 
   // Busca lotes da fazenda com cache TTL
-  const buscarLotesFazenda = useCallback(async (fazendaId: string): Promise<{ id: string; nome: string }[]> => {
+  const buscarLotesFazenda = useCallback(async (fazendaId: string): Promise<{ id: string; nome: string; ativo: boolean }[]> => {
     const cached = lotesCacheRef.current
     if (cached && cached.fazendaId === fazendaId && Date.now() - cached.ts < LOTES_CACHE_TTL) {
       return cached.lotes
     }
     const { data, error } = await supabase
       .from('lotes')
-      .select('id, nome')
+      .select('id, nome, ativo')
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
     if (error) return []
@@ -782,14 +782,15 @@ export function Lotes() {
     return data || []
   }, [])
 
-  // Verifica se já existe outro lote (não deletado) com o mesmo nome normalizado na fazenda.
+  // Verifica se já existe outro lote ATIVO (não deletado) com o mesmo nome normalizado na fazenda.
+  // Espelha o índice único lotes_unique_fazenda_nome_ativo (WHERE ativo = true): lote inativo não bloqueia nome.
   // Retorna o nome do lote conflitante ou null se não houver conflito.
   const verificarNomeDuplicado = useCallback(async (fazendaId: string, nome: string, loteIdAtual?: string): Promise<string | null> => {
     const nomeNorm = normalizarNomeLote(nome)
     if (!nomeNorm) return null
     const lotes = await buscarLotesFazenda(fazendaId)
     const duplicata = lotes.find(l =>
-      normalizarNomeLote(l.nome) === nomeNorm && l.id !== loteIdAtual
+      l.ativo && normalizarNomeLote(l.nome) === nomeNorm && l.id !== loteIdAtual
     )
     return duplicata ? duplicata.nome : null
   }, [normalizarNomeLote, buscarLotesFazenda])
@@ -1976,11 +1977,10 @@ export function Lotes() {
         return
       }
 
-      // 3. Soft-delete do lote (deleted_at=now)
-      const { error: loteError } = await supabase
-        .from('lotes')
-        .update({ deleted_at: nowIso, ativo: false })
-        .eq('id', id)
+      // 3. Soft-delete do lote via RPC excluir_lote (SECURITY DEFINER).
+      // UPDATE direto em lotes com deleted_at é recusado pela RLS (42501): a policy de SELECT esconde
+      // linhas excluídas e o Postgres confere a nova linha contra ela.
+      const { error: loteError } = await supabase.rpc('excluir_lote', { p_lote_id: id })
       if (loteError) {
         console.error('Erro ao excluir lote:', loteError)
         toast.error('Erro ao excluir lote.')
