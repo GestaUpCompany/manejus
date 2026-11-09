@@ -8,6 +8,8 @@ export interface ColumnConfig {
   header: string
   format?: ColumnFormat
   transform?: (value: any) => any
+  /** Nota (comentário) exibida ao passar o mouse sobre o cabeçalho da coluna. */
+  note?: string
 }
 
 export interface TableExportConfig {
@@ -184,6 +186,12 @@ function applyHeaderStyle(cell: ExcelJS.Cell) {
   }
 }
 
+function applyHeaderNotes(headerRow: ExcelJS.Row, configCols: ColumnConfig[]) {
+  configCols.forEach((col, i) => {
+    if (col.note) headerRow.getCell(i + 1).note = col.note
+  })
+}
+
 function applyDataStyle(cell: ExcelJS.Cell) {
   cell.alignment = { horizontal: 'center', vertical: 'middle' }
 }
@@ -239,6 +247,7 @@ export async function exportToXLSX(data: any[], config: TableExportConfig, fazen
   // Header
   const headerRow = worksheet.addRow(headers)
   headerRow.eachCell(cell => applyHeaderStyle(cell))
+  applyHeaderNotes(headerRow, configCols)
 
   // Data
   for (const resolved of resolvedRows) {
@@ -280,6 +289,7 @@ export async function exportToXLSXMultiSheet(config: MultiSheetExportConfig, faz
     // Header
     const headerRow = worksheet.addRow(headers)
     headerRow.eachCell(cell => applyHeaderStyle(cell))
+    applyHeaderNotes(headerRow, configCols)
 
     // Data
     for (const resolved of resolvedRows) {
