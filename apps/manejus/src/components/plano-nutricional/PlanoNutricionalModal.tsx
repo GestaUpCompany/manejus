@@ -368,9 +368,13 @@ export function PlanoNutricionalModal({
           // Capturar peso e RC atuais da categoria para servir de baseline do plano
           const { data: catData } = await supabase
             .from('lote_categorias')
-            .select('peso_vivo_atual_kg_cab, rc_atual')
+            .select('peso_vivo_atual_kg_cab, peso_entrada_kg_cab, rc_atual')
             .eq('id', loteCategoriaId)
             .single()
+
+          // Sem peso atual, cai para o peso de entrada: peso_inicio nulo faz o cron voltar o peso ao da
+          // entrada e perder o ganho de planos anteriores.
+          const pesoInicio = catData?.peso_vivo_atual_kg_cab ?? catData?.peso_entrada_kg_cab ?? null
 
           const { error } = await supabase
             .from('planos_nutricionais')
@@ -378,7 +382,7 @@ export function PlanoNutricionalModal({
               ativo: true,
               data_inicio: dataInicio,
               data_fim: null,
-              peso_inicio_kg_cab: catData?.peso_vivo_atual_kg_cab ?? null,
+              peso_inicio_kg_cab: pesoInicio,
               rc_inicio: catData?.rc_atual ?? null,
             })
             .eq('id', primeiroPlano.id)
@@ -403,7 +407,7 @@ export function PlanoNutricionalModal({
             .upsert({
               plano_id: primeiroPlano.id,
               lote_categoria_id: loteCategoriaId,
-              peso_inicio_kg_cab: catData?.peso_vivo_atual_kg_cab ?? null,
+              peso_inicio_kg_cab: pesoInicio,
               ativo: true,
             }, { onConflict: 'plano_id,lote_categoria_id' })
 
