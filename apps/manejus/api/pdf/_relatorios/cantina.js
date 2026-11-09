@@ -110,8 +110,17 @@ function textoCobertura(item) {
 }
 
 // Sem baixas valoradas (custo zero) não há custo por refeição a mostrar.
-function custoPorRefeicao(op) {
-  return Number(op?.custo_baixas) > 0 ? op.custo_por_refeicao : null
+// Consumo do período = baixas de estoque + marmitas + pratos feitos; refeições somam as três fontes
+function consumoPeriodo(itens, input) {
+  return soma(itens, 'baixas_valor') + (Number(input.marmitas?.valor) || 0) + (Number(input.pratos_feitos?.valor) || 0)
+}
+function refeicoesPeriodo(op, input) {
+  return refeicoesServidas(op, input.marmitas, input.pratos_feitos).total
+}
+function custoPorRefeicao(op, itens, input) {
+  const consumo = consumoPeriodo(itens, input)
+  const refeicoes = refeicoesPeriodo(op, input)
+  return consumo > 0 && refeicoes > 0 ? consumo / refeicoes : null
 }
 
 // Saldo negativo primeiro; depois, quem acaba antes.
@@ -138,13 +147,26 @@ function reporHtml(itens, temPeriodo) {
   return `<div class="table-block">${titulo}<table class="ct-table">${tableHeadHtml(cols)}<tbody>${linhas}</tbody></table>${resto}</div>`
 }
 
-function refeicoesHtml(op) {
-  const total = Number(op?.refeicoes_total) || 0
+// Espelha refeicoesServidas() de features/relatorioCantina/agregacao.ts (cantina + marmitas por refeição + pratos feitos)
+function refeicoesServidas(op, marmitas, pratos) {
+  const pr = marmitas?.por_refeicao ?? {}
+  const linhas = [
+    ['Café da manhã', (Number(op?.cafe_manha) || 0) + (Number(pr.cafe_manha) || 0)],
+    ['Lanche', (Number(op?.lanches) || 0) + (Number(pr.lanche) || 0)],
+    ['Almoço', (Number(op?.almocos) || 0) + (Number(pr.almoco) || 0)],
+    ['Jantar', (Number(op?.jantares) || 0) + (Number(pr.jantar) || 0)],
+    ['Marmita sem refeição informada', Number(pr.nao_informada) || 0],
+    ['Prato feito', Number(pratos?.quantidade) || 0],
+  ].filter(([, v]) => v > 0)
+  return { total: linhas.reduce((s, [, v]) => s + v, 0), linhas }
+}
+
+function refeicoesHtml(op, marmitas, pratos) {
+  const { total, linhas: pares } = refeicoesServidas(op, marmitas, pratos)
   if (!total) return ''
-  const linhas = [['Café da manhã', op.cafe_manha], ['Lanche', op.lanches], ['Almoço', op.almocos], ['Jantar', op.jantares]]
-    .filter(([, v]) => Number(v) > 0)
+  const linhas = pares
     .map(([nome, v]) => {
-      const pct = (Number(v) / total) * 100
+      const pct = (v / total) * 100
       return `<tr><td>${nome}</td><td class="num">${inteiro(v)}</td><td class="num">${Math.round(pct)}%</td><td><span class="ct-bar" style="width:${Math.max(2, Math.round(pct))}%"></span></td></tr>`
     }).join('')
   const cols = [['Refeição', '32%'], ['Qtd', '16%', 'num'], ['%', '14%', 'num'], ['', '38%']]
@@ -247,20 +269,20 @@ export async function renderCantinaHtml(input) {
   let n = 1
   const wrap = (corpo) => pageSection(`${renderHeader({ ...brand, reportTitle: titulo })}${corpo}${footerCantina(periodo, n, totalPages)}`)
 
-  const custoRefeicao = custoPorRefeicao(op)
+  const custoRefeicao = custoPorRefeicao(op, itens, input)
   const kpis = temPeriodo
     ? [
         kpi(`R$ ${moneyFmt(soma(itens, 'valor_estoque'))}`, 'Valor em estoque', plural(itens.length, 'item', 'itens')),
         kpi(`R$ ${moneyFmt(soma(itens, 'entradas_valor'))}`, 'Compras no período'),
-        kpi(`R$ ${moneyFmt(soma(itens, 'baixas_valor'))}`, 'Consumo', null, 'gold'),
-        kpi(custoRefeicao == null ? '—' : `R$ ${moneyFmt(custoRefeicao)}`, 'Custo por refeição', `${plural(op.refeicoes_total, 'refeição', 'refeições')}`),
+        kpi(`R$ ${moneyFmt(consumoPeriodo(itens, input))}`, 'Consumo', null, 'gold'),
+        kpi(custoRefeicao == null ? '—' : `R$ ${moneyFmt(custoRefeicao)}`, 'Custo por refeição', `${plural(refeicoesPeriodo(op, input), 'refeição', 'refeições')}`),
       ].join('')
     : [
         kpi(`R$ ${moneyFmt(soma(itens, 'valor_estoque'))}`, 'Valor em estoque', plural(itens.length, 'item', 'itens')),
         kpi(inteiro(itensParaRepor(itens).length), 'Itens para repor', null, itensParaRepor(itens).length ? 'red' : 'green'),
       ].join('')
 
-  const refeicoes = temPeriodo ? refeicoesHtml(op) : ''
+  const refeicoes = temPeriodo ? refeicoesHtml(op, input.marmitas, input.pratos_feitos) : ''
   const centro = refeicoes
     ? `<div class="ct-duo" style="grid-template-columns:1.2fr 1fr">${reporHtml(itens, temPeriodo)}${refeicoes}</div>`
     : reporHtml(itens, temPeriodo)

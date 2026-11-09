@@ -4,6 +4,7 @@ import {
   filtrarItens,
   itensDeAtencao,
   ordenarItens,
+  refeicoesServidas,
   rotuloUnidadeCusto,
   textoCobertura,
   totaisDosItens,
@@ -101,5 +102,24 @@ describe('relatório de cantina: agregação', () => {
       item({ nome: 'neg', negativo: true }),
     ]
     expect(itensDeAtencao(itens).map((i) => i.nome)).toEqual(['neg', 'min', 'div', 'semcusto'])
+  })
+})
+
+describe('refeicoesServidas', () => {
+  it('soma cantina, marmitas por refeição e pratos feitos', () => {
+    const r = refeicoesServidas(
+      { cafe_manha: 8, lanches: 3, almocos: 12, jantares: 10 },
+      { por_refeicao: { cafe_manha: 0, lanche: 0, almoco: 25, jantar: 15, nao_informada: 0 } },
+      { quantidade: 25 },
+    )
+    expect(r.total).toBe(98)
+    expect(r.linhas.find((l) => l.chave === 'almoco')?.valor).toBe(37)
+    expect(r.linhas.find((l) => l.chave === 'pratos_feitos')?.valor).toBe(25)
+  })
+
+  it('omite linhas zeradas e mantém marmita antiga sem divisão', () => {
+    const r = refeicoesServidas(null, { por_refeicao: { cafe_manha: 0, lanche: 0, almoco: 0, jantar: 0, nao_informada: 6 } }, null)
+    expect(r.total).toBe(6)
+    expect(r.linhas.map((l) => l.chave)).toEqual(['nao_informada'])
   })
 })

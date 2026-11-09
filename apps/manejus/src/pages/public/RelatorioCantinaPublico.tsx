@@ -19,6 +19,7 @@ import {
   type FiltroCantina,
   type MarmitasCantina,
   type RefeicaoMarmita,
+  refeicoesServidas,
 } from '../../features/relatorioCantina/agregacao'
 
 const GREEN_DARK = '#0F6437'
@@ -269,12 +270,15 @@ export function RelatorioCantinaPublico({ token, relatorioInfo }: Props) {
   const op = dados?.operacao
   const marm = dados?.marmitas
   const pratos = dados?.pratos_feitos
-  const custoRefeicao = op && op.custo_baixas > 0 ? op.custo_por_refeicao : null
+  const consumoPeriodo = totais.valor_baixas + (marm?.valor ?? 0) + (pratos?.valor ?? 0)
+  const servidas = refeicoesServidas(op, marm, pratos)
+  const refeicoesPeriodo = servidas.total
+  const custoRefeicao = consumoPeriodo > 0 && refeicoesPeriodo > 0 ? consumoPeriodo / refeicoesPeriodo : null
   const kpis = [
     { valor: formatarMoeda(totais.valor_total), rotulo: 'Valor em estoque', sub: `${formatarInteiro(totais.total_itens)} ${totais.total_itens === 1 ? 'item' : 'itens'}`, cor: GREEN_DARK },
     { valor: formatarMoeda(totais.valor_entradas), rotulo: 'Compras no período', cor: GREEN_DARK },
-    { valor: formatarMoeda(totais.valor_baixas), rotulo: 'Consumo', cor: GOLD },
-    { valor: custoRefeicao == null ? '—' : formatarMoeda(custoRefeicao), rotulo: 'Custo por refeição', sub: `${formatarInteiro(op?.refeicoes_total)} ${op?.refeicoes_total === 1 ? 'refeição' : 'refeições'}`, cor: GREEN_DARK },
+    { valor: formatarMoeda(consumoPeriodo), rotulo: 'Consumo', cor: GOLD },
+    { valor: custoRefeicao == null ? '—' : formatarMoeda(custoRefeicao), rotulo: 'Custo por refeição', sub: `${formatarInteiro(refeicoesPeriodo)} ${refeicoesPeriodo === 1 ? 'refeição' : 'refeições'}`, cor: GREEN_DARK },
   ]
 
   const temProntas = !!(marm?.quantidade || pratos?.quantidade)
@@ -414,19 +418,14 @@ export function RelatorioCantinaPublico({ token, relatorioInfo }: Props) {
               </div>
 
               <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Refeições servidas <span className="text-xs font-normal text-gray-400">({formatarInteiro(op?.refeicoes_total)})</span></h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Refeições servidas <span className="text-xs font-normal text-gray-400">({formatarInteiro(servidas.total)})</span></h3>
                 <div className="space-y-2">
-                  {[
-                    { nome: 'Café da manhã', valor: op?.cafe_manha ?? 0 },
-                    { nome: 'Lanche', valor: op?.lanches ?? 0 },
-                    { nome: 'Almoço', valor: op?.almocos ?? 0 },
-                    { nome: 'Jantar', valor: op?.jantares ?? 0 },
-                  ].filter((r) => r.valor > 0).map((r) => {
-                    const pct = op?.refeicoes_total ? (r.valor / op.refeicoes_total) * 100 : 0
+                  {servidas.linhas.map((r) => {
+                    const pct = servidas.total ? (r.valor / servidas.total) * 100 : 0
                     return (
-                      <div key={r.nome}>
+                      <div key={r.chave}>
                         <div className="flex justify-between text-xs text-gray-600">
-                          <span>{r.nome}</span>
+                          <span>{r.rotulo}</span>
                           <span>{formatarInteiro(r.valor)} <span className="text-gray-400">({Math.round(pct)}%)</span></span>
                         </div>
                         <div className="h-2 rounded bg-gray-100 mt-1">
