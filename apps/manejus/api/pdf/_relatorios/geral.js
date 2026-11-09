@@ -1,11 +1,15 @@
 import { readFileSync } from 'node:fs'
 import { renderPartsToPdf } from '../_shared/partsPdf.js'
+import { ordenarSecoesCombustivel } from '../_shared/combustivelCombinado.js'
 import { composeReportParts } from '../_shared/reportComposer.js'
 import { isReportType } from '../_shared/reportRegistry.js'
 import { createAuthenticatedSupabase, downloadImageDataUrl } from '../_shared/supabaseAuth.js'
 
 const MAX_BODY_BYTES = 4_000_000
 const DIA_MS = 86_400_000
+// Seções, não itens do catálogo: "Combustível" gera duas (estoque e abastecimento). Com todos os itens do catálogo
+// selecionados são 13; o teto é só uma proteção contra payload absurdo.
+const MAX_SECOES = 16
 
 // Capa padrão institucional (foto de rebanho) embutida no bundle da função.
 // Usada quando a fazenda não escolheu imagem própria na galeria de capas;
@@ -26,7 +30,7 @@ function capaPadraoDataUrl() {
 function validarBody(body) {
   if (!body || typeof body !== 'object') return 'Payload inválido'
   if (typeof body.fazendaId !== 'string' || typeof body.fazendaNome !== 'string') return 'Fazenda inválida'
-  if (!Array.isArray(body.reports) || body.reports.length < 1 || body.reports.length > 10) return 'Seleção de relatórios inválida'
+  if (!Array.isArray(body.reports) || body.reports.length < 1 || body.reports.length > MAX_SECOES) return 'Seleção de relatórios inválida'
   const tipos = body.reports.map((report) => report?.tipo)
   const temOperacionais = tipos.some((tipo) => tipo !== 'boletim_rebanho')
   if (temOperacionais) {
@@ -66,7 +70,7 @@ export default async function handler(req, res) {
       downloadImageDataUrl(supabase, 'system/gestaupcompany.png'),
       body.imagemCapaPath ? downloadImageDataUrl(supabase, body.imagemCapaPath) : Promise.resolve(capaPadraoDataUrl()),
     ])
-    const reports = body.reports.map((report) => ({
+    const reports = ordenarSecoesCombustivel(body.reports).map((report) => ({
       ...report,
       dados: { ...report.dados, logoGestao: body.logoGestao ?? '', logoFazenda: body.logoFazenda ?? '' },
     }))

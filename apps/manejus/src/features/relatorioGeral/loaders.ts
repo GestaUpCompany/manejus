@@ -19,6 +19,8 @@ import {
 } from '../relatorioBebedouros/paraPdf'
 import type { LoteRelatorio } from '../../utils/relatorioConsumoPDF'
 import type { LinhaMorte, ParametrosRelatorioMorte, PastoGeo, ResumoMorte } from '../../utils/relatorioMortePDF'
+import type { ParametrosRelatorioClima } from '../../utils/relatorioClimaPDFPuppeteer'
+import type { LeituraClima, PluviometroDisponivel } from '../../pages/public/RelatorioClimaPublico'
 import type { ParametrosRelatorioRodeio } from '../../utils/relatorioRodeioPDFPuppeteer'
 import type { ParametrosRelatorioPastagens } from '../../utils/relatorioPastagensPDFPuppeteer'
 import { calcularResumoRodeio, type RegistroRodeio } from '../relatorioRodeio/agregacao'
@@ -27,6 +29,7 @@ import { classificarABC, type ClasseABC, type DadosRelatorioEstoque } from '../r
 import { montarDecisao, type DecisaoPDF } from '../relatorioEstoque/decisao'
 import { DADOS_ESTOQUE_COMBUSTIVEL_VAZIO, type DadosRelatorioEstoqueCombustivel } from '../relatorioEstoqueCombustivel/agregacao'
 import { classificarABC as classificarABCCantina, DADOS_CANTINA_VAZIO, type DadosRelatorioCantina } from '../relatorioCantina/agregacao'
+import { DADOS_ALMOXARIFADO_VAZIO, type DadosRelatorioAlmoxarifado } from '../relatorioAlmoxarifado/agregacao'
 import type { TipoRelatorioGeral } from './catalogo'
 import type { DadosPDFBoletimRebanho } from './boletimRebanho'
 
@@ -63,12 +66,14 @@ export type PayloadRelatorioGeral =
   | { tipo: 'abastecimento'; dados: DadosPDFRelatorioAbastecimento }
   | { tipo: 'consumo'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; lotes: LoteRelatorio[] } }
   | { tipo: 'bebedouros'; dados: DadosPDFBebedouros }
+  | { tipo: 'clima'; dados: ParametrosRelatorioClima }
   | { tipo: 'morte'; dados: ParametrosRelatorioMorte }
   | { tipo: 'rodeio'; dados: ParametrosRelatorioRodeio }
   | { tipo: 'pastagens'; dados: ParametrosRelatorioPastagens }
   | { tipo: 'estoque'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC>; decisao: DecisaoPDF } & DadosRelatorioEstoque }
   | { tipo: 'estoque_combustivel'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null } & DadosRelatorioEstoqueCombustivel }
   | { tipo: 'cantina'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC> } & DadosRelatorioCantina }
+  | { tipo: 'almoxarifado'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC> } & DadosRelatorioAlmoxarifado }
   | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
 
 const PRECOS_KG_DEFAULT: Record<string, number> = {
@@ -463,6 +468,9 @@ async function carregarEstoqueCombustivel(
       fazendaNome: fazenda.nome,
       fazendaLogoUrl: fazenda.logoUrl,
       ...dados,
+      // O combinado de combustível não imprime o extrato (api/pdf/_shared/combustivelCombinado.js): não vai no payload,
+      // que tem teto de 4 MB.
+      movimentacoes: [],
     },
   }
 }
@@ -496,6 +504,70 @@ async function carregarCantina(
   }
 }
 
+// Almoxarifado usa o período do infográfico. O extrato vai truncado pelo mesmo limite de 4 MB
+// do /api/pdf/geral e a curva ABC vai calculada (o endpoint de PDF não importa as regras do front).
+async function carregarAlmoxarifado(
+  fazenda: FazendaRelatorio,
+  dataInicio: string,
+  dataFim: string,
+): Promise<PayloadRelatorioGeral> {
+  const { data, error } = await supabase.rpc('get_dados_relatorio_almoxarifado_fazenda', {
+    p_fazenda_id: fazenda.id,
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
+  })
+  if (error) throw error
+  const dados = (data?.dados ?? DADOS_ALMOXARIFADO_VAZIO) as DadosRelatorioAlmoxarifado
+  return {
+    tipo: 'almoxarifado',
+    dados: {
+      dataInicio,
+      dataFim,
+      fazendaNome: fazenda.nome,
+      fazendaLogoUrl: fazenda.logoUrl,
+      ...dados,
+      abc: Object.fromEntries(classificarABCCantina(dados.itens ?? [])),
+      movimentacoes: (dados.movimentacoes ?? []).slice(0, MAX_MOVIMENTACOES_ESTOQUE_GERAL),
+      movimentacoes_total: dados.movimentacoes_total ?? (dados.movimentacoes ?? []).length,
+    },
+  }
+}
+
+// Clima usa o período do infográfico. Os cálculos (KPIs, séries de chuva, resumo por pluviômetro) vêm do relatório
+// público, a fonte única; o import é dinâmico para não levar o recharts da página ao bundle do infográfico.
+async function carregarClima(
+  fazenda: FazendaRelatorio,
+  dataInicio: string,
+  dataFim: string,
+): Promise<PayloadRelatorioGeral> {
+  const { data, error } = await supabase.rpc('get_dados_relatorio_clima_fazenda', {
+    p_fazenda_id: fazenda.id,
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
+  })
+  if (error) throw error
+  const registros = (data?.dados?.registros ?? []) as LeituraClima[]
+  const disponiveis = (data?.dados?.pluviometros_disponiveis ?? []) as PluviometroDisponivel[]
+  const clima = await import('../../pages/public/RelatorioClimaPublico')
+  return {
+    tipo: 'clima',
+    dados: {
+      dataInicio,
+      dataFim,
+      fazendaNome: fazenda.nome,
+      fazendaLogoUrl: fazenda.logoUrl,
+      kpis: clima.calcularKpis(registros),
+      pluviometros: disponiveis.map((p) => p.pluviometro_nome || '—'),
+      serie: clima.serieDiaria(registros),
+      diaria: clima.serieChuvaDiaria(registros),
+      mensal: clima.serieChuvaMensal(registros),
+      limites: { forte: clima.LIMITE_CHUVA_FORTE_MM, torrencial: clima.LIMITE_CHUVA_TORRENCIAL_MM },
+      resumo: clima.resumirPorPluviometro(registros),
+      registros,
+    },
+  }
+}
+
 export interface OpcoesCarregamentoRelatorios {
   boletim?: DadosPDFBoletimRebanho
 }
@@ -524,12 +596,14 @@ const LOADERS: Record<TipoCarregavel, (fazenda: FazendaRelatorio, dataInicio: st
   abastecimento: carregarAbastecimento,
   consumo: carregarConsumo,
   bebedouros: carregarBebedouros,
+  clima: carregarClima,
   morte: carregarMortes,
   rodeio: carregarRodeio,
   pastagens: carregarPastagens,
   estoque: carregarEstoque,
   estoque_combustivel: carregarEstoqueCombustivel,
   cantina: carregarCantina,
+  almoxarifado: carregarAlmoxarifado,
   boletim_rebanho: carregarBoletim,
 }
 

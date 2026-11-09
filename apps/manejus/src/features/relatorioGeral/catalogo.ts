@@ -1,4 +1,4 @@
-export type TipoRelatorioGeral = 'combustivel' | 'consumo' | 'bebedouros' | 'morte' | 'rodeio' | 'pastagens' | 'estoque' | 'cantina' | 'boletim_rebanho'
+export type TipoRelatorioGeral = 'combustivel' | 'consumo' | 'bebedouros' | 'clima' | 'morte' | 'rodeio' | 'pastagens' | 'estoque' | 'cantina' | 'almoxarifado' | 'boletim_rebanho'
 
 export interface RelatorioGeralCatalogoItem {
   id: TipoRelatorioGeral
@@ -21,6 +21,11 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
     id: 'bebedouros',
     titulo: 'Bebedouros',
     descricao: 'Limpezas, metas, qualidade da água e ocorrências.',
+  },
+  {
+    id: 'clima',
+    titulo: 'Clima',
+    descricao: 'Chuva acumulada média da fazenda e por pluviômetro, dias de chuva forte, calendário de chuvas, temperatura e umidade.',
   },
   {
     id: 'morte',
@@ -46,6 +51,11 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
     id: 'cantina',
     titulo: 'Cantina',
     descricao: 'Estoque da cozinha por item no período, refeições servidas, custo por refeição, marmitas, pratos feitos e extrato.',
+  },
+  {
+    id: 'almoxarifado',
+    titulo: 'Almoxarifado',
+    descricao: 'Estoque do almoxarifado por item no período, itens para repor, consumo líquido (retiradas menos devoluções), retiradas por responsável e setor.',
   },
   {
     id: 'boletim_rebanho',

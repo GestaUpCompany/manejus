@@ -858,14 +858,16 @@ export const TRATO_CONFINAMENTO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'kg_ofertado_real', header: 'Ofertado (kg)', transform: (value) => round2(value) },
     { source: 'leitura_cocho_nota', header: 'Nota Cocho', format: 'number' },
     { source: 'origem', header: 'Origem', transform: (value: any) => value === 'pwa' ? 'App' : value },
-    { source: 'consumo_status', header: 'Status do Consumo (lote/dia)' },
-    { source: 'consumo_kg_consumido_mn', header: 'Consumido do Lote no Dia (Kg MN)', transform: (value) => round2(value) },
-    { source: 'consumo_n_cabecas', header: 'Nº Cabeças', format: 'number' },
-    { source: 'consumo_peso_vivo_kg', header: 'Peso Vivo (kg)', transform: (value) => round2(value) },
-    { source: 'consumo_kg_mn_cab_dia', header: 'Consumo (Kg MN/cab/dia)', transform: (value) => round2(value) },
-    { source: 'consumo_kg_ms_cab_dia', header: 'Consumo (Kg MS/cab/dia)', transform: (value) => round2(value) },
-    { source: 'consumo_percent_pv', header: 'Consumo (% PV)', transform: (value) => round2(value) },
-    { source: 'consumo_custo_reais_cab_dia', header: 'Custo (R$/cab/dia)', transform: (value) => round2(value) }
+    // Colunas "Lote/dia" vêm de consumo_confinamento_dia (uma linha por lote e dia): o mesmo valor se repete
+    // em cada trato do lote naquele dia. Não somar estas colunas linha a linha.
+    { source: 'consumo_status', header: 'Lote/dia: Status do Consumo', note: 'Valor do lote no dia (tabela consumo_confinamento_dia), repetido em cada trato do lote. Não some esta coluna linha a linha: o consumo do dia é a soma dos tratos, uma vez só.' },
+    { source: 'consumo_kg_consumido_mn', header: 'Lote/dia: Consumido (Kg MN, total dos tratos)', transform: (value) => round2(value), note: 'Valor do lote no dia (tabela consumo_confinamento_dia), repetido em cada trato do lote. Não some esta coluna linha a linha: o consumo do dia é a soma dos tratos, uma vez só.' },
+    { source: 'consumo_n_cabecas', header: 'Lote/dia: Nº Cabeças', format: 'number' },
+    { source: 'consumo_peso_vivo_kg', header: 'Lote/dia: Peso Vivo (kg)', transform: (value) => round2(value) },
+    { source: 'consumo_kg_mn_cab_dia', header: 'Lote/dia: Consumo (Kg MN/cab/dia)', transform: (value) => round2(value) },
+    { source: 'consumo_kg_ms_cab_dia', header: 'Lote/dia: Consumo (Kg MS/cab/dia)', transform: (value) => round2(value) },
+    { source: 'consumo_percent_pv', header: 'Lote/dia: Consumo (% PV)', transform: (value) => round2(value) },
+    { source: 'consumo_custo_reais_cab_dia', header: 'Lote/dia: Custo (R$/cab/dia)', transform: (value) => round2(value) }
   ]
 }
 

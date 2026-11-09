@@ -169,6 +169,31 @@ export const DADOS_CANTINA_VAZIO: DadosRelatorioCantina = {
 
 const soma = (valores: Array<number | null | undefined>) => valores.reduce<number>((s, v) => s + (Number(v) || 0), 0)
 
+export interface LinhaRefeicaoServida {
+  chave: string
+  rotulo: string
+  valor: number
+}
+
+// Refeições servidas no período = cantina da fazenda + marmitas (por refeição) + pratos feitos.
+// Pratos feitos não têm divisão por refeição: entram como linha própria.
+export function refeicoesServidas(
+  op: Pick<OperacaoCantina, 'cafe_manha' | 'lanches' | 'almocos' | 'jantares'> | null | undefined,
+  marmitas: Pick<MarmitasCantina, 'por_refeicao'> | null | undefined,
+  pratos: Pick<MarmitasCantina, 'quantidade'> | null | undefined,
+): { total: number; linhas: LinhaRefeicaoServida[] } {
+  const pr = marmitas?.por_refeicao
+  const linhas = [
+    { chave: 'cafe_manha', rotulo: 'Café da manhã', valor: (op?.cafe_manha ?? 0) + (pr?.cafe_manha ?? 0) },
+    { chave: 'lanche', rotulo: 'Lanche', valor: (op?.lanches ?? 0) + (pr?.lanche ?? 0) },
+    { chave: 'almoco', rotulo: 'Almoço', valor: (op?.almocos ?? 0) + (pr?.almoco ?? 0) },
+    { chave: 'jantar', rotulo: 'Jantar', valor: (op?.jantares ?? 0) + (pr?.jantar ?? 0) },
+    { chave: 'nao_informada', rotulo: 'Marmita sem refeição informada', valor: pr?.nao_informada ?? 0 },
+    { chave: 'pratos_feitos', rotulo: 'Prato feito', valor: pratos?.quantidade ?? 0 },
+  ].filter((l) => l.valor > 0)
+  return { total: soma(linhas.map((l) => l.valor)), linhas }
+}
+
 export function totaisDosItens(itens: ItemCantina[]): TotaisCantina {
   return {
     valor_total: soma(itens.map((i) => i.valor_estoque)),

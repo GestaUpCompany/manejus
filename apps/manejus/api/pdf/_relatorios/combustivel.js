@@ -6,6 +6,12 @@ import { PDFDocument } from 'pdf-lib'
 import { generatePdf } from '../_shared/puppeteer.js'
 import { isPDFData as isAbastecimentoData, renderAbastecimentoHtml } from './abastecimento.js'
 import { isPDFData as isEstoqueData, renderEstoqueCombustivelHtml } from './estoqueCombustivel.js'
+import {
+  OPCOES_ABASTECIMENTO_COMBINADO,
+  OPCOES_ESTOQUE_COMBINADO,
+  prepararAbastecimentoCombinado,
+  prepararEstoqueCombinado,
+} from '../_shared/combustivelCombinado.js'
 
 const MAX_BODY_BYTES = 8_000_000
 const MAX_MAQUINAS = 5000
@@ -17,13 +23,13 @@ export default async function handler(req, res) {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Método não permitido' })
   }
-  const { abastecimento, estoque } = req.body ?? {}
+  const { abastecimento: abastecimentoBody, estoque: estoqueBody } = req.body ?? {}
   if (
-    !isAbastecimentoData(abastecimento) ||
-    !isEstoqueData(estoque) ||
-    abastecimento.detalhesPorMaquina.length > MAX_MAQUINAS ||
-    estoque.tanques.length > MAX_TANQUES ||
-    (estoque.movimentacoes?.length ?? 0) > MAX_MOVIMENTACOES
+    !isAbastecimentoData(abastecimentoBody) ||
+    !isEstoqueData(estoqueBody) ||
+    abastecimentoBody.detalhesPorMaquina.length > MAX_MAQUINAS ||
+    estoqueBody.tanques.length > MAX_TANQUES ||
+    (estoqueBody.movimentacoes?.length ?? 0) > MAX_MOVIMENTACOES
   ) {
     return res.status(400).json({ error: 'Payload de relatório inválido ou grande demais' })
   }
@@ -33,9 +39,12 @@ export default async function handler(req, res) {
 
   try {
     // Numeração contínua: conta as páginas de cada parte no HTML (sem Chromium) e renderiza com o total geral
-    // O PDF combinado é um resumo: sem tabelas de lançamentos (máquina, operador, placa e extrato)
-    const opcoesAbastecimento = { incluirDetalhes: false }
-    const opcoesEstoque = { incluirExtrato: false }
+    // O combinado é um resumo (sem lançamentos, sem tanques duplicados): regras em _shared/combustivelCombinado.js,
+    // as mesmas que o Infográfico Mensal usa.
+    const abastecimento = prepararAbastecimentoCombinado(abastecimentoBody)
+    const estoque = prepararEstoqueCombinado(estoqueBody)
+    const opcoesAbastecimento = OPCOES_ABASTECIMENTO_COMBINADO
+    const opcoesEstoque = OPCOES_ESTOQUE_COMBINADO
     const contarPaginas = (html) => (html.match(/<section class="page">/g) || []).length
     // O estoque vem primeiro no arquivo, então a numeração do abastecimento começa depois das páginas dele
     const totalEstoque = contarPaginas(await renderEstoqueCombustivelHtml(estoque, opcoesEstoque))

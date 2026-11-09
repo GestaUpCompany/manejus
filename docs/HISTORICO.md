@@ -1,5 +1,32 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Clima no Infográfico Mensal (09/11/2026)
+
+- **Novo no Infográfico**: seção "Clima" (depois de Bebedouros), com chuva acumulada da fazenda e por pluviômetro, chuva diária e mensal, calendário e temperatura/umidade, pelo mesmo renderizador do PDF individual (`renderClimaHtml`). Omitida quando não há leituras no período.
+- **Banco**: migration `20261109190000_relatorio_clima_fazenda` (aditiva): RPC `get_dados_relatorio_clima_fazenda(fazenda, ini, fim)`, mesmo padrão de rodeio/cantina/almoxarifado (token temporário sobre `get_dados_relatorio_clima`). Só `authenticated` executa. Rollback: `supabase/rollbacks/20261109190000_relatorio_clima_fazenda_rollback.sql`. Aplicada junto com `20261109180000_iniciar_plano_lote_peso_inicio_sem_nulo` (pendente de outra frente de trabalho).
+- **Cálculos**: `loaders.ts` usa as funções exportadas de `RelatorioClimaPublico.tsx` (`calcularKpis`, `serieDiaria`, `serieChuvaDiaria`, `serieChuvaMensal`, `resumirPorPluviometro`) por import dinâmico, então os números são os do relatório público.
+- **Teto de seções**: `api/pdf/_relatorios/geral.js` aceitava no máximo 10 seções; com todos os itens do catálogo marcados são 13 (Combustível gera 2), então a geração completa falhava desde o almoxarifado. Teto agora `MAX_SECOES = 16`.
+- **Teste**: `infograficoRegistro.test.ts` exige renderizador no servidor para todo item do catálogo e confere o Clima. Typecheck e 638 testes ok. O PDF do Infográfico com Clima não foi gerado pela tela (sessão do navegador deslogada).
+- **Fora do Infográfico por decisão**: Zootécnico, Acompanhamento de Tratos, Atividades (sem renderizador no servidor) e Abate (por lote, em homologação).
+
+## Combustível no Infográfico alinhado ao PDF individual, com definição única (09/11/2026)
+
+- **Sintoma**: o Infográfico Mensal trazia, na parte de combustível, o extrato de movimentações e o detalhamento operacional (máquina, operador, placa), que o PDF individual de combustível omite. Qualquer ajuste no individual exigia repetir no Infográfico.
+- **Causa**: as regras do "resumo" estavam só em `api/pdf/_relatorios/combustivel.js` (`incluirDetalhes: false`, `incluirExtrato: false`, abastecimento sem tanques, estoque antes do abastecimento). O Infográfico renderiza pelo `reportRegistry.js` com os padrões das funções (tudo incluído), recebia os tanques também dentro do abastecimento (tabela de tanques duplicada) e montava abastecimento antes do estoque.
+- **Correção**: nova definição única `api/pdf/_shared/combustivelCombinado.js` (opções de renderização, preparação dos dados e ordem das seções), usada pelo PDF individual (`combustivel.js`), pelo registro do Infográfico (`reportRegistry.js`) e por `geral.js` (reordena estoque antes de abastecimento). O loader do Infográfico (`relatorioGeral/loaders.ts`) deixou de mandar as movimentações do estoque de combustível (não são impressas; economiza o teto de 4 MB). Para mudar o que o combinado mostra, altere só o `combustivelCombinado.js`.
+- **Verificação**: `combustivelCombinado.test.ts` (3 testes) confirma que o Infográfico não tem detalhamento por máquina, operacional, saldo por tanque duplicado nem extrato, e a ordem das seções; typecheck e 636 testes ok. O PDF do Infográfico não foi gerado pela tela (sessão do navegador estava deslogada).
+- **Ainda manual**: o payload dos dois caminhos é montado no front em lugares diferentes (`relatorioCombustivelPDFPuppeteer.ts` e `loaders.ts`); só as regras de renderização foram unificadas. Filtros de máquina/combustível/operação existem só no individual.
+
+## Relatório de Almoxarifado (09/11/2026)
+
+- **Novo relatório** (`tipo = 'almoxarifado'`): estoque por item no período (saldo inicial, entradas, retiradas, devoluções, saldo final), itens para repor, consumo líquido, retiradas por responsável (`quem_pegou`) e por setor, curva ABC, cobertura, extrato e avisos (devoluções em revisão, divergência de saldo, itens movimentados sem controle). Link público (`RelatorioAlmoxarifadoPublico.tsx`), PDF (`api/pdf/_relatorios/almoxarifado.js`, dentro da função única `[relatorio].js`) e seção do Infográfico Mensal (`relatorioGeral/loaders.ts`, `catalogo.ts`, `reportRegistry.js`).
+- **Banco**: migration `20261109170000_relatorio_almoxarifado` (aditiva): RPCs `get_dados_relatorio_almoxarifado(token, ini, fim)` e `get_dados_relatorio_almoxarifado_fazenda(fazenda, ini, fim)`. Rollback: `supabase/rollbacks/20261109170000_relatorio_almoxarifado_rollback.sql` (`DROP FUNCTION` das duas).
+- **Regras**: saldo reconstruído na ordem de `recalcular_estoque_almoxarifado` (`created_at`, `id`): entrada e devolução (`quantidade_aprovada`) somam, baixa e estorno subtraem, ajuste define o saldo; o período separa saldo inicial por `data`. Consumo = retiradas − devoluções aprovadas, nunca negativo por item (`baixas`/`baixas_valor` no JSON). Só itens com `controla_estoque`.
+- **Front**: tipos e helpers reaproveitam os da Cantina (`features/relatorioAlmoxarifado/agregacao.ts`); plural de unidade só para unidades por extenso (abreviações de até 3 letras ficam como estão).
+- **Verificação**: typecheck e 633 testes ok. Na fazenda de testes, saldo final = `estoque_atual` em todos os itens (divergência 0); link e PDF conferidos (PDF em 2 páginas; setor e avisos sobem para a página 1 quando cabem). Registro de teste criado: link `c5d3e898-99f0-45c5-bf31-6f4e87e53710` em `relatorios_publicos` da fazenda de testes.
+- **Simulação (fazenda de testes, via `scripts/teste-api.mjs`)**: 20 itens fictícios (categorias variadas, mínimos, 1 sem custo, 1 com saldo negativo, 5 abaixo do mínimo), 20 entradas, 4 retiradas por responsável/setor (Ana Paula, Marcos Oliveira, Carlos Lima, Rita Souza; baixas geradas pelo trigger) e 1 devolução de luvas. Observação "DADOS FICTÍCIOS - teste de relatório" nas entradas e retiradas. Unidades do cadastro são fixas (`un, kg, g, L, mL, m, cx, pct, par, kit`, CHECK `itens_almoxarifado_unidade_check`).
+- **Ajustes pós-simulação**: plural só para `par` (pares) e `kit` (kits); aviso "itens sem custo cadastrado" no PDF e na página; setor e avisos sobem para a página 1 pelo orçamento de altura (24 px por linha de tabela, 32 px por aviso, limite 280), PDF de 23 itens fecha em 3 páginas.
+
 ## Relatório de mortalidade: taxa passa a ser do período selecionado (06/11/2026)
 
 - **Sintoma**: a "Taxa de mortalidade" do relatório público e do relatório geral usava `taxa_mortalidade_geral` da RPC, calculada com todas as mortes do histórico ÷ rebanho atual, ignorando o período dos date pickers.
@@ -3215,3 +3242,13 @@ Registro de morte lançado por engano: `registros_morte.id = a9ab7081-6a93-4bae-
 ### Rebanho por faixa etária: saldo histórico contava lote inativo — 2026-11-06
 
 Relato da Santa Cecília (`a53d7375-15c8-44fe-98d8-90e9f8423c65`): tabela "Rebanho por Faixa Etária" do dashboard mostrava 1692 em 31/10 contra 1530 hoje, sem movimentações no período (confirmado: zero registros em `registros_movimentacao`, `registros_morte` e `registros_maternidade` após 31/10). Causa: `useRebanhoFaixaEtariaNaData` (`apps/manejus/src/hooks/useDashboardQueries.ts`) buscava `lotes` só por `fazenda_id` + `deleted_at`, sem `ativo = true` como faz a RPC `get_rebanho_faixa_etaria`. O Lote 06 (Bez. 1 Rondonia), inativado em ~09/10 com `quant_atual = 162` residual na categoria bezerro, entrava na reconstrução e inflava o total em exatamente 162. Correção: `.eq('ativo', true)` na query de lotes do hook. Ressalva conhecida: sem timestamp de inativação em `lotes`, a data escolhida usa o status atual do lote; se um lote foi desativado depois da data consultada, seu saldo histórico fica subestimado.
+
+## 2026-11-09 — Exclusão pontual de movimento de pastagem (Fazenda Chibata)
+
+Fazenda `d3965505-74d5-4af7-9858-f773d2e8aab3` (Chibata), lote ENFERMARIA `1977e555-cbb2-4dab-85fb-5e28fd54c830`. Autorização escopada do usuário em 09/11/2026.
+
+- `registros_pastagens` `2c548752-89ac-4477-a9ad-41d86b0cde86` (08/11, Piq. Sede 1 → Piq. 2, 34 cabeças): soft-delete (`deleted_at`).
+- `lote_pasto_historico` `711d6fc0-7608-46db-bfe7-cbf896de228d` (aberto pelo registro acima): hard delete, com o gatilho `trg_proteger_lote_pasto_historico_delete` desligado só dentro da transação e religado em seguida.
+- Backups: `backup.pastagens_chibata_20261109_reg` e `backup.pastagens_chibata_20261109_lph`.
+- Estado final: lote aberto em Piq. Sede 2 (`1633b081-91fd-42bc-90f1-e78100a82b8b`), igual a `lotes.pasto_id`. Gatilho de proteção ativo (`O`).
+- Para reverter: reinserir a linha do backup_lph (com o gatilho desligado) e zerar `deleted_at` do registro.

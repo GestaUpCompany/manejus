@@ -105,6 +105,12 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'Estoque da cozinha por item (saldo inicial, entradas, baixas e saldo final), refeições servidas, custo por refeição, marmitas, pratos feitos e extrato por período.',
     icone: '🍽️',
   },
+  {
+    tipo: 'almoxarifado',
+    titulo: 'Almoxarifado',
+    descricao: 'Estoque do almoxarifado por item (saldo inicial, entradas, retiradas, devoluções e saldo final), itens para repor, retiradas por responsável e setor, curva ABC e extrato por período.',
+    icone: '🧰',
+  },
 ]
 
 // 'todos' é o escopo antigo (insumos e formulações juntos): não é mais criado, mas links antigos ainda o têm
