@@ -12,7 +12,7 @@ export function render({ model, ctx }) {
   const area = areaChart({
     labels: d.mensal.map(m => mesLbl(m.mes)),
     values: d.mensal.map(m => m.porHa),
-    W: 1184, H: fin ? 440 : 185, color: C.blue, labelFmt: (v) => `R$ ${fmt2(v)}`, labelScale: 1.3,
+    W: 1184, H: 400, color: C.blue, labelFmt: (v) => `R$ ${fmt2(v)}`, labelScale: 1.3,
   });
 
   const extraCss = `
@@ -27,7 +27,7 @@ export function render({ model, ctx }) {
     <div class="kpi"><div class="lbl">Desembolso por ha/mês</div><div class="val"><small>R$</small> ${fmt2(d.porHaMes)}</div></div>
   </div>
 
-  <div class="chart1">
+  <div class="chart1" style="flex:1;display:flex;flex-direction:column;justify-content:center;">
     <div class="chart-title">Desembolso por hectare por mês</div>
     ${area}
   </div>`;
