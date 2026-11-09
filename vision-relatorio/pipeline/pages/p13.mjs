@@ -12,7 +12,7 @@ export function render({ model, ctx }) {
 
   const combo = comboChart({
     labels: d.mensalCfCv.map(m => mesLbl(m.mes)),
-    W: 1184, H: 208, labelScale: 1.3,
+    W: 1184, H: 380, labelScale: 1.3,
     bars: {
       values: d.mensalCfCv.map(m => m.custoDiariaCab),
       color: C.blue, labelFmt: (v) => `R$ ${fmt2(v)}`, labelInside: true,
@@ -42,7 +42,7 @@ export function render({ model, ctx }) {
     ${fin ? '' : `<div class="kpi"><div class="lbl">Custo Diária/cab</div><div class="val"><small>R$</small> ${fmt2(c.custoDiariaCab)}</div></div>`}
   </div>
 
-  ${fin ? '' : `<div class="chart2">
+  ${fin ? '' : `<div class="chart2" style="flex:1;display:flex;flex-direction:column;justify-content:center;">
     <div class="chart-title">
       Custo diário por cabeça × rebanho médio
       <span class="legend"><span><span class="sw b"></span>Custo Diária/cab</span><span><span class="sw g"></span>Rebanho Médio</span></span>
