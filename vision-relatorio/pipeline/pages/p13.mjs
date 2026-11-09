@@ -1,6 +1,6 @@
 // p.13 — Relatório de Custeio (somente Custos Fixos + Variáveis)
 import { pageShell } from '../lib/shell.mjs';
-import { areaChart, comboChart, C } from '../lib/svg.mjs';
+import { comboChart, C } from '../lib/svg.mjs';
 import { fmt2, fmtInt, mesAbrev, kickerPeriodo } from '../lib/fmt.mjs';
 
 export function render({ model, ctx }) {
@@ -9,12 +9,6 @@ export function render({ model, ctx }) {
   const crossYear = new Date(meta.ini).getUTCFullYear() !== new Date(meta.fim).getUTCFullYear();
   const mesLbl = (ym) => crossYear ? `${mesAbrev(ym)}/${ym.slice(2, 4)}` : mesAbrev(ym);
   const c = d.custeio;
-
-  const area = areaChart({
-    labels: d.mensalCfCv.map(m => mesLbl(m.mes)),
-    values: d.mensalCfCv.map(m => m.porHa),
-    W: 1184, H: fin ? 440 : 185, color: C.green, labelFmt: (v) => `R$ ${fmt2(v)}`, labelScale: 1.3,
-  });
 
   const combo = comboChart({
     labels: d.mensalCfCv.map(m => mesLbl(m.mes)),
@@ -46,11 +40,6 @@ export function render({ model, ctx }) {
     <div class="kpi"><div class="lbl">Despesa Média Mensal</div><div class="val"><small>R$</small> ${fmt2(c.mediaMensal)}</div></div>
     <div class="kpi"><div class="lbl">Custeio por ha/mês</div><div class="val"><small>R$</small> ${fmt2(c.porHaMes)}</div></div>
     ${fin ? '' : `<div class="kpi"><div class="lbl">Custo Diária/cab</div><div class="val"><small>R$</small> ${fmt2(c.custoDiariaCab)}</div></div>`}
-  </div>
-
-  <div class="chart1">
-    <div class="chart-title">Custeio por hectare por mês</div>
-    ${area}
   </div>
 
   ${fin ? '' : `<div class="chart2">

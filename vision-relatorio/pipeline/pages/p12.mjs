@@ -1,7 +1,7 @@
-// p.12 — Relatório de Desembolso · desembolso/ha mensal e custo diário × rebanho
+// p.12 — Relatório de Desembolso · desembolso/ha mensal
 import { pageShell } from '../lib/shell.mjs';
-import { areaChart, comboChart, C } from '../lib/svg.mjs';
-import { fmt2, fmtInt, mesAbrev, kickerPeriodo } from '../lib/fmt.mjs';
+import { areaChart, C } from '../lib/svg.mjs';
+import { fmt2, mesAbrev, kickerPeriodo } from '../lib/fmt.mjs';
 
 export function render({ model, ctx }) {
   const { meta, desembolso: d } = model;
@@ -15,28 +15,9 @@ export function render({ model, ctx }) {
     W: 1184, H: fin ? 440 : 185, color: C.blue, labelFmt: (v) => `R$ ${fmt2(v)}`, labelScale: 1.3,
   });
 
-  const combo = comboChart({
-    labels: d.mensal.map(m => mesLbl(m.mes)),
-    W: 1184, H: 208, labelScale: 1.3,
-    bars: {
-      values: d.mensal.map(m => m.custoDiariaCab),
-      color: C.blue, labelFmt: (v) => `R$ ${fmt2(v)}`, labelInside: true, labelAtBase: true,
-    },
-    line: {
-      values: d.mensal.map(m => m.rebMedio || null),
-      color: C.green, labelFmt: (v) => fmtInt(v), labelBelow: true,
-    },
-  });
-
   const extraCss = `
     .kpi { border-top-color: var(--blue); }
-    
-    .chart2 { margin-top: 14px; flex: 1; }
     .chart-title { display: flex; align-items: center; justify-content: space-between; }
-    .legend { display: flex; gap: 14px; font-size:12px; color: var(--ink); font-weight: 600; text-transform: none; letter-spacing: 0; }
-    .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
-    .legend .sw.b { background: var(--blue); }
-    .legend .sw.g { background: var(--green); }
   `;
 
   const body = `
@@ -49,15 +30,7 @@ export function render({ model, ctx }) {
   <div class="chart1">
     <div class="chart-title">Desembolso por hectare por mês</div>
     ${area}
-  </div>
-
-  ${fin ? '' : `<div class="chart2">
-    <div class="chart-title">
-      Custo diário por cabeça × rebanho médio
-      <span class="legend"><span><span class="sw b"></span>Custo Diária/cab</span><span><span class="sw g"></span>Rebanho Médio</span></span>
-    </div>
-    ${combo}
-  </div>`}`;
+  </div>`;
 
   return pageShell({
     kicker: kickerPeriodo(meta.ini, meta.fim),
