@@ -7,6 +7,7 @@
 import abastecimento from './_relatorios/abastecimento.js'
 import bebedouros from './_relatorios/bebedouros.js'
 import abate from './_relatorios/abate.js'
+import almoxarifado from './_relatorios/almoxarifado.js'
 import cantina from './_relatorios/cantina.js'
 import clima from './_relatorios/clima.js'
 import combustivel from './_relatorios/combustivel.js'
@@ -22,6 +23,7 @@ import zootecnico from './_relatorios/zootecnico.js'
 const RELATORIOS = {
   abate,
   abastecimento,
+  almoxarifado,
   bebedouros,
   cantina,
   clima,

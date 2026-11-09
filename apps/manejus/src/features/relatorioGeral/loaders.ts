@@ -27,6 +27,7 @@ import { classificarABC, type ClasseABC, type DadosRelatorioEstoque } from '../r
 import { montarDecisao, type DecisaoPDF } from '../relatorioEstoque/decisao'
 import { DADOS_ESTOQUE_COMBUSTIVEL_VAZIO, type DadosRelatorioEstoqueCombustivel } from '../relatorioEstoqueCombustivel/agregacao'
 import { classificarABC as classificarABCCantina, DADOS_CANTINA_VAZIO, type DadosRelatorioCantina } from '../relatorioCantina/agregacao'
+import { DADOS_ALMOXARIFADO_VAZIO, type DadosRelatorioAlmoxarifado } from '../relatorioAlmoxarifado/agregacao'
 import type { TipoRelatorioGeral } from './catalogo'
 import type { DadosPDFBoletimRebanho } from './boletimRebanho'
 
@@ -69,6 +70,7 @@ export type PayloadRelatorioGeral =
   | { tipo: 'estoque'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC>; decisao: DecisaoPDF } & DadosRelatorioEstoque }
   | { tipo: 'estoque_combustivel'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null } & DadosRelatorioEstoqueCombustivel }
   | { tipo: 'cantina'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC> } & DadosRelatorioCantina }
+  | { tipo: 'almoxarifado'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC> } & DadosRelatorioAlmoxarifado }
   | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
 
 const PRECOS_KG_DEFAULT: Record<string, number> = {
@@ -496,6 +498,35 @@ async function carregarCantina(
   }
 }
 
+// Almoxarifado usa o período do infográfico. O extrato vai truncado pelo mesmo limite de 4 MB
+// do /api/pdf/geral e a curva ABC vai calculada (o endpoint de PDF não importa as regras do front).
+async function carregarAlmoxarifado(
+  fazenda: FazendaRelatorio,
+  dataInicio: string,
+  dataFim: string,
+): Promise<PayloadRelatorioGeral> {
+  const { data, error } = await supabase.rpc('get_dados_relatorio_almoxarifado_fazenda', {
+    p_fazenda_id: fazenda.id,
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
+  })
+  if (error) throw error
+  const dados = (data?.dados ?? DADOS_ALMOXARIFADO_VAZIO) as DadosRelatorioAlmoxarifado
+  return {
+    tipo: 'almoxarifado',
+    dados: {
+      dataInicio,
+      dataFim,
+      fazendaNome: fazenda.nome,
+      fazendaLogoUrl: fazenda.logoUrl,
+      ...dados,
+      abc: Object.fromEntries(classificarABCCantina(dados.itens ?? [])),
+      movimentacoes: (dados.movimentacoes ?? []).slice(0, MAX_MOVIMENTACOES_ESTOQUE_GERAL),
+      movimentacoes_total: dados.movimentacoes_total ?? (dados.movimentacoes ?? []).length,
+    },
+  }
+}
+
 export interface OpcoesCarregamentoRelatorios {
   boletim?: DadosPDFBoletimRebanho
 }
@@ -530,6 +561,7 @@ const LOADERS: Record<TipoCarregavel, (fazenda: FazendaRelatorio, dataInicio: st
   estoque: carregarEstoque,
   estoque_combustivel: carregarEstoqueCombustivel,
   cantina: carregarCantina,
+  almoxarifado: carregarAlmoxarifado,
   boletim_rebanho: carregarBoletim,
 }
 

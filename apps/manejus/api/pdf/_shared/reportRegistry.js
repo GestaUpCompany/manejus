@@ -7,6 +7,7 @@ import { renderPastagensHtml } from '../_relatorios/pastagens.js'
 import { renderEstoqueHtml } from '../_relatorios/estoque.js'
 import { renderEstoqueCombustivelHtml } from '../_relatorios/estoqueCombustivel.js'
 import { renderCantinaHtml } from '../_relatorios/cantina.js'
+import { renderAlmoxarifadoHtml } from '../_relatorios/almoxarifado.js'
 import { renderBoletimRebanhoHtml } from '../_relatorios/boletimRebanho.js'
 
 export const REPORT_REGISTRY = {
@@ -55,6 +56,11 @@ export const REPORT_REGISTRY = {
     title: 'Relatório de Cantina',
     render: renderCantinaHtml,
     hasData: (dados) => (dados.itens?.length ?? 0) > 0 || Number(dados.operacao?.registros) > 0 || Number(dados.marmitas?.registros) > 0 || Number(dados.pratos_feitos?.registros) > 0,
+  },
+  almoxarifado: {
+    title: 'Relatório de Almoxarifado',
+    render: renderAlmoxarifadoHtml,
+    hasData: (dados) => (dados.itens?.length ?? 0) > 0 || (dados.movimentacoes?.length ?? 0) > 0,
   },
   boletim_rebanho: {
     title: 'Boletim de Rebanho',
