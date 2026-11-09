@@ -1,5 +1,22 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Clima no Infográfico Mensal (09/11/2026)
+
+- **Novo no Infográfico**: seção "Clima" (depois de Bebedouros), com chuva acumulada da fazenda e por pluviômetro, chuva diária e mensal, calendário e temperatura/umidade, pelo mesmo renderizador do PDF individual (`renderClimaHtml`). Omitida quando não há leituras no período.
+- **Banco**: migration `20261109190000_relatorio_clima_fazenda` (aditiva): RPC `get_dados_relatorio_clima_fazenda(fazenda, ini, fim)`, mesmo padrão de rodeio/cantina/almoxarifado (token temporário sobre `get_dados_relatorio_clima`). Só `authenticated` executa. Rollback: `supabase/rollbacks/20261109190000_relatorio_clima_fazenda_rollback.sql`. Aplicada junto com `20261109180000_iniciar_plano_lote_peso_inicio_sem_nulo` (pendente de outra frente de trabalho).
+- **Cálculos**: `loaders.ts` usa as funções exportadas de `RelatorioClimaPublico.tsx` (`calcularKpis`, `serieDiaria`, `serieChuvaDiaria`, `serieChuvaMensal`, `resumirPorPluviometro`) por import dinâmico, então os números são os do relatório público.
+- **Teto de seções**: `api/pdf/_relatorios/geral.js` aceitava no máximo 10 seções; com todos os itens do catálogo marcados são 13 (Combustível gera 2), então a geração completa falhava desde o almoxarifado. Teto agora `MAX_SECOES = 16`.
+- **Teste**: `infograficoRegistro.test.ts` exige renderizador no servidor para todo item do catálogo e confere o Clima. Typecheck e 638 testes ok. O PDF do Infográfico com Clima não foi gerado pela tela (sessão do navegador deslogada).
+- **Fora do Infográfico por decisão**: Zootécnico, Acompanhamento de Tratos, Atividades (sem renderizador no servidor) e Abate (por lote, em homologação).
+
+## Combustível no Infográfico alinhado ao PDF individual, com definição única (09/11/2026)
+
+- **Sintoma**: o Infográfico Mensal trazia, na parte de combustível, o extrato de movimentações e o detalhamento operacional (máquina, operador, placa), que o PDF individual de combustível omite. Qualquer ajuste no individual exigia repetir no Infográfico.
+- **Causa**: as regras do "resumo" estavam só em `api/pdf/_relatorios/combustivel.js` (`incluirDetalhes: false`, `incluirExtrato: false`, abastecimento sem tanques, estoque antes do abastecimento). O Infográfico renderiza pelo `reportRegistry.js` com os padrões das funções (tudo incluído), recebia os tanques também dentro do abastecimento (tabela de tanques duplicada) e montava abastecimento antes do estoque.
+- **Correção**: nova definição única `api/pdf/_shared/combustivelCombinado.js` (opções de renderização, preparação dos dados e ordem das seções), usada pelo PDF individual (`combustivel.js`), pelo registro do Infográfico (`reportRegistry.js`) e por `geral.js` (reordena estoque antes de abastecimento). O loader do Infográfico (`relatorioGeral/loaders.ts`) deixou de mandar as movimentações do estoque de combustível (não são impressas; economiza o teto de 4 MB). Para mudar o que o combinado mostra, altere só o `combustivelCombinado.js`.
+- **Verificação**: `combustivelCombinado.test.ts` (3 testes) confirma que o Infográfico não tem detalhamento por máquina, operacional, saldo por tanque duplicado nem extrato, e a ordem das seções; typecheck e 636 testes ok. O PDF do Infográfico não foi gerado pela tela (sessão do navegador estava deslogada).
+- **Ainda manual**: o payload dos dois caminhos é montado no front em lugares diferentes (`relatorioCombustivelPDFPuppeteer.ts` e `loaders.ts`); só as regras de renderização foram unificadas. Filtros de máquina/combustível/operação existem só no individual.
+
 ## Relatório de Almoxarifado (09/11/2026)
 
 - **Novo relatório** (`tipo = 'almoxarifado'`): estoque por item no período (saldo inicial, entradas, retiradas, devoluções, saldo final), itens para repor, consumo líquido, retiradas por responsável (`quem_pegou`) e por setor, curva ABC, cobertura, extrato e avisos (devoluções em revisão, divergência de saldo, itens movimentados sem controle). Link público (`RelatorioAlmoxarifadoPublico.tsx`), PDF (`api/pdf/_relatorios/almoxarifado.js`, dentro da função única `[relatorio].js`) e seção do Infográfico Mensal (`relatorioGeral/loaders.ts`, `catalogo.ts`, `reportRegistry.js`).

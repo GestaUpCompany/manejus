@@ -1,4 +1,4 @@
-export type TipoRelatorioGeral = 'combustivel' | 'consumo' | 'bebedouros' | 'morte' | 'rodeio' | 'pastagens' | 'estoque' | 'cantina' | 'almoxarifado' | 'boletim_rebanho'
+export type TipoRelatorioGeral = 'combustivel' | 'consumo' | 'bebedouros' | 'clima' | 'morte' | 'rodeio' | 'pastagens' | 'estoque' | 'cantina' | 'almoxarifado' | 'boletim_rebanho'
 
 export interface RelatorioGeralCatalogoItem {
   id: TipoRelatorioGeral
@@ -21,6 +21,11 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
     id: 'bebedouros',
     titulo: 'Bebedouros',
     descricao: 'Limpezas, metas, qualidade da água e ocorrências.',
+  },
+  {
+    id: 'clima',
+    titulo: 'Clima',
+    descricao: 'Chuva acumulada média da fazenda e por pluviômetro, dias de chuva forte, calendário de chuvas, temperatura e umidade.',
   },
   {
     id: 'morte',

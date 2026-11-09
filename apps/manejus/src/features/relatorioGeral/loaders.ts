@@ -19,6 +19,8 @@ import {
 } from '../relatorioBebedouros/paraPdf'
 import type { LoteRelatorio } from '../../utils/relatorioConsumoPDF'
 import type { LinhaMorte, ParametrosRelatorioMorte, PastoGeo, ResumoMorte } from '../../utils/relatorioMortePDF'
+import type { ParametrosRelatorioClima } from '../../utils/relatorioClimaPDFPuppeteer'
+import type { LeituraClima, PluviometroDisponivel } from '../../pages/public/RelatorioClimaPublico'
 import type { ParametrosRelatorioRodeio } from '../../utils/relatorioRodeioPDFPuppeteer'
 import type { ParametrosRelatorioPastagens } from '../../utils/relatorioPastagensPDFPuppeteer'
 import { calcularResumoRodeio, type RegistroRodeio } from '../relatorioRodeio/agregacao'
@@ -64,6 +66,7 @@ export type PayloadRelatorioGeral =
   | { tipo: 'abastecimento'; dados: DadosPDFRelatorioAbastecimento }
   | { tipo: 'consumo'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; lotes: LoteRelatorio[] } }
   | { tipo: 'bebedouros'; dados: DadosPDFBebedouros }
+  | { tipo: 'clima'; dados: ParametrosRelatorioClima }
   | { tipo: 'morte'; dados: ParametrosRelatorioMorte }
   | { tipo: 'rodeio'; dados: ParametrosRelatorioRodeio }
   | { tipo: 'pastagens'; dados: ParametrosRelatorioPastagens }
@@ -465,6 +468,9 @@ async function carregarEstoqueCombustivel(
       fazendaNome: fazenda.nome,
       fazendaLogoUrl: fazenda.logoUrl,
       ...dados,
+      // O combinado de combustível não imprime o extrato (api/pdf/_shared/combustivelCombinado.js): não vai no payload,
+      // que tem teto de 4 MB.
+      movimentacoes: [],
     },
   }
 }
@@ -527,6 +533,41 @@ async function carregarAlmoxarifado(
   }
 }
 
+// Clima usa o período do infográfico. Os cálculos (KPIs, séries de chuva, resumo por pluviômetro) vêm do relatório
+// público, a fonte única; o import é dinâmico para não levar o recharts da página ao bundle do infográfico.
+async function carregarClima(
+  fazenda: FazendaRelatorio,
+  dataInicio: string,
+  dataFim: string,
+): Promise<PayloadRelatorioGeral> {
+  const { data, error } = await supabase.rpc('get_dados_relatorio_clima_fazenda', {
+    p_fazenda_id: fazenda.id,
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
+  })
+  if (error) throw error
+  const registros = (data?.dados?.registros ?? []) as LeituraClima[]
+  const disponiveis = (data?.dados?.pluviometros_disponiveis ?? []) as PluviometroDisponivel[]
+  const clima = await import('../../pages/public/RelatorioClimaPublico')
+  return {
+    tipo: 'clima',
+    dados: {
+      dataInicio,
+      dataFim,
+      fazendaNome: fazenda.nome,
+      fazendaLogoUrl: fazenda.logoUrl,
+      kpis: clima.calcularKpis(registros),
+      pluviometros: disponiveis.map((p) => p.pluviometro_nome || '—'),
+      serie: clima.serieDiaria(registros),
+      diaria: clima.serieChuvaDiaria(registros),
+      mensal: clima.serieChuvaMensal(registros),
+      limites: { forte: clima.LIMITE_CHUVA_FORTE_MM, torrencial: clima.LIMITE_CHUVA_TORRENCIAL_MM },
+      resumo: clima.resumirPorPluviometro(registros),
+      registros,
+    },
+  }
+}
+
 export interface OpcoesCarregamentoRelatorios {
   boletim?: DadosPDFBoletimRebanho
 }
@@ -555,6 +596,7 @@ const LOADERS: Record<TipoCarregavel, (fazenda: FazendaRelatorio, dataInicio: st
   abastecimento: carregarAbastecimento,
   consumo: carregarConsumo,
   bebedouros: carregarBebedouros,
+  clima: carregarClima,
   morte: carregarMortes,
   rodeio: carregarRodeio,
   pastagens: carregarPastagens,

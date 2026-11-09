@@ -1,6 +1,7 @@
 import { renderAbastecimentoHtml } from '../_relatorios/abastecimento.js'
 import { renderBebedourosHtml } from '../_relatorios/bebedouros.js'
 import { renderConsumoHtml } from '../_relatorios/consumo.js'
+import { renderClimaHtml } from '../_relatorios/clima.js'
 import { renderMorteHtml } from '../_relatorios/morte.js'
 import { renderRodeioHtml } from '../_relatorios/rodeio.js'
 import { renderPastagensHtml } from '../_relatorios/pastagens.js'
@@ -9,11 +10,18 @@ import { renderEstoqueCombustivelHtml } from '../_relatorios/estoqueCombustivel.
 import { renderCantinaHtml } from '../_relatorios/cantina.js'
 import { renderAlmoxarifadoHtml } from '../_relatorios/almoxarifado.js'
 import { renderBoletimRebanhoHtml } from '../_relatorios/boletimRebanho.js'
+import {
+  OPCOES_ABASTECIMENTO_COMBINADO,
+  OPCOES_ESTOQUE_COMBINADO,
+  prepararAbastecimentoCombinado,
+  prepararEstoqueCombinado,
+} from './combustivelCombinado.js'
 
 export const REPORT_REGISTRY = {
   abastecimento: {
     title: 'Relatório de Abastecimento',
-    render: renderAbastecimentoHtml,
+    // Parte do "Combustível" do Infográfico: mesmas regras do PDF individual (_shared/combustivelCombinado.js).
+    render: (dados) => renderAbastecimentoHtml(prepararAbastecimentoCombinado(dados), OPCOES_ABASTECIMENTO_COMBINADO),
     hasData: (dados) => Number(dados.totalRegistros) > 0,
   },
   consumo: {
@@ -25,6 +33,11 @@ export const REPORT_REGISTRY = {
     title: 'Relatório de Bebedouros',
     render: renderBebedourosHtml,
     hasData: (dados) => (dados.statusPorBebedouro?.length ?? 0) > 0 || (dados.limpezasDoDia?.length ?? 0) > 0 || Number(dados.checklistKPIs?.totalRegistros) > 0,
+  },
+  clima: {
+    title: 'Relatório de Clima',
+    render: renderClimaHtml,
+    hasData: (dados) => (dados.registros?.length ?? 0) > 0,
   },
   morte: {
     title: 'Relatório de Mortalidade',
@@ -49,7 +62,8 @@ export const REPORT_REGISTRY = {
   },
   estoque_combustivel: {
     title: 'Relatório de Estoque de Combustível',
-    render: renderEstoqueCombustivelHtml,
+    // Parte do "Combustível" do Infográfico: mesmas regras do PDF individual (_shared/combustivelCombinado.js).
+    render: (dados) => renderEstoqueCombustivelHtml(prepararEstoqueCombinado(dados), OPCOES_ESTOQUE_COMBINADO),
     hasData: (dados) => (dados.tanques?.length ?? 0) > 0,
   },
   cantina: {
