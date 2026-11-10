@@ -14,7 +14,9 @@ import combustivel from './_relatorios/combustivel.js'
 import consumo from './_relatorios/consumo.js'
 import estoque from './_relatorios/estoque.js'
 import estoqueCombustivel from './_relatorios/estoqueCombustivel.js'
+import farmacia from './_relatorios/farmacia.js'
 import geral from './_relatorios/geral.js'
+import maternidade from './_relatorios/maternidade.js'
 import morte from './_relatorios/morte.js'
 import pastagens from './_relatorios/pastagens.js'
 import rodeio from './_relatorios/rodeio.js'
@@ -31,7 +33,9 @@ const RELATORIOS = {
   consumo,
   estoque,
   estoqueCombustivel,
+  farmacia,
   geral,
+  maternidade,
   morte,
   pastagens,
   rodeio,

@@ -111,6 +111,18 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'Estoque do almoxarifado por item (saldo inicial, entradas, retiradas, devoluções e saldo final), itens para repor, retiradas por responsável e setor, curva ABC e extrato por período.',
     icone: '🧰',
   },
+  {
+    tipo: 'maternidade',
+    titulo: 'Maternidade',
+    descricao: 'Partos e crias no período, perda de crias, peso ao nascer, tipo de parto, sexo e raça, matrizes com intercorrências, tratamentos e medicamentos.',
+    icone: '🐄',
+  },
+  {
+    tipo: 'farmacia',
+    titulo: 'Farmácia',
+    descricao: 'Estoque de medicamentos e vacinas por item (saldo inicial, entradas, baixas e saldo final), itens para repor, validade dos lotes, valor em estoque, curva ABC e extrato por período.',
+    icone: '💊',
+  },
 ]
 
 // 'todos' é o escopo antigo (insumos e formulações juntos): não é mais criado, mas links antigos ainda o têm

@@ -9,6 +9,8 @@ import { renderEstoqueHtml } from '../_relatorios/estoque.js'
 import { renderEstoqueCombustivelHtml } from '../_relatorios/estoqueCombustivel.js'
 import { renderCantinaHtml } from '../_relatorios/cantina.js'
 import { renderAlmoxarifadoHtml } from '../_relatorios/almoxarifado.js'
+import { renderMaternidadeHtml } from '../_relatorios/maternidade.js'
+import { renderFarmaciaHtml } from '../_relatorios/farmacia.js'
 import { renderBoletimRebanhoHtml } from '../_relatorios/boletimRebanho.js'
 import {
   OPCOES_ABASTECIMENTO_COMBINADO,
@@ -75,6 +77,16 @@ export const REPORT_REGISTRY = {
     title: 'Relatório de Almoxarifado',
     render: renderAlmoxarifadoHtml,
     hasData: (dados) => (dados.itens?.length ?? 0) > 0 || (dados.movimentacoes?.length ?? 0) > 0,
+  },
+  maternidade: {
+    title: 'Relatório de Maternidade',
+    render: renderMaternidadeHtml,
+    hasData: (dados) => Number(dados.resumo?.crias) > 0,
+  },
+  farmacia: {
+    title: 'Relatório de Farmácia',
+    render: renderFarmaciaHtml,
+    hasData: (dados) => Number(dados.resumo?.total_itens) > 0,
   },
   boletim_rebanho: {
     title: 'Boletim de Rebanho',

@@ -175,7 +175,7 @@ export function EstoqueFarmacia() {
 
   const salvarEntrada = async () => {
     if (!fazendaId) return
-    const v = validarEntrada(formEntrada)
+    const v = validarEntrada(formEntrada, hojeLocal())
     if (!v.ok) return setErroForm(v.erro)
     setSubmitting(true)
     try {
@@ -206,7 +206,7 @@ export function EstoqueFarmacia() {
 
   const salvarAjuste = async () => {
     if (!fazendaId) return
-    const v = validarAjuste(formAjuste)
+    const v = validarAjuste(formAjuste, hojeLocal())
     if (!v.ok) return setErroForm(v.erro)
     setSubmitting(true)
     try {
@@ -562,7 +562,7 @@ export function EstoqueFarmacia() {
           <Input label="Nota fiscal" value={formEntrada.notaFiscal} onChange={(e) => setFormEntrada({ ...formEntrada, notaFiscal: e.target.value })} />
           <Input label="Lote do produto" value={formEntrada.lote} onChange={(e) => setFormEntrada({ ...formEntrada, lote: e.target.value })} />
           <Input label="Validade" type="date" value={formEntrada.validade} onChange={(e) => setFormEntrada({ ...formEntrada, validade: e.target.value })} />
-          <Input label="Data" type="date" value={formEntrada.data} onChange={(e) => setFormEntrada({ ...formEntrada, data: e.target.value })} />
+          <Input label="Data" type="date" max={hojeLocal()} value={formEntrada.data} onChange={(e) => setFormEntrada({ ...formEntrada, data: e.target.value })} />
           <Input label="Observação" value={formEntrada.observacao} onChange={(e) => setFormEntrada({ ...formEntrada, observacao: e.target.value })} />
           {erroForm && <p className="text-sm text-red-700">{erroForm}</p>}
           <div className="flex gap-2 pt-2">
@@ -588,7 +588,7 @@ export function EstoqueFarmacia() {
               {diferencaAjuste != null && ` · diferença: ${diferencaAjuste > 0 ? '+' : ''}${numero(diferencaAjuste)} ${itemDoAjuste.unidade}`}
             </p>
           )}
-          <Input label="Data" type="date" value={formAjuste.data} onChange={(e) => setFormAjuste({ ...formAjuste, data: e.target.value })} />
+          <Input label="Data" type="date" max={hojeLocal()} value={formAjuste.data} onChange={(e) => setFormAjuste({ ...formAjuste, data: e.target.value })} />
           <Input label="Motivo" value={formAjuste.observacao} onChange={(e) => setFormAjuste({ ...formAjuste, observacao: e.target.value })} placeholder="Ex.: inventário, perda, quebra" />
           {erroForm && <p className="text-sm text-red-700">{erroForm}</p>}
           <div className="flex gap-2 pt-2">

@@ -1,4 +1,4 @@
-export type TipoRelatorioGeral = 'combustivel' | 'consumo' | 'bebedouros' | 'clima' | 'morte' | 'rodeio' | 'pastagens' | 'estoque' | 'cantina' | 'almoxarifado' | 'boletim_rebanho'
+export type TipoRelatorioGeral = 'combustivel' | 'consumo' | 'bebedouros' | 'clima' | 'morte' | 'rodeio' | 'pastagens' | 'estoque' | 'cantina' | 'almoxarifado' | 'maternidade' | 'farmacia' | 'boletim_rebanho'
 
 export interface RelatorioGeralCatalogoItem {
   id: TipoRelatorioGeral
@@ -56,6 +56,16 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
     id: 'almoxarifado',
     titulo: 'Almoxarifado',
     descricao: 'Estoque do almoxarifado por item no período, itens para repor, consumo líquido (retiradas menos devoluções), retiradas por responsável e setor.',
+  },
+  {
+    id: 'maternidade',
+    titulo: 'Maternidade',
+    descricao: 'Partos e crias no período, perda de crias, peso ao nascer, tipo de parto, matrizes com intercorrências, tratamentos e medicamentos.',
+  },
+  {
+    id: 'farmacia',
+    titulo: 'Farmácia',
+    descricao: 'Estoque de medicamentos e vacinas (saldo inicial, entradas, baixas e saldo final), itens a repor, validade dos lotes, valor em estoque e curva ABC.',
   },
   {
     id: 'boletim_rebanho',

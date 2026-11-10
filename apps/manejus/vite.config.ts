@@ -22,6 +22,8 @@ import estoqueHandler from './api/pdf/_relatorios/estoque.js'
 import estoqueCombustivelHandler from './api/pdf/_relatorios/estoqueCombustivel.js'
 import cantinaHandler from './api/pdf/_relatorios/cantina.js'
 import almoxarifadoHandler from './api/pdf/_relatorios/almoxarifado.js'
+import maternidadeHandler from './api/pdf/_relatorios/maternidade.js'
+import farmaciaHandler from './api/pdf/_relatorios/farmacia.js'
 // @ts-ignore
 import combustivelHandler from './api/pdf/_relatorios/combustivel.js'
 import zootecnicoHandler from './api/pdf/_relatorios/zootecnico.js'
@@ -93,6 +95,8 @@ function localPdfApi(): Plugin {
       register('/api/pdf/estoqueCombustivel', estoqueCombustivelHandler)
       register('/api/pdf/cantina', cantinaHandler)
       register('/api/pdf/almoxarifado', almoxarifadoHandler)
+      register('/api/pdf/maternidade', maternidadeHandler)
+      register('/api/pdf/farmacia', farmaciaHandler)
       register('/api/pdf/combustivel', combustivelHandler)
       register('/api/pdf/zootecnico', zootecnicoHandler)
       register('/api/pdf/abate', abateHandler)

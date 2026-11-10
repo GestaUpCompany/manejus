@@ -9,6 +9,7 @@ import {
   semCusto,
   sinalMovimento,
   totaisDaTela,
+  dataFutura,
   validarAjuste,
   validarConteudo,
   validarEntrada,
@@ -174,5 +175,21 @@ describe('busca por SKU', () => {
     expect(filtrarEOrdenar(itens, 'med-001', '').map((i) => i.nome_comercial)).toEqual(['Draxxin 100'])
     expect(filtrarEOrdenar(itens, 'MED-002', '').map((i) => i.nome_comercial)).toEqual(['Exceller'])
     expect(filtrarEOrdenar(itens, 'med', '')).toHaveLength(2)
+  })
+})
+
+describe('data futura em entrada e ajuste', () => {
+  const entrada = { itemId: 'a', quantidade: '2', custo: '10', fornecedor: '', notaFiscal: '', lote: '', validade: '', observacao: '', data: '2026-11-10' }
+  const ajuste = { itemId: 'a', saldo: '1', observacao: 'contagem', data: '2026-11-10' }
+  it('recusa data posterior a hoje e aceita hoje e passado', () => {
+    expect(validarEntrada({ ...entrada, data: '2027-10-31' }, '2026-11-10').ok).toBe(false)
+    expect(validarEntrada({ ...entrada, data: '2026-11-10' }, '2026-11-10').ok).toBe(true)
+    expect(validarEntrada({ ...entrada, data: '2026-10-31' }, '2026-11-10').ok).toBe(true)
+    expect(validarAjuste({ ...ajuste, data: '2026-11-11' }, '2026-11-10').ok).toBe(false)
+    expect(validarAjuste(ajuste, '2026-11-10').ok).toBe(true)
+  })
+  it('dataFutura ignora formato inválido', () => {
+    expect(dataFutura('', '2026-11-10')).toBe(false)
+    expect(dataFutura('2026-11-11', '2026-11-10')).toBe(true)
   })
 })
