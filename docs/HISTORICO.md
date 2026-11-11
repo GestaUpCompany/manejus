@@ -1,5 +1,14 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Bebedouros: sem filtro de ocupação do pasto e data sem recálculo a cada dígito (11/11/2026)
+
+- **Sintoma** (Fazenda Marcon): o relatório mostrava 0 bebedouros dentro da meta em outubro, apesar de os bebedouros 59 a 66 terem sido limpos e registrados. Eles ficam nos pastos Conf. 1 a 8, que nunca tiveram `lote_pasto_historico`.
+- **Causa**: `get_bebedouros_permitidos_relatorio` só liberava bebedouros sem pasto ou em pasto com lote dentro agora (`data_hora_saida IS NULL`). Pastos de confinamento contavam como vazios e os bebedouros sumiam do relatório (30 de 91 listados).
+- **Decisão**: o relatório serve para saber quais bebedouros foram limpos, independente da ocupação. A função passou a retornar todos os bebedouros da fazenda com `deleted_at IS NULL`; a validação do token não mudou. Vale também para o Infográfico Mensal (`get_bebedouros_permitidos_relatorio_fazenda` delega para ela).
+- **Banco**: migration `20261111120000_relatorio_bebedouros_sem_filtro_ocupacao` (CREATE OR REPLACE, já aplicada). Na Marcon o link passou a liberar 91 bebedouros. Rollback: reaplicar a definição de `20260908190000_rpc_bebedouros_pastos_ocupados_relatorio.sql`.
+- **Data no filtro** (`RelatorioBebedourosPublico.tsx`): o `<input type="date">` disparava `onChange` a cada dígito do ano e o relatório recarregava a cada um; `ordenarPeriodo` ainda invertia início e fim no meio da digitação. Agora o período efetivo só é aplicado com ano completo (>= 1900) e 700 ms sem digitar (`useDataEstabilizada`), e a ordenação vale só sobre os valores estabilizados. Os outros relatórios públicos usam o mesmo tipo de campo e podem ter o mesmo problema.
+- **Fora do escopo**: bebedouros que nunca tiveram limpeza aparecem como "sem registro", e limpezas posteriores ao fim do período são descartadas pela consulta (`data_limpeza <= fim`), por desenho.
+
 ## Relatório de Farmácia (10/11/2026)
 
 - **Novo relatório** (`tipo = 'farmacia'`): estoque de medicamentos e vacinas com controle de estoque. Valor em estoque, itens a repor (cobertura em dias), entradas e consumo do período, validade dos lotes (vencidos ou a até 60 dias), maiores consumos, posição por item (saldo inicial, entradas, baixas, saldo final, curva ABC) e extrato com saldo após. Card na central (`Relatorios.tsx`), link público (`RelatorioFarmaciaPublico.tsx`), PDF de 2 páginas (`api/pdf/_relatorios/farmacia.js`) e seção do Infográfico Mensal (`catalogo.ts`, `loaders.ts`, `reportRegistry.js`).
@@ -3307,3 +3316,10 @@ Fazenda `696a1a83-5c92-445d-afff-afa6aaca0de1` (Pioneira), `movimentacoes_farmac
 Fazenda `465534bb-0542-423b-ac83-f70081606816` (São José), `movimentacoes_farmacia`, 2 entradas manuais (painel_entrada, criadas em 03/11/2026) com `data` 2026-11-30 corrigida para 2026-11-03 (autorizado pelo usuário): `5fc82d0c-481d-46f7-9ca7-9f37678289a6` (RIPERCOL - ZOETIS, 13 frascos) e `f13887c6-fb58-44f2-8523-02597d38afdf` (SOLUTION - MDS, 3 frascos).
 - Backups: `backup.movfarm_saojose_datafutura_20261110` (2 lançamentos) e `backup.medicamentos_saojose_datafutura_20261110` (2 itens). Saldo, custo médio e valor dos dois itens inalterados após o recálculo (14 frascos/R$ 782,60 e 3 frascos/R$ 1.470,00).
 - Para reverter: `UPDATE movimentacoes_farmacia SET data = '2026-11-30' WHERE id IN ('5fc82d0c-481d-46f7-9ca7-9f37678289a6','f13887c6-fb58-44f2-8523-02597d38afdf')`.
+
+## 2026-11-11: Relatório de Bebedouros mostra a situação do pasto
+- Nova RPC `get_bebedouros_situacao_pasto_relatorio(p_token)` (migration `20261111160000_rpc_bebedouros_situacao_pasto_relatorio.sql`, rollback em `supabase/rollbacks/`): devolve por bebedouro `pasto_nomes` e `situacao` (`ocupado` = há lote com `data_hora_saida IS NULL` em algum pasto ligado; `vago` = pasto ligado sem lote; `sem_pasto` = sem ligação em `pasto_bebedouros`, ex.: confinamento).
+- Tela pública e PDF (`api/pdf/_relatorios/bebedouros.js`) ganham coluna "Pasto" com selo de situação ao lado do nome, nas tabelas de cronograma e de limpezas do dia. Com mais de 3 pastos, mostra os 2 primeiros e "+N" (tooltip com a lista completa na tela). No Infográfico a coluna não aparece (o payload não traz a situação).
+- No PDF, as larguras da tabela com a coluna Pasto são definidas em `<colgroup>`: o template usa `table-layout: fixed` e a primeira linha (legenda, 1 célula) fazia as regras por `nth-child` serem ignoradas.
+- O dev server importa os handlers `api/pdf/_relatorios/*.js` uma vez (`vite.config.ts`): editar o handler exige reiniciar o `pnpm dev`.
+- A RPC `get_bebedouros_permitidos_relatorio` não mudou. Observado, não corrigido: `historico_limpezas_bebedouros` só tem policy de SELECT para `authenticated` (migration 20260714124551), então a página pública sem login recebe o histórico vazio.

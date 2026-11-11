@@ -23,6 +23,8 @@ export interface StatusBebedouroPDF {
   diasParaProxima?: number | null
   responsavelUltima?: string | null
   observacaoUltima?: string | null
+  pastoNomes?: string[]
+  situacaoPasto?: 'ocupado' | 'vago' | 'sem_pasto'
 }
 
 export interface LimpezaDoDiaPDF {
@@ -36,6 +38,8 @@ export interface LimpezaDoDiaPDF {
   responsavel: string | null
   simbolo?: string
   proximaPrevista?: string | null
+  pastoNomes?: string[]
+  situacaoPasto?: 'ocupado' | 'vago' | 'sem_pasto'
 }
 
 export interface LimpezaKPIsPDF {
