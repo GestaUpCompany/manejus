@@ -92,6 +92,22 @@ function formatarData(iso: string): string {
   return iso
 }
 
+// O input de data dispara onChange a cada dígito do ano (0002, 0020, 0202, 2026). Só aplicamos o valor
+// depois que o usuário para de digitar e quando o ano está completo.
+function dataCompleta(iso: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) && Number(iso.slice(0, 4)) >= 1900
+}
+
+function useDataEstabilizada(valor: string, atrasoMs = 700): string {
+  const [aplicado, setAplicado] = useState(valor)
+  useEffect(() => {
+    if (valor !== '' && !dataCompleta(valor)) return // ano ainda incompleto: mantém o último valor aplicado
+    const t = setTimeout(() => setAplicado(valor), valor === '' ? 0 : atrasoMs)
+    return () => clearTimeout(t)
+  }, [valor, atrasoMs])
+  return aplicado
+}
+
 export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -134,8 +150,15 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
     }
   }, [])
 
-  const periodoInicio = diaUnico || dataInicio || periodoPadrao.inicio
-  const periodoFim = diaUnico || dataFim || periodoPadrao.fim
+  // Valores efetivos (estabilizados): os inputs usam o estado cru, o relatório usa estes.
+  const diaUnicoAplicado = useDataEstabilizada(diaUnico)
+  const [dataInicioAplicado, dataFimAplicado] = ordenarPeriodo(
+    useDataEstabilizada(dataInicio),
+    useDataEstabilizada(dataFim),
+  )
+
+  const periodoInicio = diaUnicoAplicado || dataInicioAplicado || periodoPadrao.inicio
+  const periodoFim = diaUnicoAplicado || dataFimAplicado || periodoPadrao.fim
 
   const carregarDados = useCallback(async () => {
     if (!relatorioInfo?.fazenda_id) return
@@ -264,8 +287,11 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
   const maisAtrasado = useMemo(() => calcularMaisAtrasado(cronograma), [cronograma])
   const proximasSemana = useMemo(() => proximasNaJanela(cronograma, 7), [cronograma])
 
-  const ehDiaUnico = diaUnico !== '' || (dataInicio !== '' && dataFim !== '' && dataInicio === dataFim)
-  const diaUnicoEfetivo = diaUnico || (dataInicio !== '' && dataFim !== '' && dataInicio === dataFim ? dataInicio : '')
+  const ehDiaUnico =
+    diaUnicoAplicado !== '' || (dataInicioAplicado !== '' && dataFimAplicado !== '' && dataInicioAplicado === dataFimAplicado)
+  const diaUnicoEfetivo =
+    diaUnicoAplicado ||
+    (dataInicioAplicado !== '' && dataFimAplicado !== '' && dataInicioAplicado === dataFimAplicado ? dataInicioAplicado : '')
 
   const limpezasDoDia = useMemo(
     () => (ehDiaUnico ? calcularLimpezasDoDia(bebedourosFiltrados, todasLimpezas, diaUnicoEfetivo) : []),
@@ -613,11 +639,7 @@ function Filtros({
           <input
             type="date"
             value={dataInicio}
-            onChange={(e) => {
-              const [ini, fim] = ordenarPeriodo(e.target.value, dataFim)
-              setDataInicio(ini)
-              setDataFim(fim)
-            }}
+            onChange={(e) => setDataInicio(e.target.value)}
             disabled={!!diaUnico}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600 disabled:bg-gray-50 disabled:text-gray-300"
           />
@@ -627,11 +649,7 @@ function Filtros({
           <input
             type="date"
             value={dataFim}
-            onChange={(e) => {
-              const [ini, fim] = ordenarPeriodo(dataInicio, e.target.value)
-              setDataInicio(ini)
-              setDataFim(fim)
-            }}
+            onChange={(e) => setDataFim(e.target.value)}
             disabled={!!diaUnico}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600 disabled:bg-gray-50 disabled:text-gray-300"
           />
