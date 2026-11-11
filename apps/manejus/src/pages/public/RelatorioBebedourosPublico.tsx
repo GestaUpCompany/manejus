@@ -11,10 +11,13 @@ import {
   calcularLimpezasDoDia,
   calcularMaisAtrasado,
   proximasNaJanela,
+  resumirPastos,
+  SITUACAO_PASTO_INFO,
   textoPrazo,
   type ItemCronograma,
   type LimpezaDoDiaItem,
   type OcorrenciaCalculada,
+  type SituacaoPasto,
 } from '../../features/relatorioBebedouros/calculos'
 import { cronogramaParaPDF, limpezaDoDiaParaPDF, ocorrenciaParaPDF } from '../../features/relatorioBebedouros/paraPdf'
 
@@ -57,6 +60,8 @@ interface Bebedouro {
   capacidade: number | null
   meta_intervalo_limpeza: number | null
   ativo: boolean
+  pastoNomes: string[]
+  situacaoPasto: SituacaoPasto
 }
 
 interface Limpeza {
@@ -184,6 +189,19 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
         (permitidosRes.data || []).map((item: { bebedouro_id: string }) => item.bebedouro_id)
       )
 
+      const situacaoRes = await supabase.rpc('get_bebedouros_situacao_pasto_relatorio', {
+        p_token: token,
+      })
+      // Se a RPC falhar, o relatório segue sem a situação do pasto (cai em "Sem pasto").
+      if (situacaoRes.error) console.error('Erro ao carregar situação do pasto:', situacaoRes.error)
+      const situacaoPorBebedouro = new Map<string, { pastoNomes: string[]; situacaoPasto: SituacaoPasto }>(
+        ((situacaoRes.data || []) as { bebedouro_id: string; pasto_nomes: string[] | null; situacao: SituacaoPasto }[])
+          .map((item) => [
+            item.bebedouro_id,
+            { pastoNomes: item.pasto_nomes ?? [], situacaoPasto: item.situacao },
+          ])
+      )
+
       const [bebedourosRes, limpezasRes, registrosRes] = await Promise.all([
         supabase
           .from('bebedouros')
@@ -222,6 +240,8 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
           capacidade: b.capacidade ? Number(b.capacidade) : null,
           meta_intervalo_limpeza: b.meta_intervalo_limpeza,
           ativo: b.ativo,
+          pastoNomes: situacaoPorBebedouro.get(b.id)?.pastoNomes ?? [],
+          situacaoPasto: situacaoPorBebedouro.get(b.id)?.situacaoPasto ?? 'sem_pasto',
         }))
       const nomesBebedourosPermitidos = new Set(bebedourosMapped.map((b) => b.nome))
 
@@ -822,6 +842,24 @@ function KPIsLimpezaDia({ limpezas }: { limpezas: LimpezaDoDiaItem[] }) {
   )
 }
 
+// Pasto do bebedouro + situação (ocupado agora / vago / sem pasto). Usado nas tabelas e no PDF.
+function SituacaoPastoCelula({ situacao, pastoNomes }: { situacao: SituacaoPasto; pastoNomes: string[] }) {
+  const info = SITUACAO_PASTO_INFO[situacao]
+  return (
+    <div className="flex items-center gap-1.5 whitespace-nowrap">
+      <span className="text-xs" style={{ color: '#4f5f56' }} title={pastoNomes.length > 3 ? pastoNomes.join(', ') : undefined}>
+        {resumirPastos(pastoNomes)}
+      </span>
+      <span
+        className="inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-bold text-white whitespace-nowrap"
+        style={{ backgroundColor: info.cor }}
+      >
+        {info.label}
+      </span>
+    </div>
+  )
+}
+
 function TabelaCronograma({ itens, dataReferencia }: { itens: ItemCronograma[]; dataReferencia: string }) {
   if (itens.length === 0) {
     return <div className="text-center text-gray-400 py-8 bg-gray-50 rounded-lg">Nenhum bebedouro cadastrado.</div>
@@ -835,6 +873,7 @@ function TabelaCronograma({ itens, dataReferencia }: { itens: ItemCronograma[]; 
         cabecalho={
           <>
             <th className={TH} style={TH_STYLE}>Bebedouro</th>
+            <th className={TH} style={TH_STYLE}>Pasto</th>
             <th className={TH} style={TH_STYLE}>Última limpeza</th>
             <th className={TH} style={TH_STYLE}>Próxima limpeza</th>
             <th className={TH} style={TH_STYLE}>Prazo</th>
@@ -856,6 +895,7 @@ function TabelaCronograma({ itens, dataReferencia }: { itens: ItemCronograma[]; 
           return (
             <tr key={i.id}>
               <td className="py-2 px-3 whitespace-nowrap" style={{ ...base, borderLeft: vencida ? '4px solid #c94d46' : '4px solid transparent' }}>{i.nome}</td>
+              <td className="py-2 px-3" style={base}><SituacaoPastoCelula situacao={i.situacaoPasto ?? 'sem_pasto'} pastoNomes={i.pastoNomes ?? []} /></td>
               <td className="py-2 px-3 whitespace-nowrap" style={base}>{i.ultimaLimpeza ? formatarData(i.ultimaLimpeza) : '—'}</td>
               <td className="py-2 px-3 whitespace-nowrap" style={{ ...base, fontWeight: 700, color: vencida ? '#991b1b' : '#26352e' }}>
                 {i.proximaLimpeza ? formatarData(i.proximaLimpeza) : i.ultimaLimpeza ? 'Sem meta' : 'Pendente'}
@@ -884,6 +924,7 @@ function TabelaLimpezasDia({ limpezas }: { limpezas: LimpezaDoDiaItem[] }) {
         cabecalho={
           <>
             <th className={TH} style={TH_STYLE}>Bebedouro</th>
+            <th className={TH} style={TH_STYLE}>Pasto</th>
             <th className={TH} style={TH_STYLE}>Limpeza anterior</th>
             <th className={TH} style={TH_STYLE}>Limpeza do dia</th>
             <th className={TH} style={TH_STYLE}>Próxima prevista</th>
@@ -898,6 +939,7 @@ function TabelaLimpezasDia({ limpezas }: { limpezas: LimpezaDoDiaItem[] }) {
           return (
             <tr key={l.id}>
               <td className="py-2 px-3 whitespace-nowrap" style={base}>{l.nome}</td>
+              <td className="py-2 px-3" style={base}><SituacaoPastoCelula situacao={l.situacaoPasto ?? 'sem_pasto'} pastoNomes={l.pastoNomes ?? []} /></td>
               <td className="py-2 px-3 whitespace-nowrap" style={base}>{l.dataLimpezaAnterior ? formatarData(l.dataLimpezaAnterior) : '—'}</td>
               <td className="py-2 px-3 whitespace-nowrap" style={base}>{formatarData(l.dataLimpeza)}</td>
               <td className="py-2 px-3 whitespace-nowrap font-bold" style={{ ...base, color: '#26352e' }}>{l.proximaPrevista ? formatarData(l.proximaPrevista) : 'Sem meta'}</td>

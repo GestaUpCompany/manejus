@@ -144,6 +144,14 @@ function normalizarCronograma(lista, dataFim) {
 // (cor + símbolo + texto), tabelas de cronograma/dia, ocorrências e alertas.
 const BEBEDOUROS_CSS = `
 .page{display:flex;flex-direction:column}
+.pasto-cell{display:flex;align-items:center;gap:4px;white-space:nowrap;min-width:0;line-height:1.3}
+.pasto-cell > span:first-child{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.pasto-cell .pasto-sit{flex-shrink:0}
+.cron-table.com-pasto thead tr:not(.legend-head) th,.dia-table.com-pasto thead tr:not(.legend-head) th{text-align:center}
+.pasto-sit{display:inline-block;white-space:nowrap;line-height:1.3;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;color:#fff}
+.pasto-sit.sit-ocupado{background:#16A34A}
+.pasto-sit.sit-vago{background:#6B7280}
+.pasto-sit.sit-sem_pasto{background:#9CA3AF}
 .kpi-grid.cols-3{grid-template-columns:repeat(3,1fr)}
 .kpi-grid.cols-4{grid-template-columns:repeat(4,1fr)}
 .kpi-grid.cols-5{grid-template-columns:repeat(5,1fr)}
@@ -336,21 +344,49 @@ function cap(texto, max = MAX_TEXTO_OCORRENCIA) {
 
 // === Tabelas ===
 
+// Pasto do bebedouro e situação (ocupado agora / vago / sem pasto).
+const SITUACAO_PASTO_LABEL = { ocupado: 'Ocupado', vago: 'Vago', sem_pasto: 'Sem pasto' }
+function pastoCelulaHtml(i) {
+  // Até 3 pastos aparecem inteiros; acima disso, os 2 primeiros e "+N".
+  const lista = Array.isArray(i.pastoNomes) ? i.pastoNomes : []
+  const nomes = lista.length === 0
+    ? '—'
+    : lista.length <= 3
+      ? lista.map((n) => escapeHtml(n)).join(', ')
+      : `${lista.slice(0, 2).map((n) => escapeHtml(n)).join(', ')} +${lista.length - 2}`
+  const sit = SITUACAO_PASTO_LABEL[i.situacaoPasto] ?? SITUACAO_PASTO_LABEL.sem_pasto
+  return `<td><div class="pasto-cell"><span>${nomes}</span><span class="pasto-sit sit-${i.situacaoPasto ?? 'sem_pasto'}">${sit}</span></div></td>`
+}
+
+// A coluna Pasto só aparece quando o payload traz a situação (o Infográfico não envia).
+function temPasto(chunk) {
+  return chunk.some((i) => i.situacaoPasto !== undefined)
+}
+// Com table-layout: fixed, a largura vem da primeira linha (a da legenda, de uma célula só);
+// por isso as larguras da tabela com coluna Pasto são declaradas em <colgroup>.
+function colgroupHtml(percentuais) {
+  return `<colgroup>${percentuais.map((p) => `<col style="width:${p}%">`).join('')}</colgroup>`
+}
+
 function cronogramaTableHtml(chunk) {
-  const header = `<thead><tr class="legend-head"><th colspan="8">${legendaStatusHtml('periodo')}</th></tr><tr><th>Bebedouro</th><th>Última limpeza</th><th>Próxima limpeza</th><th>Prazo</th><th>Status</th><th>Meta</th><th>Responsável (última)</th><th>No período</th></tr></thead>`
+  const pasto = temPasto(chunk)
+  const colPasto = pasto ? '<th>Pasto</th>' : ''
+  const header = `<thead><tr class="legend-head"><th colspan="${pasto ? 9 : 8}">${legendaStatusHtml('periodo')}</th></tr><tr><th>Bebedouro</th>${colPasto}<th>Última limpeza</th><th>Próxima limpeza</th><th>Prazo</th><th>Status</th><th>Meta</th><th>Responsável (última)</th><th>No período</th></tr></thead>`
   const rows = chunk
     .map((i) => {
       const venc = i.diasParaProxima !== null && i.diasParaProxima < 0
       const proximaTxt = i.proxima ? dateFmt(i.proxima) : (i.ultima ? 'Sem meta' : 'Pendente')
       const prazo = `${venc ? '! ' : ''}${prazoTexto(i.diasParaProxima)}`
-      return `<tr class="${venc ? 'row-venc' : ''}"><td>${escapeHtml(i.nome)}</td><td>${i.ultima ? dateFmt(i.ultima) : '—'}</td><td class="strong">${escapeHtml(proximaTxt)}</td><td>${escapeHtml(prazo)}</td><td>${statusBadge(i.statusLabel)}</td><td class="num">${i.meta ? `${i.meta}d` : '—'}</td><td>${escapeHtml(i.responsavelUltima || '—')}</td><td class="num">${i.limpezasNoPeriodo ?? 0}</td></tr>`
+      return `<tr class="${venc ? 'row-venc' : ''}"><td>${escapeHtml(i.nome)}</td>${pasto ? pastoCelulaHtml(i) : ''}<td>${i.ultima ? dateFmt(i.ultima) : '—'}</td><td class="strong">${escapeHtml(proximaTxt)}</td><td>${escapeHtml(prazo)}</td><td>${statusBadge(i.statusLabel)}</td><td class="num">${i.meta ? `${i.meta}d` : '—'}</td><td>${escapeHtml(i.responsavelUltima || '—')}</td><td class="num">${i.limpezasNoPeriodo ?? 0}</td></tr>`
     })
     .join('')
-  return `<div class="table-block"><h3 class="table-title">Última e próxima limpeza por bebedouro<span>${chunk.length} ${chunk.length === 1 ? 'bebedouro' : 'bebedouros'}</span></h3><table class="cron-table">${header}<tbody>${rows}</tbody></table></div>`
+  return `<div class="table-block"><h3 class="table-title">Última e próxima limpeza por bebedouro<span>${chunk.length} ${chunk.length === 1 ? 'bebedouro' : 'bebedouros'}</span></h3><table class="cron-table${pasto ? ' com-pasto' : ''}">${pasto ? colgroupHtml([7, 20, 10, 10, 13, 10, 4, 20, 6]) : ''}${header}<tbody>${rows}</tbody></table></div>`
 }
 
 function diaTableHtml(chunk) {
-  const header = `<thead><tr class="legend-head"><th colspan="7">${legendaStatusHtml('dia')}</th></tr><tr><th>Bebedouro</th><th>Limpeza anterior</th><th>Limpeza do dia</th><th>Próxima prevista</th><th>Status</th><th>Intervalo / meta</th><th>Responsável</th></tr></thead>`
+  const pasto = temPasto(chunk)
+  const colPasto = pasto ? '<th>Pasto</th>' : ''
+  const header = `<thead><tr class="legend-head"><th colspan="${pasto ? 8 : 7}">${legendaStatusHtml('dia')}</th></tr><tr><th>Bebedouro</th>${colPasto}<th>Limpeza anterior</th><th>Limpeza do dia</th><th>Próxima prevista</th><th>Status</th><th>Intervalo / meta</th><th>Responsável</th></tr></thead>`
   const rows = chunk
     .map((l) => {
       const meta = l.meta > 0 ? l.meta : null
@@ -358,10 +394,10 @@ function diaTableHtml(chunk) {
         ? ymd(l.proximaPrevista)
         : (meta && ymd(l.dataLimpeza) ? addDays(ymd(l.dataLimpeza), meta) : null)
       const interv = l.intervalo === null || l.intervalo === undefined ? '—' : `${l.intervalo}d`
-      return `<tr><td>${escapeHtml(l.nome)}</td><td>${l.dataLimpezaAnterior ? dateFmt(l.dataLimpezaAnterior) : '—'}</td><td>${dateFmt(l.dataLimpeza)}</td><td class="strong">${proxima ? dateFmt(proxima) : 'Sem meta'}</td><td>${statusBadge(l.statusLabel)}</td><td>${interv} / ${meta ? `${meta}d` : '—'}</td><td>${escapeHtml(l.responsavel || '—')}</td></tr>`
+      return `<tr><td>${escapeHtml(l.nome)}</td>${pasto ? pastoCelulaHtml(l) : ''}<td>${l.dataLimpezaAnterior ? dateFmt(l.dataLimpezaAnterior) : '—'}</td><td>${dateFmt(l.dataLimpeza)}</td><td class="strong">${proxima ? dateFmt(proxima) : 'Sem meta'}</td><td>${statusBadge(l.statusLabel)}</td><td>${interv} / ${meta ? `${meta}d` : '—'}</td><td>${escapeHtml(l.responsavel || '—')}</td></tr>`
     })
     .join('')
-  return `<div class="table-block"><h3 class="table-title">Bebedouros limpos no dia<span>${chunk.length} ${chunk.length === 1 ? 'bebedouro' : 'bebedouros'}</span></h3><table class="dia-table">${header}<tbody>${rows}</tbody></table></div>`
+  return `<div class="table-block"><h3 class="table-title">Bebedouros limpos no dia<span>${chunk.length} ${chunk.length === 1 ? 'bebedouro' : 'bebedouros'}</span></h3><table class="dia-table${pasto ? ' com-pasto' : ''}">${pasto ? colgroupHtml([10, 20, 10, 10, 11, 14, 10, 15]) : ''}${header}<tbody>${rows}</tbody></table></div>`
 }
 
 // Itens negativos com observação pareada. Aceita payload antigo (strings).

@@ -16,6 +16,8 @@ export function cronogramaParaPDF(i: ItemCronograma): StatusBebedouroPDF {
     diasParaProxima: i.diasParaProxima,
     responsavelUltima: i.responsavelUltima,
     observacaoUltima: i.observacaoUltima,
+    pastoNomes: i.pastoNomes,
+    situacaoPasto: i.situacaoPasto,
   }
 }
 
@@ -31,6 +33,8 @@ export function limpezaDoDiaParaPDF(l: LimpezaDoDiaItem): LimpezaDoDiaPDF {
     responsavel: l.responsavel,
     simbolo: l.simbolo,
     proximaPrevista: l.proximaPrevista,
+    pastoNomes: l.pastoNomes,
+    situacaoPasto: l.situacaoPasto,
   }
 }
 

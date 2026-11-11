@@ -2,10 +2,29 @@
 // pública (RelatorioBebedourosPublico) e o Infográfico Mensal (loaders.ts).
 // Datas são tratadas como "date-only" (dia de calendário local), sem fuso.
 
+// Situação do pasto onde o bebedouro está: ocupado = há lote no pasto agora;
+// vago = há pasto ligado, nenhum com lote; sem_pasto = sem ligação (ex.: confinamento).
+export type SituacaoPasto = 'ocupado' | 'vago' | 'sem_pasto'
+
+export const SITUACAO_PASTO_INFO: Record<SituacaoPasto, { label: string; cor: string }> = {
+  ocupado: { label: 'Ocupado', cor: '#16A34A' },
+  vago: { label: 'Vago', cor: '#6B7280' },
+  sem_pasto: { label: 'Sem pasto', cor: '#9CA3AF' },
+}
+
+// Lista de pastos compacta: até 3 nomes aparecem inteiros; acima disso, os 2 primeiros e "+N".
+export function resumirPastos(nomes: string[], maximo = 3): string {
+  if (nomes.length === 0) return '—'
+  if (nomes.length <= maximo) return nomes.join(', ')
+  return `${nomes.slice(0, 2).join(', ')} +${nomes.length - 2}`
+}
+
 export interface BebedouroBase {
   id: string
   nome: string
   meta_intervalo_limpeza: number | null
+  pastoNomes?: string[]
+  situacaoPasto?: SituacaoPasto
 }
 
 export interface LimpezaBase {
@@ -39,6 +58,9 @@ export interface ItemCronograma {
   observacaoUltima: string | null
   limpezasNoPeriodo: number
   status: StatusLimpezaInfo
+  // Indefinidos quando o chamador não buscou a situação do pasto (ex.: Infográfico).
+  pastoNomes?: string[]
+  situacaoPasto?: SituacaoPasto
 }
 
 export const CHECKLIST_ITEMS: { key: string; label: string }[] = [
@@ -132,6 +154,8 @@ export function calcularCronograma(
         observacaoUltima: ultima?.observacao ?? null,
         limpezasNoPeriodo,
         status: statusLimpeza(dias, meta),
+        pastoNomes: b.pastoNomes,
+        situacaoPasto: b.situacaoPasto,
       }
     })
     .sort(ordemCronograma)
@@ -179,6 +203,8 @@ export interface LimpezaDoDiaItem {
   simbolo: string
   dataLimpezaAnterior: string | null
   proximaPrevista: string | null
+  pastoNomes?: string[]
+  situacaoPasto?: SituacaoPasto
 }
 
 export function calcularLimpezasDoDia(
@@ -215,6 +241,8 @@ export function calcularLimpezasDoDia(
         simbolo: status.simbolo,
         dataLimpezaAnterior: anterior?.data_limpeza ?? null,
         proximaPrevista: meta ? somarDias(atual.data_limpeza, meta) : null,
+        pastoNomes: b.pastoNomes,
+        situacaoPasto: b.situacaoPasto,
       }]
     })
     .sort((a, b) => (b.intervalo ?? 0) - (a.intervalo ?? 0))
