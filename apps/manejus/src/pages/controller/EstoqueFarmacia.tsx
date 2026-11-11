@@ -175,7 +175,7 @@ export function EstoqueFarmacia() {
 
   const salvarEntrada = async () => {
     if (!fazendaId) return
-    const v = validarEntrada(formEntrada)
+    const v = validarEntrada(formEntrada, hojeLocal())
     if (!v.ok) return setErroForm(v.erro)
     setSubmitting(true)
     try {
@@ -206,7 +206,7 @@ export function EstoqueFarmacia() {
 
   const salvarAjuste = async () => {
     if (!fazendaId) return
-    const v = validarAjuste(formAjuste)
+    const v = validarAjuste(formAjuste, hojeLocal())
     if (!v.ok) return setErroForm(v.erro)
     setSubmitting(true)
     try {
@@ -407,7 +407,7 @@ export function EstoqueFarmacia() {
                       {semCusto(item) && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-700">Sem custo</span>}
                     </div>
                   )}
-                  <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                     {item.controla_estoque ? (
                       <>
                         <button
@@ -435,11 +435,18 @@ export function EstoqueFarmacia() {
                     ) : (
                       <button
                         onClick={() => { setErroForm(null); setAtivacao({ item, modo: 'ativar', unidade: UNIDADE_ESTOQUE, minimo: '0', conteudo: '', conteudoUn: 'mL' }) }}
-                        className={`${BOTAO_ACAO} col-span-3 border-primary/30 bg-primary/10 text-primary dark:text-primary-light hover:bg-primary/20`}
+                        className={`${BOTAO_ACAO} col-span-2 border-primary/30 bg-primary/10 text-primary dark:text-primary-light hover:bg-primary/20`}
                       >
                         Ativar controle
                       </button>
                     )}
+                    <button
+                      onClick={() => navigate('/controller/medicamentos')}
+                      className={`${BOTAO_ACAO} col-span-2 sm:col-span-1 border-border-base bg-surface-2 text-content hover:bg-surface-3`}
+                      title="Abrir o cadastro do medicamento para editar nome, SKU, tipo e princípio ativo"
+                    >
+                      Editar cadastro
+                    </button>
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -562,7 +569,7 @@ export function EstoqueFarmacia() {
           <Input label="Nota fiscal" value={formEntrada.notaFiscal} onChange={(e) => setFormEntrada({ ...formEntrada, notaFiscal: e.target.value })} />
           <Input label="Lote do produto" value={formEntrada.lote} onChange={(e) => setFormEntrada({ ...formEntrada, lote: e.target.value })} />
           <Input label="Validade" type="date" value={formEntrada.validade} onChange={(e) => setFormEntrada({ ...formEntrada, validade: e.target.value })} />
-          <Input label="Data" type="date" value={formEntrada.data} onChange={(e) => setFormEntrada({ ...formEntrada, data: e.target.value })} />
+          <Input label="Data" type="date" max={hojeLocal()} value={formEntrada.data} onChange={(e) => setFormEntrada({ ...formEntrada, data: e.target.value })} />
           <Input label="Observação" value={formEntrada.observacao} onChange={(e) => setFormEntrada({ ...formEntrada, observacao: e.target.value })} />
           {erroForm && <p className="text-sm text-red-700">{erroForm}</p>}
           <div className="flex gap-2 pt-2">
@@ -588,7 +595,7 @@ export function EstoqueFarmacia() {
               {diferencaAjuste != null && ` · diferença: ${diferencaAjuste > 0 ? '+' : ''}${numero(diferencaAjuste)} ${itemDoAjuste.unidade}`}
             </p>
           )}
-          <Input label="Data" type="date" value={formAjuste.data} onChange={(e) => setFormAjuste({ ...formAjuste, data: e.target.value })} />
+          <Input label="Data" type="date" max={hojeLocal()} value={formAjuste.data} onChange={(e) => setFormAjuste({ ...formAjuste, data: e.target.value })} />
           <Input label="Motivo" value={formAjuste.observacao} onChange={(e) => setFormAjuste({ ...formAjuste, observacao: e.target.value })} placeholder="Ex.: inventário, perda, quebra" />
           {erroForm && <p className="text-sm text-red-700">{erroForm}</p>}
           <div className="flex gap-2 pt-2">

@@ -1,5 +1,19 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Relatório de Farmácia (10/11/2026)
+
+- **Novo relatório** (`tipo = 'farmacia'`): estoque de medicamentos e vacinas com controle de estoque. Valor em estoque, itens a repor (cobertura em dias), entradas e consumo do período, validade dos lotes (vencidos ou a até 60 dias), maiores consumos, posição por item (saldo inicial, entradas, baixas, saldo final, curva ABC) e extrato com saldo após. Card na central (`Relatorios.tsx`), link público (`RelatorioFarmaciaPublico.tsx`), PDF de 2 páginas (`api/pdf/_relatorios/farmacia.js`) e seção do Infográfico Mensal (`catalogo.ts`, `loaders.ts`, `reportRegistry.js`).
+- **Banco**: migration `20261110110000_relatorio_farmacia` (aditiva, já aplicada): RPCs `get_dados_relatorio_farmacia(token, ini, fim)` e `get_dados_relatorio_farmacia_fazenda(fazenda, ini, fim)`; rollback em `supabase/rollbacks/`. A RPC devolve o catálogo (`medicamentos` com `controla_estoque`) e o ledger de `movimentacoes_farmacia` até a data final (até 5000), sem agregar; o cálculo é no front.
+- **Regras** (`features/relatorioFarmacia/agregacao.ts`, fonte única; reaproveita `estoqueFarmacia/logica.ts`: `movimentosComSaldo`, `lotesComSaldo` FEFO, `situacaoValidade`, `divergenciaDeSaldo`): consumo = baixas − estornos (nunca negativo); valor = max(0, saldo) × custo médio atual; divergência com o saldo gravado só quando o período vai até hoje; ABC A até 80% e B até 95% do valor.
+- **Verificação**: typecheck, lint e testes ok (7 testes novos; `catalogo.test.ts` atualizado). RPC testada na fazenda de testes com token temporário (4 itens, 11 movimentações).
+
+## Relatório de Maternidade (10/11/2026)
+
+- **Novo relatório** (`tipo = 'maternidade'`): partos e crias no período, perda de crias (aborto/natimorto), peso médio ao nascer, tipo de parto, sexo, raça, categoria da mãe, nascimentos por mês, matrizes com mais intercorrências (escore, docilidade, medicamentos), tratamentos, medicamentos, partos por pasto e extrato. Card na central (`Relatorios.tsx`), link público (`RelatorioMaternidadePublico.tsx`), PDF de 2 páginas (`api/pdf/_relatorios/maternidade.js`, dentro da função única `[relatorio].js`) e seção do Infográfico Mensal (`catalogo.ts`, `loaders.ts`, `reportRegistry.js`).
+- **Banco**: migration `20261110100000_relatorio_maternidade` (aditiva): RPCs `get_dados_relatorio_maternidade(token, ini, fim)` e `get_dados_relatorio_maternidade_fazenda(fazenda, ini, fim)`; rollback em `supabase/rollbacks/`. A RPC devolve as linhas de `registros_maternidade` (até 5000, `deleted_at IS NULL`, data em America/Cuiaba) e o resumo é calculado no front.
+- **Regras** (`features/relatorioMaternidade/agregacao.ts`, fonte única; o endpoint de PDF recebe o resumo pronto): cria morta = `tipo_parto` com Aborto ou Natimorto (fora de crias vivas e do peso médio); parto = grupo por `parto_vinculo_id` (gêmeos contam como 1 parto); intercorrência = Cesárea, Auxiliado, Aborto ou Natimorto.
+- **Verificação**: typecheck e testes ok (8 testes novos de agregação; `catalogo.test.ts` atualizado). Na fazenda de testes: RPC com token válido e inválido, link público, PDF individual (2 páginas) e Infográfico de outubro/2026 com a seção (payload com 26 partos e 31 crias). O Infográfico só aceita períodos de até 31 dias.
+
 ## Relatório de Clima no Infográfico Mensal (09/11/2026)
 
 - **Novo no Infográfico**: seção "Clima" (depois de Bebedouros), com chuva acumulada da fazenda e por pluviômetro, chuva diária e mensal, calendário e temperatura/umidade, pelo mesmo renderizador do PDF individual (`renderClimaHtml`). Omitida quando não há leituras no período.
@@ -3252,3 +3266,44 @@ Fazenda `d3965505-74d5-4af7-9858-f773d2e8aab3` (Chibata), lote ENFERMARIA `1977e
 - Backups: `backup.pastagens_chibata_20261109_reg` e `backup.pastagens_chibata_20261109_lph`.
 - Estado final: lote aberto em Piq. Sede 2 (`1633b081-91fd-42bc-90f1-e78100a82b8b`), igual a `lotes.pasto_id`. Gatilho de proteção ativo (`O`).
 - Para reverter: reinserir a linha do backup_lph (com o gatilho desligado) e zerar `deleted_at` do registro.
+
+## 2026-11-09 — Backfill de `peso_inicio_kg_cab` na personalização do plano (8 fazendas) e correção do PV médio
+
+**Problema:** o PV médio do texto de suplementação do PWA divergia do relatório de consumo (Chibata, Lote 8: 691,35 kg × 540,20 kg). Causa raiz: planos trocados por `migrar_plano_lote`/`_encerrar_plano_lote` antes de 19/10 gravavam `plano_categoria_personalizacao` sem `peso_inicio_kg_cab`. Com o valor nulo, `update_dados_lotes`, `recalcular_peso_vivo_lote` e `calc_cabecas_peso_lote_em` usam `COALESCE(pcp.peso_inicio_kg_cab, peso_entrada)`: na primeira noite após a troca o peso da categoria voltava ao de entrada e perdia o ganho do plano anterior (Lote 8, boi magro: 524,35 → 462,00 em 17/09 às 23:00; `audit_log`). Efeitos: peso do lote subestimado, %PV de consumo inflado (reclamação da Chibata), PV do texto do PWA calculado só com as categorias que tinham `peso_inicio`.
+
+**Código (publicado em produção em 09/11/2026):**
+- PWA (`planoNutricionalCalculo.ts`, commit `654f2d6`): categoria sem `peso_inicio` entra na projeção do PV médio pelo `peso_vivo_atual_kg_cab`; chave do cache do plano subiu para `plano-nutricional-ativo-v3`.
+- Painel (`PlanoNutricionalModal.tsx`, commit `ab8ac74`): ao iniciar o plano pela tela, `peso_inicio_kg_cab` cai para `peso_entrada_kg_cab` quando não há peso atual (antes gravava nulo).
+- `iniciar_plano_lote`: migration `20261109180000` (peso inicial cai para o peso de entrada), já aplicada.
+
+**Dado (autorização escopada do usuário, MCP):** `UPDATE` de `peso_inicio_kg_cab` em 34 linhas de `plano_categoria_personalizacao`, só onde estava NULL, com o `peso_inicial_kg_cab` do snapshot de entrada do plano atual. Script: `backfill_peso_inicio_pcp_20261109.sql` (bloco único, aborta se a contagem divergir). Backup: `public.backup_pcp_peso_inicio_20261109` (34 linhas, valor antigo NULL em todas, com `pv_antes`). Contagem por fazenda: Chibata 12, Marcon 10, Santa Vitória 3, Arizona 3, Brilhante 2, Jacamim 2, GBJ 1, Santa Cecília 1. Verificado: 34 gravadas, zero linhas do Lote 17 alteradas.
+
+IDs (`plano_categoria_personalizacao.id`):
+- Chibata (`d3965505-…`): `276bd065-4487-435d-97c6-b8cc986009ff`, `fbdcbe2c-d26e-4222-8f47-6b8ad1a101ce`, `a411f8a5-0d91-4ad7-b656-e494f17602e3`, `e27019dc-eb45-409f-9817-eb6872fda39b`, `cfd143aa-380b-456d-8059-fc99f571a764`, `7dac0f97-d45c-4f78-ab19-4bd1895df6ba`, `e2a8a8ea-190c-41da-83e3-faf64cb0859c`, `942136c0-f528-480d-8b78-815b7761f0a1`, `64cbf2c2-510b-45a7-af72-17fdc85d1fd8`, `91c8051a-fc2d-4f11-987a-f63f11a9175c`, `32b99a35-7b9e-4cc1-83ce-a1be9802dece` (Lote 8, boi magro), `4c407190-62f8-4383-917b-19907ae8853a`.
+- Marcon (`c4d13f1f-…`): `b7938775-e996-4ead-8c20-5567724dbbba`, `1963f7cb-4d39-45c0-a668-3460518cf3f0`, `db9dff05-162a-4bbc-b0f8-507713d1991f`, `745acae8-3a98-4384-85bd-e17abf47abc7`, `3100961e-3f11-4fb4-8a62-618e2f1140e4`, `e916edda-1a06-4b6a-9e6f-d393d34c18b5`, `e15915aa-09ae-4c8c-a2ae-d06ec2691aef`, `ac355697-3615-417f-bf64-8dff6421cdb0`, `4cc670ee-a050-462b-bb51-b659e5b052d9`, `02594fed-4dac-4807-bc6c-a449b76e0d4e`.
+- Santa Vitória (`867f70e7-…`): `08724388-4d48-41e6-a97e-2ee912f9e11e`, `d6f239a2-6f11-4d11-86a8-73c95f35679f`, `46c011cb-a515-4e63-ab75-ab7451fd2c21`.
+- Arizona (`a6559695-…`): `ea8fe227-1668-44aa-9b3a-b7d166cae111`, `37342278-1222-4de9-8f38-0d965963b6bb`, `c387cdc2-32cd-4986-96d3-894bcb43afdb`.
+- Brilhante (`f5d64d63-…`): `f3bc0093-936d-43e3-b16e-ba72641d5667`, `65efe1e6-c392-4539-8c67-0f80bea2e38f`.
+- Jacamim (`d8900758-…`): `6eacd5f9-6a5d-4b29-b3e2-580144cdc165`, `dded9579-644f-44f4-92d8-037cad7b9cac`.
+- GBJ (`a6640dd6-…`): `b3e0ace5-ba31-4735-b6fc-4a9152f213c4`. Santa Cecília (`a53d7375-…`): `b44521c7-e047-4f7b-be4e-020e5a764d1f`.
+
+**Fora do backfill, de propósito:** Chibata Lote 17 (3 linhas: o peso das categorias foi sobrescrito hoje às 13:41 por rotina não identificada, para entrada + GMD novo × dias desde a entrada); Jacamim CM - 04 (snapshot 315,5 abaixo da entrada de 357, calculado com entrada errada); 3 linhas com snapshot 0 (Brilhante "Lote Atual P1", Jacamim "Lote femeas angus", Santa Vitória "Lote 10").
+
+**Efeito esperado:** no cron de 23:00 (Cuiabá) o peso de cada categoria passa a `peso_inicio + GMD × dias do plano`. Chibata Lote 8: boi magro de 538,85 → ~601 kg, lote de 540,21 → ~602 kg; %PV do lote cai de ~1,90% para ~1,70% depois do recálculo dos registros (não executado). Não há pesagem real confirmando os novos valores: a consistência vem do `audit_log` (queda artificial de peso na primeira noite após a troca, igual ao snapshot em 20 das 41 linhas com GMD).
+
+**Pendências (ver BACKLOG):** recalcular `peso_vivo_kg` dos registros de suplementação (`recalcular_peso_vivo_lote`, autorização própria); investigar o salto do Lote 17; trocar o `COALESCE(..., peso_entrada)` nas 3 funções por falha visível; job duplicado de `update_dados_lotes` (cron 7 e 13); `recalcular_peso_vivo_lote` reescreve o histórico com o plano atual.
+
+**Reverter:** `backfill_peso_inicio_pcp_20261109_rollback.sql` (volta a NULL só onde o valor ainda é o gravado; usa a tabela de backup).
+
+## 2026-11-10 — Correção pontual de data de entrada de farmácia (Fazenda Pioneira)
+
+Fazenda `696a1a83-5c92-445d-afff-afa6aaca0de1` (Pioneira), `movimentacoes_farmacia` id `30184437-81fb-4554-a5ac-704f40ab7c2c` (LIVERTON® – BIOVET, entrada de 9 frascos, painel_entrada, criada em 04/11/2026): `data` de 2027-10-31 para 2026-10-31 (autorizado pelo usuário; a data era a validade digitada no campo "Data"). O relatório de Farmácia ignorava a entrada (só lê lançamentos até a data final) e mostrava saldo 0 contra 9 gravado.
+- Backup: `backup.movfarm_pioneira_liverton_20261110` (1 linha). Saldo, custo médio e valor do item inalterados (9 frascos, R$ 28,26, R$ 254,34).
+- Para reverter: `UPDATE movimentacoes_farmacia SET data = '2027-10-31' WHERE id = '30184437-81fb-4554-a5ac-704f40ab7c2c'`.
+- Validação (10/11/2026): `validarEntrada` e `validarAjuste` (`estoqueFarmacia/logica.ts`) recusam data futura, e os campos Data da tela têm `max` de hoje; a mensagem da entrada sugere usar o campo Validade. Só na tela: PWA e escrita direta no banco não passam por essa checagem. As duas entradas de São José foram corrigidas para 03/11/2026 (ver acima).
+
+## 2026-11-10 — Correção pontual de data de 2 entradas de farmácia (Fazenda São José)
+
+Fazenda `465534bb-0542-423b-ac83-f70081606816` (São José), `movimentacoes_farmacia`, 2 entradas manuais (painel_entrada, criadas em 03/11/2026) com `data` 2026-11-30 corrigida para 2026-11-03 (autorizado pelo usuário): `5fc82d0c-481d-46f7-9ca7-9f37678289a6` (RIPERCOL - ZOETIS, 13 frascos) e `f13887c6-fb58-44f2-8523-02597d38afdf` (SOLUTION - MDS, 3 frascos).
+- Backups: `backup.movfarm_saojose_datafutura_20261110` (2 lançamentos) e `backup.medicamentos_saojose_datafutura_20261110` (2 itens). Saldo, custo médio e valor dos dois itens inalterados após o recálculo (14 frascos/R$ 782,60 e 3 frascos/R$ 1.470,00).
+- Para reverter: `UPDATE movimentacoes_farmacia SET data = '2026-11-30' WHERE id IN ('5fc82d0c-481d-46f7-9ca7-9f37678289a6','f13887c6-fb58-44f2-8523-02597d38afdf')`.

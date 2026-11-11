@@ -291,13 +291,20 @@ function inteiroValido(texto: string): number | null {
 
 export type ResultadoValidacao<T> = { ok: true; valores: T } | { ok: false; erro: string }
 
-export function validarEntrada(form: FormEntrada): ResultadoValidacao<{ quantidade: number; custo: number }> {
+// Lançamento com data futura entra no saldo na hora (o recálculo não olha a data) mas some dos relatórios até a data:
+// foi o que aconteceu quando a validade foi digitada no campo Data. `hoje` é a data local (YYYY-MM-DD).
+export function dataFutura(data: string, hoje: string): boolean {
+  return DATA_ISO.test(data) && DATA_ISO.test(hoje) && data > hoje
+}
+
+export function validarEntrada(form: FormEntrada, hoje?: string): ResultadoValidacao<{ quantidade: number; custo: number }> {
   if (!form.itemId) return { ok: false, erro: 'Selecione o medicamento.' }
   const quantidade = inteiroValido(form.quantidade)
   if (quantidade == null || quantidade <= 0) return { ok: false, erro: 'Informe um número inteiro de frascos maior que zero.' }
   const custo = numeroValido(form.custo)
   if (custo == null || custo <= 0) return { ok: false, erro: 'Informe o custo unitário (maior que zero).' }
   if (!DATA_ISO.test(form.data)) return { ok: false, erro: 'Informe a data da entrada.' }
+  if (hoje && dataFutura(form.data, hoje)) return { ok: false, erro: 'A data da entrada não pode ser futura. Se for a validade do produto, use o campo Validade.' }
   return { ok: true, valores: { quantidade, custo } }
 }
 
@@ -331,11 +338,12 @@ export function validarReclassificacao(
   return { ok: true, valores: { quantidade, lote, validade } }
 }
 
-export function validarAjuste(form: FormAjuste): ResultadoValidacao<{ saldo: number }> {
+export function validarAjuste(form: FormAjuste, hoje?: string): ResultadoValidacao<{ saldo: number }> {
   if (!form.itemId) return { ok: false, erro: 'Selecione o medicamento.' }
   const saldo = inteiroValido(form.saldo)
   if (saldo == null) return { ok: false, erro: 'Informe o novo saldo em frascos inteiros (zero ou maior).' }
   if (!form.observacao.trim()) return { ok: false, erro: 'Informe o motivo do ajuste.' }
   if (!DATA_ISO.test(form.data)) return { ok: false, erro: 'Informe a data do ajuste.' }
+  if (hoje && dataFutura(form.data, hoje)) return { ok: false, erro: 'A data do ajuste não pode ser futura.' }
   return { ok: true, valores: { saldo } }
 }

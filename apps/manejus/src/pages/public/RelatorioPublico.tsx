@@ -19,6 +19,8 @@ import { RelatorioEstoquePublico } from './RelatorioEstoquePublico'
 import { RelatorioEstoqueCombustivelPublico } from './RelatorioEstoqueCombustivelPublico'
 import { RelatorioCantinaPublico } from './RelatorioCantinaPublico'
 import { RelatorioAlmoxarifadoPublico } from './RelatorioAlmoxarifadoPublico'
+import { RelatorioMaternidadePublico } from './RelatorioMaternidadePublico'
+import { RelatorioFarmaciaPublico } from './RelatorioFarmaciaPublico'
 import { EstoqueCombustivelSecao } from './EstoqueCombustivelSecao'
 import type { DadosRelatorioEstoqueCombustivel } from '../../features/relatorioEstoqueCombustivel/agregacao'
 
@@ -262,7 +264,7 @@ export function RelatorioPublico() {
       })
 
       // Se for relatório de consumo, tratos ou morte, o componente filho busca seus próprios dados
-      if (relData.tipo === 'consumo' || relData.tipo === 'tratos' || relData.tipo === 'morte' || relData.tipo === 'atividades' || relData.tipo === 'bebedouros' || relData.tipo === 'clima' || relData.tipo === 'rodeio' || relData.tipo === 'pastagens' || relData.tipo === 'estoque' || relData.tipo === 'estoque_combustivel' || relData.tipo === 'cantina' || relData.tipo === 'almoxarifado') {
+      if (relData.tipo === 'consumo' || relData.tipo === 'tratos' || relData.tipo === 'morte' || relData.tipo === 'atividades' || relData.tipo === 'bebedouros' || relData.tipo === 'clima' || relData.tipo === 'rodeio' || relData.tipo === 'pastagens' || relData.tipo === 'estoque' || relData.tipo === 'estoque_combustivel' || relData.tipo === 'cantina' || relData.tipo === 'almoxarifado' || relData.tipo === 'maternidade' || relData.tipo === 'farmacia') {
         setError(null)
         setLoading(false)
         return
@@ -681,6 +683,14 @@ export function RelatorioPublico() {
 
   if (relatorioInfo?.tipo === 'almoxarifado') {
     return <RelatorioAlmoxarifadoPublico token={token!} relatorioInfo={relatorioInfo} />
+  }
+
+  if (relatorioInfo?.tipo === 'farmacia') {
+    return <RelatorioFarmaciaPublico token={token!} relatorioInfo={relatorioInfo} />
+  }
+
+  if (relatorioInfo?.tipo === 'maternidade') {
+    return <RelatorioMaternidadePublico token={token!} relatorioInfo={relatorioInfo} />
   }
 
   // Componente de popover multi-select

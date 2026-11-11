@@ -30,6 +30,8 @@ import { montarDecisao, type DecisaoPDF } from '../relatorioEstoque/decisao'
 import { DADOS_ESTOQUE_COMBUSTIVEL_VAZIO, type DadosRelatorioEstoqueCombustivel } from '../relatorioEstoqueCombustivel/agregacao'
 import { classificarABC as classificarABCCantina, DADOS_CANTINA_VAZIO, type DadosRelatorioCantina } from '../relatorioCantina/agregacao'
 import { DADOS_ALMOXARIFADO_VAZIO, type DadosRelatorioAlmoxarifado } from '../relatorioAlmoxarifado/agregacao'
+import { calcularResumoMaternidade, DADOS_MATERNIDADE_VAZIO, type DadosRelatorioMaternidade, type ResumoMaternidade } from '../relatorioMaternidade/agregacao'
+import { calcularResumoFarmacia, DADOS_FARMACIA_VAZIO, type DadosRelatorioFarmacia, type ResumoFarmacia } from '../relatorioFarmacia/agregacao'
 import type { TipoRelatorioGeral } from './catalogo'
 import type { DadosPDFBoletimRebanho } from './boletimRebanho'
 
@@ -74,6 +76,8 @@ export type PayloadRelatorioGeral =
   | { tipo: 'estoque_combustivel'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null } & DadosRelatorioEstoqueCombustivel }
   | { tipo: 'cantina'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC> } & DadosRelatorioCantina }
   | { tipo: 'almoxarifado'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC> } & DadosRelatorioAlmoxarifado }
+  | { tipo: 'maternidade'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; registros_total: number; resumo: ResumoMaternidade } }
+  | { tipo: 'farmacia'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; resumo: ResumoFarmacia } }
   | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
 
 const PRECOS_KG_DEFAULT: Record<string, number> = {
@@ -533,6 +537,60 @@ async function carregarAlmoxarifado(
   }
 }
 
+// Maternidade usa o período do infográfico. Só o resumo vai no payload (o PDF não imprime o extrato),
+// o que mantém o /api/pdf/geral longe do teto de 4 MB.
+async function carregarMaternidade(
+  fazenda: FazendaRelatorio,
+  dataInicio: string,
+  dataFim: string,
+): Promise<PayloadRelatorioGeral> {
+  const { data, error } = await supabase.rpc('get_dados_relatorio_maternidade_fazenda', {
+    p_fazenda_id: fazenda.id,
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
+  })
+  if (error) throw error
+  const dados = (data?.dados ?? DADOS_MATERNIDADE_VAZIO) as DadosRelatorioMaternidade
+  const registros = dados.registros ?? []
+  return {
+    tipo: 'maternidade',
+    dados: {
+      dataInicio,
+      dataFim,
+      fazendaNome: fazenda.nome,
+      fazendaLogoUrl: fazenda.logoUrl,
+      registros_total: dados.registros_total ?? registros.length,
+      resumo: calcularResumoMaternidade(registros),
+    },
+  }
+}
+
+// Farmácia usa o período do infográfico. O ledger completo fica no cliente: só o resumo vai no payload
+// (sem extrato), para manter o /api/pdf/geral abaixo do teto de 4 MB.
+async function carregarFarmacia(
+  fazenda: FazendaRelatorio,
+  dataInicio: string,
+  dataFim: string,
+): Promise<PayloadRelatorioGeral> {
+  const { data, error } = await supabase.rpc('get_dados_relatorio_farmacia_fazenda', {
+    p_fazenda_id: fazenda.id,
+    p_data_inicio: dataInicio,
+    p_data_fim: dataFim,
+  })
+  if (error) throw error
+  const dados = (data?.dados ?? DADOS_FARMACIA_VAZIO) as DadosRelatorioFarmacia
+  return {
+    tipo: 'farmacia',
+    dados: {
+      dataInicio,
+      dataFim,
+      fazendaNome: fazenda.nome,
+      fazendaLogoUrl: fazenda.logoUrl,
+      resumo: calcularResumoFarmacia({ ...dados, data_inicio: dataInicio, data_fim: dataFim }),
+    },
+  }
+}
+
 // Clima usa o período do infográfico. Os cálculos (KPIs, séries de chuva, resumo por pluviômetro) vêm do relatório
 // público, a fonte única; o import é dinâmico para não levar o recharts da página ao bundle do infográfico.
 async function carregarClima(
@@ -604,6 +662,8 @@ const LOADERS: Record<TipoCarregavel, (fazenda: FazendaRelatorio, dataInicio: st
   estoque_combustivel: carregarEstoqueCombustivel,
   cantina: carregarCantina,
   almoxarifado: carregarAlmoxarifado,
+  maternidade: carregarMaternidade,
+  farmacia: carregarFarmacia,
   boletim_rebanho: carregarBoletim,
 }
 

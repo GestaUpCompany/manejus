@@ -14,6 +14,8 @@ describe('catálogo do relatório geral', () => {
       'estoque',
       'cantina',
       'almoxarifado',
+      'maternidade',
+      'farmacia',
       'boletim_rebanho',
     ])
   })
@@ -31,6 +33,8 @@ describe('catálogo do relatório geral', () => {
       'estoque',
       'cantina',
       'almoxarifado',
+      'maternidade',
+      'farmacia',
       'boletim_rebanho',
     ])
     expect(moverRelatorio(ids, 'combustivel', -1)).toBe(ids)

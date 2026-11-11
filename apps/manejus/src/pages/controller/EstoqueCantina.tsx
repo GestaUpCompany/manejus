@@ -256,7 +256,7 @@ export function EstoqueCantina() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-start">
         <div className="sm:w-72">
           <Input label="Buscar item" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome do item" />
         </div>
@@ -288,12 +288,12 @@ export function EstoqueCantina() {
               const minimo = Number(item.estoque_minimo)
               return (
                 <Card key={item.id} className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
-                  <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
-                    <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
+                  <div className="flex flex-col gap-3 mb-3">
+                    <div className="min-w-0 w-full">
                       <p className="font-semibold text-content-strong truncate">{item.nome}</p>
                       <p className="text-xs text-content-muted truncate">{item.classificacao} · {item.unidade_medida}</p>
                     </div>
-                    <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
+                    <div className="flex flex-wrap items-center gap-2 w-full">
                       {alerta && (
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 dark:text-red-300">
                           {saldo < 0 ? 'Saldo negativo' : 'Alerta'}
@@ -334,6 +334,13 @@ export function EstoqueCantina() {
                           </button>
                         </>
                       )}
+                      <button
+                        onClick={() => navigate('/controller/cadastros-auxiliares?aba=itens-cantina')}
+                        className="inline-flex items-center gap-1 rounded-lg border border-border-base bg-surface-2 px-2.5 py-1 text-xs font-semibold text-content transition-colors hover:bg-surface-2"
+                        title="Abrir o cadastro do item para editar nome, classificação e unidade"
+                      >
+                        Editar cadastro
+                      </button>
                     </div>
                   </div>
                   <div className="space-y-1">
