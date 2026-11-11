@@ -40,6 +40,7 @@ export function EstoqueCombustivel() {
   // Modais
   const [modalTanque, setModalTanque] = useState(false)
   const [tanqueEditando, setTanqueEditando] = useState<Tanque | null>(null)
+  const [tanqueTemLancamentos, setTanqueTemLancamentos] = useState(false)
   const [modalEntrada, setModalEntrada] = useState(false)
   const [modalHistorico, setModalHistorico] = useState<Tanque | null>(null)
   const [historicoMovs, setHistoricoMovs] = useState<any[]>([])
@@ -151,9 +152,22 @@ export function EstoqueCombustivel() {
   const tanquesAtivos = tanques.filter((t) => t.ativo)
 
   // Handlers tanque
+  const verificarLancamentosTanque = async (tanqueId: string): Promise<number> => {
+    const { count, error } = await supabase
+      .from('movimentacoes_combustivel')
+      .select('id', { count: 'exact', head: true })
+      .eq('tanque_id', tanqueId)
+    if (error) throw error
+    return count ?? 0
+  }
+
   const abrirModalTanque = (tanque: Tanque | null) => {
     setTanqueEditando(tanque)
+    setTanqueTemLancamentos(false)
     if (tanque) {
+      verificarLancamentosTanque(tanque.id)
+        .then((total) => setTanqueTemLancamentos(total > 0))
+        .catch((err) => console.error('Erro ao verificar lançamentos do tanque:', err))
       setTanqueForm({
         nome: tanque.nome,
         tipo_combustivel: tanque.tipo_combustivel,
@@ -181,6 +195,13 @@ export function EstoqueCombustivel() {
         limite_alerta_l: parseFloat(tanqueForm.limite_alerta_l) || 0,
       }
       if (tanqueEditando) {
+        // Confere de novo no banco: a tela pode estar desatualizada
+        if (tanqueEditando.tipo_combustivel !== tanqueForm.tipo_combustivel) {
+          const total = await verificarLancamentosTanque(tanqueEditando.id)
+          if (total > 0) {
+            throw new Error('Não é possível alterar o tipo de combustível: este tanque já tem lançamentos (entradas ou saídas). Crie outro tanque para o novo combustível.')
+          }
+        }
         const { error } = await supabase.from('tanques_combustivel').update(payload).eq('id', tanqueEditando.id)
         if (error) throw error
       } else {
@@ -473,12 +494,12 @@ export function EstoqueCombustivel() {
               const valorTanque = Math.max(0, Number(tanque.saldo_atual_l)) * Number(tanque.custo_medio_l)
               return (
                 <Card key={tanque.id} className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
-                  <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
-                    <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
+                  <div className="flex flex-col gap-3 mb-3">
+                    <div className="min-w-0 w-full">
                       <p className="font-semibold text-content-strong truncate">{tanque.nome}</p>
                       <p className="text-xs text-content-muted truncate">{tanque.tipo_combustivel}</p>
                     </div>
-                    <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
+                    <div className="flex flex-wrap items-center gap-2 w-full">
                       {emAlerta && (
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 dark:text-red-300">
                           Alerta
@@ -570,14 +591,28 @@ export function EstoqueCombustivel() {
             onChange={(e) => setTanqueForm({ ...tanqueForm, nome: e.target.value })}
             required
           />
-          <Select
-            label="Tipo de Combustível"
-            options={TIPOS_COMBUSTIVEL}
-            value={tanqueForm.tipo_combustivel}
-            onChange={(val) => setTanqueForm({ ...tanqueForm, tipo_combustivel: val })}
-            placeholder="Selecione..."
-            required
-          />
+          {tanqueEditando && tanqueTemLancamentos ? (
+            <div className="mb-4">
+              <Input
+                label="Tipo de Combustível"
+                value={tanqueForm.tipo_combustivel}
+                disabled
+                readOnly
+              />
+              <p className="text-xs text-content-muted mt-1">
+                Não é possível alterar o tipo: o tanque já tem lançamentos (entradas ou saídas).
+              </p>
+            </div>
+          ) : (
+            <Select
+              label="Tipo de Combustível"
+              options={TIPOS_COMBUSTIVEL}
+              value={tanqueForm.tipo_combustivel}
+              onChange={(val) => setTanqueForm({ ...tanqueForm, tipo_combustivel: val })}
+              placeholder="Selecione..."
+              required
+            />
+          )}
           <Input
             label="Capacidade Máxima (L)"
             type="number"

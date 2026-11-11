@@ -443,8 +443,8 @@ export function EstoqueSuplementacao() {
 
     return (
       <Card key={item.id} className="bg-surface-1 p-4 sm:p-5 h-full" disableHover>
-        <div className="flex flex-col 2xl:flex-row justify-between items-start gap-3 mb-3">
-          <div className="min-w-0 flex-1 w-full 2xl:min-w-[140px]">
+        <div className="flex flex-col gap-3 mb-3">
+          <div className="min-w-0 w-full">
             <p className="font-semibold text-content-strong truncate">{item.nome}</p>
             <p className="text-xs text-content-muted truncate">
               {tipo === 'insumo' ? 'Insumo' : 'Produto Final'}
@@ -452,7 +452,7 @@ export function EstoqueSuplementacao() {
               {!temMovimentacao && <span className="text-content-faint"> · Sem movimentação</span>}
             </p>
           </div>
-          <div className="flex flex-wrap 2xl:flex-nowrap items-center gap-2 w-full 2xl:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full">
             {emAlerta && (
               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 dark:text-red-300">Alerta</span>
             )}

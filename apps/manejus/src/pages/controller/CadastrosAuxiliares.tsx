@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem, Modal, MultiSelect, useToast } from '@gestaup/ui'
@@ -430,7 +431,10 @@ function resumoExpediente(dias: ExpedienteDias): string {
 export function CadastrosAuxiliares() {
   const { user } = useAuth()
   const toast = useToast()
-  const [activeTab, setActiveTab] = useState(tabs[0].key)
+  const [searchParams] = useSearchParams()
+  // Aceita ?aba=<key> para abrir direto numa aba (ex.: link "Editar cadastro" das telas de estoque)
+  const abaInicial = searchParams.get('aba')
+  const [activeTab, setActiveTab] = useState(tabs.some((t) => t.key === abaInicial) ? abaInicial! : tabs[0].key)
   const [tabStates, setTabStates] = useState<Record<string, TabState>>(
     () => Object.fromEntries(tabs.map((t) => [t.key, { ...defaultTabState }]))
   )
