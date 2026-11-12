@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Disk IO do Supabase, fase 1: cron duplicado, saúde do sistema e RLS dos backups (12/11/2026)
+
+- **Sintoma**: aviso de orçamento de burst de disk IO esgotado (throughput volta ao baseline de 5 MB/s). Diagnóstico da IA do Supabase conferido contra `pg_stat_statements`, `cron.job` e o código: as leituras pesadas de `audit_log` eram consultas ad hoc (1 chamada cada), não tráfego do app; as maiores fontes reais eram `sample_system_health()` (a cada 5 min, 73 mil blocos sujos) e `update_dados_lotes()` agendada duas vezes.
+- **Migration `20261112250000_cron_remove_duplicata_e_health`** (rollback em `supabase/rollbacks/`): remove o cron de `update_dados_lotes` das 03:00 UTC (23:00 em Cuiabá, `CURRENT_DATE` ainda do dia anterior) e mantém o das 04:00 UTC (00:00 em Cuiabá, ajustado em `20260824120000_corrigir_fuso_cron_peso_vivo`). A função não mudou e é idempotente no mesmo dia (`data_ajuste_peso`), então peso/GMD seguem como antes. Manter o de 03:00 reintroduziria 1 GMD a menos. Desativa o cron de `sample_system_health` por decisão do usuário (a função e `system_health_samples` ficam; a tela de saúde deixa de receber amostras novas).
+- **Migration `20261112260000_rls_backups_farmacia_saida`**: RLS ligado, sem policy, em `backup_saida_itens_duplicados_20261022`, `backup_medicamentos_20261103` e `backup_movimentacoes_farmacia_20261103`, que estavam expostas a anon/authenticated.
+- **Pendente**: fase 2 (UPDATE condicional em `update_dados_lotes`) e fase 3 (`get_audit_log`: ORDER BY antes do LIMIT, `COUNT`/`GROUP BY` sem varrer a tabela toda, índices de `audit_log`, VACUUM). `audit_log` mantém o payload atual por decisão do usuário.
+- **Reverter**: scripts de rollback correspondentes em `supabase/rollbacks/` (reagendam os dois jobs / desligam o RLS).
+
 ## Infográfico Anual, fase 2D: Estoque de Insumos e Formulações e refeições da Cantina (12/11/2026)
 
 - **RPCs** (migration `20261112240000_infografico_anual_fase2d_estoque.sql`): `get_infografico_anual_estoque` (função nova) e `get_infografico_anual_cantina` (agora um invólucro: a função da 2C foi renomeada para `get_infografico_anual_cantina_estoque` e a nova a chama e acrescenta a chave `refeicoes`; os campos antigos não mudam).
