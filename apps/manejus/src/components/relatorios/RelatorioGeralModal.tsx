@@ -24,6 +24,7 @@ const ANO_MINIMO_ANUAL = 2020
 const ANOS_ANUAL = Array.from({ length: ANO_ATUAL - ANO_MINIMO_ANUAL + 1 }, (_, i) => ANO_ATUAL - i)
 
 type ModoInfografico = 'mensal' | 'anual'
+const MESES_CAPA = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 const chaveLocaisOcultos = (fazenda: string, ano: number) => `infografico:locais-ocultos:${fazenda}:${ano}`
 
@@ -142,7 +143,7 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
   const tituloInfografico = anual ? 'Infográfico Anual' : 'Infográfico Mensal'
   const resumo = useMemo(() => tiposSelecionados.map((id) => RELATORIOS_GERAIS.find((item) => item.id === id)?.titulo).filter(Boolean).join(' · '), [tiposSelecionados])
   const periodoCapa = anual
-    ? anoAnual === ANO_ATUAL ? `${anoAnual} (até o mês atual)` : `Ano de ${anoAnual}`
+    ? anoAnual === ANO_ATUAL ? `Janeiro a ${MESES_CAPA[new Date().getMonth()]} de ${anoAnual}` : `Janeiro a Dezembro de ${anoAnual}`
     : formatarPeriodoCapa(dataInicio, dataFim) || (dadosBoletim ? `${dadosBoletim.mesReferencia} de ${dadosBoletim.ano}` : '')
 
   const toggle = (id: TipoRelatorioGeral) => {

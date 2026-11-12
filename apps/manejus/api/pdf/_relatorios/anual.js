@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { ANUAL_REGISTRY, isSecaoAnual } from '../_shared/anualRegistry.js'
+import { ANUAL_REGISTRY, REGISTRY_COMPOSICAO, isSecaoAnual, montarReportsAnuais } from '../_shared/anualRegistry.js'
 import { renderPartsToPdf } from '../_shared/partsPdf.js'
 import { composeReportParts } from '../_shared/reportComposer.js'
 import { createAuthenticatedSupabase, downloadImageDataUrl } from '../_shared/supabaseAuth.js'
@@ -20,6 +20,13 @@ function capaPadraoDataUrl() {
     }
   }
   return capaPadraoCache
+}
+
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+
+export function rotuloPeriodoCapa(ano, ultimoMes) {
+  const ult = Math.max(1, Math.min(12, Number(ultimoMes) || 12))
+  return ult >= 12 ? `Janeiro a Dezembro de ${ano}` : `Janeiro a ${MESES[ult - 1]} de ${ano}`
 }
 
 function anoAtualCuiaba() {
@@ -73,17 +80,17 @@ export default async function handler(req, res) {
     console.log(`[PDF Anual] ano=${body.ano} secoes=${body.secoes.join(',')} dados=${Date.now() - t0}ms rss=${memMb()}MB`)
 
     const marca = { fazendaNome: body.fazendaNome, logoGestao: body.logoGestao ?? '', logoFazenda: body.logoFazenda ?? '' }
-    const reports = dadosSecoes.map(({ secao, data }) => ({ tipo: secao, dados: { ...data, __marca: marca } }))
+    const reports = montarReportsAnuais(dadosSecoes, marca)
     const ultimoMes = dadosSecoes[0]?.data?.ultimo_mes ?? 12
     const parts = await composeReportParts({
       reports,
-      registry: ANUAL_REGISTRY,
+      registry: REGISTRY_COMPOSICAO,
       titulo: 'Infográfico Anual',
       cover: {
         ...marca,
         logoEmpresa,
         imagemCapa,
-        periodoLabel: Number(ultimoMes) >= 12 ? `Ano de ${body.ano}` : `${body.ano} · até ${String(ultimoMes).padStart(2, '0')}/${body.ano}`,
+        periodoLabel: rotuloPeriodoCapa(body.ano, ultimoMes),
       },
     })
     const pdf = await renderPartsToPdf(parts, memMb)

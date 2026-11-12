@@ -6,7 +6,8 @@
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { ANUAL_REGISTRY } from '../api/pdf/_shared/anualRegistry.js'
+import { ANUAL_REGISTRY, REGISTRY_COMPOSICAO, montarReportsAnuais } from '../api/pdf/_shared/anualRegistry.js'
+import { rotuloPeriodoCapa } from '../api/pdf/_relatorios/anual.js'
 import { renderPartsToPdf } from '../api/pdf/_shared/partsPdf.js'
 import { composeReportParts } from '../api/pdf/_shared/reportComposer.js'
 
@@ -27,10 +28,10 @@ const memMb = () => Math.round(process.memoryUsage().rss / 1048576)
 
 const t0 = Date.now()
 const parts = await composeReportParts({
-  reports: secoes.map((s) => ({ tipo: s, dados: { ...dados[s], __marca: marca } })),
-  registry: ANUAL_REGISTRY,
+  reports: montarReportsAnuais(secoes.map((s) => ({ secao: s, data: dados[s] })), marca),
+  registry: REGISTRY_COMPOSICAO,
   titulo: 'Infográfico Anual',
-  cover: { ...marca, logoEmpresa: logo('gestaupcompany.png'), imagemCapa: '', periodoLabel: `Ano de ${dados[secoes[0]]?.ano ?? ''}` },
+  cover: { ...marca, logoEmpresa: logo('gestaupcompany.png'), imagemCapa: '', periodoLabel: rotuloPeriodoCapa(dados[secoes[0]]?.ano, dados[secoes[0]]?.ultimo_mes) },
 })
 const pdf = await renderPartsToPdf(parts, memMb)
 writeFileSync(saida, pdf)

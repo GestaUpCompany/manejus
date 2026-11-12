@@ -32,7 +32,7 @@ describe('Infográfico Anual', () => {
       expect(reg[secao].hasData(dados)).toBe(true)
       const html = await reg[secao].render(dados)
       expect(html).toContain(reg[secao].title)
-      expect(html).toContain('Janeiro a Novembro de 2026')
+      expect(html).toContain('Jan–Nov 2026')
       // Nenhuma data dd/mm/aaaa no corpo além do rodapé do período.
       const datas = (html.match(/\b\d{2}\/\d{2}\/\d{4}\b/g) ?? []).filter((d) => d !== '01/01/2026' && !d.endsWith('/2026'))
       expect(datas).toEqual([])
@@ -44,6 +44,7 @@ describe('Infográfico Anual', () => {
     const reg = await registry()
     const html = await reg.morte.render({ ...exemplo.morte, __marca: marca })
     expect(html).toContain('Rebanho estimado em 11 de 11 meses')
+    expect(html).toContain('Rebanho (estimado)')
     const real = await reg.morte.render({ ...exemplo.morte, kpis: { ...exemplo.morte.kpis, rebanho_estimado: false }, __marca: marca })
     expect(real).not.toContain('Rebanho estimado em')
   })
@@ -59,9 +60,28 @@ describe('Infográfico Anual', () => {
       titulo: 'Infográfico Anual',
       cover: { ...marca, logoEmpresa: '', imagemCapa: '', periodoLabel: 'Ano de 2026' },
     })
-    expect(parts.map((p: { id: string }) => p.id)).toEqual(['capa', 'Clima no Ano', 'encerramento'])
+    expect(parts.map((p: { id: string }) => p.id)).toEqual(['capa', 'Clima', 'encerramento'])
+    // Com uma seção só não há página de abertura (montarReportsAnuais filtra pelo hasData do resumo).
     expect(parts[0].html({ offset: 0, total: 5 })).toContain('Infográfico Anual')
     expect(parts[2].html({ offset: 4, total: 5 })).toContain("Gesta'Up · Infográfico Anual")
+  })
+
+  it('abre com O Ano em Números e o calendário quando há mais de uma seção', async () => {
+    const mod = await import(REGISTRY_PATH)
+    const reports = mod.montarReportsAnuais(SECOES_ANUAIS.map((s) => ({ secao: s, data: exemplo[s] })), marca)
+    expect(reports[0].tipo).toBe('resumo')
+    const html = await mod.REGISTRY_COMPOSICAO.resumo.render(reports[0].dados)
+    expect(html).toContain('O Ano em Números')
+    expect(html).toContain('Calendário do ano')
+    expect(html).toContain('2/11 meses')
+    const umaSo = mod.montarReportsAnuais([{ secao: 'clima', data: exemplo.clima }], marca)
+    expect(mod.REGISTRY_COMPOSICAO.resumo.hasData(umaSo[0].dados)).toBe(false)
+  })
+
+  it('rótulo da capa segue o período', async () => {
+    const { rotuloPeriodoCapa } = await import(HANDLER_PATH)
+    expect(rotuloPeriodoCapa(2026, 11)).toBe('Janeiro a Novembro de 2026')
+    expect(rotuloPeriodoCapa(2025, 12)).toBe('Janeiro a Dezembro de 2025')
   })
 
   it('valida o corpo da requisição', async () => {
