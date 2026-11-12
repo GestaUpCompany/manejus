@@ -4,7 +4,8 @@ import exemploJson from '../../../scripts/fixtures/infografico-anual-exemplo.jso
 
 const REGISTRY_PATH = '../../../api/pdf/_shared/anualRegistry.js'
 const COMPOSER_PATH = '../../../api/pdf/_shared/reportComposer.js'
-const HANDLER_PATH = '../../../api/pdf/_relatorios/anual.js'
+const SECOES_PATH = '../../../api/pdf/_relatorios/anual/secoes.js'
+const HANDLER_PATH ='../../../api/pdf/_relatorios/anual.js'
 
 // Retorno real das RPCs get_infografico_anual_* na fazenda de testes (2026, até novembro).
 const exemplo = exemploJson as Record<string, any>
@@ -17,6 +18,11 @@ async function registry() {
 describe('Infográfico Anual', () => {
   it('o catálogo do front e o registry do servidor têm as mesmas seções', async () => {
     expect(Object.keys(await registry()).sort()).toEqual([...SECOES_ANUAIS].sort())
+  })
+
+  it('toda seção do anual tem cartão na página "O Ano em Números"', async () => {
+    const { RESUMOS } = await import(SECOES_PATH)
+    expect(Object.keys(RESUMOS).sort()).toEqual([...SECOES_ANUAIS].sort())
   })
 
   it('cada seção chama a RPC anual própria', async () => {

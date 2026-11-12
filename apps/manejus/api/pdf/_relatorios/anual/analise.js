@@ -51,6 +51,9 @@ export const COMPARAVEIS = {
     },
     perda: { rotulo: 'perda estimada', bom: 'baixo', valor: (m, u) => somaMeses(m, 'perda', u), formato: fmtMoeda },
   },
+  almoxarifado: ESTOQUE_COMPARAVEIS,
+  farmacia: ESTOQUE_COMPARAVEIS,
+  cantina: ESTOQUE_COMPARAVEIS,
   maternidade: {
     partos: { rotulo: 'partos', bom: 'neutro', valor: (m, u) => somaMeses(m, 'partos', u), formato: fmtInt },
     crias: { rotulo: 'crias nascidas', bom: 'neutro', valor: (m, u) => somaMeses(m, 'crias', u), formato: fmtInt },

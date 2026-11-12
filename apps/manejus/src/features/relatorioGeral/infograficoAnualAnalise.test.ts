@@ -40,6 +40,14 @@ describe('Infográfico Anual: análise', () => {
     expect(variacaoForte(cmp, 'mortes')).toBe('Mortes 100% acima do mesmo período de 2025.')
   })
 
+  it('toda seção do anual tem métricas comparáveis com o ano anterior', async () => {
+    const { COMPARAVEIS, comparador } = await import(ANALISE)
+    const { SECOES_ANUAIS } = await import('./catalogo')
+    for (const secao of SECOES_ANUAIS) expect(Object.keys(COMPARAVEIS[secao] ?? {}).length, secao).toBeGreaterThan(0)
+    const est = { ano: 2026, ultimo_mes: 2, mensal: [{ mes: 1, consumo_valor: 100 }, { mes: 2, consumo_valor: 100 }], __anterior: { mensal: [{ mes: 1, consumo_valor: 50 }, { mes: 2, consumo_valor: 50 }] } }
+    for (const secao of ['almoxarifado', 'farmacia', 'cantina']) expect(comparador(secao, est).delta('consumo')?.texto).toBe('▲ +100% vs 2025')
+  })
+
   it('maternidade: perda de crias em pontos percentuais e lotação ponderada pelos dias-pasto', async () => {
     const { comparador } = await import(ANALISE)
     const mat = { ano: 2026, ultimo_mes: 2, mensal: [{ mes: 1, crias: 10, crias_mortas: 2 }, { mes: 2, crias: 10, crias_mortas: 2 }], __anterior: { mensal: [{ mes: 1, crias: 10, crias_mortas: 1 }, { mes: 2, crias: 10, crias_mortas: 1 }] } }

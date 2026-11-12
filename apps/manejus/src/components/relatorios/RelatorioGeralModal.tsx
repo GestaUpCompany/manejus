@@ -304,7 +304,7 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
 
           <section>
             <h3 className="text-sm font-semibold text-content-strong">Conteúdo e ordem</h3>
-            <p className="mb-3 text-xs text-content-muted">Selecione as seções e arraste os cards para definir a ordem do PDF.{anual && ' No anual estão disponíveis Combustível, Consumo, Clima, Mortes e Rodeio; as demais seções entram nas próximas fases.'}</p>
+            <p className="mb-3 text-xs text-content-muted">Selecione as seções e arraste os cards para definir a ordem do PDF.{anual && ' O anual não inclui o Estoque de Insumos nem o Boletim de Rebanho.'}</p>
             <div className="space-y-2">
               {ordem.map((id, index) => {
                 if (anual && !ehSecaoAnual(id)) return null
