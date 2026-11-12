@@ -47,26 +47,26 @@ function image(src, alt, className = '') {
   return src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="${className}">` : ''
 }
 
-function renderCover({ fazendaNome, logoGestao, logoFazenda, logoEmpresa, imagemCapa, periodoLabel, totalPages }) {
+function renderCover({ fazendaNome, logoGestao, logoFazenda, logoEmpresa, imagemCapa, periodoLabel, totalPages, titulo = 'Infográfico Mensal' }) {
   return `<section class="page cover-page">
     ${image(imagemCapa, 'Imagem de capa', 'cover-bg')}
     <div class="cover-overlay"></div><div class="cover-shape"></div><div class="cover-shape second"></div>
     <div class="cover-content">
       <div class="cover-brand">${image(logoGestao, 'ManejUs 360')}<div class="cover-brand-name">Manej'Us <b>360</b></div></div>
-      <div class="cover-main"><div class="cover-kicker">Gestão integrada da fazenda</div><h1 class="cover-title">Infográfico Mensal</h1><div class="cover-subtitle">Registros Operacionais</div><div class="cover-period">${escapeHtml(periodoLabel)}</div></div>
+      <div class="cover-main"><div class="cover-kicker">Gestão integrada da fazenda</div><h1 class="cover-title">${escapeHtml(titulo)}</h1><div class="cover-subtitle">Registros Operacionais</div><div class="cover-period">${escapeHtml(periodoLabel)}</div></div>
       <div class="cover-footer"><div class="cover-organizations"><div class="cover-logo-box company">${image(logoEmpresa, 'GestaUp Company')}</div>${logoFazenda ? `<div class="cover-logo-box farm">${image(logoFazenda, 'Logo da fazenda')}</div>` : ''}<div class="cover-farm"><span>Fazenda</span>${escapeHtml(fazendaNome)}</div></div><div class="cover-page-number">Página 1 de ${totalPages}</div></div>
     </div>
   </section>`
 }
 
-function renderFinalPage({ logoFazenda, logoEmpresa, page, totalPages }) {
-  return `<section class="page final-page"><div class="final-content"><h1 class="final-signoff">Atenciosamente,</h1><div class="final-company">Gesta'Up</div><div class="final-brand">Manej'Us <b>360</b></div><div class="final-logos">${logoEmpresa ? `<div class="final-logo-box company">${image(logoEmpresa, 'GestaUp Company')}</div>` : ''}${logoFazenda ? `<div class="final-logo-box farm">${image(logoFazenda, 'Logo da fazenda')}</div>` : ''}</div></div><footer class="report-footer"><span>Gesta'Up · Infográfico Mensal</span><span>Página ${page} de ${totalPages}</span></footer></section>`
+function renderFinalPage({ logoFazenda, logoEmpresa, page, totalPages, titulo = 'Infográfico Mensal' }) {
+  return `<section class="page final-page"><div class="final-content"><h1 class="final-signoff">Atenciosamente,</h1><div class="final-company">Gesta'Up</div><div class="final-brand">Manej'Us <b>360</b></div><div class="final-logos">${logoEmpresa ? `<div class="final-logo-box company">${image(logoEmpresa, 'GestaUp Company')}</div>` : ''}${logoFazenda ? `<div class="final-logo-box farm">${image(logoFazenda, 'Logo da fazenda')}</div>` : ''}</div></div><footer class="report-footer"><span>Gesta'Up · ${escapeHtml(titulo)}</span><span>Página ${page} de ${totalPages}</span></footer></section>`
 }
 
-async function renderReports(reports) {
+async function renderReports(reports, registry = REPORT_REGISTRY) {
   const rendered = []
   for (const report of reports) {
-    const adapter = REPORT_REGISTRY[report.tipo]
+    const adapter = registry[report.tipo]
     // Seção sem registros no período não ganha página: é omitida.
     if (!adapter.hasData(report.dados)) continue
     const document = extractDocument(await adapter.render(report.dados))
@@ -89,17 +89,18 @@ function stripScriptsExceptPagination(body) {
  * PDF final, `total` o total de páginas; `countOnly` gera uma versão sem gráficos
  * apenas para contar páginas.
  */
-export async function composeReportParts({ reports, cover }) {
+export async function composeReportParts({ reports, cover, registry = REPORT_REGISTRY, titulo = 'Infográfico Mensal' }) {
   const chartJs = await getChartJsScript().catch(() => '')
-  const rendered = await renderReports(reports)
+  const rendered = await renderReports(reports, registry)
+  const capa = { ...cover, titulo }
 
   const document = ({ style, body, chart, offset, total }) =>
-    `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Infográfico Mensal</title><style>${BASE_CSS}${style}${COVER_CSS}</style><script>${FLOW_ENGINE_JS}</script>${chart && chartJs ? `<script>${chartJs}</script>` : ''}</head><body>${body}<script>window.__pageOffset=${offset};window.__pageTotal=${total};window.__numberPages();window.__chartsReady=true</script></body></html>`
+    `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${escapeHtml(titulo)}</title><style>${BASE_CSS}${style}${COVER_CSS}</style><script>${FLOW_ENGINE_JS}</script>${chart && chartJs ? `<script>${chartJs}</script>` : ''}</head><body>${body}<script>window.__pageOffset=${offset};window.__pageTotal=${total};window.__numberPages();window.__chartsReady=true</script></body></html>`
 
   const parts = [
     {
       id: 'capa',
-      html: ({ offset, total }) => document({ style: '', body: renderCover({ ...cover, totalPages: total }), chart: false, offset, total }),
+      html: ({ offset, total }) => document({ style: '', body: renderCover({ ...capa, totalPages: total }), chart: false, offset, total }),
     },
     ...rendered.map((report) => {
       // O UMD do Chart.js vem embutido no body de cada seção; carregá-lo uma vez no head basta.
@@ -119,7 +120,7 @@ export async function composeReportParts({ reports, cover }) {
     }),
     {
       id: 'encerramento',
-      html: ({ offset, total }) => document({ style: '', body: renderFinalPage({ ...cover, page: total, totalPages: total }), chart: false, offset, total }),
+      html: ({ offset, total }) => document({ style: '', body: renderFinalPage({ ...capa, page: total, totalPages: total }), chart: false, offset, total }),
     },
   ]
   return parts

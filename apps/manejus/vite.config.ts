@@ -11,6 +11,7 @@ import abastecimentoHandler from './api/pdf/_relatorios/abastecimento.js'
 import bebedourosHandler from './api/pdf/_relatorios/bebedouros.js'
 // @ts-ignore
 import geralHandler from './api/pdf/_relatorios/geral.js'
+import anualHandler from './api/pdf/_relatorios/anual.js'
 // @ts-ignore
 import climaHandler from './api/pdf/_relatorios/clima.js'
 // @ts-ignore
@@ -88,6 +89,7 @@ function localPdfApi(): Plugin {
       register('/api/pdf/abastecimento', abastecimentoHandler)
       register('/api/pdf/bebedouros', bebedourosHandler)
       register('/api/pdf/geral', geralHandler)
+      register('/api/pdf/anual', anualHandler)
       register('/api/pdf/clima', climaHandler)
       register('/api/pdf/rodeio', rodeioHandler)
       register('/api/pdf/pastagens', pastagensHandler)

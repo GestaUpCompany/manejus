@@ -36,7 +36,7 @@ function reduzirLogo(dataUrl: string): Promise<string> {
   })
 }
 
-async function carregarLogo(path?: string | null): Promise<string> {
+export async function carregarLogo(path?: string | null): Promise<string> {
   if (!path) return ''
   try {
     return await reduzirLogo(await carregarLogoComoBase64(path))
@@ -88,12 +88,12 @@ export async function gerarRelatorioGeral(params: GerarRelatorioGeralParams): Pr
   return response.blob()
 }
 
-export function baixarRelatorioGeral(blob: Blob, fazendaNome: string, dataInicio: string, dataFim: string) {
+export function baixarRelatorioGeral(blob: Blob, fazendaNome: string, dataInicio: string, dataFim: string, nomeArquivo?: string) {
   const fazenda = fazendaNome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[<>:"/\\|?*]+/g, '').trim() || 'Fazenda'
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `GestaUp - Infografico Mensal - ${fazenda} - ${dataInicio} a ${dataFim}.pdf`
+  link.download = nomeArquivo ? `GestaUp - ${nomeArquivo} - ${fazenda}.pdf` : `GestaUp - Infografico Mensal - ${fazenda} - ${dataInicio} a ${dataFim}.pdf`
   document.body.appendChild(link)
   link.click()
   link.remove()

@@ -5,6 +5,7 @@
 // boletimRebanho não entra: é só renderizador usado pelo front e pelos testes.
 
 import abastecimento from './_relatorios/abastecimento.js'
+import anual from './_relatorios/anual.js'
 import bebedouros from './_relatorios/bebedouros.js'
 import abate from './_relatorios/abate.js'
 import almoxarifado from './_relatorios/almoxarifado.js'
@@ -26,6 +27,7 @@ const RELATORIOS = {
   abate,
   abastecimento,
   almoxarifado,
+  anual,
   bebedouros,
   cantina,
   clima,

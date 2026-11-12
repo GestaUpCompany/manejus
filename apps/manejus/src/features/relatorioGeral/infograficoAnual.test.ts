@@ -1,0 +1,79 @@
+import { describe, expect, it } from 'vitest'
+import { SECOES_ANUAIS } from './catalogo'
+import exemploJson from '../../../scripts/fixtures/infografico-anual-exemplo.json'
+
+const REGISTRY_PATH = '../../../api/pdf/_shared/anualRegistry.js'
+const COMPOSER_PATH = '../../../api/pdf/_shared/reportComposer.js'
+const HANDLER_PATH = '../../../api/pdf/_relatorios/anual.js'
+
+// Retorno real das RPCs get_infografico_anual_* na fazenda de testes (2026, até novembro).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const exemplo = exemploJson as Record<string, any>
+const marca = { fazendaNome: 'Fazenda Teste', logoGestao: '', logoFazenda: '' }
+
+async function registry() {
+  return (await import(REGISTRY_PATH)).ANUAL_REGISTRY as Record<string, { title: string; rpc: string; render: (d: unknown) => Promise<string>; hasData: (d: unknown) => boolean }>
+}
+
+describe('Infográfico Anual', () => {
+  it('o catálogo do front e o registry do servidor têm as mesmas seções', async () => {
+    expect(Object.keys(await registry()).sort()).toEqual([...SECOES_ANUAIS].sort())
+  })
+
+  it('cada seção chama a RPC anual própria', async () => {
+    const reg = await registry()
+    for (const secao of SECOES_ANUAIS) expect(reg[secao].rpc).toBe(`get_infografico_anual_${secao}`)
+  })
+
+  it('renderiza as seções sem dado diário: só meses e totais', async () => {
+    const reg = await registry()
+    for (const secao of SECOES_ANUAIS) {
+      const dados = { ...exemplo[secao], __marca: marca }
+      expect(reg[secao].hasData(dados)).toBe(true)
+      const html = await reg[secao].render(dados)
+      expect(html).toContain(reg[secao].title)
+      expect(html).toContain('Janeiro a Novembro de 2026')
+      // Nenhuma data dd/mm/aaaa no corpo além do rodapé do período.
+      const datas = (html.match(/\b\d{2}\/\d{2}\/\d{4}\b/g) ?? []).filter((d) => d !== '01/01/2026' && !d.endsWith('/2026'))
+      expect(datas).toEqual([])
+      expect(html).not.toMatch(/\b\d{2}\/(0[1-9]|1[0-2])\b(?!\/)/)
+    }
+  })
+
+  it('avisa quando o rebanho da taxa de mortalidade é estimado', async () => {
+    const reg = await registry()
+    const html = await reg.morte.render({ ...exemplo.morte, __marca: marca })
+    expect(html).toContain('Rebanho estimado em 11 de 11 meses')
+    const real = await reg.morte.render({ ...exemplo.morte, kpis: { ...exemplo.morte.kpis, rebanho_estimado: false }, __marca: marca })
+    expect(real).not.toContain('Rebanho estimado em')
+  })
+
+  it('omite seção sem dados e usa o título anual na capa', async () => {
+    const reg = await registry()
+    const { composeReportParts } = await import(COMPOSER_PATH)
+    const vazio = { ano: 2025, ultimo_mes: 12, kpis: { rodeios: 0 }, mensal: [], __marca: marca }
+    expect(reg.rodeio.hasData(vazio)).toBe(false)
+    const parts = await composeReportParts({
+      reports: [{ tipo: 'rodeio', dados: vazio }, { tipo: 'clima', dados: { ...exemplo.clima, __marca: marca } }],
+      registry: reg,
+      titulo: 'Infográfico Anual',
+      cover: { ...marca, logoEmpresa: '', imagemCapa: '', periodoLabel: 'Ano de 2026' },
+    })
+    expect(parts.map((p: { id: string }) => p.id)).toEqual(['capa', 'Clima no Ano', 'encerramento'])
+    expect(parts[0].html({ offset: 0, total: 5 })).toContain('Infográfico Anual')
+    expect(parts[2].html({ offset: 4, total: 5 })).toContain("Gesta'Up · Infográfico Anual")
+  })
+
+  it('valida o corpo da requisição', async () => {
+    const { validarBodyAnual } = await import(HANDLER_PATH)
+    const ok = { fazendaId: 'f1', fazendaNome: 'F', ano: 2026, secoes: ['clima', 'morte'] }
+    expect(validarBodyAnual(ok, 2026)).toBeNull()
+    expect(validarBodyAnual({ ...ok, ano: 2027 }, 2026)).toMatch(/Ano inválido/)
+    expect(validarBodyAnual({ ...ok, ano: 2019 }, 2026)).toMatch(/Ano inválido/)
+    expect(validarBodyAnual({ ...ok, ano: '2026' }, 2026)).toMatch(/Ano inválido/)
+    expect(validarBodyAnual({ ...ok, secoes: [] }, 2026)).toMatch(/ao menos uma/)
+    expect(validarBodyAnual({ ...ok, secoes: ['clima', 'clima'] }, 2026)).toMatch(/duplicada/)
+    expect(validarBodyAnual({ ...ok, secoes: ['cantina'] }, 2026)).toMatch(/desconhecida/)
+    expect(validarBodyAnual({ ...ok, imagemCapaPath: 'outra/capas/x.webp' }, 2026)).toMatch(/capa/)
+  })
+})
