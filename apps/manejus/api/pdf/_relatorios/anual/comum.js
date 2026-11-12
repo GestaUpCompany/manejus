@@ -100,7 +100,7 @@ export function reguaAnual(titulo, nota, linhas, ultimoMes) {
         .map((v) => {
           if (v === undefined) return '<td class="rg-fut"></td>'
           if (v == null) return '<td class="rg-nulo">·</td>'
-          if (v === 0) return '<td class="rg-zero">0</td>'
+          if (v === 0) return '<td class="rg-zero"></td>'
           const a = l.semCor || max === 0 ? 0 : 0.12 + 0.78 * (Math.abs(v) / max)
           const claro = a > 0.55
           return `<td style="background:rgba(${tom.rgb},${a.toFixed(2)})${claro ? ';color:#fff' : ''}">${escapeHtml(l.formato(v))}</td>`

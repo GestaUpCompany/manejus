@@ -55,7 +55,7 @@ export function resumoCombustivel(d) {
     linhas: [`${fmtInt(k.abastecimentos)} abastecimentos`, `Entradas: ${fmtInt(k.entradas_l)} L`],
     serie: litros,
     tom: 'verde',
-    calendario: { rotulo: 'Combustível · litros', valores: litros, formato: L(0) },
+    calendario: { rotulo: 'Combustível · abastecimentos', valores: serie(d.mensal, 'abastecimentos', d.ultimo_mes), formato: L(0) },
   }
 }
 
@@ -126,15 +126,14 @@ export async function renderCombustivelAnual(d) {
 // ─────────────────────────── Consumo ───────────────────────────
 export function resumoConsumo(d) {
   const k = d.kpis || {}
-  const dias = serie(d.mensal, 'lote_dias', d.ultimo_mes)
   return {
     titulo: 'Consumo',
-    valor: `${fmt(k.ms_kg_cab_dia, 2)} kg`,
-    rotulo: 'de MS por cabeça/dia',
-    linhas: [`${fmt(k.pct_pv, 2)}% do peso vivo`, `${fmtMoeda(k.custo_cab_dia)} por cab./dia`],
-    serie: dias,
-    tom: 'verde',
-    calendario: { rotulo: 'Consumo · lote-dias', valores: dias, formato: L(0) },
+    valor: fmtMoeda(k.custo_total),
+    rotulo: 'de custo alimentar no ano',
+    linhas: [`${fmt(k.ms_kg_cab_dia, 2)} kg MS/cab/dia · ${fmt(k.pct_pv, 2)}% PV`, `${fmt(Number(k.ms_total_kg) / 1000, 1)} t de MS fornecidas`],
+    serie: serie(d.mensal, 'custo_total', d.ultimo_mes),
+    tom: 'dourado',
+    calendario: { rotulo: 'Consumo · registros de trato', valores: serie(d.mensal, 'registros', d.ultimo_mes), formato: L(0) },
   }
 }
 
@@ -146,21 +145,39 @@ export async function renderConsumoAnual(d) {
   const temConf = (d.mensal || []).some((m) => Number(m.confinamento?.lote_dias) > 0)
   const temPasto = (d.mensal || []).some((m) => Number(m.pasto?.lote_dias) > 0)
   const dias = serie(d.mensal, 'lote_dias', ult)
-  const porManejo = (rotulo, campo, formato, tom, anoTxt) => {
+  // Índice do ano de cada manejo: média dos meses ponderada pelas cabeça-dias de cada mês.
+  const anoManejo = (manejo, campo) => {
+    let soma = 0
+    let peso = 0
+    for (const m of d.mensal || []) {
+      const x = m?.[manejo]
+      if (x?.[campo] != null && Number(x.cab_dias) > 0) {
+        soma += Number(x[campo]) * Number(x.cab_dias)
+        peso += Number(x.cab_dias)
+      }
+    }
+    return peso > 0 ? soma / peso : null
+  }
+  const porManejo = (rotulo, campo, formato, tom) => {
     const linhas = []
-    if (temConf) linhas.push({ rotulo: `${rotulo} · confinamento`, valores: serie(d.mensal, (m) => m?.confinamento?.[campo], ult), formato, tom, ano: anoTxt })
-    if (temPasto) linhas.push({ rotulo: `${rotulo} · pasto`, valores: serie(d.mensal, (m) => m?.pasto?.[campo], ult), formato, tom, ano: linhas.length ? '' : anoTxt })
+    for (const [manejo, tem] of [['confinamento', temConf], ['pasto', temPasto]]) {
+      if (!tem) continue
+      const ano = anoManejo(manejo, campo)
+      linhas.push({ rotulo: `${rotulo} · ${manejo}`, valores: serie(d.mensal, (m) => m?.[manejo]?.[campo], ult), formato, tom, ano: ano == null ? '—' : formato(ano) })
+    }
     return linhas
   }
 
   const regua = reguaAnual(
     'Mês a mês',
-    'Médias dos lote-dias do mês · coluna Ano: média de todos os lote-dias',
+    'Índices ponderados por cabeças × dias · coluna Ano: ano inteiro',
     [
-      { rotulo: 'Lote-dias com trato', valores: dias, ano: fmtInt(k.lote_dias), formato: L(0), tom: 'azul' },
-      ...porManejo('kg MS/cab/dia', 'ms', L(2), 'verde', fmt(k.ms_kg_cab_dia, 2)),
-      ...porManejo('% do PV', 'pv', L(2), 'verde', `${fmt(k.pct_pv, 2)}%`),
-      ...porManejo('R$/cab/dia', 'custo', L(2), 'dourado', fmtMoeda(k.custo_cab_dia)),
+      { rotulo: 'Custo alimentar (R$)', valores: serie(d.mensal, 'custo_total', ult), ano: fmtMoeda(k.custo_total).replace('R$ ', ''), formato: L(0), tom: 'dourado' },
+      { rotulo: 'MS fornecida (t)', valores: serie(d.mensal, (m) => (Number(m?.ms_total_kg) || 0) / 1000, ult), ano: fmt(Number(k.ms_total_kg) / 1000, 1), formato: L(1) },
+      { rotulo: 'Cabeça-dias tratadas', valores: serie(d.mensal, 'cab_dias', ult), ano: fmtInt(k.cab_dias), formato: L(0), tom: 'azul' },
+      ...porManejo('kg MS/cab/dia', 'ms', L(2), 'verde'),
+      ...porManejo('% do PV', 'pv', L(2), 'verde'),
+      ...porManejo('R$/cab/dia', 'custo', L(2), 'dourado'),
     ],
     ult,
   )
@@ -169,15 +186,15 @@ export async function renderConsumoAnual(d) {
     escapeHtml(l.lote),
     l.manejo === 'confinamento' ? 'Confinamento' : 'Pasto',
     fmtInt(l.dias),
-    fmt(l.mn, 2),
+    fmtInt(l.cabecas_medias),
     `<strong>${fmt(l.ms, 2)}</strong>`,
     `${fmt(l.pv, 2)}%`,
     l.custo != null ? fmtMoeda(l.custo) : '—',
-    fmt(l.cocho, 2),
+    `<strong>${fmtMoeda(l.custo_total)}</strong>`,
   ])
   if (Number(d.lotes_demais) > 0) lotes.push([`<em>Demais ${fmtInt(d.lotes_demais)} lotes</em>`, '', '', '', '', '', '', ''])
   const msLotes = (d.por_lote || []).map((l) => ({ rotulo: l.lote, valor: l.ms, texto: fmt(l.ms, 2), extra: `${fmt(l.pv, 2)}% PV` }))
-  const custoLotes = (d.por_lote || []).filter((l) => l.custo != null).map((l) => ({ rotulo: l.lote, valor: l.custo, texto: fmtMoeda(l.custo), extra: `${fmtInt(l.dias)} dias` }))
+  const custoLotes = (d.por_lote || []).filter((l) => Number(l.custo_total) > 0).map((l) => ({ rotulo: l.lote, valor: l.custo_total, texto: fmtMoeda(l.custo_total), extra: pct(l.custo_total, k.custo_total) }))
 
   return renderSecaoAnual({
     titulo: 'Consumo',
@@ -186,23 +203,30 @@ export async function renderConsumoAnual(d) {
     blocos: [
       {
         html: kpisAnuais(
-          { rotulo: 'Consumo de matéria seca', valor: `${fmt(k.ms_kg_cab_dia, 2)} kg`, contexto: `por cabeça por dia · matéria natural ${fmt(k.mn_kg_cab_dia, 2)} kg` },
+          { rotulo: 'Custo alimentar do ano', valor: fmtMoeda(k.custo_total), contexto: `${fmtMoeda(k.custo_cab_dia)} por cabeça/dia · ${fmtInt(k.cab_dias)} cabeça-dias` },
           [
-            { rotulo: 'Consumo em % do PV', valor: `${fmt(k.pct_pv, 2)}%`, contexto: `Leitura de cocho média: ${fmt(k.leitura_cocho, 2)}` },
-            { rotulo: 'Custo alimentar', valor: fmtMoeda(k.custo_cab_dia), contexto: 'por cabeça por dia', tom: 'dourado' },
-            { rotulo: 'Cobertura do trato', valor: `${fmtInt(k.lote_dias)} lote-dias`, contexto: `${plural(k.lotes, 'lote', 'lotes')} · ${cobertura(dias, ult)}`, tom: 'azul' },
+            { rotulo: 'Consumo de matéria seca', valor: `${fmt(k.ms_kg_cab_dia, 2)} kg`, contexto: `por cab./dia · ${fmt(Number(k.ms_total_kg) / 1000, 1)} t fornecidas no ano` },
+            { rotulo: 'Consumo em % do PV', valor: `${fmt(k.pct_pv, 2)}%`, contexto: `Matéria natural: ${fmt(k.mn_kg_cab_dia, 2)} kg/cab/dia` },
+            { rotulo: 'Rebanho tratado', valor: `${fmtInt(k.cabecas_medias)} cab.`, contexto: `média por dia · ${plural(k.lotes, 'lote', 'lotes')} · ${cobertura(dias, ult)}`, tom: 'azul' },
           ],
         ),
         ...vis,
       },
       { html: regua, ...vis },
-      { html: colunas([ranking('Consumo de MS por lote', 'kg MS/cab/dia · % do PV', msLotes), ranking('Custo por lote', 'R$/cab/dia · dias com trato', custoLotes, { tom: 'dourado' })]), ...vis },
+      { html: colunas([ranking('Consumo de MS por lote', 'kg MS/cab/dia · % do PV', msLotes), ranking('Custo alimentar por lote', 'R$ no ano · % do total', custoLotes, { tom: 'dourado' })]), ...vis },
       {
-        html: tabela('Lotes no ano', 'Médias dos dias com trato · top 15 por dias', [{ label: 'Lote', width: '26%' }, { label: 'Manejo' }, { label: 'Dias', numeric: true }, { label: 'MN kg', numeric: true }, { label: 'MS kg', numeric: true }, { label: '% PV', numeric: true }, { label: 'R$/cab/dia', numeric: true }, { label: 'Cocho', numeric: true }], lotes),
+        html: tabela('Lotes no ano', 'Ponderado por cabeças × dias · top 15 por custo', [{ label: 'Lote', width: '24%' }, { label: 'Manejo' }, { label: 'Dias', numeric: true }, { label: 'Cab. médias', numeric: true }, { label: 'kg MS/cab/dia', numeric: true }, { label: '% PV', numeric: true }, { label: 'R$/cab/dia', numeric: true }, { label: 'Custo no ano', numeric: true }], lotes),
         tipo: 'tabela',
         ...det,
       },
-      { html: rodape(['Índices do ano: média de todos os dias com trato de todos os lotes (cada lote-dia pesa igual). Não há MS total nem custo total do ano porque o número de cabeças de cada dia não está disponível.']), ...det },
+      {
+        html: rodape([
+          'Índices e totais ponderados por cabeças × dias: no confinamento, as cabeças de cada dia; no pasto, as do registro de suplementação, multiplicadas pelos dias do intervalo até o registro seguinte. O intervalo de pasto entra no mês do registro que o fecha.',
+          Number(k.pontos_cabecas_estimadas) > 0 ? `${plural(k.pontos_cabecas_estimadas, 'registro sem nº de cabeças usou', 'registros sem nº de cabeças usaram')} o rebanho do lote na data.` : '',
+          Number(k.pontos_sem_cabecas) > 0 ? `${plural(k.pontos_sem_cabecas, 'registro ficou', 'registros ficaram')} fora da ponderação por falta do nº de cabeças.` : '',
+        ]),
+        ...det,
+      },
     ],
   })
 }
@@ -218,7 +242,7 @@ export function resumoClima(d) {
     linhas: [`${plural(k.dias_com_chuva, 'dia', 'dias')} com chuva`, `Mais chuvoso: ${nomeMes(k.mes_mais_chuvoso)}`],
     serie: chuva,
     tom: 'azul',
-    calendario: { rotulo: 'Clima · chuva (mm)', valores: chuva, formato: L(0), tom: 'azul' },
+    calendario: { rotulo: 'Clima · leituras', valores: serie(d.mensal, 'leituras', d.ultimo_mes), formato: L(0), tom: 'azul' },
   }
 }
 
@@ -273,7 +297,7 @@ export async function renderClimaAnual(d) {
           { rotulo: 'Chuva acumulada', valor: `${fmt(k.mm_total, 1)} mm`, contexto: `Média de ${plural(k.pluviometros, 'pluviômetro', 'pluviômetros')} · ${cobertura(chuva, ult)}` },
           [
             { rotulo: 'Mês mais chuvoso', valor: nomeMes(k.mes_mais_chuvoso), contexto: mesChuvoso ? `${fmt(mesChuvoso.mm_fazenda, 1)} mm · ${pct(mesChuvoso.mm_fazenda, k.mm_total)} do ano` : '—', tom: 'azul' },
-            { rotulo: 'Dias com chuva', valor: fmtInt(k.dias_com_chuva), contexto: `${plural(k.dias_forte, 'forte', 'fortes')} · ${plural(k.dias_torrencial, 'torrencial', 'torrenciais')} · maior dia ${fmt(k.maior_dia_mm, 1)} mm`, tom: Number(k.dias_torrencial) > 0 ? 'vermelho' : 'azul' },
+            { rotulo: 'Dias com chuva', valor: fmtInt(k.dias_com_chuva), contexto: `${plural(k.dias_forte, 'forte', 'fortes')} · ${plural(k.dias_torrencial, 'torrencial', 'torrenciais')} · maior dia ${fmt(k.maior_dia_mm, 1)} mm`, tom: 'azul' },
             { rotulo: 'Temperatura média', valor: k.temp_media != null ? `${fmt(k.temp_media, 1)} °C` : '—', contexto: k.temp_min != null ? `Mín. ${fmt(k.temp_min, 1)} · máx. ${fmt(k.temp_max, 1)} °C` : 'Sem leitura de temperatura', tom: 'vermelho' },
           ],
         ),
@@ -297,7 +321,8 @@ export function resumoMorte(d) {
     linhas: [`Taxa: ${k.taxa_mortalidade != null ? `${fmt(k.taxa_mortalidade, 2)}%` : '—'}${k.rebanho_estimado ? ' (rebanho estimado)' : ''}`, `Perda: ${fmtMoeda(k.perda_estimada)}`],
     serie: mortes,
     tom: 'vermelho',
-    calendario: { rotulo: 'Mortalidade · mortes', valores: mortes, formato: L(0), tom: 'vermelho' },
+    // Mês sem morte não é falta de lançamento: fica fora da contagem de meses sem registro.
+    calendario: { rotulo: 'Mortalidade · mortes', valores: mortes, formato: L(0), tom: 'vermelho', eventual: true },
   }
 }
 
@@ -416,8 +441,8 @@ export async function renderRodeioAnual(d) {
     ],
     ult,
   )
-  const diag = (d.por_diagnostico || []).map((x) => ({ rotulo: x.label, valor: x.valor, extra: x.sanitario ? 'sanitário' : 'infra' }))
-  const local = (lista) => (lista || []).map((x) => ({ rotulo: x.nome, valor: x.alertas, texto: fmtInt(x.alertas), extra: `${fmtInt(x.rodeios)} rod.` }))
+  const diag = (d.por_diagnostico || []).filter((x) => Number(x.valor) > 0).map((x) => ({ rotulo: x.label, valor: x.valor, extra: x.sanitario ? 'sanitário' : 'infra' }))
+  const local = (lista) => (lista || []).filter((x) => Number(x.alertas) > 0).map((x) => ({ rotulo: x.nome, valor: x.alertas, texto: fmtInt(x.alertas), extra: `${fmtInt(x.rodeios)} rod.` }))
 
   return renderSecaoAnual({
     titulo: 'Rodeio de Gado',
@@ -430,7 +455,9 @@ export async function renderRodeioAnual(d) {
           [
             { rotulo: 'Rodeios com alerta', valor: `${fmt(k.pct_rodeios_com_alerta, 0)}%`, contexto: `${plural(totalAlertas, 'alerta', 'alertas')}: ${fmtInt(k.alertas_sanitarios)} sanitários · ${fmtInt(k.pendencias_infra)} infra`, tom: totalAlertas > 0 ? 'vermelho' : undefined },
             { rotulo: 'Escore médio do gado', valor: fmt(k.escore_gado_medio, 1), contexto: `Fezes: ${fmt(k.escore_fezes_medio, 1)} · escala de 1 a 5` },
-            { rotulo: 'Meta de intervalo', valor: avaliados > 0 ? pct(k.dentro_meta, avaliados) : '—', contexto: avaliados > 0 ? `${fmtInt(k.dentro_meta)} dentro · ${fmtInt(k.fora_meta)} fora` : 'Nenhum lote com meta configurada', tom: Number(k.fora_meta) > 0 ? 'dourado' : undefined },
+            avaliados > 0
+              ? { rotulo: 'Dentro da meta de intervalo', valor: pct(k.dentro_meta, avaliados), contexto: `${fmtInt(k.dentro_meta)} dentro · ${fmtInt(k.fora_meta)} fora`, tom: Number(k.fora_meta) > 0 ? 'dourado' : undefined }
+              : { rotulo: 'Cabeças por rodeio', valor: fmtInt(k.cabecas_media), contexto: 'média de cabeças contadas', tom: 'azul' },
           ],
         ),
         ...vis,
@@ -472,7 +499,7 @@ export async function renderResumoAnual(d) {
     .join('')
   const calendario = reguaAnual(
     'Calendário do ano',
-    'Métrica principal de cada caderneta por mês · 0: nenhum registro no mês',
+    'Registros lançados em cada caderneta por mês · vazio: nenhum registro',
     itens.map((r) => ({
       rotulo: r.calendario.rotulo,
       valores: r.calendario.valores,
@@ -483,6 +510,7 @@ export async function renderResumoAnual(d) {
     ult,
   )
   const semRegistro = itens
+    .filter((r) => !r.calendario.eventual)
     .map((r) => ({ t: r.titulo, n: ult - mesesComValor(r.calendario.valores) }))
     .filter((x) => x.n > 0)
     .sort((a, b) => b.n - a.n)

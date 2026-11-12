@@ -78,6 +78,26 @@ describe('Infográfico Anual', () => {
     expect(mod.REGISTRY_COMPOSICAO.resumo.hasData(umaSo[0].dados)).toBe(false)
   })
 
+  it('consumo usa os valores ponderados por cabeças × dias e a média de cada manejo no ano', async () => {
+    const reg = await registry()
+    const html = await reg.consumo.render({ ...exemplo.consumo, __marca: marca })
+    expect(html).toContain('R$ 16.838,41')
+    expect(html).toContain('6,59 kg')
+    // Coluna Ano da linha de confinamento = média ponderada do confinamento (9,47), não a geral (6,59).
+    const linhaConf = html.split('<tr>').find((tr) => tr.includes('kg MS/cab/dia · confinamento')) ?? ''
+    expect(linhaConf).toMatch(/class="rg-ano"[^>]*>9,47</)
+    expect(html).not.toContain('cada lote-dia pesa igual')
+  })
+
+  it('calendário conta registros e não trata mês sem morte como falta de lançamento', async () => {
+    const mod = await import(REGISTRY_PATH)
+    const reports = mod.montarReportsAnuais(SECOES_ANUAIS.map((s) => ({ secao: s, data: exemplo[s] })), marca)
+    const html = await mod.REGISTRY_COMPOSICAO.resumo.render(reports[0].dados)
+    expect(html).toContain('Clima · leituras')
+    expect(html).toContain('Clima 7')
+    expect(html).not.toMatch(/Meses sem registro[^<]*Mortalidade/)
+  })
+
   it('rótulo da capa segue o período', async () => {
     const { rotuloPeriodoCapa } = await import(HANDLER_PATH)
     expect(rotuloPeriodoCapa(2026, 11)).toBe('Janeiro a Novembro de 2026')

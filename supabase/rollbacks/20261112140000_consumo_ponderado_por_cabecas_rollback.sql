@@ -1,0 +1,6 @@
+-- Rollback de 20261112140000_consumo_ponderado_por_cabecas.sql
+-- 1) get_dados_relatorio_consumo: reaplicar o CREATE OR REPLACE de 20261027180000_relatorio_consumo_lotes_inativos.sql
+--    (os campos n_cabecas e dias somem dos pontos; nenhum consumidor anterior os usa).
+-- 2) get_infografico_anual_consumo: reaplicar o bloco de 20261112100000_infografico_anual_consumo_morte_rebanho.sql.
+-- 3) get_infografico_anual_clima: reaplicar o bloco de 20261111150000_infografico_anual_fase1.sql.
+-- Não há DROP: as três funções continuam existindo com a versão anterior.
