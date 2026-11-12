@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Infográfico Anual, fase 2C: Almoxarifado, Farmácia e Cantina (12/11/2026)
+
+- **RPCs** (migration `20261112220000_infografico_anual_fase2c_estoques.sql`, só funções novas, geradas de um único molde): `get_infografico_anual_{almoxarifado,farmacia,cantina}`. Diferente das fases anteriores, **não chamam a RPC mensal**: ela reconstrói o saldo item a item e corta em 5.000 movimentações, o que não serve para um ano. Leem o razão (`movimentacoes_<x>`) direto, só com GROUP BY: entradas e consumo em R$ por mês, valor em estoque de hoje (saldo atual x custo atual), itens em alerta, top 10 por consumo, consumo por classificação e curva ABC (itens que somam 80% do consumo).
+- **Regras** iguais às dos relatórios mensais: itens com controle de estoque; valor do movimento = `valor_total` ou quantidade x custo; consumo = baixa + estorno; Almoxarifado: consumo líquido = retiradas menos devoluções aprovadas, com piso em zero por item; ajuste e reclassificação não são fluxo.
+- **Fora do escopo (decisão)**: saldo de 1/jan e 31/dez (exige o replay do razão; continua no relatório mensal), refeições servidas e custo por refeição da Cantina (vêm de `registros_alimentacao`) e o relatório de **Estoque de Insumos/Formulações** (`movimentacao_estoque`, com filtro de dieta e escopo).
+- **PDF**: molde único em `anual/secoes3.js`; comparação com o ano anterior em `analise.js` (`ESTOQUE_COMPARAVEIS`). Validado na fazenda de testes contra a RPC mensal: Almoxarifado idêntico (itens, valor em estoque, alertas, entradas R$ 12.001,10, devoluções R$ 1.542,00, consumo R$ 3.866,60); Cantina idêntica em itens, alertas, entradas e consumo (valor em estoque difere R$ 3,41 porque a mensal usa o saldo reconstruído e acusa 1 divergência); Farmácia idêntica em itens e valor.
+- **Reverter**: `supabase/rollbacks/20261112220000_infografico_anual_fase2c_estoques_rollback.sql`.
+
 ## Infográfico Anual, fase 2B: Bebedouros (12/11/2026)
 
 - **RPC** (migration `20261112200000_infografico_anual_fase2b_bebedouros.sql`, só função nova): `get_infografico_anual_bebedouros`. O relatório mensal de bebedouros não tem RPC de dados (o cálculo roda no navegador, em `relatorioBebedouros/calculos.ts`), então ela lê direto das tabelas repetindo as regras: só bebedouros permitidos (`get_bebedouros_permitidos_relatorio_fazenda`, que também valida o acesso), intervalo da limpeza contra a limpeza anterior do mesmo bebedouro (pode ser do ano passado), faixas dentro/acima (até meta x 1,3)/muito acima, situação no fim do período (em dia, atrasado, crítico, sem registro, sem meta) e ocorrência = checklist com item respondido "não".

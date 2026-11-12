@@ -33,6 +33,7 @@ import {
 } from './comum.js'
 
 import { resumoBebedouros, resumoMaternidade, resumoPastagens } from './secoes2.js'
+import { resumoAlmoxarifado, resumoCantina, resumoFarmacia } from './secoes3.js'
 
 const nomeMes = (m) => (m ? MESES[Number(m) - 1] : '—')
 const soma = (arr) => arr.reduce((s, v) => s + (Number(v) || 0), 0)

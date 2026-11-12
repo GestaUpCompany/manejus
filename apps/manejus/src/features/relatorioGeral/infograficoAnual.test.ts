@@ -112,7 +112,7 @@ describe('Infográfico Anual', () => {
     expect(validarBodyAnual({ ...ok, ano: '2026' }, 2026)).toMatch(/Ano inválido/)
     expect(validarBodyAnual({ ...ok, secoes: [] }, 2026)).toMatch(/ao menos uma/)
     expect(validarBodyAnual({ ...ok, secoes: ['clima', 'clima'] }, 2026)).toMatch(/duplicada/)
-    expect(validarBodyAnual({ ...ok, secoes: ['cantina'] }, 2026)).toMatch(/desconhecida/)
+    expect(validarBodyAnual({ ...ok, secoes: ['boletim_rebanho'] }, 2026)).toMatch(/desconhecida/)
     expect(validarBodyAnual({ ...ok, imagemCapaPath: 'outra/capas/x.webp' }, 2026)).toMatch(/capa/)
   })
 })

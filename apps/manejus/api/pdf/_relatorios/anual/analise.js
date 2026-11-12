@@ -12,6 +12,12 @@ const somaMeses = (mensal, campo, ult) =>
 
 const razao = (a, b) => (Number(b) > 0 ? Number(a) / Number(b) : null)
 
+const ESTOQUE_COMPARAVEIS = {
+  consumo: { rotulo: 'consumo', bom: 'neutro', valor: (m, u) => somaMeses(m, 'consumo_valor', u), formato: fmtMoeda },
+  entradas: { rotulo: 'entradas', bom: 'neutro', valor: (m, u) => somaMeses(m, 'entradas_valor', u), formato: fmtMoeda },
+  movimentos: { rotulo: 'movimentos', bom: 'neutro', valor: (m, u) => somaMeses(m, 'movimentos', u), formato: fmtInt },
+}
+
 // Métricas comparáveis por seção: { chave: { valor(mensal, ult), bom, rotulo, formato, absoluta? } }
 export const COMPARAVEIS = {
   combustivel: {

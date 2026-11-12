@@ -6,6 +6,7 @@ import {
   renderResumoAnual,
   renderRodeioAnual,
 } from '../_relatorios/anual/secoes.js'
+import { renderAlmoxarifadoAnual, renderCantinaAnual, renderFarmaciaAnual } from '../_relatorios/anual/secoes3.js'
 import { renderBebedourosAnual, renderMaternidadeAnual, renderPastagensAnual } from '../_relatorios/anual/secoes2.js'
 
 // Seções do Infográfico Anual. `rpc` é chamada no servidor com (p_fazenda_id, p_ano) e devolve só
@@ -54,6 +55,24 @@ export const ANUAL_REGISTRY = {
     rpc: 'get_infografico_anual_pastagens',
     render: renderPastagensAnual,
     hasData: (d) => Number(d?.kpis?.movimentacoes) > 0 || Number(d?.kpis?.dias_pasto) > 0,
+  },
+  almoxarifado: {
+    title: 'Almoxarifado',
+    rpc: 'get_infografico_anual_almoxarifado',
+    render: renderAlmoxarifadoAnual,
+    hasData: (d) => Number(d?.kpis?.movimentos) > 0 || Number(d?.kpis?.itens) > 0,
+  },
+  farmacia: {
+    title: 'Farmácia',
+    rpc: 'get_infografico_anual_farmacia',
+    render: renderFarmaciaAnual,
+    hasData: (d) => Number(d?.kpis?.movimentos) > 0 || Number(d?.kpis?.itens) > 0,
+  },
+  cantina: {
+    title: 'Cantina',
+    rpc: 'get_infografico_anual_cantina',
+    render: renderCantinaAnual,
+    hasData: (d) => Number(d?.kpis?.movimentos) > 0 || Number(d?.kpis?.itens) > 0,
   },
   maternidade: {
     title: 'Maternidade',
