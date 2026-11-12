@@ -17,6 +17,8 @@ interface RegistroManutencaoMaquinas {
   responsavel_checklist?: string
   operador_motorista?: string
   veiculo_trator?: string
+  tipo_equipamento?: 'maquina' | 'implemento'
+  tipo_manutencao?: 'rotina' | 'preventiva' | 'corretiva' | null
   placa?: string
   odometro_horimetro?: string
   checklist?: Record<string, { valor: string; observacao: string }>
@@ -24,6 +26,8 @@ interface RegistroManutencaoMaquinas {
   sync_status?: string
   created_at: string
 }
+
+const TIPOS_MANUTENCAO: Record<string, string> = { rotina: 'Rotina', preventiva: 'Preventiva', corretiva: 'Corretiva' }
 
 export function ManutencaoMaquinas() {
   const { user } = useAuth()
@@ -195,8 +199,12 @@ export function ManutencaoMaquinas() {
                     <span className="text-content-strong font-medium">{registro.nome_usuario || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-content-muted">Máquina/Veículo:</span>
+                    <span className="text-content-muted">{registro.tipo_equipamento === 'implemento' ? 'Implemento:' : 'Máquina/Veículo:'}</span>
                     <span className="text-content-strong font-medium">{registro.veiculo_trator || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-content-muted">Manutenção:</span>
+                    <span className="text-content-strong font-medium">{registro.tipo_manutencao ? TIPOS_MANUTENCAO[registro.tipo_manutencao] : '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-content-muted">Operador:</span>
@@ -234,6 +242,7 @@ export function ManutencaoMaquinas() {
                   </th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Máquina/Veículo</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Manutenção</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Operador</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Responsável</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">Placa</th>
@@ -253,6 +262,12 @@ export function ManutencaoMaquinas() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.veiculo_trator || '-'}
+                      {registro.tipo_equipamento === 'implemento' && (
+                        <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-xs text-content-muted">Implemento</span>
+                      )}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
+                      {registro.tipo_manutencao ? TIPOS_MANUTENCAO[registro.tipo_manutencao] : '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-content-strong">
                       {registro.operador_motorista || '-'}

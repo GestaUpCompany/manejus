@@ -20,6 +20,8 @@ interface RegistroManutencaoMaquinas {
   responsavel_checklist?: string
   operador_motorista?: string
   veiculo_trator?: string
+  tipo_equipamento?: 'maquina' | 'implemento'
+  tipo_manutencao?: 'rotina' | 'preventiva' | 'corretiva' | null
   placa?: string
   odometro_horimetro?: string
   observacao?: string
@@ -30,20 +32,28 @@ interface RegistroManutencaoMaquinas {
 }
 
 const CHECKLIST_LABELS: Record<string, string> = {
-  assentoBom: 'Assento em bom estado',
-  bateriaBoa: 'Bateria em boa condição',
-  freiosBons: 'Freios em bom estado',
-  tapetesBons: 'Tapetes em bom estado',
-  calibrouPneus: 'Calibrou pneus',
-  limpouRadiador: 'Limpou radiador',
-  nivelAguaIdeal: 'Nível de água ideal',
-  vidrosPerfeitos: 'Vidros perfeitos',
-  conferiuEletrica: 'Conferiu parte elétrica',
-  lavagemRealizada: 'Lavagem realizada',
-  maquinaEngraxada: 'Máquina engraxada',
-  conferiuNivelOleo: 'Conferiu nível de óleo',
-  abastecimentoRealizado: 'Abastecimento realizado',
+  abastecimentoRealizado: 'Abasteceu?',
+  lavagemRealizada: 'Lavou?',
+  vidrosPerfeitos: 'Conferiu os vidros?',
+  freiosBons: 'Conferiu os freios?',
+  bateriaBoa: 'Conferiu a bateria?',
+  conferiuEletrica: 'Conferiu a parte elétrica?',
+  maquinaEngraxada: 'Engraxou?',
+  nivelAguaIdeal: 'Conferiu o nível de água?',
+  conferiuNivelOleo: 'Conferiu o nível de óleo?',
+  calibrouPneus: 'Calibrou os pneus?',
+  limpouRadiador: 'Limpou o radiador?',
+  tapetesBons: 'Conferiu os tapetes?',
+  assentoBom: 'Conferiu o assento?',
+  pneusRodadoBons: 'Conferiu pneus/rodado?',
+  pecasDesgasteBoas: 'Conferiu as peças de desgaste?',
+  parafusosFixos: 'Conferiu parafusos e pinos?',
+  mangueirasSemVazamento: 'Conferiu mangueiras e vazamentos?',
+  engateBom: 'Conferiu engate/cabeçalho?',
+  estruturaBoa: 'Conferiu estrutura e soldas?',
 }
+
+const TIPOS_MANUTENCAO: Record<string, string> = { rotina: 'Rotina', preventiva: 'Preventiva', corretiva: 'Corretiva' }
 
 function simNao(valor?: string): string {
   if (valor === 'S') return 'Sim'
@@ -114,9 +124,18 @@ export function ManutencaoMaquinasDetalhes() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <DetailField label="Data" value={formatDate(registro!.data)} />
                 <DetailField label="Usuário" value={formatValue(registro!.nome_usuario)} />
-                <DetailField label="Veículo/Trator" value={formatValue(registro!.veiculo_trator)} />
-                <DetailField label="Placa" value={formatValue(registro!.placa)} />
-                <DetailField label="Odômetro/Horímetro" value={formatValue(registro!.odometro_horimetro)} />
+                <DetailField label="Tipo" value={registro!.tipo_equipamento === 'implemento' ? 'Implemento' : 'Máquina/Veículo'} />
+                <DetailField label="Tipo de manutenção" value={registro!.tipo_manutencao ? TIPOS_MANUTENCAO[registro!.tipo_manutencao] : '-'} />
+                <DetailField
+                  label={registro!.tipo_equipamento === 'implemento' ? 'Implemento' : 'Veículo/Trator'}
+                  value={formatValue(registro!.veiculo_trator)}
+                />
+                {registro!.tipo_equipamento !== 'implemento' && (
+                  <>
+                    <DetailField label="Placa" value={formatValue(registro!.placa)} />
+                    <DetailField label="Odômetro/Horímetro" value={formatValue(registro!.odometro_horimetro)} />
+                  </>
+                )}
                 <DetailField label="Operador/Motorista" value={formatValue(registro!.operador_motorista)} />
                 <DetailField label="Responsável Checklist" value={formatValue(registro!.responsavel_checklist)} />
               </div>
@@ -130,7 +149,7 @@ export function ManutencaoMaquinasDetalhes() {
                     <div key={key} className="space-y-1">
                       <DetailField label={CHECKLIST_LABELS[key] || key} value={simNao(item.valor)} />
                       {item.observacao && (
-                        <p className="text-sm text-content-muted"><span className="font-medium">Obs.:</span> {item.observacao}</p>
+                        <p className="text-sm text-content-muted"><span className="font-medium">Motivo:</span> {item.observacao}</p>
                       )}
                     </div>
                   ))}
@@ -139,8 +158,8 @@ export function ManutencaoMaquinasDetalhes() {
             )}
 
             {/* Observações */}
-            <DetailSection title="Observações" highlighted>
-              <DetailField label="Observação" value={formatValue(registro!.observacao)} />
+            <DetailSection title="Atividades executadas" highlighted>
+              <DetailField label="Detalhamento" value={formatValue(registro!.observacao)} />
             </DetailSection>
           </div>
         </Card>

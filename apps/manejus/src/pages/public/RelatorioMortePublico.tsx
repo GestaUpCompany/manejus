@@ -12,6 +12,7 @@ import {
   type ResumoMorte,
   type AgregadoItem,
 } from '../../utils/relatorioMortePDF'
+import { PRECO_KG_FALLBACK, PRECOS_KG_DEFAULT, precoKgCategoria, rotuloCategoria } from '../../features/relatorioMorte/categorias'
 
 const CHART_NO_FOCUS_CSS = `
 .recharts-surface {
@@ -39,20 +40,8 @@ const CHART_NO_FOCUS_CSS = `
 const GREEN_DARK = '#0F6437'
 const CHART_COLORS = ['#0F6437', '#1E3A5F', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16', '#F97316']
 
-// Preços por kg vivo por categoria (defaults baseados em cotações de agosto/2026)
-// Fontes: Scot Consultoria, CEPEA/ESALQ, Agrifatto
-// 1 arroba = 15 kg; rendimento carcaça ~50% → R$/kg vivo = (R$/@ ÷ 15) × 0,5
-const PRECOS_KG_DEFAULT: Record<string, number> = {
-  'Bezerro': 12.00,
-  'Bezerra': 11.50,
-  'Novilha': 11.00,
-  'Garrote': 9.50,
-  'Boi Magro': 10.00,
-  'Boi Gordo': 11.67,
-  'Vaca': 10.83,
-  'Touro': 15.00,
-}
-const PRECO_KG_FALLBACK = 10.00
+// Preços por kg vivo por categoria (defaults de agosto/2026, Scot/CEPEA/Agrifatto) e busca
+// normalizada da categoria: features/relatorioMorte/categorias.ts.
 
 const DIAG_LABELS: Record<string, string> = {
   inchaco: 'Inchaço',
@@ -170,7 +159,13 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
         return
       }
 
-      setDados(rpcData?.dados as DadosRelatorioMorte)
+      // Categoria pelo rótulo normalizado: "bezerro" e "Bezerro" viram uma opção só nos filtros e gráficos.
+      const bruto = rpcData?.dados as DadosRelatorioMorte
+      setDados({
+        ...bruto,
+        linhas: (bruto?.linhas ?? []).map((l) => ({ ...l, categoria: rotuloCategoria(l.categoria) })),
+        categorias_disponiveis: Array.from(new Set((bruto?.categorias_disponiveis ?? []).map(rotuloCategoria).filter((c): c is string => Boolean(c)))).sort(),
+      })
 
       // Carregar preços por categoria da fazenda
       const fazendaId = rpcData?.fazenda_id
@@ -280,7 +275,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
     for (const l of linhasFiltradas) {
       if (l.peso_vivo == null) continue
       const cat = l.categoria ?? 'Outros'
-      const preco = precosKg[cat] ?? PRECO_KG_FALLBACK
+      const preco = precoKgCategoria(cat, precosKg)
       const perda = l.peso_vivo * preco
       pesoTotal += l.peso_vivo
       perdaTotal += perda
