@@ -22,6 +22,7 @@ import {
   type FormEntrada,
   type ItemEstoqueCantina,
   type MovimentoCantina,
+  type MovimentoComSaldo,
 } from '../../features/estoqueCantina/logica'
 
 const hojeLocal = () => new Date().toLocaleDateString('en-CA')
@@ -35,6 +36,22 @@ const dataBR = (iso: string) => iso.split('-').reverse().join('/')
 
 const formEntradaVazio = (): FormEntrada => ({ itemId: '', quantidade: '', custo: '', fornecedor: '', observacao: '', data: hojeLocal() })
 const formAjusteVazio = (): FormAjuste => ({ itemId: '', saldo: '', observacao: '', data: hojeLocal() })
+
+interface EdicaoMovimento {
+  item: ItemEstoqueCantina
+  mov: MovimentoComSaldo
+  quantidade: string
+  custo: string
+  motivo: string
+}
+
+const numeroBR = (texto: string | undefined | null) => {
+  const n = Number(String(texto ?? '').replace(',', '.'))
+  return Number.isFinite(n) ? n : 0
+}
+
+// Só entradas lançadas no Painel (sem registro de origem) são corrigidas aqui; as do aplicativo são corrigidas no registro
+const podeCorrigirMovimento = (m: MovimentoComSaldo) => m.tipo_movimentacao === 'entrada' && movimentoEditavel(m)
 
 interface HistoricoAberto {
   item: ItemEstoqueCantina
@@ -60,6 +77,8 @@ export function EstoqueCantina() {
   const [historico, setHistorico] = useState<HistoricoAberto | null>(null)
   const [periodoDe, setPeriodoDe] = useState('')
   const [periodoAte, setPeriodoAte] = useState('')
+  const [edicaoMov, setEdicaoMov] = useState<EdicaoMovimento | null>(null)
+  const [erroEdicao, setErroEdicao] = useState<string | null>(null)
 
   const carregar = useCallback(async () => {
     if (!fazendaId) return
@@ -174,6 +193,51 @@ export function EstoqueCantina() {
     setPeriodoDe('')
     setPeriodoAte('')
     setHistorico({ item, movimentos: (data as MovimentoCantina[]) || [] })
+  }
+
+  const abrirCorrecao = (item: ItemEstoqueCantina, mov: MovimentoComSaldo) => {
+    setErroEdicao(null)
+    setEdicaoMov({
+      item,
+      mov,
+      quantidade: String(mov.quantidade).replace('.', ','),
+      custo: mov.custo_unitario == null ? '' : String(mov.custo_unitario).replace('.', ','),
+      motivo: '',
+    })
+  }
+
+  const salvarCorrecao = async () => {
+    if (!edicaoMov || !fazendaId) return
+    const { item, mov } = edicaoMov
+    const q = numeroBR(edicaoMov.quantidade)
+    const c = numeroBR(edicaoMov.custo)
+    if (q <= 0) return setErroEdicao('Informe uma quantidade maior que zero.')
+    if (c <= 0) return setErroEdicao('Informe um custo unitário maior que zero.')
+    if (!edicaoMov.motivo.trim()) return setErroEdicao('Informe o motivo da correção.')
+
+    // Trilha da correção: fica na própria observação do lançamento (valor antigo, novo e motivo)
+    const antigoCusto = mov.custo_unitario == null ? 'sem custo' : moeda(Number(mov.custo_unitario))
+    const trilha = `Corrigido em ${dataBR(hojeLocal())}: custo ${antigoCusto} → ${moeda(c)}/un; qtd ${numero(Number(mov.quantidade))} → ${numero(q)}. Motivo: ${edicaoMov.motivo.trim()}`
+    const obsBase = mov.observacao?.trim() ? `${mov.observacao.trim()} | ` : ''
+
+    setSubmitting(true)
+    setErroEdicao(null)
+    const { error } = await supabase
+      .from('movimentacoes_cantina')
+      .update({
+        quantidade: q,
+        custo_unitario: c,
+        valor_total: Math.round(q * c * 100) / 100,
+        observacao: obsBase + trilha,
+      })
+      .eq('id', mov.id)
+      .eq('fazenda_id', fazendaId)
+    setSubmitting(false)
+
+    if (error) return setErroEdicao(error.message)
+    setEdicaoMov(null)
+    await carregar()
+    await abrirHistorico(item)
   }
 
   const extrato = useMemo(() => (historico ? movimentosComSaldo(historico.movimentos) : []), [historico])
@@ -444,7 +508,8 @@ export function EstoqueCantina() {
                     <th className="py-2 pr-3">Detalhe</th>
                     <th className="py-2 pr-3 text-right">Quantidade</th>
                     <th className="py-2 pr-3 text-right">Custo un.</th>
-                    <th className="py-2 text-right">Saldo após</th>
+                    <th className="py-2 pr-3 text-right">Saldo após</th>
+                    <th className="py-2 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -458,12 +523,17 @@ export function EstoqueCantina() {
                         <td className="py-2 pr-3 text-content-muted">{[m.fornecedor, m.observacao].filter(Boolean).join(' · ') || '—'}</td>
                         <td className={`py-2 pr-3 text-right whitespace-nowrap ${m.variacao < 0 ? 'text-red-600' : ''}`}>{sinal} {numero(qtd)} {m.unidade || historico.item.unidade_medida}</td>
                         <td className="py-2 pr-3 text-right">{m.custo_unitario == null ? '—' : moeda(Number(m.custo_unitario))}</td>
-                        <td className={`py-2 text-right font-semibold ${m.saldo_apos < 0 ? 'text-red-600' : ''}`}>{numero(m.saldo_apos)}</td>
+                        <td className={`py-2 pr-3 text-right font-semibold ${m.saldo_apos < 0 ? 'text-red-600' : ''}`}>{numero(m.saldo_apos)}</td>
+                        <td className="py-2 text-right">
+                          {podeCorrigirMovimento(m) && (
+                            <Button size="sm" variant="secondary" onClick={() => abrirCorrecao(historico.item, m)}>Corrigir</Button>
+                          )}
+                        </td>
                       </tr>
                     )
                   })}
                   {extratoVisivel.length === 0 && (
-                    <tr><td colSpan={7} className="py-6 text-center text-content-muted">Nenhum lançamento no período.</td></tr>
+                    <tr><td colSpan={8} className="py-6 text-center text-content-muted">Nenhum lançamento no período.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -471,6 +541,44 @@ export function EstoqueCantina() {
             {temMovimentoDoApp && (
               <p className="text-xs text-content-muted">Lançamentos do aplicativo são gerados pelos registros de Entrada e Saída da Cantina: para corrigi-los, edite o registro nessas telas.</p>
             )}
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={!!edicaoMov}
+        onClose={() => setEdicaoMov(null)}
+        title={edicaoMov ? `Corrigir entrada: ${edicaoMov.item.nome}` : 'Corrigir entrada'}
+      >
+        {edicaoMov && (
+          <div className="space-y-3">
+            <p className="text-xs text-content-muted">
+              Lançamento de {dataBR(edicaoMov.mov.data)}. A correção recalcula o custo médio e o saldo do item.
+            </p>
+            <Input
+              label={`Quantidade (${edicaoMov.item.unidade_medida})`}
+              value={edicaoMov.quantidade}
+              onChange={(e) => setEdicaoMov({ ...edicaoMov, quantidade: e.target.value.replace(/[^0-9,.]/g, '') })}
+            />
+            <Input
+              label="Custo unitário (R$)"
+              value={edicaoMov.custo}
+              onChange={(e) => setEdicaoMov({ ...edicaoMov, custo: e.target.value.replace(/[^0-9,.]/g, '') })}
+            />
+            <p className="text-sm text-content">
+              Total: {moeda(numeroBR(edicaoMov.quantidade) * numeroBR(edicaoMov.custo))}
+            </p>
+            <Input
+              label="Motivo da correção"
+              value={edicaoMov.motivo}
+              onChange={(e) => setEdicaoMov({ ...edicaoMov, motivo: e.target.value })}
+              placeholder="Ex.: custo digitado errado na contagem inicial"
+            />
+            {erroEdicao && <p className="text-sm text-red-700">{erroEdicao}</p>}
+            <div className="flex gap-2 pt-2">
+              <Button onClick={salvarCorrecao} disabled={submitting}>{submitting ? 'Salvando...' : 'Salvar correção'}</Button>
+              <Button variant="secondary" onClick={() => setEdicaoMov(null)} disabled={submitting}>Cancelar</Button>
+            </div>
           </div>
         )}
       </Modal>

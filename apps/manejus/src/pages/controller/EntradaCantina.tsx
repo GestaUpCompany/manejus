@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
-import { Card, Input, EmptyState, PageSkeleton, Table, Thead, Tbody, Tr, Th, Td, SearchInput, FilterToolbar, FilterField } from '@gestaup/ui'
+import { Button, Card, Input, EmptyState, Modal, PageSkeleton, Table, Thead, Tbody, Tr, Th, Td, SearchInput, FilterToolbar, FilterField } from '@gestaup/ui'
 import { exportToXLSX } from '@gestaup/shared'
 import { ENTRADA_CANTINA_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDateTime } from '@gestaup/shared'
@@ -20,6 +20,25 @@ interface RegistroEntradaCantina {
   created_at: string
 }
 
+interface ItemEdicao {
+  nome: string
+  unidade: string
+  quantidade: string
+  custo: string
+}
+
+interface FormEdicao {
+  data: string
+  quem: string
+  observacao: string
+  itens: ItemEdicao[]
+}
+
+const numeroBR = (texto: string | undefined | null) => {
+  const n = Number(String(texto ?? '').replace(',', '.'))
+  return Number.isFinite(n) ? n : 0
+}
+
 export function EntradaCantina() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -30,6 +49,10 @@ export function EntradaCantina() {
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [editando, setEditando] = useState<RegistroEntradaCantina | null>(null)
+  const [edit, setEdit] = useState<FormEdicao>({ data: '', quem: '', observacao: '', itens: [] })
+  const [salvandoEdit, setSalvandoEdit] = useState(false)
+  const [erroEdit, setErroEdit] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistros()
@@ -80,6 +103,74 @@ export function EntradaCantina() {
     const dateB = new Date(b.data)
     return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
+
+  const abrirEdicao = (registro: RegistroEntradaCantina) => {
+    setErroEdit(null)
+    setEditando(registro)
+    setEdit({
+      data: String(registro.data).slice(0, 10),
+      quem: registro.quem_recebeu ?? '',
+      observacao: registro.observacao ?? '',
+      itens: (registro.itens_detalhe ?? []).map((item: any) => ({
+        nome: item.nome ?? '',
+        unidade: item.unidade_medida ?? '',
+        quantidade: String(item.quantidade ?? '').replace('.', ','),
+        custo: item.custo_unitario != null ? String(item.custo_unitario).replace('.', ',') : String(item.custoUnitario ?? ''),
+      })),
+    })
+  }
+
+  const setItemEdicao = (idx: number, parcial: Partial<ItemEdicao>) =>
+    setEdit((prev) => ({ ...prev, itens: prev.itens.map((it, i) => (i === idx ? { ...it, ...parcial } : it)) }))
+
+  const salvarEdicao = async () => {
+    if (!editando) return
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(edit.data)) return setErroEdit('Informe a data da entrada')
+    if (edit.itens.some((i) => numeroBR(i.quantidade) <= 0 || numeroBR(i.custo) <= 0)) {
+      return setErroEdit('Quantidade e custo unitário de cada item devem ser maiores que zero')
+    }
+
+    const originais = editando.itens_detalhe ?? []
+    const itensDetalhe = originais.map((orig: any, idx: number) => {
+      const e = edit.itens[idx]
+      const q = numeroBR(e.quantidade)
+      const c = numeroBR(e.custo)
+      return {
+        ...orig,
+        quantidade: String(q),
+        custo_unitario: c,
+        valor_total: Math.round(q * c * 100) / 100,
+        custoUnitario: e.custo,
+      }
+    })
+    // Mesmo formato do PWA: mapa "nome (unidade)" -> quantidade
+    const itens: Record<string, string> = {}
+    itensDetalhe.forEach((i: any) => {
+      itens[`${i.nome} (${i.unidade_medida})`] = i.quantidade
+    })
+
+    // Preserva a hora e o fuso originais; troca só a data
+    const dataIso = `${edit.data}${String(editando.data).slice(10)}`
+
+    setSalvandoEdit(true)
+    setErroEdit(null)
+    const { error } = await supabase
+      .from('registros_alimentacao')
+      .update({
+        data: dataIso,
+        quem_recebeu: edit.quem.trim() || null,
+        observacao: edit.observacao.trim() || null,
+        itens,
+        itens_detalhe: itensDetalhe,
+      })
+      .eq('id', editando.id)
+      .eq('fazenda_id', editando.fazenda_id)
+    setSalvandoEdit(false)
+
+    if (error) return setErroEdit(error.message)
+    setEditando(null)
+    await loadRegistros()
+  }
 
   if (loading) {
     return <PageSkeleton variant="list" />
@@ -173,6 +264,17 @@ export function EntradaCantina() {
                     </span>
                   </div>
                 </div>
+                <div className="mt-3 flex justify-end">
+                  <Button
+                    variant="secondary"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      abrirEdicao(registro)
+                    }}
+                  >
+                    Editar
+                  </Button>
+                </div>
               </Card>
             ))}
           </div>
@@ -192,6 +294,7 @@ export function EntradaCantina() {
                   <Th>Quem Recebeu</Th>
                   <Th>Itens</Th>
                   <Th>Observação</Th>
+                  <Th>Ações</Th>
                 </Tr>
               </Thead>
               <Tbody>
@@ -206,6 +309,17 @@ export function EntradaCantina() {
                     <Td>{registro.quem_recebeu || '-'}</Td>
                     <Td>{Array.isArray(registro.itens_detalhe) ? `${registro.itens_detalhe.length} item(s)` : '-'}</Td>
                     <Td className="text-content-muted max-w-xs truncate">{registro.observacao || '-'}</Td>
+                    <Td>
+                      <Button
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          abrirEdicao(registro)
+                        }}
+                      >
+                        Editar
+                      </Button>
+                    </Td>
                   </Tr>
                 ))}
               </Tbody>
@@ -213,6 +327,49 @@ export function EntradaCantina() {
           </Card>
         </>
       )}
+
+      <Modal isOpen={!!editando} onClose={() => setEditando(null)} title="Editar entrada na cantina">
+        <div className="space-y-4">
+          <Input label="Data" type="date" value={edit.data} onChange={(e) => setEdit({ ...edit, data: e.target.value })} />
+          <Input label="Quem recebeu" value={edit.quem} onChange={(e) => setEdit({ ...edit, quem: e.target.value })} />
+          <Input label="Observação" value={edit.observacao} onChange={(e) => setEdit({ ...edit, observacao: e.target.value })} />
+
+          {edit.itens.map((item, idx) => (
+            <div key={idx} className="space-y-2 rounded-lg border border-border-base p-3">
+              <p className="font-semibold text-content-strong">
+                {item.nome} <span className="text-sm text-content-muted">({item.unidade})</span>
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Quantidade"
+                  value={item.quantidade}
+                  onChange={(e) => setItemEdicao(idx, { quantidade: e.target.value.replace(/[^0-9,.]/g, '') })}
+                />
+                <Input
+                  label="Custo unitário (R$)"
+                  value={item.custo}
+                  onChange={(e) => setItemEdicao(idx, { custo: e.target.value.replace(/[^0-9,.]/g, '') })}
+                />
+              </div>
+              <p className="text-sm text-content">
+                Total do item:{' '}
+                {(numeroBR(item.quantidade) * numeroBR(item.custo)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </p>
+            </div>
+          ))}
+
+          {erroEdit && <p className="text-sm text-red-700">{erroEdit}</p>}
+
+          <div className="flex gap-2 pt-2">
+            <Button onClick={salvarEdicao} disabled={salvandoEdit}>
+              {salvandoEdit ? 'Salvando...' : 'Salvar'}
+            </Button>
+            <Button variant="secondary" onClick={() => setEditando(null)} disabled={salvandoEdit}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
