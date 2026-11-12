@@ -61,6 +61,21 @@ export const COMPARAVEIS = {
       formato: (v) => `${fmt(v, 1)}%`,
     },
   },
+  bebedouros: {
+    limpezas: { rotulo: 'limpezas', bom: 'neutro', valor: (m, u) => somaMeses(m, 'limpezas', u), formato: fmtInt },
+    registros: { rotulo: 'registros de checklist', bom: 'neutro', valor: (m, u) => somaMeses(m, 'registros', u), formato: fmtInt },
+    ocorrencias: { rotulo: 'ocorrências no checklist', bom: 'baixo', valor: (m, u) => somaMeses(m, 'ocorrencias', u), formato: fmtInt },
+    dentro_pct: {
+      rotulo: 'limpezas dentro da meta',
+      bom: 'alto',
+      absoluta: true,
+      valor: (m, u) => {
+        const r = razao(somaMeses(m, 'dentro_meta', u), somaMeses(m, 'avaliadas', u))
+        return r == null ? null : r * 100
+      },
+      formato: (v) => `${fmt(v, 0)}%`,
+    },
+  },
   pastagens: {
     movimentacoes: { rotulo: 'movimentações de pasto', bom: 'neutro', valor: (m, u) => somaMeses(m, 'movimentacoes', u), formato: fmtInt },
     dias_pasto: { rotulo: 'dias-pasto', bom: 'neutro', valor: (m, u) => somaMeses(m, 'dias_pasto', u), formato: fmtInt },

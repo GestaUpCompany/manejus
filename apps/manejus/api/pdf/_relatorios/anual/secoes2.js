@@ -215,3 +215,105 @@ export async function renderPastagensAnual(d) {
     ],
   })
 }
+
+// ─────────────────────────── Bebedouros ───────────────────────────
+export function resumoBebedouros(d) {
+  const k = d.kpis || {}
+  const limpezas = serie(d.mensal, 'limpezas', d.ultimo_mes)
+  return {
+    titulo: 'Bebedouros',
+    valor: fmtInt(k.limpezas),
+    rotulo: 'limpezas no ano',
+    linhas: [`${pct(k.dentro_meta, k.avaliadas)} dentro da meta`, `${plural(k.criticos, 'bebedouro crítico', 'bebedouros críticos')} agora`],
+    serie: limpezas,
+    anteriores: serieAnterior(d, 'limpezas'),
+    delta: comparador('bebedouros', d).delta('limpezas'),
+    tom: 'azul',
+    calendario: { rotulo: 'Bebedouros · limpezas', valores: limpezas, formato: L(0), tom: 'azul' },
+  }
+}
+
+export async function renderBebedourosAnual(d) {
+  const k = d.kpis || {}
+  const ult = d.ultimo_mes
+  const vis = { sec: 'Visão do ano' }
+  const limpezas = serie(d.mensal, 'limpezas', ult)
+  const ocorr = serie(d.mensal, 'ocorrencias', ult)
+  const mPico = pico(d.mensal, 'limpezas')
+  const cmp = comparador('bebedouros', d)
+  const pior = (d.mais_atrasados || [])[0]
+  const itens = (d.por_item || []).filter((x) => Number(x.valor) > 0).map((x) => ({ rotulo: x.label, valor: x.valor, extra: pct(x.valor, k.com_checklist) }))
+  const ocorrencias = (d.mais_ocorrencias || []).map((x) => ({ rotulo: x.label, valor: x.valor }))
+  const atrasados = (d.mais_atrasados || []).map((x) => ({ rotulo: x.label, valor: x.dias, texto: `${fmtInt(x.dias)} d`, extra: `meta ${fmtInt(x.meta)} d` }))
+  const semCheck = Number(k.registros) - Number(k.com_checklist)
+
+  const regua = reguaAnual(
+    'Mês a mês',
+    'Limpezas avaliadas = com meta cadastrada e limpeza anterior para comparar',
+    [
+      { rotulo: 'Limpezas', valores: limpezas, ano: fmtInt(k.limpezas), formato: L(0), tom: 'azul' },
+      { rotulo: 'Dentro da meta', valores: serie(d.mensal, 'dentro_meta', ult), ano: `${fmtInt(k.dentro_meta)} de ${fmtInt(k.avaliadas)}`, formato: L(0) },
+      { rotulo: 'Registros de checklist', valores: serie(d.mensal, 'registros', ult), ano: fmtInt(k.registros), formato: L(0), semCor: true },
+      { rotulo: 'Ocorrências', valores: ocorr, ano: fmtInt(k.com_ocorrencia), formato: L(0), tom: 'vermelho' },
+    ],
+    ult,
+  )
+
+  const notas = [
+    'Limpeza dentro da meta: intervalo desde a limpeza anterior do mesmo bebedouro até a meta cadastrada; acima da meta até 30% além dela; o resto é muito acima. A primeira limpeza e os bebedouros sem meta não entram no percentual.',
+    'A situação no fim do período usa a data de fechamento (hoje, no ano corrente) e os mesmos limites: atrasado até 30% além da meta, crítico acima disso.',
+    Number(k.registros) > 0 && semCheck > 0 ? `${plural(semCheck, 'registro não tem', 'registros não têm')} checklist respondido e ${semCheck === 1 ? 'fica' : 'ficam'} fora do cálculo de ocorrências.` : null,
+  ]
+
+  return renderSecaoAnual({
+    titulo: 'Bebedouros',
+    dados: d,
+    ...d.__marca,
+    blocos: [
+      {
+        html: kpisAnuais(
+          { rotulo: 'Limpezas no ano', valor: fmtInt(k.limpezas), delta: cmp.delta('limpezas'), contexto: `${fmtInt(k.bebedouros_limpos)} de ${plural(k.bebedouros, 'bebedouro', 'bebedouros')} · intervalo médio ${k.intervalo_medio_dias != null ? `${fmt(k.intervalo_medio_dias, 1)} dias` : '—'}${mPico ? ` · pico em ${nomeMes(mPico.mes)}` : ''}` },
+          [
+            { rotulo: 'Limpezas dentro da meta', valor: pct(k.dentro_meta, k.avaliadas), delta: cmp.delta('dentro_pct'), contexto: `${fmtInt(k.dentro_meta)} de ${fmtInt(k.avaliadas)} avaliadas · ${fmtInt(k.acima_meta)} acima · ${fmtInt(k.muito_acima_meta)} muito acima`, tom: 'azul' },
+            { rotulo: 'Situação no fim do período', valor: `${fmtInt(k.em_dia)} em dia`, contexto: `${fmtInt(k.atrasados)} atrasados · ${fmtInt(k.criticos)} críticos${Number(k.sem_registro) > 0 ? ` · ${fmtInt(k.sem_registro)} sem registro` : ''}`, tom: Number(k.criticos) > 0 ? 'vermelho' : undefined },
+            { rotulo: 'Checklist com ocorrência', valor: pct(k.com_ocorrencia, k.com_checklist), delta: cmp.delta('ocorrencias'), contexto: `${fmtInt(k.com_ocorrencia)} de ${fmtInt(k.com_checklist)} registros com checklist`, tom: 'dourado' },
+          ],
+        ),
+        ...vis,
+      },
+      {
+        html: tendencias(
+          [
+            { titulo: 'Limpezas', total: fmtInt(k.limpezas), valores: limpezas, anteriores: serieAnterior(d, 'limpezas'), tom: 'azul' },
+            { titulo: 'Ocorrências no checklist', total: fmtInt(k.com_ocorrencia), valores: ocorr, anteriores: serieAnterior(d, 'ocorrencias'), tom: 'vermelho' },
+          ],
+          ult,
+          cmp.anoAnterior,
+        ),
+        ...vis,
+      },
+      {
+        html: atencao([
+          Number(k.criticos) > 0 && pior ? `${plural(k.criticos, 'bebedouro com atraso crítico', 'bebedouros com atraso crítico')} no fim do período; o mais atrasado é ${pior.label}, há ${fmtInt(pior.dias)} dias sem limpeza (meta ${fmtInt(pior.meta)}).` : null,
+          variacaoForte(cmp, 'ocorrencias'),
+          concentracao(ocorrencias, k.com_ocorrencia, { oque: 'das ocorrências do ano' }),
+          lacuna(limpezas, ult, { oque: 'limpeza lançada' }),
+        ]),
+        ...vis,
+      },
+      { html: regua, ...vis },
+      {
+        html: colunas(
+          [
+            ranking('Itens do checklist com problema', 'Registros · % dos checklists', itens, { tom: 'vermelho' }),
+            ranking('Bebedouros com mais ocorrências', 'Ocorrências no ano', ocorrencias, { tom: 'dourado' }),
+            ranking('Mais tempo sem limpeza', 'Dias desde a última limpeza · meta', atrasados, { tom: 'vermelho' }),
+          ],
+          '1fr 1fr 1fr',
+        ),
+        ...vis,
+      },
+      { html: rodape(notas), ...vis },
+    ],
+  })
+}

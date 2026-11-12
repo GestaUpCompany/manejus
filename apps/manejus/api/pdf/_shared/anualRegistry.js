@@ -6,7 +6,7 @@ import {
   renderResumoAnual,
   renderRodeioAnual,
 } from '../_relatorios/anual/secoes.js'
-import { renderMaternidadeAnual, renderPastagensAnual } from '../_relatorios/anual/secoes2.js'
+import { renderBebedourosAnual, renderMaternidadeAnual, renderPastagensAnual } from '../_relatorios/anual/secoes2.js'
 
 // Seções do Infográfico Anual. `rpc` é chamada no servidor com (p_fazenda_id, p_ano) e devolve só
 // agregados (12 meses + índices do ano). A ordem das seções é a escolhida no modal.
@@ -42,6 +42,12 @@ export const ANUAL_REGISTRY = {
     rpc: 'get_infografico_anual_rodeio',
     render: renderRodeioAnual,
     hasData: (d) => Number(d?.kpis?.rodeios) > 0,
+  },
+  bebedouros: {
+    title: 'Bebedouros',
+    rpc: 'get_infografico_anual_bebedouros',
+    render: renderBebedourosAnual,
+    hasData: (d) => Number(d?.kpis?.limpezas) > 0 || Number(d?.kpis?.registros) > 0,
   },
   pastagens: {
     title: 'Manejo de Pastagens',

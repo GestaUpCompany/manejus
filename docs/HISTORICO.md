@@ -1,5 +1,12 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Infográfico Anual, fase 2B: Bebedouros (12/11/2026)
+
+- **RPC** (migration `20261112200000_infografico_anual_fase2b_bebedouros.sql`, só função nova): `get_infografico_anual_bebedouros`. O relatório mensal de bebedouros não tem RPC de dados (o cálculo roda no navegador, em `relatorioBebedouros/calculos.ts`), então ela lê direto das tabelas repetindo as regras: só bebedouros permitidos (`get_bebedouros_permitidos_relatorio_fazenda`, que também valida o acesso), intervalo da limpeza contra a limpeza anterior do mesmo bebedouro (pode ser do ano passado), faixas dentro/acima (até meta x 1,3)/muito acima, situação no fim do período (em dia, atrasado, crítico, sem registro, sem meta) e ocorrência = checklist com item respondido "não".
+- **PDF**: `renderBebedourosAnual` em `anual/secoes2.js`; comparação com o ano anterior em `analise.js` (`bebedouros`: limpezas, ocorrências, % dentro da meta em p.p.). Fixture com a saída real da RPC. Validado na fazenda de testes: 76 limpezas, 19 registros e 10 bebedouros iguais às tabelas; dentro + acima + muito acima = 66 avaliadas.
+- **Reverter**: `supabase/rollbacks/20261112200000_infografico_anual_fase2b_bebedouros_rollback.sql`.
+- **Falta**: 2C (Estoque, Cantina, Almoxarifado e Farmácia).
+
 ## Infográfico Anual, fase 2A: Pastagens e Maternidade (12/11/2026)
 
 - **Escopo**: a fase 2 do plano sai em lotes. Este é o 2A (RPCs que já tinham `_fazenda` mensal). Faltam o 2B (Bebedouros, sem RPC mensal: o loader roda no navegador, então precisa de RPC nova) e o 2C (Estoque, Cantina, Almoxarifado e Farmácia).

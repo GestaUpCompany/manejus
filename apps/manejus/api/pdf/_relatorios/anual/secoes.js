@@ -32,7 +32,7 @@ import {
   tendencias,
 } from './comum.js'
 
-import { resumoMaternidade, resumoPastagens } from './secoes2.js'
+import { resumoBebedouros, resumoMaternidade, resumoPastagens } from './secoes2.js'
 
 const nomeMes = (m) => (m ? MESES[Number(m) - 1] : '—')
 const soma = (arr) => arr.reduce((s, v) => s + (Number(v) || 0), 0)
