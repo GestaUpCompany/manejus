@@ -40,6 +40,17 @@ describe('Infográfico Anual: análise', () => {
     expect(variacaoForte(cmp, 'mortes')).toBe('Mortes 100% acima do mesmo período de 2025.')
   })
 
+  it('maternidade: perda de crias em pontos percentuais e lotação ponderada pelos dias-pasto', async () => {
+    const { comparador } = await import(ANALISE)
+    const mat = { ano: 2026, ultimo_mes: 2, mensal: [{ mes: 1, crias: 10, crias_mortas: 2 }, { mes: 2, crias: 10, crias_mortas: 2 }], __anterior: { mensal: [{ mes: 1, crias: 10, crias_mortas: 1 }, { mes: 2, crias: 10, crias_mortas: 1 }] } }
+    const cm = comparador('maternidade', mat)
+    expect(cm.atual('taxa_perda')).toBeCloseTo(20)
+    expect(cm.delta('taxa_perda')).toEqual({ texto: '▲ +10,00 p.p. vs 2025', tom: 'ruim' })
+    // 30 dias a 1 UA/ha + 10 dias a 3 UA/ha = (30 + 30) / 40 = 1,5 UA/ha
+    const past = { ano: 2026, ultimo_mes: 2, mensal: [{ mes: 1, ua_ha: 1, dias_pasto: 30 }, { mes: 2, ua_ha: 3, dias_pasto: 10 }] }
+    expect(comparador('pastagens', past).atual('ua_ha')).toBeCloseTo(1.5)
+  })
+
   it('PDF da seção mostra selo, tendência com o ano anterior e pontos de atenção', async () => {
     const { renderMorteAnual } = await import(SECOES)
     const d = {

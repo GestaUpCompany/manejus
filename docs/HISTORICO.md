@@ -1,5 +1,14 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Infográfico Anual, fase 2A: Pastagens e Maternidade (12/11/2026)
+
+- **Escopo**: a fase 2 do plano sai em lotes. Este é o 2A (RPCs que já tinham `_fazenda` mensal). Faltam o 2B (Bebedouros, sem RPC mensal: o loader roda no navegador, então precisa de RPC nova) e o 2C (Estoque, Cantina, Almoxarifado e Farmácia).
+- **RPCs** (migration `20261112180000_infografico_anual_fase2a.sql`, só funções novas): `get_infografico_anual_maternidade` e `get_infografico_anual_pastagens`, mesmo padrão da fase 1 (chamam a `_fazenda` mensal do ano civil, mesmo controle de acesso).
+- **Maternidade**: regras iguais às de `relatorioMaternidade/agregacao.ts` (cria perdida = Aborto ou Natimorto; parto = grupo de gêmeos pelo vínculo; intercorrência = Cesárea, Auxiliado, Aborto ou Natimorto; peso médio só de crias vivas). A RPC mensal limita a 5.000 linhas; `truncado` avisa e o PDF mostra a ressalva. Parto é sazonal: o calendário da abertura não conta mês vazio como falta de lançamento.
+- **Pastagens**: movimentação = troca de pasto (`registros_pastagens`). Ocupação (`lote_pasto_historico`) é recortada no ano e distribuída pelos meses em dias corridos (dias-pasto); ocupação aberta conta até hoje. UA/ha do ano e do mês = média ponderada pelos dias-pasto, nunca média das médias.
+- **Front/PDF**: `anual/secoes2.js` (renderers e resumos), métricas comparáveis em `anual/analise.js` (`maternidade`: perda de crias em p.p.; `pastagens`: lotação ponderada), `SECOES_ANUAIS` com 7 seções, fixture com a saída real das duas RPCs. Validado na fazenda de testes: 34 crias e 13 movimentações iguais à contagem direta; 96 dias-pasto em novembro = 8 pastos x 12 dias.
+- **Reverter**: `supabase/rollbacks/20261112180000_infografico_anual_fase2a_rollback.sql` (só remove as duas funções).
+
 ## Infográfico Anual, fase 1: RPCs agregadas, categorias de mortalidade e rebanho mensal (11-12/11/2026)
 
 - **Objetivo**: infográfico anual com visão macro (12 meses + índices do ano), sem enviar dados pelo navegador. Período = ano civil (ano corrente até hoje, Cuiabá); o Infográfico Mensal continua como está.

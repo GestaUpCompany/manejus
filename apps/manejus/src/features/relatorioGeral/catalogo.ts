@@ -75,8 +75,9 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
 ]
 
 // Seções com versão anual (RPCs get_infografico_anual_*, api/pdf/_shared/anualRegistry.js).
-// Fase 1: as demais entram conforme ganharem RPC e renderer anuais.
-export const SECOES_ANUAIS = ['combustivel', 'consumo', 'clima', 'morte', 'rodeio'] as const
+// Fase 1: combustível, consumo, clima, mortes e rodeio. Fase 2A: pastagens e maternidade.
+// As demais entram conforme ganharem RPC e renderer anuais.
+export const SECOES_ANUAIS = ['combustivel', 'consumo', 'clima', 'morte', 'rodeio', 'pastagens', 'maternidade'] as const
 export type SecaoAnual = (typeof SECOES_ANUAIS)[number]
 
 export function ehSecaoAnual(id: TipoRelatorioGeral): id is SecaoAnual {

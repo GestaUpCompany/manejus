@@ -32,6 +32,8 @@ import {
   tendencias,
 } from './comum.js'
 
+import { resumoMaternidade, resumoPastagens } from './secoes2.js'
+
 const nomeMes = (m) => (m ? MESES[Number(m) - 1] : '—')
 const soma = (arr) => arr.reduce((s, v) => s + (Number(v) || 0), 0)
 const pct = (parte, todo, casas = 0) => (Number(todo) > 0 ? `${fmt((Number(parte) / Number(todo)) * 100, casas)}%` : '—')
@@ -594,6 +596,8 @@ export async function renderRodeioAnual(d) {
 
 // ─────────────────────────── O ano em números (abertura) ───────────────────────────
 export const RESUMOS = {
+  maternidade: resumoMaternidade,
+  pastagens: resumoPastagens,
   combustivel: resumoCombustivel,
   consumo: resumoConsumo,
   clima: resumoClima,

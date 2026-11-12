@@ -45,6 +45,34 @@ export const COMPARAVEIS = {
     },
     perda: { rotulo: 'perda estimada', bom: 'baixo', valor: (m, u) => somaMeses(m, 'perda', u), formato: fmtMoeda },
   },
+  maternidade: {
+    partos: { rotulo: 'partos', bom: 'neutro', valor: (m, u) => somaMeses(m, 'partos', u), formato: fmtInt },
+    crias: { rotulo: 'crias nascidas', bom: 'neutro', valor: (m, u) => somaMeses(m, 'crias', u), formato: fmtInt },
+    crias_mortas: { rotulo: 'crias perdidas', bom: 'baixo', valor: (m, u) => somaMeses(m, 'crias_mortas', u), formato: fmtInt },
+    intercorrencias: { rotulo: 'partos com intercorrência', bom: 'baixo', valor: (m, u) => somaMeses(m, 'intercorrencias', u), formato: fmtInt },
+    taxa_perda: {
+      rotulo: 'perda de crias',
+      bom: 'baixo',
+      absoluta: true,
+      valor: (m, u) => {
+        const r = razao(somaMeses(m, 'crias_mortas', u), somaMeses(m, 'crias', u))
+        return r == null ? null : r * 100
+      },
+      formato: (v) => `${fmt(v, 1)}%`,
+    },
+  },
+  pastagens: {
+    movimentacoes: { rotulo: 'movimentações de pasto', bom: 'neutro', valor: (m, u) => somaMeses(m, 'movimentacoes', u), formato: fmtInt },
+    dias_pasto: { rotulo: 'dias-pasto', bom: 'neutro', valor: (m, u) => somaMeses(m, 'dias_pasto', u), formato: fmtInt },
+    cabecas: { rotulo: 'cabeças movimentadas', bom: 'neutro', valor: (m, u) => somaMeses(m, 'cabecas', u), formato: fmtInt },
+    // Média da lotação de cada mês ponderada pelos dias-pasto do mês.
+    ua_ha: {
+      rotulo: 'taxa de lotação',
+      bom: 'neutro',
+      valor: (m, u) => razao(somaMeses(m, (x) => (num(x.ua_ha) ?? 0) * (Number(x.dias_pasto) || 0), u), somaMeses(m, (x) => (x.ua_ha != null ? Number(x.dias_pasto) || 0 : 0), u)),
+      formato: (v) => fmt(v, 2),
+    },
+  },
   rodeio: {
     rodeios: { rotulo: 'rodeios', bom: 'alto', valor: (m, u) => somaMeses(m, 'rodeios', u), formato: fmtInt },
     alertas: { rotulo: 'alertas', bom: 'baixo', valor: (m, u) => somaMeses(m, (x) => (Number(x.alertas_sanitarios) || 0) + (Number(x.pendencias_infra) || 0), u), formato: fmtInt },

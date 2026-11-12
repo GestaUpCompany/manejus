@@ -7,7 +7,6 @@ const COMPOSER_PATH = '../../../api/pdf/_shared/reportComposer.js'
 const HANDLER_PATH = '../../../api/pdf/_relatorios/anual.js'
 
 // Retorno real das RPCs get_infografico_anual_* na fazenda de testes (2026, até novembro).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const exemplo = exemploJson as Record<string, any>
 const marca = { fazendaNome: 'Fazenda Teste', logoGestao: '', logoFazenda: '' }
 

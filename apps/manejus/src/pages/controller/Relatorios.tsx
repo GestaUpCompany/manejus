@@ -444,9 +444,9 @@ export function Relatorios() {
             <div className="relative flex h-full flex-col justify-between gap-6">
               <div className="max-w-xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-100">Relatório consolidado</p>
-                <h2 className="mt-2 text-2xl font-bold">Infográfico Mensal</h2>
+                <h2 className="mt-2 text-2xl font-bold">Infográfico</h2>
                 <p className="mt-2 text-sm text-green-50/90">
-                  Abastecimento, Consumo, Bebedouros e Mortes em um único PDF, com período comum, ordem personalizada e capa institucional.
+                  Visão mensal (Abastecimento, Consumo, Bebedouros, Mortes e mais) ou anual, com totais, médias e comparação com o ano anterior, em um único PDF com ordem personalizada e capa institucional.
                 </p>
               </div>
               <div>
