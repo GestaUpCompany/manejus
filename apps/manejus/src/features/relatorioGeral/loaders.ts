@@ -32,6 +32,7 @@ import { classificarABC as classificarABCCantina, DADOS_CANTINA_VAZIO, type Dado
 import { DADOS_ALMOXARIFADO_VAZIO, type DadosRelatorioAlmoxarifado } from '../relatorioAlmoxarifado/agregacao'
 import { calcularResumoMaternidade, DADOS_MATERNIDADE_VAZIO, type DadosRelatorioMaternidade, type ResumoMaternidade } from '../relatorioMaternidade/agregacao'
 import { calcularResumoFarmacia, DADOS_FARMACIA_VAZIO, type DadosRelatorioFarmacia, type ResumoFarmacia } from '../relatorioFarmacia/agregacao'
+import { precoKgCategoria, rotuloCategoria } from '../relatorioMorte/categorias'
 import type { TipoRelatorioGeral } from './catalogo'
 import type { DadosPDFBoletimRebanho } from './boletimRebanho'
 
@@ -79,17 +80,6 @@ export type PayloadRelatorioGeral =
   | { tipo: 'maternidade'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; registros_total: number; resumo: ResumoMaternidade } }
   | { tipo: 'farmacia'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; resumo: ResumoFarmacia } }
   | { tipo: 'boletim_rebanho'; dados: DadosPDFBoletimRebanho & { fazendaNome: string; fazendaLogoUrl?: string | null } }
-
-const PRECOS_KG_DEFAULT: Record<string, number> = {
-  Bezerro: 12,
-  Bezerra: 11.5,
-  Novilha: 11,
-  Garrote: 9.5,
-  'Boi Magro': 10,
-  'Boi Gordo': 11.67,
-  Vaca: 10.83,
-  Touro: 15,
-}
 
 function agregarAbastecimento(registros: RegistroAbastecimento[], chave: (r: RegistroAbastecimento) => string) {
   const valores = new Map<string, number>()
@@ -294,7 +284,8 @@ async function carregarMortes(
   })
   if (error) throw error
   const dados = data?.dados as DadosMorteRpc
-  const linhas = dados?.linhas ?? []
+  // Categoria pelo rótulo normalizado: "bezerro" e "Bezerro" viram uma linha só e casam com precos_categorias.
+  const linhas = (dados?.linhas ?? []).map((linha) => ({ ...linha, categoria: rotuloCategoria(linha.categoria) }))
   const { data: precosData } = await supabase.from('precos_categorias').select('categoria, preco_kg').eq('fazenda_id', fazenda.id)
   const precos = Object.fromEntries((precosData ?? []).map((item) => [item.categoria, Number(item.preco_kg)]))
   const porCausa = agregarMortes(linhas, (linha) => linha.causa_morte)
@@ -306,7 +297,7 @@ async function carregarMortes(
   const pesoTotal = pesos.reduce((soma, peso) => soma + peso, 0)
   const perdaEstimada = linhas.reduce((soma, linha) => {
     if (linha.peso_vivo == null) return soma
-    return soma + linha.peso_vivo * (precos[linha.categoria ?? ''] ?? PRECOS_KG_DEFAULT[linha.categoria ?? ''] ?? 10)
+    return soma + linha.peso_vivo * precoKgCategoria(linha.categoria, precos)
   }, 0)
   const causas = [...new Set(linhas.map((linha) => linha.causa_morte).filter((item): item is string => Boolean(item)))].sort()
   const categorias = [...new Set(linhas.map((linha) => linha.categoria).filter((item): item is string => Boolean(item)))].sort()
