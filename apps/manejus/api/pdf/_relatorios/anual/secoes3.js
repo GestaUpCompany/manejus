@@ -25,10 +25,16 @@ const CONFIG = {
     consumoNota: 'Consumo = baixas e estornos de medicamentos e vacinas com controle de estoque, em R$ ao custo do movimento.',
     entidade: 'medicamentos',
   },
+  estoque: {
+    titulo: 'Estoque de Insumos',
+    consumo: 'Consumo',
+    consumoNota: 'Consumo = baixas e consumos de insumos e formulações, em R$ ao custo do movimento (ou ao custo atual do item quando o movimento não traz custo). Entradas = compras; formulações fabricadas aparecem separadas, como produção.',
+    entidade: 'itens',
+  },
   cantina: {
     titulo: 'Cantina',
     consumo: 'Consumo',
-    consumoNota: 'Consumo = baixas e estornos dos itens da cozinha com controle de estoque, em R$ ao custo do movimento. Refeições servidas e custo por refeição ficam no relatório mensal.',
+    consumoNota: 'Consumo = baixas e estornos dos itens da cozinha com controle de estoque, em R$ ao custo do movimento. O custo por refeição é o consumo de estoque dividido pelas refeições servidas no mesmo período.',
     entidade: 'itens',
   },
 }
@@ -72,11 +78,64 @@ export function renderEstoqueAnual(secao) {
     }))
     const nomesAlerta = (d.em_alerta || []).slice(0, 3).map((i) => i.label).join(', ')
 
+    const extraBlocos = []
+    if (secao === 'estoque') {
+      const origemNome = { saida_insumos: 'Produção de formulações', suplementacao: 'Suplementação', fabrica_confinamento: 'Fábrica do confinamento' }
+      extraBlocos.push({
+        html: colunas([
+          ranking('Consumo por origem', 'R$ no ano', (d.por_origem || []).map((o) => ({ rotulo: origemNome[o.label] ?? o.label, valor: o.valor, texto: fmtMoeda(o.valor) })), { tom: 'dourado' }),
+          ranking(
+            'Insumos × formulações',
+            'Consumo no ano · valor em estoque',
+            [
+              { rotulo: 'Insumos', valor: k.consumo_valor_insumos, texto: fmtMoeda(k.consumo_valor_insumos), extra: `estoque ${fmtMoeda(k.valor_estoque_insumos)}` },
+              { rotulo: 'Formulações', valor: k.consumo_valor_formulacoes, texto: fmtMoeda(k.consumo_valor_formulacoes), extra: `estoque ${fmtMoeda(k.valor_estoque_formulacoes)}` },
+            ],
+            { tom: 'azul' },
+          ),
+        ]),
+        ...vis,
+      })
+    }
+    if (d.refeicoes) {
+      const rf = d.refeicoes
+      const rk = rf.kpis || {}
+      extraBlocos.push(
+        {
+          html: kpisAnuais(
+            { rotulo: 'Refeições servidas', valor: fmtInt(rk.refeicoes), contexto: `Café ${fmtInt(rk.cafe_manha)} · lanche ${fmtInt(rk.lanches)} · almoço ${fmtInt(rk.almocos)} · jantar ${fmtInt(rk.jantares)}` },
+            [
+              { rotulo: 'Custo por refeição', valor: rk.custo_por_refeicao != null ? fmtMoeda(rk.custo_por_refeicao) : '—', contexto: 'Consumo de estoque dividido pelas refeições do ano', tom: 'dourado' },
+              { rotulo: 'Marmitas', valor: fmtInt(rk.marmitas), contexto: fmtMoeda(rk.marmitas_valor), tom: 'azul' },
+              { rotulo: 'Pratos feitos', valor: fmtInt(rk.pratos_feitos), contexto: fmtMoeda(rk.pratos_feitos_valor), tom: 'azul' },
+            ],
+          ),
+          ...vis,
+        },
+        {
+          html: reguaAnual(
+            'Refeições mês a mês',
+            'Registros da cozinha (cantina, marmita e prato feito)',
+            [
+              { rotulo: 'Refeições servidas', valores: serie(rf.mensal, 'refeicoes', ult), ano: fmtInt(rk.refeicoes), formato: L(0) },
+              { rotulo: 'Custo por refeição (R$)', valores: serie(rf.mensal, 'custo_por_refeicao', ult), ano: rk.custo_por_refeicao != null ? fmt(rk.custo_por_refeicao, 2) : '—', formato: L(2), tom: 'dourado', semCor: true },
+              { rotulo: 'Marmitas', valores: serie(rf.mensal, 'marmitas', ult), ano: fmtInt(rk.marmitas), formato: L(0), tom: 'azul' },
+              { rotulo: 'Pratos feitos', valores: serie(rf.mensal, 'pratos_feitos', ult), ano: fmtInt(rk.pratos_feitos), formato: L(0), tom: 'azul' },
+            ],
+            ult,
+          ),
+          ...vis,
+        },
+      )
+    }
+    const prodLinha = Number(k.producao_valor) > 0 ? [{ rotulo: 'Produção de formulações (R$)', valores: serie(d.mensal, 'producao_valor', ult), ano: fmtMoeda(k.producao_valor).replace('R$ ', ''), formato: L(0), tom: 'verde' }] : []
+
     const regua = reguaAnual(
       'Mês a mês',
       'Valores em R$ ao custo de cada movimento',
       [
         { rotulo: 'Entradas (R$)', valores: entradas, ano: fmtMoeda(k.entradas_valor).replace('R$ ', ''), formato: L(0), tom: 'azul' },
+        ...prodLinha,
         { rotulo: `${c.consumo} (R$)`, valores: consumo, ano: fmtMoeda(k.consumo_valor).replace('R$ ', ''), formato: L(0), tom: 'dourado' },
         { rotulo: 'Movimentos', valores: serie(d.mensal, 'movimentos', ult), ano: fmtInt(k.movimentos), formato: L(0), semCor: true },
       ],
@@ -87,6 +146,7 @@ export function renderEstoqueAnual(secao) {
       c.consumoNota,
       'Valor em estoque = saldo atual (nunca negativo) x custo médio atual, posição de hoje. O saldo inicial e final do período por item está no relatório mensal.',
       'Ajustes de saldo não contam como entrada nem como consumo.',
+      secao === 'estoque' ? 'O insumo usado para produzir uma formulação conta no consumo do insumo, e a formulação é consumida depois na suplementação: o mesmo valor aparece nas duas pontas (veja o consumo por origem). Itens em alerta incluem os de saldo negativo, que o relatório mensal conta à parte.' : null,
       Number(k.sem_custo) > 0 ? `${plural(k.sem_custo, 'item tem', 'itens têm')} saldo sem custo cadastrado e entra no estoque com R$ 0,00.` : null,
     ]
 
@@ -99,7 +159,7 @@ export function renderEstoqueAnual(secao) {
           html: kpisAnuais(
             { rotulo: `${c.consumo} no ano`, valor: fmtMoeda(k.consumo_valor), delta: cmp.delta('consumo'), contexto: `${plural(k.itens_com_consumo, 'item com consumo', 'itens com consumo')}${mPico ? ` · pico em ${nomeMes(mPico.mes)} (${fmtMoeda(mPico.consumo_valor)})` : ''}` },
             [
-              { rotulo: 'Entradas no ano', valor: fmtMoeda(k.entradas_valor), delta: cmp.delta('entradas'), contexto: Number(k.devolucoes_valor) > 0 ? `Devoluções ao estoque: ${fmtMoeda(k.devolucoes_valor)}` : `${plural(k.movimentos, 'movimento', 'movimentos')} no ano`, tom: 'azul' },
+              { rotulo: 'Entradas no ano', valor: fmtMoeda(k.entradas_valor), delta: cmp.delta('entradas'), contexto: Number(k.devolucoes_valor) > 0 ? `Devoluções ao estoque: ${fmtMoeda(k.devolucoes_valor)}` : Number(k.producao_valor) > 0 ? `Compras · produção de formulações: ${fmtMoeda(k.producao_valor)}` : `${plural(k.movimentos, 'movimento', 'movimentos')} no ano`, tom: 'azul' },
               { rotulo: 'Valor em estoque hoje', valor: fmtMoeda(k.valor_estoque), contexto: `${plural(k.itens, 'item controlado', 'itens controlados')}${Number(k.sem_custo) > 0 ? ` · ${fmtInt(k.sem_custo)} sem custo` : ''}` },
               { rotulo: 'Itens em alerta', valor: fmtInt(k.em_alerta), contexto: Number(k.em_alerta) > 0 ? `${fmtInt(k.negativos)} com saldo negativo · abaixo ou no mínimo` : 'Nenhum abaixo do mínimo', tom: Number(k.em_alerta) > 0 ? 'vermelho' : undefined },
             ],
@@ -139,6 +199,7 @@ export function renderEstoqueAnual(secao) {
           ),
           ...vis,
         },
+        ...extraBlocos,
         { html: rodape(notas), ...vis },
       ],
     })
@@ -151,3 +212,5 @@ export const renderCantinaAnual = renderEstoqueAnual('cantina')
 export const resumoAlmoxarifado = resumoEstoque('almoxarifado')
 export const resumoFarmacia = resumoEstoque('farmacia')
 export const resumoCantina = resumoEstoque('cantina')
+export const renderEstoqueInsumosAnual = renderEstoqueAnual('estoque')
+export const resumoEstoqueInsumos = resumoEstoque('estoque')

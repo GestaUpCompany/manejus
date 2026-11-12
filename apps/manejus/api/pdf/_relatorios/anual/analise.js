@@ -51,6 +51,7 @@ export const COMPARAVEIS = {
     },
     perda: { rotulo: 'perda estimada', bom: 'baixo', valor: (m, u) => somaMeses(m, 'perda', u), formato: fmtMoeda },
   },
+  estoque: ESTOQUE_COMPARAVEIS,
   almoxarifado: ESTOQUE_COMPARAVEIS,
   farmacia: ESTOQUE_COMPARAVEIS,
   cantina: ESTOQUE_COMPARAVEIS,

@@ -33,7 +33,7 @@ import {
 } from './comum.js'
 
 import { resumoBebedouros, resumoMaternidade, resumoPastagens } from './secoes2.js'
-import { resumoAlmoxarifado, resumoCantina, resumoFarmacia } from './secoes3.js'
+import { resumoAlmoxarifado, resumoCantina, resumoEstoqueInsumos, resumoFarmacia } from './secoes3.js'
 
 const nomeMes = (m) => (m ? MESES[Number(m) - 1] : '—')
 const soma = (arr) => arr.reduce((s, v) => s + (Number(v) || 0), 0)
@@ -598,6 +598,7 @@ export async function renderRodeioAnual(d) {
 // ─────────────────────────── O ano em números (abertura) ───────────────────────────
 export const RESUMOS = {
   bebedouros: resumoBebedouros,
+  estoque: resumoEstoqueInsumos,
   almoxarifado: resumoAlmoxarifado,
   farmacia: resumoFarmacia,
   cantina: resumoCantina,

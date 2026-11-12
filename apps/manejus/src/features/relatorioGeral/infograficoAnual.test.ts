@@ -25,6 +25,18 @@ describe('Infográfico Anual', () => {
     expect(Object.keys(RESUMOS).sort()).toEqual([...SECOES_ANUAIS].sort())
   })
 
+  it('Cantina mostra as refeições e o Estoque mostra produção e origem do consumo', async () => {
+    const reg = await registry()
+    const cantina = await reg.cantina.render({ ...exemplo.cantina, __marca: marca })
+    expect(cantina).toContain('Refeições servidas')
+    expect(cantina).toContain('Custo por refeição')
+    expect(cantina).toContain('832')
+    const estoque = await reg.estoque.render({ ...exemplo.estoque, __marca: marca })
+    expect(estoque).toContain('Consumo por origem')
+    expect(estoque).toContain('Produção de formulações')
+    expect(estoque).toContain('Insumos × formulações')
+  })
+
   it('cada seção chama a RPC anual própria', async () => {
     const reg = await registry()
     for (const secao of SECOES_ANUAIS) expect(reg[secao].rpc).toBe(`get_infografico_anual_${secao}`)
