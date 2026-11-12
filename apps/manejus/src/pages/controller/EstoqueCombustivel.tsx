@@ -303,7 +303,7 @@ export function EstoqueCombustivel() {
       const { data, error } = await supabase
         .from('movimentacoes_combustivel')
         .select(`
-          id, tipo_movimentacao, quantidade_l, preco_por_litro, valor_total, data, origem, fornecedor, observacao, created_at, registro_abastecimento_id,
+          id, tipo_movimentacao, quantidade_l, preco_por_litro, valor_total, data, origem, fornecedor, observacao, created_at, registro_abastecimento_id, saldo_anterior, saldo_posterior,
           registro_abastecimento:registros_abastecimento!movimentacoes_combustivel_registro_abastecimento_id_fkey(id, maquina_veiculo)
         `)
         .eq('tanque_id', tanque.id)
@@ -835,6 +835,11 @@ export function EstoqueCombustivel() {
                                     return `${formatDate(mov.data)} · ${label}${maquina ? ` · ${maquina}` : ''}`
                                   })()}
                                 </p>
+                                {mov.saldo_anterior != null && mov.saldo_posterior != null && (
+                                  <p className="text-xs text-content-muted">
+                                    Saldo: {Number(mov.saldo_anterior).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} → {Number(mov.saldo_posterior).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} L
+                                  </p>
+                                )}
                               </div>
                               <div className="text-right">
                                 <p className="text-sm font-semibold text-content-strong">
