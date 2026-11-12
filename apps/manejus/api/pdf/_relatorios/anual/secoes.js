@@ -2,13 +2,15 @@
 // get_infografico_anual_<secao> + __marca ({ fazendaNome, logoGestao, logoFazenda }).
 //
 // Estrutura fixa de cada seção (visão macro, sem registro diário):
-//   1. KPIs com hierarquia: um destaque + três secundários, cada um com contexto.
-//   2. Régua anual: métricas × meses com mapa de calor por linha e a coluna do ano.
-//   3. Rankings do ano em barras (HTML) e, quando a forma da curva importa, um gráfico.
-//   4. Notas de rodapé com as ressalvas de método.
+//   1. Veredito: KPIs com destaque, contexto e variação contra o mesmo período do ano anterior.
+//   2. Tendência: mini-gráficos de 12 meses com o ano anterior em cinza por trás.
+//   3. Exceções: "Pontos de atenção" gerados por regra (analise.js).
+//   4. Consulta: régua métricas × meses, rankings do ano e notas de método.
 
+import { comparador, concentracao, lacuna, mesForaDoPadrao, serieAnterior, variacaoForte } from './analise.js'
 import {
   CORES,
+  atencao,
   MESES,
   TONS,
   colunas,
@@ -27,6 +29,7 @@ import {
   rodape,
   serie,
   tabela,
+  tendencias,
 } from './comum.js'
 
 const nomeMes = (m) => (m ? MESES[Number(m) - 1] : '—')
@@ -54,6 +57,8 @@ export function resumoCombustivel(d) {
     rotulo: 'abastecidos no ano',
     linhas: [`${fmtInt(k.abastecimentos)} abastecimentos`, `Entradas: ${fmtInt(k.entradas_l)} L`],
     serie: litros,
+    anteriores: serieAnterior(d, 'litros'),
+    delta: comparador('combustivel', d).delta('litros'),
     tom: 'verde',
     calendario: { rotulo: 'Combustível · abastecimentos', valores: serie(d.mensal, 'abastecimentos', d.ultimo_mes), formato: L(0) },
   }
@@ -68,6 +73,8 @@ export async function renderCombustivelAnual(d) {
   const vis = { sec: 'Visão do ano' }
   const det = { sec: 'Tanques' }
   const porComb = (c) => serie(d.mensal, (m) => m?.por_combustivel?.[c] ?? 0, ult)
+  const cmp = comparador('combustivel', d)
+  const abast = serie(d.mensal, 'abastecimentos', ult)
 
   const regua = reguaAnual(
     'Mês a mês',
@@ -103,13 +110,34 @@ export async function renderCombustivelAnual(d) {
     blocos: [
       {
         html: kpisAnuais(
-          { rotulo: 'Litros abastecidos', valor: `${fmtInt(k.litros)} L`, contexto: `${plural(k.abastecimentos, 'abastecimento', 'abastecimentos')} · ${plural(k.maquinas, 'máquina', 'máquinas')} · ${cobertura(litros, ult)}` },
+          { rotulo: 'Litros abastecidos', valor: `${fmtInt(k.litros)} L`, delta: cmp.delta('litros'), contexto: `${plural(k.abastecimentos, 'abastecimento', 'abastecimentos')} · ${plural(k.maquinas, 'máquina', 'máquinas')} · ${cobertura(litros, ult)}` },
           [
             { rotulo: 'Mês de maior consumo', valor: mPico ? nomeMes(mPico.mes) : '—', contexto: mPico ? `${fmtInt(mPico.litros)} L · ${pct(mPico.litros, k.litros)} do ano` : 'Sem abastecimento', tom: 'azul' },
-            { rotulo: 'Comprado para os tanques', valor: `${fmtInt(k.entradas_l)} L`, contexto: fmtMoeda(k.entradas_valor), tom: 'dourado' },
+            { rotulo: 'Comprado para os tanques', valor: `${fmtInt(k.entradas_l)} L`, delta: cmp.delta('entradas'), contexto: fmtMoeda(k.entradas_valor), tom: 'dourado' },
             { rotulo: 'Saldo dos tanques no fim', valor: `${fmtInt(k.saldo_final_l)} L`, contexto: `Início do ano: ${fmtInt(k.saldo_inicial_l)} L` },
           ],
         ),
+        ...vis,
+      },
+      {
+        html: tendencias(
+          [
+            { titulo: 'Litros abastecidos', total: `${fmtInt(k.litros)} L`, valores: litros, anteriores: serieAnterior(d, 'litros') },
+            { titulo: 'Abastecimentos', total: fmtInt(k.abastecimentos), valores: abast, anteriores: serieAnterior(d, 'abastecimentos'), tom: 'azul' },
+            { titulo: 'Compras para os tanques', total: `${fmtInt(k.entradas_l)} L`, valores: serie(d.mensal, 'entradas_l', ult), anteriores: serieAnterior(d, 'entradas_l'), tom: 'dourado' },
+          ],
+          ult,
+          cmp.anoAnterior,
+        ),
+        ...vis,
+      },
+      {
+        html: atencao([
+          variacaoForte(cmp, 'litros'),
+          mesForaDoPadrao(litros, { nome: 'litros abastecidos', formato: (v) => `${fmtInt(v)} L` }),
+          concentracao(maquinas, k.litros, { oque: 'dos litros abastecidos no ano' }),
+          lacuna(abast, ult, { oque: 'abastecimento lançado' }),
+        ]),
         ...vis,
       },
       { html: regua, ...vis },
@@ -132,6 +160,8 @@ export function resumoConsumo(d) {
     rotulo: 'de custo alimentar no ano',
     linhas: [`${fmt(k.ms_kg_cab_dia, 2)} kg MS/cab/dia · ${fmt(k.pct_pv, 2)}% PV`, `${fmt(Number(k.ms_total_kg) / 1000, 1)} t de MS fornecidas`],
     serie: serie(d.mensal, 'custo_total', d.ultimo_mes),
+    anteriores: serieAnterior(d, 'custo_total'),
+    delta: comparador('consumo', d).delta('custo'),
     tom: 'dourado',
     calendario: { rotulo: 'Consumo · registros de trato', valores: serie(d.mensal, 'registros', d.ultimo_mes), formato: L(0) },
   }
@@ -145,6 +175,8 @@ export async function renderConsumoAnual(d) {
   const temConf = (d.mensal || []).some((m) => Number(m.confinamento?.lote_dias) > 0)
   const temPasto = (d.mensal || []).some((m) => Number(m.pasto?.lote_dias) > 0)
   const dias = serie(d.mensal, 'lote_dias', ult)
+  const cmp = comparador('consumo', d)
+  const custoMes = serie(d.mensal, 'custo_total', ult)
   // Índice do ano de cada manejo: média dos meses ponderada pelas cabeça-dias de cada mês.
   const anoManejo = (manejo, campo) => {
     let soma = 0
@@ -203,13 +235,35 @@ export async function renderConsumoAnual(d) {
     blocos: [
       {
         html: kpisAnuais(
-          { rotulo: 'Custo alimentar do ano', valor: fmtMoeda(k.custo_total), contexto: `${fmtMoeda(k.custo_cab_dia)} por cabeça/dia · ${fmtInt(k.cab_dias)} cabeça-dias` },
+          { rotulo: 'Custo alimentar do ano', valor: fmtMoeda(k.custo_total), delta: cmp.delta('custo'), contexto: `${fmtMoeda(k.custo_cab_dia)} por cabeça/dia · ${fmtInt(k.cab_dias)} cabeça-dias` },
           [
-            { rotulo: 'Consumo de matéria seca', valor: `${fmt(k.ms_kg_cab_dia, 2)} kg`, contexto: `por cab./dia · ${fmt(Number(k.ms_total_kg) / 1000, 1)} t fornecidas no ano` },
+            { rotulo: 'Consumo de matéria seca', valor: `${fmt(k.ms_kg_cab_dia, 2)} kg`, delta: cmp.delta('ms_cab'), contexto: `por cab./dia · ${fmt(Number(k.ms_total_kg) / 1000, 1)} t fornecidas no ano` },
             { rotulo: 'Consumo em % do PV', valor: `${fmt(k.pct_pv, 2)}%`, contexto: `Matéria natural: ${fmt(k.mn_kg_cab_dia, 2)} kg/cab/dia` },
-            { rotulo: 'Rebanho tratado', valor: `${fmtInt(k.cabecas_medias)} cab.`, contexto: `média por dia · ${plural(k.lotes, 'lote', 'lotes')} · ${cobertura(dias, ult)}`, tom: 'azul' },
+            { rotulo: 'Rebanho tratado', valor: `${fmtInt(k.cabecas_medias)} cab.`, delta: cmp.delta('cab_dias'), contexto: `média por dia · ${plural(k.lotes, 'lote', 'lotes')} · ${cobertura(dias, ult)}`, tom: 'azul' },
           ],
         ),
+        ...vis,
+      },
+      {
+        html: tendencias(
+          [
+            { titulo: 'Custo alimentar (R$)', total: fmtMoeda(k.custo_total), valores: custoMes, anteriores: serieAnterior(d, 'custo_total'), tom: 'dourado' },
+            { titulo: 'MS fornecida (t)', total: `${fmt(Number(k.ms_total_kg) / 1000, 1)} t`, valores: serie(d.mensal, (m) => (Number(m?.ms_total_kg) || 0) / 1000, ult), anteriores: serieAnterior(d, (m) => (Number(m?.ms_total_kg) || 0) / 1000) },
+            { titulo: 'Cabeça-dias tratadas', total: fmtInt(k.cab_dias), valores: serie(d.mensal, 'cab_dias', ult), anteriores: serieAnterior(d, 'cab_dias'), tom: 'azul' },
+          ],
+          ult,
+          cmp.anoAnterior,
+        ),
+        ...vis,
+      },
+      {
+        html: atencao([
+          variacaoForte(cmp, 'custo_cab'),
+          variacaoForte(cmp, 'custo'),
+          mesForaDoPadrao(custoMes, { nome: 'custo alimentar', formato: fmtMoeda }),
+          concentracao(custoLotes, k.custo_total, { oque: 'do custo alimentar do ano' }),
+          lacuna(serie(d.mensal, 'registros', ult), ult, { oque: 'registro de trato' }),
+        ]),
         ...vis,
       },
       { html: regua, ...vis },
@@ -241,6 +295,8 @@ export function resumoClima(d) {
     rotulo: 'de chuva no ano',
     linhas: [`${plural(k.dias_com_chuva, 'dia', 'dias')} com chuva`, `Mais chuvoso: ${nomeMes(k.mes_mais_chuvoso)}`],
     serie: chuva,
+    anteriores: serieAnterior(d, 'mm_fazenda'),
+    delta: comparador('clima', d).delta('mm'),
     tom: 'azul',
     calendario: { rotulo: 'Clima · leituras', valores: serie(d.mensal, 'leituras', d.ultimo_mes), formato: L(0), tom: 'azul' },
   }
@@ -256,6 +312,7 @@ export async function renderClimaAnual(d) {
   const temTemp = (d.mensal || []).some((m) => m.temp_media != null)
   const temUmid = (d.mensal || []).some((m) => m.umidade_media != null)
   const mesChuvoso = (d.mensal || []).find((m) => Number(m.mes) === Number(k.mes_mais_chuvoso))
+  const cmp = comparador('clima', d)
 
   const g = grafico({
     id: 'anual-clima-chuva',
@@ -268,6 +325,9 @@ export async function renderClimaAnual(d) {
     datasets: [
       { label: 'Chuva no mês', data: chuva, cor: CORES.azulClaro },
       { label: 'Acumulado', data: acumulado, cor: CORES.azul, tipo: 'line', eixo: 'y2' },
+      ...(d.__anterior
+        ? [{ label: `Chuva em ${Number(d.ano) - 1}`, data: (serieAnterior(d, 'mm_fazenda') || []).slice(0, Number(ult) || 12), cor: '#b9c3be', tipo: 'line' }]
+        : []),
     ],
   })
 
@@ -294,13 +354,21 @@ export async function renderClimaAnual(d) {
     blocos: [
       {
         html: kpisAnuais(
-          { rotulo: 'Chuva acumulada', valor: `${fmt(k.mm_total, 1)} mm`, contexto: `Média de ${plural(k.pluviometros, 'pluviômetro', 'pluviômetros')} · ${cobertura(chuva, ult)}` },
+          { rotulo: 'Chuva acumulada', valor: `${fmt(k.mm_total, 1)} mm`, delta: cmp.delta('mm'), contexto: `Média de ${plural(k.pluviometros, 'pluviômetro', 'pluviômetros')} · ${cobertura(chuva, ult)}` },
           [
             { rotulo: 'Mês mais chuvoso', valor: nomeMes(k.mes_mais_chuvoso), contexto: mesChuvoso ? `${fmt(mesChuvoso.mm_fazenda, 1)} mm · ${pct(mesChuvoso.mm_fazenda, k.mm_total)} do ano` : '—', tom: 'azul' },
-            { rotulo: 'Dias com chuva', valor: fmtInt(k.dias_com_chuva), contexto: `${plural(k.dias_forte, 'forte', 'fortes')} · ${plural(k.dias_torrencial, 'torrencial', 'torrenciais')} · maior dia ${fmt(k.maior_dia_mm, 1)} mm`, tom: 'azul' },
+            { rotulo: 'Dias com chuva', valor: fmtInt(k.dias_com_chuva), delta: cmp.delta('dias'), contexto: `${plural(k.dias_forte, 'forte', 'fortes')} · ${plural(k.dias_torrencial, 'torrencial', 'torrenciais')} · maior dia ${fmt(k.maior_dia_mm, 1)} mm`, tom: 'azul' },
             { rotulo: 'Temperatura média', valor: k.temp_media != null ? `${fmt(k.temp_media, 1)} °C` : '—', contexto: k.temp_min != null ? `Mín. ${fmt(k.temp_min, 1)} · máx. ${fmt(k.temp_max, 1)} °C` : 'Sem leitura de temperatura', tom: 'vermelho' },
           ],
         ),
+        ...vis,
+      },
+      {
+        html: atencao([
+          variacaoForte(cmp, 'mm'),
+          Number(k.dias_torrencial) > 0 ? `${plural(k.dias_torrencial, 'dia teve', 'dias tiveram')} chuva torrencial (50 mm ou mais numa região); o maior foi de ${fmt(k.maior_dia_mm, 1)} mm.` : null,
+          lacuna(serie(d.mensal, 'leituras', ult), ult, { oque: 'leitura de chuva lançada' }),
+        ]),
         ...vis,
       },
       { html: regua, ...vis },
@@ -320,6 +388,8 @@ export function resumoMorte(d) {
     rotulo: 'mortes no ano',
     linhas: [`Taxa: ${k.taxa_mortalidade != null ? `${fmt(k.taxa_mortalidade, 2)}%` : '—'}${k.rebanho_estimado ? ' (rebanho estimado)' : ''}`, `Perda: ${fmtMoeda(k.perda_estimada)}`],
     serie: mortes,
+    anteriores: serieAnterior(d, 'mortes'),
+    delta: comparador('morte', d).delta('mortes'),
     tom: 'vermelho',
     // Mês sem morte não é falta de lançamento: fica fora da contagem de meses sem registro.
     calendario: { rotulo: 'Mortalidade · mortes', valores: mortes, formato: L(0), tom: 'vermelho', eventual: true },
@@ -335,13 +405,14 @@ export async function renderMorteAnual(d) {
   const mortes = serie(d.mensal, 'mortes', ult)
   const mPico = pico(d.mensal, 'mortes')
   const principal = (d.por_causa || [])[0]
+  const cmp = comparador('morte', d)
 
   const regua = reguaAnual(
     'Mês a mês',
-    estimado ? 'Rebanho no início do mês, estimado pelo histórico de movimentações' : 'Rebanho no início do mês',
+    `${estimado ? 'Rebanho no início do mês, estimado pelo histórico' : 'Rebanho no início do mês'} · cor da taxa: escala fixa até 1% ao mês`,
     [
       { rotulo: 'Mortes', valores: mortes, ano: fmtInt(k.mortes), formato: L(0), tom: 'vermelho' },
-      { rotulo: 'Taxa de mortalidade (%)', valores: serie(d.mensal, 'taxa', ult), ano: k.taxa_mortalidade != null ? `${fmt(k.taxa_mortalidade, 2)}%` : '—', formato: L(2), tom: 'vermelho' },
+      { rotulo: 'Taxa de mortalidade (%)', valores: serie(d.mensal, 'taxa', ult), ano: k.taxa_mortalidade != null ? `${fmt(k.taxa_mortalidade, 2)}%` : '—', formato: L(2), tom: 'vermelho', escalaMax: 1 },
       { rotulo: `Rebanho${estimado ? ' (estimado)' : ''}`, valores: serie(d.mensal, 'rebanho', ult), ano: `${fmtInt(k.rebanho_medio)} méd.`, formato: L(0), semCor: true },
       { rotulo: 'Perda estimada (R$)', valores: serie(d.mensal, 'perda', ult), ano: fmtMoeda(k.perda_estimada).replace('R$ ', ''), formato: L(0), tom: 'dourado' },
     ],
@@ -389,13 +460,32 @@ export async function renderMorteAnual(d) {
     blocos: [
       {
         html: kpisAnuais(
-          { rotulo: 'Mortes no ano', valor: fmtInt(k.mortes), contexto: mPico ? `Pico em ${nomeMes(mPico.mes)} (${fmtInt(mPico.mortes)}) · ${cobertura(mortes, ult)}` : 'Nenhuma morte registrada' },
+          { rotulo: 'Mortes no ano', valor: fmtInt(k.mortes), delta: cmp.delta('mortes'), contexto: mPico ? `Pico em ${nomeMes(mPico.mes)} (${fmtInt(mPico.mortes)}) · ${cobertura(mortes, ult)}` : 'Nenhuma morte registrada' },
           [
-            { rotulo: 'Taxa de mortalidade', valor: k.taxa_mortalidade != null ? `${fmt(k.taxa_mortalidade, 2)}%` : '—', contexto: `Sobre rebanho médio${estimado ? ' estimado' : ''} de ${fmtInt(k.rebanho_medio)} cab.`, tom: 'vermelho' },
-            { rotulo: 'Perda estimada', valor: fmtMoeda(k.perda_estimada), contexto: `${fmtInt(k.peso_total)} kg vivos perdidos`, tom: 'dourado' },
+            { rotulo: 'Taxa de mortalidade', valor: k.taxa_mortalidade != null ? `${fmt(k.taxa_mortalidade, 2)}%` : '—', delta: cmp.delta('taxa'), contexto: `Sobre rebanho médio${estimado ? ' estimado' : ''} de ${fmtInt(k.rebanho_medio)} cab.`, tom: 'vermelho' },
+            { rotulo: 'Perda estimada', valor: fmtMoeda(k.perda_estimada), delta: cmp.delta('perda'), contexto: `${fmtInt(k.peso_total)} kg vivos perdidos`, tom: 'dourado' },
             { rotulo: 'Causa principal', valor: k.causa_principal ?? '—', contexto: principal ? `${plural(principal.valor, 'morte', 'mortes')} · ${pct(principal.valor, k.mortes)} do total` : '', tom: 'vermelho' },
           ],
         ),
+        ...vis,
+      },
+      {
+        html: tendencias(
+          [
+            { titulo: 'Mortes', total: fmtInt(k.mortes), valores: mortes, anteriores: serieAnterior(d, 'mortes'), tom: 'vermelho' },
+            { titulo: 'Perda estimada (R$)', total: fmtMoeda(k.perda_estimada), valores: serie(d.mensal, 'perda', ult), anteriores: serieAnterior(d, 'perda'), tom: 'dourado' },
+          ],
+          ult,
+          cmp.anoAnterior,
+        ),
+        ...vis,
+      },
+      {
+        html: atencao([
+          variacaoForte(cmp, 'mortes'),
+          mesForaDoPadrao(mortes, { nome: 'mortes' }),
+          concentracao(causas, k.mortes, { oque: 'das mortes do ano' }),
+        ]),
         ...vis,
       },
       { html: regua, ...vis },
@@ -416,6 +506,8 @@ export function resumoRodeio(d) {
     rotulo: 'rodeios no ano',
     linhas: [`${fmt(k.pct_rodeios_com_alerta, 0)}% com alerta`, `Escore médio do gado: ${fmt(k.escore_gado_medio, 1)}`],
     serie: rodeios,
+    anteriores: serieAnterior(d, 'rodeios'),
+    delta: comparador('rodeio', d).delta('rodeios'),
     tom: 'verde',
     calendario: { rotulo: 'Rodeio · rodeios', valores: rodeios, formato: L(0) },
   }
@@ -428,6 +520,8 @@ export async function renderRodeioAnual(d) {
   const rodeios = serie(d.mensal, 'rodeios', ult)
   const totalAlertas = (Number(k.alertas_sanitarios) || 0) + (Number(k.pendencias_infra) || 0)
   const avaliados = (Number(k.dentro_meta) || 0) + (Number(k.fora_meta) || 0)
+  const cmp = comparador('rodeio', d)
+  const alertasMes = serie(d.mensal, (m) => (Number(m?.alertas_sanitarios) || 0) + (Number(m?.pendencias_infra) || 0), ult)
 
   const regua = reguaAnual(
     'Mês a mês',
@@ -451,15 +545,35 @@ export async function renderRodeioAnual(d) {
     blocos: [
       {
         html: kpisAnuais(
-          { rotulo: 'Rodeios realizados', valor: fmtInt(k.rodeios), contexto: `${plural(k.lotes, 'lote', 'lotes')} · ${plural(k.pastos, 'pasto', 'pastos')} · ${cobertura(rodeios, ult)}` },
+          { rotulo: 'Rodeios realizados', valor: fmtInt(k.rodeios), delta: cmp.delta('rodeios'), contexto: `${plural(k.lotes, 'lote', 'lotes')} · ${plural(k.pastos, 'pasto', 'pastos')} · ${cobertura(rodeios, ult)}` },
           [
             { rotulo: 'Rodeios com alerta', valor: `${fmt(k.pct_rodeios_com_alerta, 0)}%`, contexto: `${plural(totalAlertas, 'alerta', 'alertas')}: ${fmtInt(k.alertas_sanitarios)} sanitários · ${fmtInt(k.pendencias_infra)} infra`, tom: totalAlertas > 0 ? 'vermelho' : undefined },
-            { rotulo: 'Escore médio do gado', valor: fmt(k.escore_gado_medio, 1), contexto: `Fezes: ${fmt(k.escore_fezes_medio, 1)} · escala de 1 a 5` },
+            { rotulo: 'Escore médio do gado', valor: fmt(k.escore_gado_medio, 1), delta: cmp.delta('escore'), contexto: `Fezes: ${fmt(k.escore_fezes_medio, 1)} · escala de 1 a 5` },
             avaliados > 0
               ? { rotulo: 'Dentro da meta de intervalo', valor: pct(k.dentro_meta, avaliados), contexto: `${fmtInt(k.dentro_meta)} dentro · ${fmtInt(k.fora_meta)} fora`, tom: Number(k.fora_meta) > 0 ? 'dourado' : undefined }
               : { rotulo: 'Cabeças por rodeio', valor: fmtInt(k.cabecas_media), contexto: 'média de cabeças contadas', tom: 'azul' },
           ],
         ),
+        ...vis,
+      },
+      {
+        html: tendencias(
+          [
+            { titulo: 'Rodeios', total: fmtInt(k.rodeios), valores: rodeios, anteriores: serieAnterior(d, 'rodeios') },
+            { titulo: 'Alertas (sanitários + infra)', total: fmtInt(totalAlertas), valores: alertasMes, anteriores: serieAnterior(d, (m) => (Number(m?.alertas_sanitarios) || 0) + (Number(m?.pendencias_infra) || 0)), tom: 'vermelho' },
+          ],
+          ult,
+          cmp.anoAnterior,
+        ),
+        ...vis,
+      },
+      {
+        html: atencao([
+          variacaoForte(cmp, 'alertas'),
+          variacaoForte(cmp, 'rodeios'),
+          concentracao(local(d.por_pasto), totalAlertas, { oque: 'dos alertas do ano' }),
+          lacuna(rodeios, ult, { oque: 'rodeio lançado' }),
+        ]),
         ...vis,
       },
       { html: regua, ...vis },
@@ -494,7 +608,7 @@ export async function renderResumoAnual(d) {
   const cards = itens
     .map(
       (r) =>
-        `<div class="rs-card rs-${r.tom}"><div class="ak-rot">${escapeHtml(r.titulo)}</div><div class="rs-val">${escapeHtml(r.valor)}</div><div class="rs-rot">${escapeHtml(r.rotulo)}</div>${miniBarras(r.serie, ult, r.tom)}<div class="rs-lin">${r.linhas.map((l) => `<span>${escapeHtml(l)}</span>`).join('')}</div></div>`,
+        `<div class="rs-card rs-${r.tom}"><div class="ak-rot">${escapeHtml(r.titulo)}</div><div class="rs-val">${escapeHtml(r.valor)}</div><div class="rs-rot">${escapeHtml(r.rotulo)}</div>${r.delta ? `<div class="ak-delta ak-d-${r.delta.tom}">${escapeHtml(r.delta.texto)}</div>` : ''}${miniBarras(r.serie, ult, r.tom, r.anteriores)}<div class="rs-lin">${r.linhas.map((l) => `<span>${escapeHtml(l)}</span>`).join('')}</div></div>`,
     )
     .join('')
   const calendario = reguaAnual(
@@ -518,14 +632,14 @@ export async function renderResumoAnual(d) {
     ? `Meses sem registro no período: ${semRegistro.map((x) => `${x.t} ${x.n}`).join(' · ')}. Mês vazio pode ser falta de lançamento, e não ausência do evento.`
     : ''
 
-  const css = `<style>.rs-grid{display:grid;grid-template-columns:repeat(${Math.min(itens.length, 5) || 1},1fr);gap:3mm;margin-bottom:6mm}.rs-card{border:1px solid #dce5df;border-top:3px solid #0b6a42;border-radius:6px;padding:3mm 3.2mm 2.5mm}.rs-azul{border-top-color:#1E3A5F}.rs-vermelho{border-top-color:#b5413a}.rs-val{font-size:25px;font-weight:700;color:#26352e;margin-top:1.5mm;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rs-rot{font-size:10px;color:#7a8981;margin-bottom:2.5mm}.rs-lin{display:flex;flex-direction:column;gap:.6mm;margin-top:2.2mm;font-size:10px;color:#30463a}.rs-card .mb{height:30mm}</style>`
+  const css = `<style>.rs-grid{display:grid;grid-template-columns:repeat(${Math.min(itens.length, 5) || 1},1fr);gap:3mm;margin-bottom:6mm}.rs-card{border:1px solid #dce5df;border-top:3px solid #0b6a42;border-radius:6px;padding:3mm 3.2mm 2.5mm}.rs-azul{border-top-color:#1E3A5F}.rs-vermelho{border-top-color:#b5413a}.rs-val{font-size:25px;font-weight:700;color:#26352e;margin-top:1.5mm;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rs-rot{font-size:10px;color:#7a8981;margin-bottom:2.5mm}.rs-lin{display:flex;flex-direction:column;gap:.6mm;margin-top:2.2mm;font-size:10px;color:#30463a}.rs-card .mb{height:26mm}.rs-card .ak-delta{margin:0 0 2mm}</style>`
 
   return renderSecaoAnual({
     titulo: 'O Ano em Números',
     dados: d,
     ...d.__marca,
     blocos: [
-      { html: `${css}<div class="rs-grid">${cards}</div>`, sec: 'Resumo' },
+      { html: `${css}${itens.some((r) => r.anteriores) ? `<div class="td-leg" style="justify-content:flex-end;margin:-2mm 0 1.5mm"><i></i>${escapeHtml(String(d.ano))} <b></b>${escapeHtml(String(Number(d.ano) - 1))} (mesmo período na comparação)</div>` : ''}<div class="rs-grid">${cards}</div>`, sec: 'Resumo' },
       { html: calendario, sec: 'Resumo' },
       { html: rodape([leitura]), sec: 'Resumo' },
     ],

@@ -24,6 +24,16 @@ const logo = (arquivo) => {
 }
 const marca = { fazendaNome: "Fazenda Gesta'Up (testes)", logoGestao: logo('manejus360.png'), logoFazenda: '' }
 const secoes = Object.keys(ANUAL_REGISTRY).filter((s) => dados[s])
+
+// PREVIEW_ANTERIOR=sintetico: ano anterior artificial (valores mensais × 0,8, deslocados 1 mês) só para ver
+// os selos de variação e o ano anterior nos gráficos. Sem a variável, segue o real: sem ano anterior.
+if (process.env.PREVIEW_ANTERIOR === 'sintetico') {
+  const escala = (v) => (typeof v === 'number' ? Math.round(v * 0.8 * 100) / 100 : v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, escala(x)])) : v)
+  for (const s of secoes) {
+    const mensal = (dados[s].mensal || []).map((m) => ({ ...escala(m), mes: ((Number(m.mes) + 10) % 12) + 1 }))
+    dados[s] = { ...dados[s], __anterior: { ano: dados[s].ano - 1, ultimo_mes: 12, mensal } }
+  }
+}
 const memMb = () => Math.round(process.memoryUsage().rss / 1048576)
 
 const t0 = Date.now()

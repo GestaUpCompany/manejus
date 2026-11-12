@@ -71,9 +71,14 @@ export default async function handler(req, res) {
       body.imagemCapaPath ? downloadImageDataUrl(supabase, body.imagemCapaPath) : Promise.resolve(capaPadraoDataUrl()),
       Promise.all(
         body.secoes.map(async (secao) => {
-          const { data, error } = await supabase.rpc(ANUAL_REGISTRY[secao].rpc, { p_fazenda_id: body.fazendaId, p_ano: body.ano })
-          if (error) throw new Error(`${ANUAL_REGISTRY[secao].title}: ${error.message}`)
-          return { secao, data }
+          const rpc = ANUAL_REGISTRY[secao].rpc
+          const [atual, anterior] = await Promise.all([
+            supabase.rpc(rpc, { p_fazenda_id: body.fazendaId, p_ano: body.ano }),
+            // Ano anterior só para a comparação (mesmo período, recortado no renderer). Falha aqui não derruba o PDF.
+            body.ano - 1 >= ANO_MINIMO ? supabase.rpc(rpc, { p_fazenda_id: body.fazendaId, p_ano: body.ano - 1 }) : Promise.resolve({ data: null }),
+          ])
+          if (atual.error) throw new Error(`${ANUAL_REGISTRY[secao].title}: ${atual.error.message}`)
+          return { secao, data: { ...atual.data, __anterior: anterior.error ? null : anterior.data ?? null } }
         }),
       ),
     ])

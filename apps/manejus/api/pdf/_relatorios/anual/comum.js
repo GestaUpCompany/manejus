@@ -76,7 +76,7 @@ export const TONS = {
  */
 export function kpisAnuais(destaque, outros) {
   const card = (k, hero) =>
-    `<div class="ak${hero ? ' ak-hero' : ''}${k.tom ? ` ak-${k.tom}` : ''}"><div class="ak-rot">${escapeHtml(k.rotulo)}</div><div class="ak-val">${escapeHtml(k.valor)}</div>${k.contexto ? `<div class="ak-ctx">${escapeHtml(k.contexto)}</div>` : ''}</div>`
+    `<div class="ak${hero ? ' ak-hero' : ''}${k.tom ? ` ak-${k.tom}` : ''}"><div class="ak-rot">${escapeHtml(k.rotulo)}</div><div class="ak-val">${escapeHtml(k.valor)}</div>${k.delta ? `<div class="ak-delta ak-d-${k.delta.tom}">${escapeHtml(k.delta.texto)}</div>` : ''}${k.contexto ? `<div class="ak-ctx">${escapeHtml(k.contexto)}</div>` : ''}</div>`
   return `<div class="ak-row">${card(destaque, true)}${outros.filter(Boolean).map((k) => card(k)).join('')}</div>`
 }
 
@@ -87,7 +87,7 @@ export function kpisAnuais(destaque, outros) {
  *            formato: (v) => string, tom?: keyof TONS, sub?: boolean, semCor?: boolean }]
  */
 export function reguaAnual(titulo, nota, linhas, ultimoMes) {
-  const validas = linhas.filter(Boolean)
+  const validas = linhas.filter((l) => l && (l.manter || (l.valores || []).some((v) => num(v) != null && num(v) !== 0)))
   if (!validas.length) return ''
   const ult = Math.max(1, Math.min(12, Number(ultimoMes) || 12))
   const head = `<thead><tr><th class="rg-met">Métrica</th>${MESES_ABREV.map((m, i) => `<th class="${i >= ult ? 'rg-fut' : ''}">${m}</th>`).join('')}<th class="rg-ano">Ano</th></tr></thead>`
@@ -101,7 +101,8 @@ export function reguaAnual(titulo, nota, linhas, ultimoMes) {
           if (v === undefined) return '<td class="rg-fut"></td>'
           if (v == null) return '<td class="rg-nulo">·</td>'
           if (v === 0) return '<td class="rg-zero"></td>'
-          const a = l.semCor || max === 0 ? 0 : 0.12 + 0.78 * (Math.abs(v) / max)
+          const ref = l.escalaMax ?? max
+          const a = l.semCor || ref === 0 ? 0 : 0.12 + 0.78 * Math.min(1, Math.abs(v) / ref)
           const claro = a > 0.55
           return `<td style="background:rgba(${tom.rgb},${a.toFixed(2)})${claro ? ';color:#fff' : ''}">${escapeHtml(l.formato(v))}</td>`
         })
@@ -128,13 +129,55 @@ export function ranking(titulo, nota, itens, { tom = 'verde', max = 8, formato =
 }
 
 /** Mini-barras de 12 meses (resumo do ano). */
-export function miniBarras(valores, ultimoMes, tom = 'verde') {
+export function miniBarras(valores, ultimoMes, tom = 'verde', anteriores = null) {
   const ult = Math.max(1, Math.min(12, Number(ultimoMes) || 12))
   const vals = MESES_ABREV.map((_, i) => (i < ult ? Math.max(0, num(valores?.[i]) ?? 0) : null))
-  const max = Math.max(0, ...vals.filter((v) => v != null)) || 1
+  // O ano anterior aparece nos 12 meses (inclusive os que este ano ainda não chegaram).
+  const ants = anteriores ? MESES_ABREV.map((_, i) => Math.max(0, num(anteriores?.[i]) ?? 0)) : null
+  const max = Math.max(0, ...vals.filter((v) => v != null), ...(ants ?? [])) || 1
+  const h = (v) => (v == null || v === 0 ? 0 : Math.max(5, (v / max) * 100).toFixed(0))
   return `<div class="mb">${vals
-    .map((v, i) => `<span class="mb-c${v == null ? ' mb-fut' : ''}" title="${MESES_ABREV[i]}"><i style="height:${v == null ? 0 : v === 0 ? 0 : Math.max(6, (v / max) * 100).toFixed(0)}%;background:${TONS[tom].cor}"></i></span>`)
+    .map((v, i) => `<span class="mb-c${v == null ? ' mb-fut' : ''}" title="${MESES_ABREV[i]}">${ants ? `<b style="height:${h(ants[i])}%"></b>` : ''}<i style="height:${h(v)}%;background:${TONS[tom].cor}"></i></span>`)
     .join('')}</div><div class="mb-eixo">${MESES_ABREV.map((m) => `<span>${m[0]}</span>`).join('')}</div>`
+}
+
+/**
+ * Variação contra o ano anterior, no mesmo período. bom: 'alto' | 'baixo' | 'neutro'.
+ * Devolve { texto, tom } para o selo do KPI.
+ */
+export function variacao(atual, anterior, { bom = 'neutro', anoAnterior, casas = 0, absoluta = false, unidade = 'p.p.' } = {}) {
+  const a = num(atual)
+  const b = num(anterior)
+  if (a == null || b == null || b === 0) return { texto: `sem base em ${anoAnterior}`, tom: 'sem' }
+  const d = absoluta ? a - b : ((a - b) / Math.abs(b)) * 100
+  if (Math.abs(d) < (absoluta ? 0.005 : 0.5)) return { texto: `= ${anoAnterior}`, tom: 'neutro' }
+  const seta = d > 0 ? '▲' : '▼'
+  const valor = absoluta ? `${d > 0 ? '+' : '−'}${numFmt(Math.abs(d), casas || 2)} ${unidade}` : `${d > 0 ? '+' : '−'}${numFmt(Math.abs(d), casas)}%`
+  const tom = bom === 'neutro' ? 'neutro' : (d > 0) === (bom === 'alto') ? 'bom' : 'ruim'
+  return { texto: `${seta} ${valor} vs ${anoAnterior}`, tom }
+}
+
+/**
+ * Tendência: até 3 mini-gráficos de 12 meses com o ano anterior em cinza por trás.
+ * itens: [{ titulo, total (texto), valores, anteriores, tom }]
+ */
+export function tendencias(itens, ultimoMes, anoAnterior) {
+  const lista = itens.filter((i) => i && (i.valores || []).some((v) => Number(v) > 0))
+  if (!lista.length) return ''
+  const legenda = lista.some((i) => i.anteriores)
+    ? `<span class="td-leg"><i></i>ano atual <b></b>${escapeHtml(String(anoAnterior))}</span>`
+    : ''
+  const cards = lista
+    .map((i) => `<div class="td-card"><div class="td-top"><span>${escapeHtml(i.titulo)}</span><strong>${escapeHtml(i.total ?? '')}</strong></div>${miniBarras(i.valores, ultimoMes, i.tom ?? 'verde', i.anteriores)}</div>`)
+    .join('')
+  return `<div class="td"><div class="ab-tit"><strong>Tendência</strong>${legenda}</div><div class="td-grid" style="grid-template-columns:repeat(${lista.length},1fr)">${cards}</div></div>`
+}
+
+/** Quadro "Pontos de atenção": frases geradas por regra (mês fora do padrão, concentração, lacunas). */
+export function atencao(frases) {
+  const lista = frases.filter(Boolean).slice(0, 3)
+  if (!lista.length) return ''
+  return `<div class="at"><div class="at-tit">Pontos de atenção</div><ul>${lista.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul></div>`
 }
 
 /** Nota de rodapé discreta (ressalvas metodológicas). */
@@ -337,7 +380,17 @@ table.regua .rg-fut{background:repeating-linear-gradient(135deg,#f3f5f4 0 3px,#e
 .ab-notas p::before{content:'Nota · ';font-weight:700;color:#9a6b17}
 .mb{display:grid;grid-template-columns:repeat(12,1fr);gap:1px;height:13mm;align-items:end;border-bottom:1px solid #cfdad3}
 .mb-c{height:100%;display:flex;align-items:flex-end}
-.mb-c i{display:block;width:100%;border-radius:1.5px 1.5px 0 0}
+.mb-c{position:relative}.mb-c i{display:block;width:100%;border-radius:1.5px 1.5px 0 0;position:relative;z-index:1}
+.mb-c b{position:absolute;left:-1px;right:-1px;bottom:0;background:#d6ddd9;border-radius:1.5px 1.5px 0 0}
+.mb-c:has(b) i{width:62%;margin:0 auto}
+.ak-delta{display:inline-block;align-self:flex-start;margin-top:1.2mm;font-size:9.5px;font-weight:700;padding:.4mm 1.6mm;border-radius:3px;background:#eef2ef;color:#52635a;white-space:nowrap}
+.ak-d-bom{background:#e3f1e8;color:#0b6a42}.ak-d-ruim{background:#f8e4e2;color:#b5413a}.ak-d-sem{background:transparent;color:#9aa69f;padding-left:0;font-weight:400}
+.ak-hero .ak-delta{background:rgba(255,255,255,.18);color:#fff}.ak-hero .ak-d-sem{background:transparent;color:#cfe6d9}
+.at{border:1px solid #efe0bd;background:#fdf8ee;border-radius:6px;padding:2.2mm 3.5mm;margin-bottom:4.5mm}
+.at-tit{font-size:9.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:#9a6b17;margin-bottom:1mm}
+.td{margin-bottom:4.5mm}.td-grid{display:grid;gap:5mm}.td-card .mb{height:15mm}.td-top{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;color:#52635a;margin-bottom:1mm}.td-top strong{font-size:11px;color:#26352e}
+.td-leg{display:flex;align-items:center;gap:1.5mm;font-size:9.5px;color:#7a8981}.td-leg i,.td-leg b{display:inline-block;width:3mm;height:2.4mm;border-radius:1px}.td-leg i{background:#0b6a42}.td-leg b{background:#d6ddd9;margin-left:2mm}
+.at ul{margin:0;padding-left:4mm}.at li{font-size:10.5px;line-height:1.45;color:#3a3a2e}
 .mb-fut{background:repeating-linear-gradient(135deg,#f3f5f4 0 2px,#e6ebe8 2px 3px)}
 .mb-eixo{display:grid;grid-template-columns:repeat(12,1fr);font-size:7.5px;color:#9aa69f;text-align:center;margin-top:.8mm}
 `
