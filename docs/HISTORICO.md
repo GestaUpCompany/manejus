@@ -1,5 +1,14 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Disk IO do Supabase, fase 3: paginação real de get_audit_log e índices enxutos do audit_log (12/11/2026)
+
+- **Causa**: em `get_audit_log`, `LIMIT/OFFSET` ficavam fora do `jsonb_agg` e eram inoperantes. Cada abertura da tela Auditoria agregava todas as linhas do filtro (com `valor_anterior`/`valor_novo` completos, TOAST), a página 2 voltava vazia e `tabelasAuditadas` varria a tabela inteira somando todas as fazendas.
+- **Migration `20261112270000_get_audit_log_paginacao_real`** (rollback em `supabase/rollbacks/`): `ORDER BY criado_em DESC, id DESC` + `LIMIT/OFFSET` numa subquery, `batchSize` só para a página, `tabelasAuditadas` restrito a fazenda e período. Assinatura, retorno, guards e grants inalterados; `AuditLog.tsx` não mudou. Efeito visível: paginação de 50 funciona de verdade. Limite conhecido: "Apenas impersonações" e a busca por usuário seguem filtrando no cliente, agora só a página atual.
+- **Migration `20261112280000_audit_log_indices_enxutos`**: cria `(fazenda_id, criado_em DESC)` e `(tabela, criado_em DESC)` no lugar de `idx_audit_log_fazenda_id`/`idx_audit_log_tabela` e remove `idx_audit_log_fazenda` (duplicado), `dispositivo`, `acao`, `source_app` e `is_soft_delete` (0 ou 1 scan). Mantém `criado_em`, `usuario_id`, `operacao`, `transaction_id`. Medido: página de 50 da fazenda de testes em 47 blocos e 34 ms.
+- **Retenção conferida**: `cleanup_audit_log` (90 dias, cron 03:00 UTC) funciona; 182 linhas acima de 90 dias saem na próxima execução. ~43 mil linhas (40%) têm `fazenda_id` nulo e só o admin as vê. Payload do `audit_log` mantido por decisão do usuário.
+- **Pendente**: `VACUUM (ANALYZE) public.audit_log;` no SQL Editor (não roda em migration); fase 2 (UPDATE condicional em `update_dados_lotes`).
+- **Reverter**: scripts em `supabase/rollbacks/` com os mesmos timestamps.
+
 ## Disk IO do Supabase, fase 1: cron duplicado, saúde do sistema e RLS dos backups (12/11/2026)
 
 - **Sintoma**: aviso de orçamento de burst de disk IO esgotado (throughput volta ao baseline de 5 MB/s). Diagnóstico da IA do Supabase conferido contra `pg_stat_statements`, `cron.job` e o código: as leituras pesadas de `audit_log` eram consultas ad hoc (1 chamada cada), não tráfego do app; as maiores fontes reais eram `sample_system_health()` (a cada 5 min, 73 mil blocos sujos) e `update_dados_lotes()` agendada duas vezes.
