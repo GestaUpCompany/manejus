@@ -145,6 +145,11 @@ function MarmitasBloco({ dados }: { dados: MarmitasCantina }) {
               Por refeição: {refeicoes.map(([chave, rotulo]) => `${rotulo} ${formatarInteiro(dados.por_refeicao?.[chave])}`).join(' · ')}
             </p>
           )}
+          {(dados.por_refeicao?.nao_informada ?? 0) > 0 && (
+            <p className="px-4 pb-3 text-xs text-gray-500">
+              “Sem refeição informada”: marmitas registradas antes de 26/10/2026, quando o app ainda não pedia a refeição (café, lanche, almoço ou jantar). Elas entram no total, mas não dá para dizer a qual refeição pertencem.
+            </p>
+          )}
         </>
       ) : (
         <p className="px-4 py-3 text-sm text-gray-500">Divisão entre funcionários e empresas não registrada nestas marmitas.</p>
