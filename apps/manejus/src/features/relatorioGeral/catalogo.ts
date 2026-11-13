@@ -1,4 +1,4 @@
-export type TipoRelatorioGeral = 'combustivel' | 'consumo' | 'bebedouros' | 'clima' | 'morte' | 'rodeio' | 'pastagens' | 'estoque' | 'cantina' | 'almoxarifado' | 'maternidade' | 'farmacia' | 'boletim_rebanho'
+export type TipoRelatorioGeral = 'combustivel' | 'consumo' | 'bebedouros' | 'clima' | 'morte' | 'rodeio' | 'pastagens' | 'estoque' | 'estoque_formulacoes' | 'cantina' | 'almoxarifado' | 'maternidade' | 'farmacia' | 'boletim_rebanho'
 
 export interface RelatorioGeralCatalogoItem {
   id: TipoRelatorioGeral
@@ -45,7 +45,12 @@ export const RELATORIOS_GERAIS: RelatorioGeralCatalogoItem[] = [
   {
     id: 'estoque',
     titulo: 'Estoque de Insumos',
-    descricao: 'Insumos e formulações no período: o que repor, capital parado ou em excesso, cobertura, consumo, valor em estoque e curva ABC.',
+    descricao: 'Insumos no período: o que repor, capital parado ou em excesso, cobertura, consumo, valor em estoque e curva ABC.',
+  },
+  {
+    id: 'estoque_formulacoes',
+    titulo: 'Estoque de Formulações',
+    descricao: 'Formulações (dietas) no período: o que repor, capital parado ou em excesso, cobertura, consumo, valor em estoque e curva ABC.',
   },
   {
     id: 'cantina',

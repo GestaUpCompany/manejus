@@ -325,7 +325,7 @@ export async function renderEstoqueHtml(input) {
   const comPeriodo = input.tem_periodo === true
   const dietaNome = typeof input.dieta_nome === 'string' ? input.dieta_nome.trim() : ''
   const periodo = `${periodoTexto(input)}${dietaNome ? ` · Dieta: ${dietaNome}` : ''}`
-  const rodape = comPeriodo ? `Estoque de insumos · ${periodo}` : `Posição do estoque em ${dateFmt(gerado_em)}`
+  const rodape = comPeriodo ? `${input.escopo === 'formulacoes' ? 'Estoque de formulações' : input.escopo === 'todos' ? 'Estoque de insumos e formulações' : 'Estoque de insumos'} · ${periodo}` : `Posição do estoque em ${dateFmt(gerado_em)}`
 
   const porChave = new Map(itens.map((i) => [chave(i), i]))
   const grupos = GRUPOS

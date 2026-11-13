@@ -62,6 +62,11 @@ export const REPORT_REGISTRY = {
     render: renderEstoqueHtml,
     hasData: (dados) => (dados.itens?.length ?? 0) > 0,
   },
+  estoque_formulacoes: {
+    title: 'Relatório de Estoque de Formulações',
+    render: renderEstoqueHtml,
+    hasData: (dados) => (dados.itens?.length ?? 0) > 0,
+  },
   estoque_combustivel: {
     title: 'Relatório de Estoque de Combustível',
     // Parte do "Combustível" do Infográfico: mesmas regras do PDF individual (_shared/combustivelCombinado.js).
