@@ -2,17 +2,25 @@
 // pública (RelatorioBebedourosPublico) e o Infográfico Mensal (loaders.ts).
 // Datas são tratadas como "date-only" (dia de calendário local), sem fuso.
 
-// Situação do pasto onde o bebedouro está: ocupado = há lote no pasto agora;
-// vago = há pasto ligado, nenhum com lote; sem_pasto = sem ligação (ex.: confinamento).
+// Situação do local (pasto ou curral) onde o bebedouro está: ocupado = há lote no local agora;
+// vago = há local ligado, nenhum com lote; sem_pasto = sem ligação a pasto nem curral.
+// Os nomes "SituacaoPasto"/"pastoNomes" foram mantidos por compatibilidade com o payload do PDF;
+// hoje "pastoNomes" traz pastos e currais juntos.
 export type SituacaoPasto = 'ocupado' | 'vago' | 'sem_pasto'
 
 export const SITUACAO_PASTO_INFO: Record<SituacaoPasto, { label: string; cor: string }> = {
   ocupado: { label: 'Ocupado', cor: '#16A34A' },
   vago: { label: 'Vago', cor: '#6B7280' },
-  sem_pasto: { label: 'Sem pasto', cor: '#9CA3AF' },
+  sem_pasto: { label: 'Sem local', cor: '#9CA3AF' },
 }
 
-// Lista de pastos compacta: até 3 nomes aparecem inteiros; acima disso, os 2 primeiros e "+N".
+// A RPC get_bebedouros_situacao_local_relatorio devolve 'sem_local'; internamente segue 'sem_pasto'.
+export function normalizarSituacaoLocal(situacao: string | null | undefined): SituacaoPasto {
+  if (situacao === 'ocupado' || situacao === 'vago') return situacao
+  return 'sem_pasto'
+}
+
+// Lista de locais compacta: até 3 nomes aparecem inteiros; acima disso, os 2 primeiros e "+N".
 export function resumirPastos(nomes: string[], maximo = 3): string {
   if (nomes.length === 0) return '—'
   if (nomes.length <= maximo) return nomes.join(', ')

@@ -12,6 +12,7 @@ import {
   calcularMaisAtrasado,
   proximasNaJanela,
   resumirPastos,
+  normalizarSituacaoLocal,
   SITUACAO_PASTO_INFO,
   textoPrazo,
   type ItemCronograma,
@@ -189,16 +190,19 @@ export function RelatorioBebedourosPublico({ token, relatorioInfo }: Props) {
         (permitidosRes.data || []).map((item: { bebedouro_id: string }) => item.bebedouro_id)
       )
 
-      const situacaoRes = await supabase.rpc('get_bebedouros_situacao_pasto_relatorio', {
+      const situacaoRes = await supabase.rpc('get_bebedouros_situacao_local_relatorio', {
         p_token: token,
       })
-      // Se a RPC falhar, o relatório segue sem a situação do pasto (cai em "Sem pasto").
-      if (situacaoRes.error) console.error('Erro ao carregar situação do pasto:', situacaoRes.error)
+      // Se a RPC falhar, o relatório segue sem a situação do local (cai em "Sem local").
+      if (situacaoRes.error) console.error('Erro ao carregar situação do local:', situacaoRes.error)
       const situacaoPorBebedouro = new Map<string, { pastoNomes: string[]; situacaoPasto: SituacaoPasto }>(
-        ((situacaoRes.data || []) as { bebedouro_id: string; pasto_nomes: string[] | null; situacao: SituacaoPasto }[])
+        ((situacaoRes.data || []) as { bebedouro_id: string; pasto_nomes: string[] | null; curral_nomes: string[] | null; situacao: string }[])
           .map((item) => [
             item.bebedouro_id,
-            { pastoNomes: item.pasto_nomes ?? [], situacaoPasto: item.situacao },
+            {
+              pastoNomes: [...(item.pasto_nomes ?? []), ...(item.curral_nomes ?? [])],
+              situacaoPasto: normalizarSituacaoLocal(item.situacao),
+            },
           ])
       )
 
@@ -873,7 +877,7 @@ function TabelaCronograma({ itens, dataReferencia }: { itens: ItemCronograma[]; 
         cabecalho={
           <>
             <th className={TH} style={TH_STYLE}>Bebedouro</th>
-            <th className={TH} style={TH_STYLE}>Pasto</th>
+            <th className={TH} style={TH_STYLE}>Local</th>
             <th className={TH} style={TH_STYLE}>Última limpeza</th>
             <th className={TH} style={TH_STYLE}>Próxima limpeza</th>
             <th className={TH} style={TH_STYLE}>Prazo</th>
@@ -924,7 +928,7 @@ function TabelaLimpezasDia({ limpezas }: { limpezas: LimpezaDoDiaItem[] }) {
         cabecalho={
           <>
             <th className={TH} style={TH_STYLE}>Bebedouro</th>
-            <th className={TH} style={TH_STYLE}>Pasto</th>
+            <th className={TH} style={TH_STYLE}>Local</th>
             <th className={TH} style={TH_STYLE}>Limpeza anterior</th>
             <th className={TH} style={TH_STYLE}>Limpeza do dia</th>
             <th className={TH} style={TH_STYLE}>Próxima prevista</th>

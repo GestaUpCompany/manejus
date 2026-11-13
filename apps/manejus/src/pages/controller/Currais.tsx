@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '@gestaup/shared'
 import { supabase } from '@gestaup/supabase'
-import { Button, Card, Input, ConfirmModal, useToast } from '@gestaup/ui'
+import { Button, Card, Input, ConfirmModal, MultiSelect, useToast } from '@gestaup/ui'
 import { getFazendaIdForUser } from '@gestaup/shared'
 
 interface LinhaConfinamento {
@@ -24,6 +24,7 @@ interface Curral {
   ativo: boolean
   lote_nome?: string
   formulacao_nome?: string
+  bebedouros?: { id: string; nome: string }[]
 }
 
 interface Lote {
@@ -86,6 +87,8 @@ export function Currais() {
     linha_id: '',
     kg_mn_dia_dia1: '',
   })
+  const [bebedouros, setBebedouros] = useState<{ id: string; nome: string; capacidade?: number | null }[]>([])
+  const [selectedBebedouros, setSelectedBebedouros] = useState<string[]>([])
   const [loteInfo, setLoteInfo] = useState<LoteInfo | null>(null)
   const [fetchingLoteInfo, setFetchingLoteInfo] = useState(false)
   const [submittingCurral, setSubmittingCurral] = useState(false)
@@ -132,7 +135,7 @@ export function Currais() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    const [linhasData, curraisData, lotesData] = await Promise.all([
+    const [linhasData, curraisData, lotesData, bebedourosData, vinculosBebData] = await Promise.all([
       supabase
         .from('linhas_confinamento')
         .select('*')
@@ -146,7 +149,27 @@ export function Currais() {
         .is('deleted_at', null)
         .order('nome', { ascending: true }),
       supabase.from('lotes').select('id, nome, n_cabecas, pasto_id').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
+      supabase.from('bebedouros').select('id, nome, capacidade').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
+      supabase.from('curral_bebedouros').select('curral_id, bebedouros(id, nome)').eq('fazenda_id', fazendaId),
     ])
+
+    if (bebedourosData.error) {
+      console.error('Erro ao buscar bebedouros:', bebedourosData.error)
+    } else {
+      setBebedouros(bebedourosData.data || [])
+    }
+
+    const bebedourosPorCurral: Record<string, { id: string; nome: string }[]> = {}
+    if (vinculosBebData.error) {
+      console.error('Erro ao buscar vínculos curral x bebedouro:', vinculosBebData.error)
+    } else {
+      for (const row of (vinculosBebData.data || []) as any[]) {
+        const b = Array.isArray(row.bebedouros) ? row.bebedouros[0] : row.bebedouros
+        if (!b) continue
+        if (!bebedourosPorCurral[row.curral_id]) bebedourosPorCurral[row.curral_id] = []
+        bebedourosPorCurral[row.curral_id].push({ id: b.id, nome: b.nome })
+      }
+    }
 
     if (linhasData.error) {
       console.error('Erro ao buscar linhas:', linhasData.error)
@@ -162,6 +185,7 @@ export function Currais() {
         ...c,
         lote_nome: c.lotes?.nome || null,
         formulacao_nome: null,
+        bebedouros: bebedourosPorCurral[c.id] || [],
       }))
     }
 
@@ -455,10 +479,22 @@ export function Currais() {
       }
     }
 
+    if (!error && curralId) {
+      const { error: bebError } = await supabase.rpc('salvar_curral_bebedouros', {
+        p_curral_id: curralId,
+        p_bebedouro_ids: selectedBebedouros,
+      })
+      if (bebError) {
+        console.error('Erro ao salvar bebedouros do curral:', bebError)
+        toast.error('Curral salvo, mas houve erro ao salvar os bebedouros: ' + bebError.message)
+      }
+    }
+
     if (error) {
       console.error('Erro ao salvar curral:', error)
       toast.error(error.message || 'Erro ao salvar curral.')
     } else {
+      setSelectedBebedouros([])
       setCurralFormData({ nome: '', lote_id: '', linha_id: '', kg_mn_dia_dia1: '' })
       setLoteInfo(null)
       setEditingCurral(null)
@@ -477,6 +513,7 @@ export function Currais() {
       linha_id: curral.linha_id || '',
       kg_mn_dia_dia1: '',
     })
+    setSelectedBebedouros(curral.bebedouros?.map((b) => b.id) || [])
     if (curral.lote_id) {
       fetchLoteInfo(curral.lote_id)
       const { data: ocup } = await supabase
@@ -495,6 +532,7 @@ export function Currais() {
   }
 
   const handleCurralCancel = () => {
+    setSelectedBebedouros([])
     setEditingCurral(null)
     setCurralFormData({ nome: '', lote_id: '', linha_id: '', kg_mn_dia_dia1: '' })
     setLoteInfo(null)
@@ -525,6 +563,7 @@ export function Currais() {
   }
 
   const openNewCurralInLinha = (linhaId: string) => {
+    setSelectedBebedouros([])
     setEditingCurral(null)
     setCurralFormData({ nome: '', lote_id: '', linha_id: linhaId, kg_mn_dia_dia1: '' })
     setLoteInfo(null)
@@ -532,6 +571,7 @@ export function Currais() {
   }
 
   const resetCurralForm = () => {
+    setSelectedBebedouros([])
     setEditingCurral(null)
     setCurralFormData({ nome: '', lote_id: '', linha_id: '', kg_mn_dia_dia1: '' })
     setLoteInfo(null)
@@ -811,6 +851,21 @@ export function Currais() {
                   </p>
                 )}
               </div>
+            </div>
+
+            <div className="mt-4">
+              <MultiSelect
+                options={bebedouros.map((b) => ({
+                  id: b.id,
+                  name: b.nome,
+                  subtitle: b.capacidade ? `Capacidade: ${b.capacidade} L` : undefined,
+                }))}
+                value={selectedBebedouros}
+                onChange={setSelectedBebedouros}
+                placeholder="Selecione bebedouros..."
+                label="Bebedouros"
+                className="border-border-base focus:border-accent"
+              />
             </div>
 
             {/* Info on-the-fly do lote */}
