@@ -26,7 +26,7 @@ import type { ParametrosRelatorioRodeio } from '../../utils/relatorioRodeioPDFPu
 import type { ParametrosRelatorioPastagens } from '../../utils/relatorioPastagensPDFPuppeteer'
 import { calcularResumoRodeio, type RegistroRodeio } from '../relatorioRodeio/agregacao'
 import { calcularResumoPastagens, normalizarNomesPasto, type OcupacaoPasto, type PastoInfo, type RegistroPastagem } from '../relatorioPastagens/agregacao'
-import { classificarABC, type ClasseABC, type DadosRelatorioEstoque } from '../relatorioEstoque/agregacao'
+import { classificarABC, itensPorGrupo, totaisDoGrupo, type ClasseABC, type DadosRelatorioEstoque } from '../relatorioEstoque/agregacao'
 import { montarDecisao, type DecisaoPDF } from '../relatorioEstoque/decisao'
 import { DADOS_ESTOQUE_COMBUSTIVEL_VAZIO, type DadosRelatorioEstoqueCombustivel } from '../relatorioEstoqueCombustivel/agregacao'
 import { classificarABC as classificarABCCantina, DADOS_CANTINA_VAZIO, type DadosRelatorioCantina } from '../relatorioCantina/agregacao'
@@ -75,6 +75,7 @@ export type PayloadRelatorioGeral =
   | { tipo: 'rodeio'; dados: ParametrosRelatorioRodeio }
   | { tipo: 'pastagens'; dados: ParametrosRelatorioPastagens }
   | { tipo: 'estoque'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC>; decisao: DecisaoPDF } & DadosRelatorioEstoque }
+  | { tipo: 'estoque_formulacoes'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC>; decisao: DecisaoPDF } & DadosRelatorioEstoque }
   | { tipo: 'estoque_combustivel'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null } & DadosRelatorioEstoqueCombustivel }
   | { tipo: 'cantina'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC> } & DadosRelatorioCantina }
   | { tipo: 'almoxarifado'; dados: { dataInicio: string; dataFim: string; fazendaNome: string; fazendaLogoUrl?: string | null; abc: Record<string, ClasseABC> } & DadosRelatorioAlmoxarifado }
@@ -478,25 +479,46 @@ const MAX_MOVIMENTACOES_ESTOQUE_GERAL = 250
 
 // Estoque usa o período do infográfico: saldo inicial, entradas, saídas e saldo
 // final por item. A RPC _fazenda sempre cobre insumos + formulações (sem seletor
-// de escopo, que só existe no link público). A curva ABC e as decisões (situação,
-// reposição, leitura do período) vão calculadas, pois o endpoint de PDF não
-// importa as regras do front.
-async function carregarEstoque(
+// de escopo, que só existe no link público), então o escopo é separado aqui, por
+// item_tipo, em duas seções (insumos e formulações) como nos relatórios individuais.
+// A curva ABC e as decisões (situação, reposição, leitura do período) vão
+// calculadas sobre cada subconjunto, pois o endpoint de PDF não importa as regras do front.
+type EscopoSeparado = 'insumos' | 'formulacoes'
+
+// Promise por (fazenda, período): evita chamar a RPC duas vezes quando as duas seções estão marcadas.
+let cacheEstoque: { chave: string; promessa: Promise<DadosRelatorioEstoque> } | null = null
+
+function buscarEstoqueTodos(fazenda: FazendaRelatorio, dataInicio: string, dataFim: string): Promise<DadosRelatorioEstoque> {
+  const chave = `${fazenda.id}|${dataInicio}|${dataFim}`
+  if (cacheEstoque?.chave === chave) return cacheEstoque.promessa
+  const promessa = (async () => {
+    const { data, error } = await supabase.rpc('get_dados_relatorio_estoque_fazenda', {
+      p_fazenda_id: fazenda.id,
+      p_data_inicio: dataInicio,
+      p_data_fim: dataFim,
+    })
+    if (error) throw error
+    return (data?.dados ?? { escopo: 'todos', itens: [], totais: null }) as DadosRelatorioEstoque
+  })()
+  cacheEstoque = { chave, promessa }
+  promessa.catch(() => {
+    if (cacheEstoque?.promessa === promessa) cacheEstoque = null
+  })
+  return promessa
+}
+
+async function carregarEstoquePorEscopo(
+  escopo: EscopoSeparado,
   fazenda: FazendaRelatorio,
   dataInicio: string,
   dataFim: string,
 ): Promise<PayloadRelatorioGeral> {
-  const { data, error } = await supabase.rpc('get_dados_relatorio_estoque_fazenda', {
-    p_fazenda_id: fazenda.id,
-    p_data_inicio: dataInicio,
-    p_data_fim: dataFim,
-  })
-  if (error) throw error
-  const dados = (data?.dados ?? { escopo: 'todos', itens: [], totais: null }) as DadosRelatorioEstoque
-  const itens = dados.itens ?? []
+  const todos = await buscarEstoqueTodos(fazenda, dataInicio, dataFim)
+  const itens = itensPorGrupo(todos.itens ?? [], escopo === 'insumos' ? 'insumo' : 'formulacao')
+  const dados: DadosRelatorioEstoque = { ...todos, escopo, itens, totais: totaisDoGrupo(itens) }
   const abc = classificarABC(itens)
   return {
-    tipo: 'estoque',
+    tipo: escopo === 'insumos' ? 'estoque' : 'estoque_formulacoes',
     dados: {
       dataInicio,
       dataFim,
@@ -504,10 +526,15 @@ async function carregarEstoque(
       fazendaLogoUrl: fazenda.logoUrl,
       ...dados,
       abc: Object.fromEntries(abc),
-      decisao: montarDecisao({ ...dados, itens }, abc),
+      decisao: montarDecisao(dados, abc),
     },
   }
 }
+
+const carregarEstoque = (fazenda: FazendaRelatorio, dataInicio: string, dataFim: string) =>
+  carregarEstoquePorEscopo('insumos', fazenda, dataInicio, dataFim)
+const carregarEstoqueFormulacoes = (fazenda: FazendaRelatorio, dataInicio: string, dataFim: string) =>
+  carregarEstoquePorEscopo('formulacoes', fazenda, dataInicio, dataFim)
 
 // Estoque de combustível usa o período do infográfico: saldo inicial/final e
 // extrato dos lançamentos entre dataInicio e dataFim (inclusivos).
@@ -718,6 +745,7 @@ const LOADERS: Record<TipoCarregavel, (fazenda: FazendaRelatorio, dataInicio: st
   rodeio: carregarRodeio,
   pastagens: carregarPastagens,
   estoque: carregarEstoque,
+  estoque_formulacoes: carregarEstoqueFormulacoes,
   estoque_combustivel: carregarEstoqueCombustivel,
   cantina: carregarCantina,
   almoxarifado: carregarAlmoxarifado,
