@@ -223,7 +223,10 @@ function marmitasHtml(m) {
     .filter(([chave]) => Number(m.por_refeicao?.[chave]) > 0)
     .map(([chave, rotulo]) => `${rotulo} ${inteiro(m.por_refeicao[chave])}`)
   const nota = refeicoes.length ? `<p class="ct-nota">Por refeição: ${refeicoes.join(' · ')}</p>` : ''
-  return `<div class="table-block">${titulo}<table class="ct-table">${tableHeadHtml(cols)}<tbody>${linhas}</tbody></table>${nota}${aviso}</div>`
+  const explicaSemRefeicao = Number(m.por_refeicao?.nao_informada) > 0
+    ? '<p class="ct-nota">“Sem refeição informada”: marmitas registradas antes de 26/10/2026, quando o app ainda não pedia a refeição (café, lanche, almoço ou jantar). Elas entram no total, mas não dá para dizer a qual refeição pertencem.</p>'
+    : ''
+  return `<div class="table-block">${titulo}<table class="ct-table">${tableHeadHtml(cols)}<tbody>${linhas}</tbody></table>${nota}${explicaSemRefeicao}${aviso}</div>`
 }
 
 function linhasDeMarmitas(m) {
