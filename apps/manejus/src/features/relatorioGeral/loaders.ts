@@ -199,9 +199,9 @@ async function carregarConsumo(
   }
 }
 
-// Pastos ligados a cada bebedouro e situação atual, com a mesma regra da RPC
-// get_bebedouros_situacao_pasto_relatorio (que alimenta o relatório sozinho): sem pasto = sem_pasto;
-// algum pasto com lote dentro (histórico aberto) = ocupado; senão vago.
+// Locais (pastos e currais) ligados a cada bebedouro e situação atual, com a mesma regra da RPC
+// get_bebedouros_situacao_local_relatorio (que alimenta o relatório sozinho): sem local = sem_pasto;
+// algum pasto com lote dentro (histórico aberto) ou curral com lote = ocupado; senão vago.
 async function carregarSituacaoPastos(
   fazendaId: string,
   bebedouroIds: string[],
@@ -217,6 +217,19 @@ async function carregarSituacaoPastos(
   if (erroVinculos) throw erroVinculos
 
   const linhas = (vinculos ?? []) as unknown as { bebedouro_id: string; pasto_id: string; pastos: { nome: string } }[]
+
+  // Currais ligados (curral_bebedouros): ocupado quando o curral tem lote (currais.lote_id).
+  const { data: vinculosCurral, error: erroCurral } = await supabase
+    .from('curral_bebedouros')
+    .select('bebedouro_id, currais!inner(nome, lote_id, deleted_at)')
+    .in('bebedouro_id', bebedouroIds)
+    .eq('fazenda_id', fazendaId)
+  if (erroCurral) throw erroCurral
+  const linhasCurral = ((vinculosCurral ?? []) as unknown as {
+    bebedouro_id: string
+    currais: { nome: string; lote_id: string | null; deleted_at: string | null }
+  }[]).filter((linha) => !linha.currais.deleted_at)
+
   const pastoIds = [...new Set(linhas.map((linha) => linha.pasto_id))]
   const ocupados = new Set<string>()
   if (pastoIds.length > 0) {
@@ -232,9 +245,14 @@ async function carregarSituacaoPastos(
 
   for (const id of bebedouroIds) {
     const itens = linhas.filter((linha) => linha.bebedouro_id === id)
-    const pastoNomes = [...new Set(itens.map((linha) => linha.pastos.nome))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-    const situacaoPasto: SituacaoPasto =
-      itens.length === 0 ? 'sem_pasto' : itens.some((linha) => ocupados.has(linha.pasto_id)) ? 'ocupado' : 'vago'
+    const itensCurral = linhasCurral.filter((linha) => linha.bebedouro_id === id)
+    const pastoNomes = [
+      ...new Set([...itens.map((linha) => linha.pastos.nome), ...itensCurral.map((linha) => linha.currais.nome)]),
+    ].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    const temLocal = itens.length > 0 || itensCurral.length > 0
+    const ocupado =
+      itens.some((linha) => ocupados.has(linha.pasto_id)) || itensCurral.some((linha) => !!linha.currais.lote_id)
+    const situacaoPasto: SituacaoPasto = !temLocal ? 'sem_pasto' : ocupado ? 'ocupado' : 'vago'
     mapa.set(id, { pastoNomes, situacaoPasto })
   }
   return mapa

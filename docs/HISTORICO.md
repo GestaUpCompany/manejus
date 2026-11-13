@@ -1,5 +1,32 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Vínculo bebedouro ↔ curral (13/11/2026)
+
+- **Motivo**: bebedouro só se associava a pasto (`pasto_bebedouros`); currais de confinamento não tinham vínculo e o relatório os tratava como "sem pasto".
+- **Desenho**: tabela nova `curral_bebedouros` (N:N, só estado atual, como no pasto), em vez de generalizar `pasto_bebedouros` (lida pelo PWA em campo, policies `true`). Diferenças: tem `fazenda_id`, RLS `is_admin_user() OR caller_has_fazenda_access`, trigger que impede vínculo entre fazendas, e salvamento transacional pela RPC `salvar_curral_bebedouros`.
+- **Migration**: `supabase/migrations/20261113140000_curral_bebedouros.sql` (aplicada com `db push`), rollback em `supabase/rollbacks/20261113140000_curral_bebedouros_rollback.sql`. Também cria a RPC pública `get_bebedouros_situacao_local_relatorio(token)` (pasto_nomes, curral_nomes, situação ocupado/vago/sem_local; curral ocupado = `currais.lote_id` preenchido) e as colunas opcionais `registros_bebedouros.curral_id` / `curral`. A RPC antiga `get_bebedouros_situacao_pasto_relatorio` foi mantida.
+- **Painel**: `Currais.tsx` (multiselect de bebedouros, salva por `salvar_curral_bebedouros`); relatório de bebedouros (tela pública, loader do Relatório Geral, PDF) mostra pastos e currais juntos na coluna "Local" e "Sem local". Os identificadores internos `pastoNomes`/`situacaoPasto` foram mantidos (agora carregam locais); `normalizarSituacaoLocal` converte `sem_local`.
+- **PWA**: `getCurraisByBebedouro(Cached)`, warm-up na fase de bebedouros, `BebedourosPage` junta pastos e currais como "local" e grava `curral`/`curral_id` (este só com exatamente 1 curral); `syncService` só envia as colunas novas quando há curral.
+- **Limites**: geometria de bebedouro em curral no mapa e visão reversa (onde cada bebedouro está) em `BebedourosCadastro`/`Detalhes` ainda não feitas. PWA antigo trata bebedouro só de curral como "sem pasto".
+
+## Rodeio: rodeio anterior encadeado pelo nome do lote (13/11/2026)
+
+- **Sintoma**: no relatório de Rodeio (Santa Cecília), "Atraso de 13 dias" em 05/10/2026 (Lote 03 e Lote 04, meta 7). O encadeamento usava só `lote_id`, e os rodeios de 01/10 (Lote 04) estavam com `lote_id` nulo, então o intervalo contava desde 15/09 (20 dias).
+- **Correção**: `get_dados_relatorio_rodeio` busca o rodeio anterior pelo mesmo nome de lote exibido (`COALESCE(lotes.nome, registros_rodeio.lote)`). Migration `supabase/migrations/20261113130000_rodeio_intervalo_por_nome_lote.sql` (aplicada com `db push`), rollback em `supabase/rollbacks/20261113130000_rodeio_intervalo_por_nome_lote_rollback.sql`.
+- **Efeito verificado (leitura)**: 05/10 passa a ter intervalo de 4 dias (desde 01/10), dentro da meta de 7. Lote 03 idem.
+- **Limite conhecido**: o encadeamento depende do nome atual do lote; um rodeio antigo gravado com nome de lote anterior a uma renomeação não entra na sequência.
+- **Pendente**: preencher `lote_id` dos registros legados (dado, exige autorização escopada da fazenda).
+
+## Correção de tanque em entrada de combustível lançada no diesel por engano, Fazenda Marcon (13/11/2026)
+
+- **Sintoma**: entrada de 50 L de Diesel S10 (NF 410118, 11/11/2026, D E Cerutti, R$ 7,00/L) lançada no tanque de diesel, mas o combustível era gasolina.
+- **Correção de dado pontual** (autorizada com escopo fechado pelo usuário, via MCP): `movimentacoes_combustivel` id `0a15bfe0-2979-4178-9545-017c65209b91`, `tanque_id` trocado de `f9606c30-1a3f-4e4c-a061-79ac184ba1f3` (Tanque de Diesel) para `2dcbcde9-30d5-4610-8ff9-d6bb8db0121e` (Tanque de Gasolina). Quantidade, data, NF, fornecedor e preço (R$ 7,00) mantidos. Execução em bloco que abortaria se a contagem não fosse 1.
+- **Backup prévio**: `backup.movimentacoes_combustivel_marcon_20261113`.
+- **Não alterados**: baixa automática `f29d5663-640e-457e-85f9-1df482e4863f` (50 L de diesel, 11/11) e abastecimento `a0ae5e76-eef5-48f1-8530-dcd12cf20514`.
+- **Efeito nos saldos** (recalculados pelos triggers): Tanque de Diesel 3.414 → 3.364 L, custo médio R$ 6,6440. Tanque de Gasolina passou a 66.800 L, custo médio R$ 6,9877.
+- **Pendências do usuário**: conferir a medição física do diesel (o ajuste de 08/11 zerou o saldo e a cadeia mudou); confirmar se a baixa de 50 L de diesel do dia 11 também estava errada.
+- **Reverter**: `UPDATE public.movimentacoes_combustivel SET tanque_id = 'f9606c30-1a3f-4e4c-a061-79ac184ba1f3' WHERE id = '0a15bfe0-2979-4178-9545-017c65209b91';` (a partir do backup).
+
 ## Disk IO do Supabase, fase 3: paginação real de get_audit_log e índices enxutos do audit_log (12/11/2026)
 
 - **Causa**: em `get_audit_log`, `LIMIT/OFFSET` ficavam fora do `jsonb_agg` e eram inoperantes. Cada abertura da tela Auditoria agregava todas as linhas do filtro (com `valor_anterior`/`valor_novo` completos, TOAST), a página 2 voltava vazia e `tabelasAuditadas` varria a tabela inteira somando todas as fazendas.
@@ -3416,3 +3443,22 @@ Fazenda `465534bb-0542-423b-ac83-f70081606816` (São José), `movimentacoes_farm
 - Causa: `recalcular_custo_medio_tanque` ordenava por `created_at` antes de `data`. Um ajuste retroativo (08/11, criado em 12/11) zerava o saldo na ordem de criação e apagava o efeito das entradas e baixas anteriores. O saldo gravado do tanque de Diesel da Marcon ficou em -330 L.
 - Correção: migration `20261113120000_fix_recalc_tanque_ordem_data.sql` (rollback em `supabase/rollbacks/`). A função passa a ordenar por `data, created_at`. `update_tanque_saldo_custo` recalcula o tanque do zero em INSERT de ajuste ou de movimentação retroativa.
 - Execução na Marcon (autorizada pelo usuário): `recalcular_custo_medio_tanque('f9606c30-1a3f-4e4c-a061-79ac184ba1f3')`, sem inserir nem apagar movimentações. Saldo -330,000 → 3.414,000 L; custo médio 6,6443 → 6,6440. Conferido com a cadeia de movimentações desde 09/11 (5.050 L de entradas, 1.636 L de baixas, sem quebras de encadeamento).
+
+### Exclusão de 3 apartações duplicadas na Fazenda Chibata — 2026-11-13
+
+Soft-delete (`deleted_at = now()`) em 3 registros de `registros_movimentacao` da Fazenda Chibata (`d3965505-74d5-4af7-9858-f773d2e8aab3`), autorizado pelo usuário com escopo fechado. Lançados por Carlos em 13/11/2026 às 10:44 e 10:49.
+
+- `f21f97d9-9b42-407b-a50d-0a13b849ca05`: LOTE 4 → Lote paridas mês 10, bezerra ao pé, 2 cab.
+- `a8b0cba3-a094-481a-84e4-1ccf54d2490b`: LOTE 4 → LOTE 12, bezerra ao pé, 2 cab.
+- `270f44c2-865b-4d33-ad45-f0dc71f9ff76`: LOTE 4 → LOTE 12, vaca, 3 cab.
+
+Backup: `backup.registros_movimentacao_chibata_20261113` (3 registros) e `backup.lote_categorias_chibata_20261113` (9 linhas dos 3 lotes).
+
+Saldos antes → depois (recálculo pelo trigger, armazenado = calculado):
+- LOTE 4 vaca: 154 → 157
+- LOTE 4 bezerra ao pé: 0 → 4
+- LOTE 12 vaca: 76 → 73
+- LOTE 12 bezerra ao pé: 3 → 1
+- Lote paridas mês 10 bezerra ao pé: 81 → 79
+
+Reversão: `update registros_movimentacao set deleted_at = null where id in (<3 ids acima>)`; o trigger recalcula os saldos.

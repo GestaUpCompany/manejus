@@ -3,6 +3,7 @@ import {
   calcularChecklist,
   calcularCronograma,
   calcularLimpezasDoDia,
+  normalizarSituacaoLocal,
   proximasNaJanela,
   somarDias,
   statusLimpeza,
@@ -14,6 +15,16 @@ const limp = (bebedouro_id: string, data_limpeza: string, responsavel: string | 
   bebedouro_id,
   data_limpeza,
   responsavel,
+})
+
+describe('normalizarSituacaoLocal', () => {
+  it('mantém ocupado/vago e mapeia sem_local e valores ausentes para sem_pasto', () => {
+    expect(normalizarSituacaoLocal('ocupado')).toBe('ocupado')
+    expect(normalizarSituacaoLocal('vago')).toBe('vago')
+    expect(normalizarSituacaoLocal('sem_local')).toBe('sem_pasto')
+    expect(normalizarSituacaoLocal(null)).toBe('sem_pasto')
+    expect(normalizarSituacaoLocal(undefined)).toBe('sem_pasto')
+  })
 })
 
 describe('somarDias', () => {

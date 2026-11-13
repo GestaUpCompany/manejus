@@ -363,7 +363,7 @@ function cap(texto, max = MAX_TEXTO_OCORRENCIA) {
 // === Tabelas ===
 
 // Pasto do bebedouro e situação (ocupado agora / vago / sem pasto).
-const SITUACAO_PASTO_LABEL = { ocupado: 'Ocupado', vago: 'Vago', sem_pasto: 'Sem pasto' }
+const SITUACAO_PASTO_LABEL = { ocupado: 'Ocupado', vago: 'Vago', sem_pasto: 'Sem local' }
 function pastoCelulaHtml(i) {
   // Até 3 pastos aparecem inteiros; acima disso, os 2 primeiros e "+N".
   const lista = Array.isArray(i.pastoNomes) ? i.pastoNomes : []
@@ -388,7 +388,7 @@ function colgroupHtml(percentuais) {
 
 function cronogramaTableHtml(chunk) {
   const pasto = temPasto(chunk)
-  const colPasto = pasto ? '<th>Pasto</th>' : ''
+  const colPasto = pasto ? '<th>Local</th>' : ''
   const header = `<thead><tr class="legend-head"><th colspan="${pasto ? 9 : 8}">${legendaStatusHtml('periodo')}</th></tr><tr><th>Bebedouro</th>${colPasto}<th>Última limpeza</th><th>Próxima limpeza</th><th>Prazo</th><th>Status</th><th>Meta</th><th>Responsável (última)</th><th>No período</th></tr></thead>`
   const rows = chunk
     .map((i) => {
@@ -403,7 +403,7 @@ function cronogramaTableHtml(chunk) {
 
 function diaTableHtml(chunk) {
   const pasto = temPasto(chunk)
-  const colPasto = pasto ? '<th>Pasto</th>' : ''
+  const colPasto = pasto ? '<th>Local</th>' : ''
   const header = `<thead><tr class="legend-head"><th colspan="${pasto ? 8 : 7}">${legendaStatusHtml('dia')}</th></tr><tr><th>Bebedouro</th>${colPasto}<th>Limpeza anterior</th><th>Limpeza do dia</th><th>Próxima prevista</th><th>Status</th><th>Intervalo / meta</th><th>Responsável</th></tr></thead>`
   const rows = chunk
     .map((l) => {
