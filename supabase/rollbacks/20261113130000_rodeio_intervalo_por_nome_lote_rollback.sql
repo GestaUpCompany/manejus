@@ -1,0 +1,6 @@
+-- Rollback de 20261113130000_rodeio_intervalo_por_nome_lote.sql
+-- Restaura a definição anterior de get_dados_relatorio_rodeio (encadeamento
+-- só por lote_id). Para reverter, reaplicar o arquivo:
+--   supabase/migrations/20260929180000_rpc_rodeio_meta_intervalo.sql
+-- (CREATE OR REPLACE, idempotente). Depois, rodar este rollback não é necessário
+-- para o estado anterior; o arquivo acima é a fonte da definição antiga.
