@@ -146,6 +146,16 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
     ? anoAnual === ANO_ATUAL ? `Janeiro a ${MESES_CAPA[new Date().getMonth()]} de ${anoAnual}` : `Janeiro a Dezembro de ${anoAnual}`
     : formatarPeriodoCapa(dataInicio, dataFim) || (dadosBoletim ? `${dadosBoletim.mesReferencia} de ${dadosBoletim.ano}` : '')
 
+  // "Selecionar todas" não mexe no Boletim de Rebanho: ele depende de planilha própria e tem seu próprio controle.
+  const secoesVisiveis: TipoRelatorioGeral[] = ordem.filter((id) => (!anual || ehSecaoAnual(id)) && id !== 'boletim_rebanho')
+  const secoesSelecionadasVisiveis = secoesVisiveis.filter((id) => selecionados.has(id)).length
+  const selecionarTodas = () => {
+    setSelecionados((atual) => new Set([...atual, ...secoesVisiveis]))
+  }
+  const desmarcarTodas = () => {
+    setSelecionados((atual) => new Set([...atual].filter((id) => !secoesVisiveis.includes(id))))
+  }
+
   const toggle = (id: TipoRelatorioGeral) => {
     setSelecionados((atual) => {
       const proximo = new Set(atual)
@@ -232,8 +242,8 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={() => { if (!gerando) onClose() }} title={tituloInfografico} size="xl">
-      <div className="grid gap-6 lg:grid-cols-[1.05fr_.95fr]">
+    <Modal isOpen={isOpen} onClose={() => { if (!gerando) onClose() }} title={tituloInfografico} size="full">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
           <section>
             <div className="inline-flex rounded-lg border border-border-base bg-surface-2 p-1" role="tablist" aria-label="Tipo de infográfico">
@@ -247,7 +257,7 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
 
           {anual && (
             <section>
-              <h3 className="text-sm font-semibold text-content-strong">Ano</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-content-muted">Ano</h3>
               <p className="mb-3 text-xs text-content-muted">Visão macro do ano civil: totais e índices do ano e um ponto por mês, sem registros diários. No ano corrente, vai até o mês atual.</p>
               <select name="infografico-ano" value={anoAnual} disabled={gerando} onChange={(event) => setAnoAnual(Number(event.target.value))} className="w-40 rounded-lg border border-surface-3 bg-surface-1 px-3 py-2 text-sm text-content-strong disabled:opacity-50">
                 {ANOS_ANUAL.map((ano) => <option key={ano} value={ano}>{ano}</option>)}
@@ -256,7 +266,7 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
           )}
 
           {!anual && <section>
-            <h3 className="text-sm font-semibold text-content-strong">Período dos relatórios operacionais</h3>
+            <h3 className="text-[11px] font-bold uppercase tracking-wider text-content-muted">Período dos relatórios operacionais</h3>
             <p className="mb-3 text-xs text-content-muted">Obrigatório quando houver relatórios operacionais selecionados. O Boletim de Rebanho usa mês próprio.</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="text-xs font-medium text-content">Data inicial<input type="date" name="relatorio-data-inicio" value={dataInicio} disabled={gerando || !temOperacionais} onChange={(event) => setDataInicio(event.target.value)} className="mt-1 w-full rounded-lg border border-surface-3 bg-surface-1 px-3 py-2 text-sm text-content-strong disabled:opacity-50" /></label>
@@ -268,11 +278,11 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
 
           {!anual && <section className="rounded-xl border border-border-base bg-surface-2 p-4">
             <div className="flex items-start justify-between gap-3">
-              <div><h3 className="text-sm font-semibold text-content-strong">Fonte do Boletim de Rebanho</h3><p className="mt-1 text-xs text-content-muted">Uma planilha ativa por fazenda e ano.</p></div>
+              <div><h3 className="text-[11px] font-bold uppercase tracking-wider text-content-muted">Fonte do Boletim de Rebanho</h3><p className="mt-1 text-xs text-content-muted">Uma planilha ativa por fazenda e ano.</p></div>
               <label className="text-xs font-medium text-content">Ano<input type="number" min="2000" max="2100" value={anoBoletim} disabled={gerando || carregandoPlanilha || !temBoletim} onChange={(event) => setAnoBoletim(Number(event.target.value) || ANO_ATUAL)} className="ml-2 w-24 rounded-lg border border-surface-3 bg-surface-1 px-2 py-1 text-sm text-content-strong disabled:opacity-50" /></label>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <label className={`rounded-lg border border-primary px-3 py-2 text-xs font-semibold text-primary ${gerando || carregandoPlanilha || !temBoletim ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-primary/10'}`}>
+              <label className={`rounded-lg border px-3 py-2 text-xs font-semibold ${gerando || carregandoPlanilha || !temBoletim ? 'cursor-not-allowed border-surface-3 text-content-muted' : 'cursor-pointer border-primary text-content-strong hover:bg-primary/10'}`}>
                 {carregandoPlanilha ? 'Carregando...' : temBoletim ? 'Enviar ou substituir planilha' : 'Selecione o boletim para liberar o upload'}
                 <input type="file" accept=".xlsx,.xlsm,.xls" disabled={gerando || carregandoPlanilha || !temBoletim} onChange={(event) => { const file = event.target.files?.[0]; if (file) void aplicarPlanilha(file, true); event.currentTarget.value = '' }} className="sr-only" />
               </label>
@@ -302,9 +312,18 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
             {temBoletim && !boletim && <p className="mt-3 text-xs text-red-600">Envie a planilha para selecionar o mês de referência.</p>}
           </section>}
 
-          <section>
-            <h3 className="text-sm font-semibold text-content-strong">Conteúdo e ordem</h3>
-            <p className="mb-3 text-xs text-content-muted">Selecione as seções e arraste os cards para definir a ordem do PDF.{anual && ' No anual estão disponíveis Combustível, Consumo, Clima, Mortes e Rodeio; as demais seções entram nas próximas fases.'}</p>
+          <section className="rounded-xl border border-border-base bg-surface-1 p-5">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-content-strong">Conteúdo e ordem</h3>
+                <p className="mt-1 text-xs text-content-muted">Selecione as seções e arraste os cards para definir a ordem do PDF.{anual && ' O Boletim de Rebanho não entra no anual.'}</p>
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="font-medium text-content-muted">{secoesSelecionadasVisiveis} de {secoesVisiveis.length}</span>
+                <button type="button" disabled={gerando || secoesSelecionadasVisiveis === secoesVisiveis.length} onClick={selecionarTodas} className="font-semibold text-content-strong hover:underline disabled:cursor-not-allowed disabled:text-content-faint disabled:no-underline">Selecionar todas</button>
+                <button type="button" disabled={gerando || secoesSelecionadasVisiveis === 0} onClick={desmarcarTodas} className="font-semibold text-content-strong hover:underline disabled:cursor-not-allowed disabled:text-content-faint disabled:no-underline">Desmarcar todas</button>
+              </div>
+            </div>
             <div className="space-y-2">
               {ordem.map((id, index) => {
                 if (anual && !ehSecaoAnual(id)) return null
@@ -329,7 +348,9 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
           </section>
           <RelatorioCapaGallery fazendaId={fazendaId} selecionada={imagemCapa} onSelect={selecionarCapa} disabled={gerando} />
           <section className="rounded-xl border border-border-base bg-surface-2 p-4"><h3 className="text-sm font-semibold text-content-strong">Resumo</h3><dl className="mt-3 space-y-2 text-xs"><div><dt className="text-content-muted">Fazenda</dt><dd className="font-medium text-content-strong">{fazendaNome}</dd></div><div><dt className="text-content-muted">Referência da capa</dt><dd className="font-medium text-content-strong">{periodoCapa || 'Aguardando período'}</dd></div><div><dt className="text-content-muted">Seções</dt><dd className="font-medium text-content-strong">{resumo || 'Nenhuma selecionada'}</dd></div></dl></section>
+          <div className="sticky bottom-0 bg-surface-1 pb-1 pt-3">
           <button type="button" disabled={!podeGerar} onClick={gerar} className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50">{gerando ? etapa || 'Preparando relatório' : 'Gerar e baixar PDF'}</button>
+          </div>
           {gerando && <div className="flex items-center justify-center gap-2 text-xs text-content-muted"><span className="h-4 w-4 animate-spin rounded-full border-2 border-surface-3 border-t-primary" />Aguarde, não feche esta janela.</div>}
         </div>
       </div>

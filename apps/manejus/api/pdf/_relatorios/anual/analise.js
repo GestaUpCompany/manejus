@@ -12,6 +12,12 @@ const somaMeses = (mensal, campo, ult) =>
 
 const razao = (a, b) => (Number(b) > 0 ? Number(a) / Number(b) : null)
 
+const ESTOQUE_COMPARAVEIS = {
+  consumo: { rotulo: 'consumo', bom: 'neutro', valor: (m, u) => somaMeses(m, 'consumo_valor', u), formato: fmtMoeda },
+  entradas: { rotulo: 'entradas', bom: 'neutro', valor: (m, u) => somaMeses(m, 'entradas_valor', u), formato: fmtMoeda },
+  movimentos: { rotulo: 'movimentos', bom: 'neutro', valor: (m, u) => somaMeses(m, 'movimentos', u), formato: fmtInt },
+}
+
 // Métricas comparáveis por seção: { chave: { valor(mensal, ult), bom, rotulo, formato, absoluta? } }
 export const COMPARAVEIS = {
   combustivel: {
@@ -44,6 +50,53 @@ export const COMPARAVEIS = {
       formato: (v) => `${fmt(v, 2)}%`,
     },
     perda: { rotulo: 'perda estimada', bom: 'baixo', valor: (m, u) => somaMeses(m, 'perda', u), formato: fmtMoeda },
+  },
+  estoque: ESTOQUE_COMPARAVEIS,
+  almoxarifado: ESTOQUE_COMPARAVEIS,
+  farmacia: ESTOQUE_COMPARAVEIS,
+  cantina: ESTOQUE_COMPARAVEIS,
+  maternidade: {
+    partos: { rotulo: 'partos', bom: 'neutro', valor: (m, u) => somaMeses(m, 'partos', u), formato: fmtInt },
+    crias: { rotulo: 'crias nascidas', bom: 'neutro', valor: (m, u) => somaMeses(m, 'crias', u), formato: fmtInt },
+    crias_mortas: { rotulo: 'crias perdidas', bom: 'baixo', valor: (m, u) => somaMeses(m, 'crias_mortas', u), formato: fmtInt },
+    intercorrencias: { rotulo: 'partos com intercorrência', bom: 'baixo', valor: (m, u) => somaMeses(m, 'intercorrencias', u), formato: fmtInt },
+    taxa_perda: {
+      rotulo: 'perda de crias',
+      bom: 'baixo',
+      absoluta: true,
+      valor: (m, u) => {
+        const r = razao(somaMeses(m, 'crias_mortas', u), somaMeses(m, 'crias', u))
+        return r == null ? null : r * 100
+      },
+      formato: (v) => `${fmt(v, 1)}%`,
+    },
+  },
+  bebedouros: {
+    limpezas: { rotulo: 'limpezas', bom: 'neutro', valor: (m, u) => somaMeses(m, 'limpezas', u), formato: fmtInt },
+    registros: { rotulo: 'registros de checklist', bom: 'neutro', valor: (m, u) => somaMeses(m, 'registros', u), formato: fmtInt },
+    ocorrencias: { rotulo: 'ocorrências no checklist', bom: 'baixo', valor: (m, u) => somaMeses(m, 'ocorrencias', u), formato: fmtInt },
+    dentro_pct: {
+      rotulo: 'limpezas dentro da meta',
+      bom: 'alto',
+      absoluta: true,
+      valor: (m, u) => {
+        const r = razao(somaMeses(m, 'dentro_meta', u), somaMeses(m, 'avaliadas', u))
+        return r == null ? null : r * 100
+      },
+      formato: (v) => `${fmt(v, 0)}%`,
+    },
+  },
+  pastagens: {
+    movimentacoes: { rotulo: 'movimentações de pasto', bom: 'neutro', valor: (m, u) => somaMeses(m, 'movimentacoes', u), formato: fmtInt },
+    dias_pasto: { rotulo: 'dias-pasto', bom: 'neutro', valor: (m, u) => somaMeses(m, 'dias_pasto', u), formato: fmtInt },
+    cabecas: { rotulo: 'cabeças movimentadas', bom: 'neutro', valor: (m, u) => somaMeses(m, 'cabecas', u), formato: fmtInt },
+    // Média da lotação de cada mês ponderada pelos dias-pasto do mês.
+    ua_ha: {
+      rotulo: 'taxa de lotação',
+      bom: 'neutro',
+      valor: (m, u) => razao(somaMeses(m, (x) => (num(x.ua_ha) ?? 0) * (Number(x.dias_pasto) || 0), u), somaMeses(m, (x) => (x.ua_ha != null ? Number(x.dias_pasto) || 0 : 0), u)),
+      formato: (v) => fmt(v, 2),
+    },
   },
   rodeio: {
     rodeios: { rotulo: 'rodeios', bom: 'alto', valor: (m, u) => somaMeses(m, 'rodeios', u), formato: fmtInt },

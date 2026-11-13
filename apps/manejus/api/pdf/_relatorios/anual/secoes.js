@@ -32,6 +32,9 @@ import {
   tendencias,
 } from './comum.js'
 
+import { resumoBebedouros, resumoMaternidade, resumoPastagens } from './secoes2.js'
+import { resumoAlmoxarifado, resumoCantina, resumoEstoqueInsumos, resumoFarmacia } from './secoes3.js'
+
 const nomeMes = (m) => (m ? MESES[Number(m) - 1] : '—')
 const soma = (arr) => arr.reduce((s, v) => s + (Number(v) || 0), 0)
 const pct = (parte, todo, casas = 0) => (Number(todo) > 0 ? `${fmt((Number(parte) / Number(todo)) * 100, casas)}%` : '—')
@@ -594,6 +597,13 @@ export async function renderRodeioAnual(d) {
 
 // ─────────────────────────── O ano em números (abertura) ───────────────────────────
 export const RESUMOS = {
+  bebedouros: resumoBebedouros,
+  estoque: resumoEstoqueInsumos,
+  almoxarifado: resumoAlmoxarifado,
+  farmacia: resumoFarmacia,
+  cantina: resumoCantina,
+  maternidade: resumoMaternidade,
+  pastagens: resumoPastagens,
   combustivel: resumoCombustivel,
   consumo: resumoConsumo,
   clima: resumoClima,
@@ -632,7 +642,10 @@ export async function renderResumoAnual(d) {
     ? `Meses sem registro no período: ${semRegistro.map((x) => `${x.t} ${x.n}`).join(' · ')}. Mês vazio pode ser falta de lançamento, e não ausência do evento.`
     : ''
 
-  const css = `<style>.rs-grid{display:grid;grid-template-columns:repeat(${Math.min(itens.length, 5) || 1},1fr);gap:3mm;margin-bottom:6mm}.rs-card{border:1px solid #dce5df;border-top:3px solid #0b6a42;border-radius:6px;padding:3mm 3.2mm 2.5mm}.rs-azul{border-top-color:#1E3A5F}.rs-vermelho{border-top-color:#b5413a}.rs-val{font-size:25px;font-weight:700;color:#26352e;margin-top:1.5mm;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rs-rot{font-size:10px;color:#7a8981;margin-bottom:2.5mm}.rs-lin{display:flex;flex-direction:column;gap:.6mm;margin-top:2.2mm;font-size:10px;color:#30463a}.rs-card .mb{height:26mm}.rs-card .ak-delta{margin:0 0 2mm}</style>`
+  // Até 5 cartões numa fileira; acima disso, duas fileiras (11 cartões = 6 + 5) para caber na página.
+  const colunasResumo = itens.length <= 5 ? itens.length || 1 : Math.ceil(itens.length / 2)
+  const compacto = colunasResumo >= 6 ? '.rs-val{font-size:19px}.rs-card{padding:3mm 2.4mm 2.5mm}.rs-card .mb{height:30mm}' : ''
+  const css = `<style>.rs-grid{display:grid;grid-template-columns:repeat(${colunasResumo},1fr);gap:3mm;margin-bottom:6mm}.rs-card{border:1px solid #dce5df;border-top:3px solid #0b6a42;border-radius:6px;padding:3mm 3.2mm 2.5mm}.rs-azul{border-top-color:#1E3A5F}.rs-vermelho{border-top-color:#b5413a}.rs-val{font-size:25px;font-weight:700;color:#26352e;margin-top:1.5mm;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rs-rot{font-size:10px;color:#7a8981;margin-bottom:2.5mm}.rs-lin{display:flex;flex-direction:column;gap:.6mm;margin-top:2.2mm;font-size:10px;color:#30463a}.rs-card .mb{height:26mm}.rs-card .ak-delta{margin:0 0 2mm}${compacto}</style>`
 
   return renderSecaoAnual({
     titulo: 'O Ano em Números',

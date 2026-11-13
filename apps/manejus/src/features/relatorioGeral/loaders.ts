@@ -11,6 +11,7 @@ import {
   type BebedouroBase,
   type LimpezaBase,
   type RegistroChecklistBase,
+  type SituacaoPasto,
 } from '../relatorioBebedouros/calculos'
 import {
   cronogramaParaPDF,
@@ -198,6 +199,47 @@ async function carregarConsumo(
   }
 }
 
+// Pastos ligados a cada bebedouro e situação atual, com a mesma regra da RPC
+// get_bebedouros_situacao_pasto_relatorio (que alimenta o relatório sozinho): sem pasto = sem_pasto;
+// algum pasto com lote dentro (histórico aberto) = ocupado; senão vago.
+async function carregarSituacaoPastos(
+  fazendaId: string,
+  bebedouroIds: string[],
+): Promise<Map<string, { pastoNomes: string[]; situacaoPasto: SituacaoPasto }>> {
+  const mapa = new Map<string, { pastoNomes: string[]; situacaoPasto: SituacaoPasto }>()
+  if (bebedouroIds.length === 0) return mapa
+
+  const { data: vinculos, error: erroVinculos } = await supabase
+    .from('pasto_bebedouros')
+    .select('bebedouro_id, pasto_id, pastos!inner(nome, fazenda_id)')
+    .in('bebedouro_id', bebedouroIds)
+    .eq('pastos.fazenda_id', fazendaId)
+  if (erroVinculos) throw erroVinculos
+
+  const linhas = (vinculos ?? []) as unknown as { bebedouro_id: string; pasto_id: string; pastos: { nome: string } }[]
+  const pastoIds = [...new Set(linhas.map((linha) => linha.pasto_id))]
+  const ocupados = new Set<string>()
+  if (pastoIds.length > 0) {
+    const { data: ocupacoes, error: erroOcupacoes } = await supabase
+      .from('lote_pasto_historico')
+      .select('pasto_id, lotes!inner(fazenda_id)')
+      .in('pasto_id', pastoIds)
+      .is('data_hora_saida', null)
+      .eq('lotes.fazenda_id', fazendaId)
+    if (erroOcupacoes) throw erroOcupacoes
+    for (const ocupacao of ocupacoes ?? []) ocupados.add((ocupacao as { pasto_id: string }).pasto_id)
+  }
+
+  for (const id of bebedouroIds) {
+    const itens = linhas.filter((linha) => linha.bebedouro_id === id)
+    const pastoNomes = [...new Set(itens.map((linha) => linha.pastos.nome))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    const situacaoPasto: SituacaoPasto =
+      itens.length === 0 ? 'sem_pasto' : itens.some((linha) => ocupados.has(linha.pasto_id)) ? 'ocupado' : 'vago'
+    mapa.set(id, { pastoNomes, situacaoPasto })
+  }
+  return mapa
+}
+
 async function carregarBebedouros(
   fazenda: FazendaRelatorio,
   dataInicio: string,
@@ -215,7 +257,15 @@ async function carregarBebedouros(
   ])
   const erro = bebedourosRes.error || limpezasRes.error || registrosRes.error
   if (erro) throw erro
-  const bebedouros = (bebedourosRes.data ?? []).filter((item) => idsPermitidos.has(item.id)) as BebedouroBase[]
+  const idsBebedouros = (bebedourosRes.data ?? []).filter((item) => idsPermitidos.has(item.id)).map((item) => item.id)
+  const situacaoPorBebedouro = await carregarSituacaoPastos(fazenda.id, idsBebedouros)
+  const bebedouros = (bebedourosRes.data ?? [])
+    .filter((item) => idsPermitidos.has(item.id))
+    .map((item) => ({
+      ...item,
+      pastoNomes: situacaoPorBebedouro.get(item.id)?.pastoNomes ?? [],
+      situacaoPasto: situacaoPorBebedouro.get(item.id)?.situacaoPasto ?? 'sem_pasto',
+    })) as BebedouroBase[]
   const nomes = new Set(bebedouros.map((item) => item.nome))
   const limpezas = (limpezasRes.data ?? []).filter((item) => idsPermitidos.has(item.bebedouro_id)) as LimpezaBase[]
   const registros = (registrosRes.data ?? []).filter((item) => item.numero_bebedouro && nomes.has(item.numero_bebedouro)) as RegistroChecklistBase[]
@@ -229,7 +279,7 @@ async function carregarBebedouros(
   return {
     tipo: 'bebedouros',
     dados: {
-      titulo: 'Relatório de Bebedouros',
+      titulo: `Relatório de Bebedouros - ${fazenda.nome}`,
       fazendaNome: fazenda.nome,
       fazendaLogoUrl: fazenda.logoUrl,
       dataInicio,
