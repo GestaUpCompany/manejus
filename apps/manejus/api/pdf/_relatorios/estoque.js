@@ -310,6 +310,7 @@ export async function renderEstoqueHtml(input) {
     .map((g) => ({ ...g, itens: itens.filter((i) => i.item_tipo === g.key) }))
     .filter((g) => g.itens.length > 0)
 
+  const parados = (decisao.parados ?? []).map((k) => porChave.get(k)).filter(Boolean)
   const altos = (decisao.altos ?? []).map((k) => porChave.get(k)).filter(Boolean)
   const temAbc = itens.some((i) => i.valor_estoque > 0)
 
