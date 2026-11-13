@@ -144,10 +144,10 @@ function normalizarCronograma(lista, dataFim) {
 // (cor + símbolo + texto), tabelas de cronograma/dia, ocorrências e alertas.
 const BEBEDOUROS_CSS = `
 .page{display:flex;flex-direction:column}
-.pasto-cell{display:flex;align-items:center;gap:4px;white-space:nowrap;min-width:0;line-height:1.3}
-.pasto-cell > span:first-child{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.pasto-cell{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;line-height:1.3}
+.pasto-cell > span:first-child{min-width:0;overflow-wrap:anywhere}
 .pasto-cell .pasto-sit{flex-shrink:0}
-.cron-table.com-pasto thead tr:not(.legend-head) th,.dia-table.com-pasto thead tr:not(.legend-head) th{text-align:center}
+.cron-table.com-pasto thead tr:not(.legend-head) th,.dia-table.com-pasto thead tr:not(.legend-head) th{text-align:left}
 .pasto-sit{display:inline-block;white-space:nowrap;line-height:1.3;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;color:#fff}
 .pasto-sit.sit-ocupado{background:#16A34A}
 .pasto-sit.sit-vago{background:#6B7280}
@@ -337,6 +337,24 @@ function chartCardLocal({ canvasId, title, subtitle = '', hasData = true, height
   return `<div class="chart-card"${style}><div class="chart-heading"><strong>${escapeHtml(title)}</strong>${subtitle ? `<span>${escapeHtml(subtitle)}</span>` : ''}</div>${body}</div>`
 }
 
+// Prefixo comum dos nomes de bebedouro (ex.: "BEBEDOURO "). Só é removido quando TODOS os nomes da
+// tabela o têm, para não cortar fazendas cujos nomes não seguem o padrão. Calculado uma vez por relatório.
+const PREFIXO_NOME_COMUM = { valor: '' }
+function definirPrefixoNomeComum(nomes) {
+  PREFIXO_NOME_COMUM.valor = ''
+  const lista = nomes.map((n) => String(n ?? '')).filter(Boolean)
+  if (lista.length === 0) return
+  const match = lista[0].match(/^(.*?\s)\S/)
+  if (!match) return
+  const candidato = match[1]
+  if (lista.every((n) => n.startsWith(candidato) && n.length > candidato.length)) PREFIXO_NOME_COMUM.valor = candidato
+}
+function nomeBebedouroExibido(nome) {
+  const s = String(nome ?? '')
+  const p = PREFIXO_NOME_COMUM.valor
+  return p && s.startsWith(p) ? s.slice(p.length) : s
+}
+
 function cap(texto, max = MAX_TEXTO_OCORRENCIA) {
   const s = String(texto ?? '')
   return s.length > max ? `${s.slice(0, max - 1)}…` : s
@@ -377,10 +395,10 @@ function cronogramaTableHtml(chunk) {
       const venc = i.diasParaProxima !== null && i.diasParaProxima < 0
       const proximaTxt = i.proxima ? dateFmt(i.proxima) : (i.ultima ? 'Sem meta' : 'Pendente')
       const prazo = `${venc ? '! ' : ''}${prazoTexto(i.diasParaProxima)}`
-      return `<tr class="${venc ? 'row-venc' : ''}"><td>${escapeHtml(i.nome)}</td>${pasto ? pastoCelulaHtml(i) : ''}<td>${i.ultima ? dateFmt(i.ultima) : '—'}</td><td class="strong">${escapeHtml(proximaTxt)}</td><td>${escapeHtml(prazo)}</td><td>${statusBadge(i.statusLabel)}</td><td class="num">${i.meta ? `${i.meta}d` : '—'}</td><td>${escapeHtml(i.responsavelUltima || '—')}</td><td class="num">${i.limpezasNoPeriodo ?? 0}</td></tr>`
+      return `<tr class="${venc ? 'row-venc' : ''}"><td>${escapeHtml(nomeBebedouroExibido(i.nome))}</td>${pasto ? pastoCelulaHtml(i) : ''}<td>${i.ultima ? dateFmt(i.ultima) : '—'}</td><td class="strong">${escapeHtml(proximaTxt)}</td><td>${escapeHtml(prazo)}</td><td>${statusBadge(i.statusLabel)}</td><td class="num">${i.meta ? `${i.meta}d` : '—'}</td><td>${escapeHtml(i.responsavelUltima || '—')}</td><td class="num">${i.limpezasNoPeriodo ?? 0}</td></tr>`
     })
     .join('')
-  return `<div class="table-block"><h3 class="table-title">Última e próxima limpeza por bebedouro<span>${chunk.length} ${chunk.length === 1 ? 'bebedouro' : 'bebedouros'}</span></h3><table class="cron-table${pasto ? ' com-pasto' : ''}">${pasto ? colgroupHtml([7, 20, 10, 10, 13, 10, 4, 20, 6]) : ''}${header}<tbody>${rows}</tbody></table></div>`
+  return `<div class="table-block"><h3 class="table-title">Última e próxima limpeza por bebedouro<span>${chunk.length} ${chunk.length === 1 ? 'bebedouro' : 'bebedouros'}</span></h3><table class="cron-table${pasto ? ' com-pasto' : ''}">${pasto ? colgroupHtml([11, 17, 10, 10, 12, 10, 4, 19, 7]) : ''}${header}<tbody>${rows}</tbody></table></div>`
 }
 
 function diaTableHtml(chunk) {
@@ -394,10 +412,10 @@ function diaTableHtml(chunk) {
         ? ymd(l.proximaPrevista)
         : (meta && ymd(l.dataLimpeza) ? addDays(ymd(l.dataLimpeza), meta) : null)
       const interv = l.intervalo === null || l.intervalo === undefined ? '—' : `${l.intervalo}d`
-      return `<tr><td>${escapeHtml(l.nome)}</td>${pasto ? pastoCelulaHtml(l) : ''}<td>${l.dataLimpezaAnterior ? dateFmt(l.dataLimpezaAnterior) : '—'}</td><td>${dateFmt(l.dataLimpeza)}</td><td class="strong">${proxima ? dateFmt(proxima) : 'Sem meta'}</td><td>${statusBadge(l.statusLabel)}</td><td>${interv} / ${meta ? `${meta}d` : '—'}</td><td>${escapeHtml(l.responsavel || '—')}</td></tr>`
+      return `<tr><td>${escapeHtml(nomeBebedouroExibido(l.nome))}</td>${pasto ? pastoCelulaHtml(l) : ''}<td>${l.dataLimpezaAnterior ? dateFmt(l.dataLimpezaAnterior) : '—'}</td><td>${dateFmt(l.dataLimpeza)}</td><td class="strong">${proxima ? dateFmt(proxima) : 'Sem meta'}</td><td>${statusBadge(l.statusLabel)}</td><td>${interv} / ${meta ? `${meta}d` : '—'}</td><td>${escapeHtml(l.responsavel || '—')}</td></tr>`
     })
     .join('')
-  return `<div class="table-block"><h3 class="table-title">Bebedouros limpos no dia<span>${chunk.length} ${chunk.length === 1 ? 'bebedouro' : 'bebedouros'}</span></h3><table class="dia-table${pasto ? ' com-pasto' : ''}">${pasto ? colgroupHtml([10, 20, 10, 10, 11, 14, 10, 15]) : ''}${header}<tbody>${rows}</tbody></table></div>`
+  return `<div class="table-block"><h3 class="table-title">Bebedouros limpos no dia<span>${chunk.length} ${chunk.length === 1 ? 'bebedouro' : 'bebedouros'}</span></h3><table class="dia-table${pasto ? ' com-pasto' : ''}">${pasto ? colgroupHtml([11, 17, 10, 10, 11, 14, 10, 17]) : ''}${header}<tbody>${rows}</tbody></table></div>`
 }
 
 // Itens negativos com observação pareada. Aceita payload antigo (strings).
@@ -488,6 +506,7 @@ export async function renderBebedourosHtml(input) {
 
   const cronograma = normalizarCronograma(input.statusPorBebedouro || [], input.dataFim)
   const limpezasDoDia = input.limpezasDoDia || []
+  definirPrefixoNomeComum([...cronograma.map((i) => i.nome), ...limpezasDoDia.map((l) => l.nome)])
   const proximas = input.proximasSemana || []
   const ocorrencias = input.ocorrencias || []
   const ranking = input.itensRanking || []

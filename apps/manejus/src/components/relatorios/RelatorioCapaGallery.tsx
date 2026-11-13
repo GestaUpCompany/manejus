@@ -69,7 +69,7 @@ export function RelatorioCapaGallery({ fazendaId, selecionada, onSelect, disable
           <h4 className="text-sm font-semibold text-content-strong">Imagem de fundo</h4>
           <p className="text-xs text-content-muted">Opcional, exclusiva desta fazenda.</p>
         </div>
-        <label className={`rounded-lg border border-primary px-3 py-2 text-xs font-semibold text-primary ${disabled || uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-primary/10'}`}>
+        <label className={`rounded-lg border px-3 py-2 text-xs font-semibold ${disabled || uploading ? 'cursor-not-allowed border-surface-3 text-content-muted' : 'cursor-pointer border-primary text-content-strong hover:bg-primary/10'}`}>
           {uploading ? 'Enviando...' : 'Adicionar imagem'}
           <input ref={inputRef} type="file" name="relatorio-imagem-capa" accept="image/png,image/jpeg,image/webp" disabled={disabled || uploading} onChange={(event) => handleUpload(event.target.files?.[0])} className="sr-only" />
         </label>
