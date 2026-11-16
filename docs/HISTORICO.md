@@ -1,5 +1,17 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Entrada de combustível contada em dobro no saldo do tanque (16/11/2026)
+
+- **Sintoma**: entrada de 753 L no tanque Diesel Comum da Doce Ilusão apareceu com saldo de 1.506 L (histórico correto, saldo do tanque errado).
+- **Causa**: dois triggers AFTER INSERT em `movimentacoes_combustivel`. `trg_mov_combustivel_saldos` grava `saldo_anterior`/`saldo_posterior` na própria linha, o que dispara um recálculo do tanque (`update_tanque_saldo_custo`, ramo UPDATE). Depois, `trigger_update_tanque_saldo_custo` (ramo INSERT) lia o saldo já recalculado e somava a entrada de novo, no caminho incremental. Afetava Painel e PWA, porque o trigger roda no banco.
+- **Reprodução (fazenda de testes)**: Painel, tanque com saldo inicial de 100 L → 200 L. PWA, tanque zerado + entrada de 100 L → 200 L.
+- **Correção**: migration `supabase/migrations/20261116110000_tanque_insert_recalcula_do_zero.sql` (aplicada com `db push`). No INSERT, `update_tanque_saldo_custo` sempre chama `recalcular_custo_medio_tanque`, sem caminho incremental. Rollback em `supabase/rollbacks/20261116110000_tanque_insert_recalcula_do_zero_rollback.sql` (reabilita o bug).
+- **Verificação pós-correção (fazenda de testes)**: tanque novo zerado, entrada de 100 L pelo Painel → 100 L. Segunda entrada de 100 L pelo PWA no mesmo tanque → 200 L, igual ao histórico.
+- **Não corrigido**: tanques com saldo divergente já gravados antes da correção (Doce Ilusão, Marcon e outros da lista da investigação, em geral com divergência negativa, causa não confirmada). Precisam de recálculo por fazenda (`recalcular_custo_medio_tanque`) com autorização escopada.
+- **Dados de teste** deixados na fazenda de testes: tanques "TESTE Verificacao Trigger", "TESTE Limpo Zerado" e "TESTE Pos-Fix Zerado".
+- **Recálculo em lote, 16/11/2026** (autorizado com escopo fechado): 14 tanques de 9 fazendas cujo saldo gravado diferia do histórico pelo efeito da última movimentação inserida (ver análise do mesmo dia). Backup: `backup.tanques_combustivel_lote_20261116` (14 linhas). Resultado conferido: soma de 38.636,51 L → 39.316,63 L (+680,12 L). Custo médio sem mudança em todos. Tanques: Alegria (Diesel Comum +46; Gasolina +3), Chibata (Tanque diesel S10 +37,62), Guanabara (+62), Jacamim (Gasolina +5; Tanque Diesel S10 +153), Marcon (Tanque de Diesel +15; Tanque de Gasolina +1,5), Monte Azul (+65), Paribó (Tambor Gasolina +8; Tanque Diesel S-10 +85; Tanque Diesel S-500 +97), Pioneira (+43), Santa Cecília (+59). **Fora deste lote:** Chibata Gasolina (diferença de 9 L não explicada).
+- **Recálculo Doce Ilusão (16/11/2026)**, autorizado com escopo fechado: tanque Tanque Diesel Comum (`1f27433d-a128-4f03-a2b2-1726a2809db8`, fazenda `d54abd92-5783-407a-8adb-15c31388ebc4`), saldo 1.506 L → 753 L via `recalcular_custo_medio_tanque`. Custo médio R$ 6,7900 sem mudança. Backup prévio: `backup.tanques_combustivel_doce_ilusao_20261116` (1 linha, saldo 1.506). Verificado depois: saldo 753 L. Reverter: `UPDATE tanques_combustivel t SET saldo_atual_l = b.saldo_atual_l, custo_medio_l = b.custo_medio_l FROM backup.tanques_combustivel_doce_ilusao_20261116 b WHERE t.id = b.id;`
+
 ## Vínculo bebedouro ↔ curral (13/11/2026)
 
 - **Motivo**: bebedouro só se associava a pasto (`pasto_bebedouros`); currais de confinamento não tinham vínculo e o relatório os tratava como "sem pasto".
