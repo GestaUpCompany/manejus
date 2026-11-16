@@ -349,8 +349,10 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
               {cabecalho('Tipo', null, 'left')}
               {cabecalho('ABC', null, 'left')}
               {cabecalho('Situação', null, 'left')}
+              {comPeriodo && cabecalho('Saldo inicial', null)}
               {comPeriodo && cabecalho('Entradas', 'entradas')}
               {comPeriodo && cabecalho('Saídas', 'saidas')}
+              {comPeriodo && cabecalho('Ajustes', null)}
               {cabecalho(comPeriodo ? 'Saldo final' : 'Estoque atual', 'saldo_final')}
               {cabecalho('Mínimo', null)}
               {comPeriodo && cabecalho('Cobertura', 'cobertura_dias')}
@@ -383,8 +385,10 @@ export function RelatorioEstoquePublico({ token, relatorioInfo }: Props) {
                     {classe ? <span className="rounded px-1.5 py-0.5 text-xs font-bold" style={COR_CLASSE[classe]}>{classe}</span> : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="py-2.5 px-3"><PilulaSituacao situacao={situacaoDe(item)} /></td>
+                  {comPeriodo && <td className="py-2.5 px-3 text-right text-gray-600">{formatarNumero(item.saldo_inicial)}</td>}
                   {comPeriodo && <td className="py-2.5 px-3 text-right text-gray-600">{formatarNumero(item.entradas)}</td>}
                   {comPeriodo && <td className="py-2.5 px-3 text-right text-gray-600">{formatarNumero(item.saidas)}</td>}
+                  {comPeriodo && <td className="py-2.5 px-3 text-right text-gray-600">{formatarNumero(item.ajustes)}</td>}
                   <td className="py-2.5 px-3 text-right font-medium whitespace-nowrap" style={{ color: item.negativo ? RED : '#111827' }}>
                     {formatarNumero(saldo)} {unidade}
                   </td>
