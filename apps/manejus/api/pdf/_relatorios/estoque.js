@@ -176,7 +176,7 @@ function linhaItem(item, comPeriodo, abc, situacoes) {
   if (!comPeriodo) {
     return `<tr>${nome}<td class="${saldoCls}">${moneyFmt(saldo)} ${unidadeDe(item)}</td><td class="num">${minimo}</td>${custo}</tr>`
   }
-  return `<tr>${nome}<td class="num">${num(item.entradas)}</td><td class="num">${num(item.saidas)}</td><td class="${saldoCls}"><strong>${moneyFmt(saldo)}</strong> ${unidadeDe(item)}</td><td class="num">${minimo}</td><td class="num">${textoCobertura(item)}</td>${custo}</tr>`
+  return `<tr>${nome}<td class="num">${num(item.saldo_inicial)}</td><td class="num">${num(item.entradas)}</td><td class="num">${num(item.saidas)}</td><td class="num">${num(item.ajustes)}</td><td class="${saldoCls}"><strong>${moneyFmt(saldo)}</strong> ${unidadeDe(item)}</td><td class="num">${minimo}</td><td class="num">${textoCobertura(item)}</td>${custo}</tr>`
 }
 
 function posicaoColunas(comPeriodo) {
@@ -187,9 +187,9 @@ function posicaoColunas(comPeriodo) {
     ]
   }
   return [
-    ['Item', '20%'], ['Tipo', '8%'], ['ABC', '4%'], ['Situação', '10%'], ['Entradas', '8%', 'num'],
-    ['Saídas', '8%', 'num'], ['Saldo final', '10%', 'num'], ['Mínimo', '7%', 'num'], ['Cobertura', '7%', 'num'],
-    ['Custo (R$/un.)', '8%', 'num'], ['Valor em estoque', '10%', 'num'],
+    ['Item', '15%'], ['Tipo', '7%'], ['ABC', '4%'], ['Situação', '9%'], ['Saldo inicial', '8%', 'num'], ['Entradas', '7%', 'num'],
+    ['Saídas', '7%', 'num'], ['Ajustes', '6%', 'num'], ['Saldo final', '9%', 'num'], ['Mínimo', '6%', 'num'], ['Cobertura', '6%', 'num'],
+    ['Custo (R$/un.)', '7%', 'num'], ['Valor em estoque', '9%', 'num'],
   ]
 }
 

@@ -187,6 +187,7 @@ async function carregarConsumo(
       fazendaLogoUrl: fazenda.logoUrl,
       lotes: lotes
         .filter((lote) => !lote.info.erro || lote.info.erro.length === 0)
+        .filter((lote) => (lote.dados ?? []).length > 0)
         .map((lote) => ({
           info: {
             ...lote.info,

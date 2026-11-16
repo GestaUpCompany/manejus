@@ -79,4 +79,7 @@ vision-relatorio/pipeline/_*
 *.xlsx
 *.xls
 /*.html
+
+# Mapeamento do ecossistema tcjr (Manejus novo, Farm Plan, Vision): documentos locais, nao versionar
+docs/MAPEAMENTO_ECOSSISTEMA/
 .vercel

@@ -941,9 +941,10 @@ export function CadastrosAuxiliares() {
     }
 
     setUnidadeBloqueada(false)
-    if (activeTab === 'itens-almoxarifado') {
+    if (activeTab === 'itens-almoxarifado' || activeTab === 'itens-cantina') {
+      const tabelaMov = activeTab === 'itens-almoxarifado' ? 'movimentacoes_almoxarifado' : 'movimentacoes_cantina'
       supabase
-        .from('movimentacoes_almoxarifado')
+        .from(tabelaMov)
         .select('id', { count: 'exact', head: true })
         .eq('item_id', item.id)
         .is('deleted_at', null)
@@ -1817,10 +1818,10 @@ export function CadastrosAuxiliares() {
                           <option key={setor.id} value={setor.id}>{setor.nome}</option>
                         ))}
                       </select>
-                    ) : activeTab === 'itens-almoxarifado' && field.name === 'unidade' && state.editingItem && unidadeBloqueada ? (
+                    ) : ((activeTab === 'itens-almoxarifado' && field.name === 'unidade') || (activeTab === 'itens-cantina' && field.name === 'unidade_medida')) && state.editingItem && unidadeBloqueada ? (
                       <>
                         <div className="w-full px-3 py-2 border border-surface-3 rounded-md min-h-[44px] flex items-center bg-surface-2 text-content-muted">
-                          {field.options?.find((o) => o.value === state.formData.unidade)?.label || state.formData.unidade}
+                          {field.options?.find((o) => o.value === state.formData[field.name])?.label || state.formData[field.name]}
                         </div>
                         <p className="text-xs text-content-faint mt-1">Item com estoque ou movimentações não pode trocar de unidade. Cadastre um novo item.</p>
                       </>
