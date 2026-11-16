@@ -8,8 +8,7 @@ import { RelatorioGeralModal } from '../../components/relatorios/RelatorioGeralM
 import { RelatorioAbateModal } from '../../components/relatorios/RelatorioAbateModal'
 import { carregarRelatorioZootecnico, gerarExcelZootecnico } from '../../services/relatorioZootecnicoService'
 import { gerarRelatorioZootecnicoPDFPuppeteer } from '../../utils/relatorioZootecnicoPDFPuppeteer'
-
-const FAZENDA_TESTES_ID = 'd649c65e-16ab-4b77-a84b-df937aa41cc3'
+import { infograficoAnualLiberado, relatorioAbateLiberado } from '../../utils/featureFlags'
 
 interface RelatorioPublico {
   id: string
@@ -164,8 +163,9 @@ export function Relatorios() {
   const [fazendaLogoUrl, setFazendaLogoUrl] = useState<string | null>(null)
   const [modalRelatorioGeral, setModalRelatorioGeral] = useState(false)
   const [modalRelatorioAbate, setModalRelatorioAbate] = useState(false)
-  // Em homologação: o relatório de abate só aparece na fazenda de testes
-  const relatorioAbateLiberado = fazendaId === FAZENDA_TESTES_ID
+  // Feature flags por fazenda (ver utils/featureFlags.ts)
+  const liberaAbate = relatorioAbateLiberado(fazendaId)
+  const liberaAnual = infograficoAnualLiberado(fazendaId)
   const [linksAtivos, setLinksAtivos] = useState<RelatorioPublico[]>([])
   const [loading, setLoading] = useState(true)
   const [modalAberto, setModalAberto] = useState(false)
@@ -493,7 +493,7 @@ export function Relatorios() {
             </div>
           </div>
 
-          {relatorioAbateLiberado && (
+          {liberaAbate && (
             <div className="flex flex-col gap-4 rounded-2xl border border-border-base bg-surface-1 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between lg:col-span-5">
               <div className="max-w-2xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-content-faint">Controle de lotes</p>
@@ -814,10 +814,11 @@ export function Relatorios() {
           fazendaId={fazendaId}
           fazendaNome={fazendaNome}
           fazendaLogoUrl={fazendaLogoUrl}
+          anualLiberado={liberaAnual}
         />
       )}
 
-      {relatorioAbateLiberado && fazendaId && fazendaNome && (
+      {liberaAbate && fazendaId && fazendaNome && (
         <RelatorioAbateModal
           isOpen={modalRelatorioAbate}
           onClose={() => setModalRelatorioAbate(false)}

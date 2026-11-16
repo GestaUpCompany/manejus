@@ -15,6 +15,8 @@ interface Props {
   fazendaId: string
   fazendaNome: string
   fazendaLogoUrl?: string | null
+  /** Feature flag: libera o modo Anual (o Mensal fica sempre disponível) */
+  anualLiberado?: boolean
 }
 
 const ORDEM_PADRAO = RELATORIOS_GERAIS.map((item) => item.id)
@@ -38,7 +40,7 @@ function lerLocaisOcultos(fazenda: string, ano: number): Set<string> {
   }
 }
 
-export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, fazendaLogoUrl }: Props) {
+export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, fazendaLogoUrl, anualLiberado = false }: Props) {
   const toast = useToast()
   const [modo, setModo] = useState<ModoInfografico>('mensal')
   const [anoAnual, setAnoAnual] = useState(ANO_ATUAL)
@@ -121,7 +123,8 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
     void carregarPersistida(anoBoletim)
   }, [isOpen, anoBoletim])
 
-  const anual = modo === 'anual'
+  // Sem a flag, o modo anual nunca fica ativo (mesmo que o estado esteja em 'anual')
+  const anual = anualLiberado && modo === 'anual'
   const tiposSelecionados = ordem.filter((id) => selecionados.has(id) && (!anual || ehSecaoAnual(id)))
   const temBoletim = tiposSelecionados.includes('boletim_rebanho')
   const temOperacionais = tiposSelecionados.some((id) => id !== 'boletim_rebanho')
@@ -245,15 +248,17 @@ export function RelatorioGeralModal({ isOpen, onClose, fazendaId, fazendaNome, f
     <Modal isOpen={isOpen} onClose={() => { if (!gerando) onClose() }} title={tituloInfografico} size="full">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
-          <section>
-            <div className="inline-flex rounded-lg border border-border-base bg-surface-2 p-1" role="tablist" aria-label="Tipo de infográfico">
-              {(['mensal', 'anual'] as const).map((opcao) => (
-                <button key={opcao} type="button" role="tab" aria-selected={modo === opcao} disabled={gerando} onClick={() => setModo(opcao)} className={`rounded-md px-4 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50 ${modo === opcao ? 'bg-primary text-white' : 'text-content hover:bg-surface-1'}`}>
-                  {opcao === 'mensal' ? 'Mensal' : 'Anual'}
-                </button>
-              ))}
-            </div>
-          </section>
+          {anualLiberado && (
+            <section>
+              <div className="inline-flex rounded-lg border border-border-base bg-surface-2 p-1" role="tablist" aria-label="Tipo de infográfico">
+                {(['mensal', 'anual'] as const).map((opcao) => (
+                  <button key={opcao} type="button" role="tab" aria-selected={modo === opcao} disabled={gerando} onClick={() => setModo(opcao)} className={`rounded-md px-4 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50 ${modo === opcao ? 'bg-primary text-white' : 'text-content hover:bg-surface-1'}`}>
+                    {opcao === 'mensal' ? 'Mensal' : 'Anual'}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
           {anual && (
             <section>
