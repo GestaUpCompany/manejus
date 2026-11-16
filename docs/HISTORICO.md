@@ -1,5 +1,15 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Consumo não calculado na troca de dieta (16/11/2026)
+- **Sintoma**: no gráfico de consumo em pasto, o último trato antes de uma troca de dieta ficava sem consumo, e o ponto seguinte aparecia como 0%. Caso: Lote 4 (Thiago Maior), Doce Ilusão, 19/10 sem valor.
+- **Causa**: `recalc_consumo_series` separava a série por formulação. Na última linha de cada dieta, zerava o consumo, mesmo com registro seguinte de outra dieta. Além disso, `get_dados_relatorio_consumo` usava `COALESCE(..., 0)`, que transformava ausência em 0%. Afetava 89 trocas em 67 lotes de 14 fazendas.
+- **Correção (migration `20261116120000_recalc_consumo_cruza_troca_dieta.sql`, rollback na pasta `rollbacks`)**: a série passa a ser (fazenda, lote, escopo). O intervalo usa o teor e o custo da dieta em vigor no registro que o abre: primeiro `formulacoes_versoes` (vigência na data), depois o cadastro ativo, senão NULL.
+- **Dados do Lote 4 (autorizado pelo usuário)**:
+  - Inserção em `formulacoes_versoes`, id `ed99327d-7c29-41b8-8af9-ddf8425a15d5`, fazenda `d54abd92-5783-407a-8adb-15c31388ebc4`, ENGORDA TIP 1,8% (teor 88,92; custo 914,30/t), vigência 08/08 a 22/10/2026, origem `backfill`, hash `7da9d568b479f1e659106a8dbb9c492b`. Reversão: `DELETE` pelo id.
+  - Recálculo da série do lote `ce874528-0ad6-4912-9d53-774e4a709d87` com `recalc_consumo_series`. 19/10 passou de nulo para MS 9,527 e %PV 1,787 (custo R$ 9,80). Os demais registros não mudaram de valor de MS/%PV; o custo da 1,8% subiu cerca de R$ 0,0001 por registro, porque agora usa o custo da versão (914,30) e não o cadastro da 2,2% (914,29). `updated_at` foi atualizado em 39 registros.
+  - Backup: `backup.consumo_lote4_doce_ilusao_2026_11_16` (40 linhas, campos de consumo e custo antes do recálculo).
+- **Pendente**: a exibição do `0%` em `get_dados_relatorio_consumo` (ponto sem dado deve sair em vez de virar 0%). Os outros 88 casos de troca de dieta só ganham consumo quando a série for recalculada, com autorização própria.
+
 ## Relatórios de consumo ocultam lotes sem registros no período (16/11/2026)
 - Problema: o Infográfico Mensal e o relatório individual de Consumo listavam lotes sem nenhum registro de consumo no período, com a mensagem "Sem dados no período".
 - Correção: lotes com `dados` vazio saem do payload em `apps/manejus/src/features/relatorioGeral/loaders.ts` (`carregarConsumo`) e do PDF em `apps/manejus/src/pages/public/RelatorioConsumoPublico.tsx` (`exportarPDF`). A RPC não muda.
