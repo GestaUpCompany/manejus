@@ -382,6 +382,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
 
       const lotesRelatorio: LoteRelatorio[] = lotesFiltrados
         .filter((l) => !l.info.erro || l.info.erro.length === 0)
+        .filter((l) => l.dados.length > 0)
         .map((l) => ({
         info: {
           ...l.info,
