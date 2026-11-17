@@ -3508,3 +3508,35 @@ Dado operacional (UPDATE pontual, autorizado escopado pelo usuário). Fazenda `2
 - Saldo final: 87.617,66 -> 27.617,66 kg (esperado 27.617,66). Custo médio do insumo: 0,7315.
 - Backup: backup.movimentacoes_supl_guanabara_milho_moido_20261113 (198 linhas) e backup.insumos_guanabara_milho_moido_20261113 (1 linha).
 - Para reverter: restaurar quantidade do ajuste a partir do backup e rodar o recálculo.
+
+## Reativação de item de cantina (Santa Cecília), 16/11/2026
+- Autorização escopada do usuário: limpar deleted_at do item AÇUCAR (id b0177f24-ba2b-46b0-9b2d-b3a75599f122), fazenda Santa Cecília (a53d7375-15c8-44fe-98d8-90e9f8423c65), 1 linha.
+- Prévia: 3 movimentações ativas, estoque_atual 27.300, controla_estoque true, ativo true.
+- Update com guarda de contagem (aborta se != 1): deleted_at 2026-11-16 16:32:38.51-04 -> NULL. Estoque e movimentações não alterados.
+- Para reverter: set deleted_at = '2026-11-16 16:32:38.51-04' nesse id.
+
+## Reativação em lote de itens de cantina (Santa Cecília), 16/11/2026
+- Autorização escopada do usuário: restaurar os 22 itens excluídos entre 16:30 e 17:00 (-04) de 16/11/2026 na fazenda Santa Cecília (a53d7375-15c8-44fe-98d8-90e9f8423c65): deleted_at -> NULL e ativo -> true. Esperado: 22 linhas.
+- Prévia: 22 itens (todos inativos), 33 movimentações ativas vinculadas. Update com guarda (aborta se != 22) executado.
+- Verificação: 24 itens ativos, 0 excluídos na fazenda; soma de estoque_atual 239.700. Movimentações não alteradas.
+- Itens: ARISCO, LEITE CONDENSADO, MACARRÃO, FEIJÃO, AZEITE, FARINHA DE MANDIOCA, AZEITONAS, DETERGENTE, CAFÉ, CREME DE LEITE, VINAGRE, TRIGO, SUCO EM PÓ, SARDINHAS, SAL, PÓ ROYAL, MAIONESE, ÓLEO, MANTEIGA, MILHO, ARROZ (7c7193a9-d65e-44ae-9e55-cbdfa31aba62, duplicata a conferir), ARROZZ (d75c10ae-edf7-40c3-926a-0c32d18e60ef, provável erro de digitação a conferir).
+- Para reverter: deleted_at de cada item para o valor anterior (ver consulta de 16/11 às 16:33-16:52) e ativo = false.
+
+## Exclusão de item de cantina duplicado/errado (Santa Cecília), 16/11/2026
+- Autorização escopada do usuário: excluir (soft-delete) o item ARROZZ (id d75c10ae-edf7-40c3-926a-0c32d18e60ef), fazenda Santa Cecília (a53d7375-15c8-44fe-98d8-90e9f8423c65), saldo 0. Esperado: 1 linha.
+- Prévia: estoque_atual 0, 0 movimentações. Update com guarda executado: deleted_at = now(), ativo = false.
+- Para reverter: deleted_at = NULL e ativo = true nesse id.
+
+## Exclusão de ARROZ duplicado (Santa Cecília), 17/11/2026
+- Autorização escopada do usuário: excluir (soft-delete) o item ARROZ id fd4d49b8-ceac-40b1-bcb5-55b030ecb0b6, fazenda Santa Cecília (a53d7375-15c8-44fe-98d8-90e9f8423c65), saldo 0. Esperado: 1 linha.
+- Prévia: estoque_atual 0, 0 movimentações. Update com guarda executado: deleted_at = now(), ativo = false.
+- Mantido o ARROZ original 7c7193a9-d65e-44ae-9e55-cbdfa31aba62 (saldo 2 kg, 5 movimentações).
+- Para reverter: deleted_at = NULL e ativo = true nesse id.
+
+## Correção de pasto em suplementação (Fazenda Chibata), 17/11/2026
+- Autorização escopada do usuário: corrigir na fazenda Chibata (d3965505-74d5-4af7-9858-f773d2e8aab3) os 3 registros de suplementação do LOTE 2 (8614cd41-e0bd-4a80-b0fe-5424cefe50fb) para Pasto 02 (aaa19bc7-2a3a-48e5-8f8c-adb12984a532). Esperado: 3 linhas.
+- Causa: o pasto veio do payload do PWA com o pasto em cache (TH05 B); o lote estava no Pasto 02 desde o movimento de pastagem de 13/11 07:03 (Carlos).
+- Backup: backup.suplementacao_pasto_correcao_20261117 (3 linhas, pasto TH05 B).
+- Update com guarda (aborta se diferente de 3): executado. IDs: 625e19f2-a088-4982-9ae7-6c890e2d960b (13/11 16:31, 120 kg), 8f26676f-6eb8-4797-9d4e-59dc1d372f9a (14/11 07:28, 300 kg), 443a8505-ca8a-409c-b69b-9ca41caf5e70 (16/11 08:51, 350 kg).
+- Para reverter: UPDATE a partir de backup.suplementacao_pasto_correcao_20261117 (pasto e pasto_id).
+- Trigger que fixa o pasto pela ocupação: migration 20261117100000, aplicada via db push em 17/11/2026 (com a 20261116150000, relatório de consumo sem zero no ponto sem dado). Não testado com INSERT real para não mutar outra fazenda.
