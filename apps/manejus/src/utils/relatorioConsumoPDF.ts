@@ -426,8 +426,9 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
   const kpiGap = 3
   let kpiY = 64.25
 
-  const consumoMedio = dados.length
-    ? dados.reduce((s, d) => s + d.consumo_percent_pv, 0) / dados.length
+  const comPv = dados.filter((d) => d.consumo_percent_pv != null)
+  const consumoMedio = comPv.length
+    ? comPv.reduce((s, d) => s + (d.consumo_percent_pv ?? 0), 0) / comPv.length
     : null
 
   const custoMedio =
