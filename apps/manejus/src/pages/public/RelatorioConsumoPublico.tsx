@@ -355,8 +355,9 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
 
   const calcularKPIs = (lote: LoteDados) => {
     const dados = lote.dados
-    const consumoMedio = dados.length
-      ? dados.reduce((s, d) => s + d.consumo_percent_pv, 0) / dados.length
+    const comPv = dados.filter((d) => d.consumo_percent_pv != null)
+    const consumoMedio = comPv.length
+      ? comPv.reduce((s, d) => s + (d.consumo_percent_pv ?? 0), 0) / comPv.length
       : null
     const custoMedio =
       dados.length && dados.some((d) => d.custo_reais_cab_dia != null)

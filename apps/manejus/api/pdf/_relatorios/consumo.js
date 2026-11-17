@@ -349,8 +349,9 @@ function chunkDados(dados, maxPerPage) {
 }
 
 function consumoMedio(dados) {
-  if (!dados.length) return null
-  return dados.reduce((s, d) => s + d.consumo_percent_pv, 0) / dados.length
+  const comPv = dados.filter((d) => d.consumo_percent_pv != null)
+  if (!comPv.length) return null
+  return comPv.reduce((s, d) => s + d.consumo_percent_pv, 0) / comPv.length
 }
 
 // trato_kg_cab_dia já é matéria natural (MN) por cabeça; o %PV é que usa a MS.
