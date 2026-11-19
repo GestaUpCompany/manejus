@@ -115,6 +115,8 @@ export function RelatorioFarmaciaPublico({ token, relatorioInfo }: Props) {
   const [dados, setDados] = useState<DadosRelatorioFarmacia | null>(null)
   const [exportandoPDF, setExportandoPDF] = useState(false)
   const [busca, setBusca] = useState('')
+  // Tipos marcados no filtro do extrato; vazio = todos.
+  const [tiposFiltro, setTiposFiltro] = useState<string[]>([])
   const [extratoVisivel, setExtratoVisivel] = useState(EXTRATO_PAGINA)
 
   const carregarDados = useCallback(async () => {
@@ -147,15 +149,25 @@ export function RelatorioFarmaciaPublico({ token, relatorioInfo }: Props) {
   }, [carregarDados])
 
   const resumo = useMemo(() => (dados ? calcularResumoFarmacia(dados) : null), [dados])
+  const extratoCompleto = useMemo(() => (dados ? extratoFarmacia(dados) : []), [dados])
+  // Só os tipos que aparecem no período, na ordem do rótulo.
+  const tiposDisponiveis = useMemo(
+    () => Object.keys(ROTULO_TIPO).filter((t) => extratoCompleto.some((l) => l.tipo_movimentacao === t)),
+    [extratoCompleto],
+  )
   const extrato = useMemo(() => {
-    if (!dados) return []
-    const linhas = extratoFarmacia(dados)
+    const porTipo = tiposFiltro.length === 0 ? extratoCompleto : extratoCompleto.filter((l) => tiposFiltro.includes(l.tipo_movimentacao))
     const termo = busca.trim().toLowerCase()
-    if (!termo) return linhas
-    return linhas.filter((l) =>
+    if (!termo) return porTipo
+    return porTipo.filter((l) =>
       [l.item, l.fornecedor, l.nota_fiscal, l.lote_produto, l.observacao, ROTULO_ORIGEM[l.origem ?? ''] ?? l.origem].some((c) => (c ?? '').toLowerCase().includes(termo)),
     )
-  }, [dados, busca])
+  }, [extratoCompleto, tiposFiltro, busca])
+
+  const alternarTipo = (tipo: string) => {
+    setTiposFiltro((atual) => (atual.includes(tipo) ? atual.filter((t) => t !== tipo) : [...atual, tipo]))
+    setExtratoVisivel(EXTRATO_PAGINA)
+  }
 
   const exportarPDF = async () => {
     if (!dados || !resumo) return
@@ -384,6 +396,35 @@ export function RelatorioFarmaciaPublico({ token, relatorioInfo }: Props) {
                   className="rounded border border-gray-300 px-2 py-1 text-xs flex-1 min-w-[160px] max-w-sm"
                 />
               </div>
+              {tiposDisponiveis.length > 0 && (
+                <div className="px-4 py-2 border-b border-gray-100 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="text-gray-500">Tipo:</span>
+                  {tiposDisponiveis.map((t) => {
+                    const ativo = tiposFiltro.includes(t)
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        aria-pressed={ativo}
+                        onClick={() => alternarTipo(t)}
+                        className="rounded-full border px-3 py-1 transition-colors"
+                        style={ativo ? { backgroundColor: GREEN_DARK, borderColor: GREEN_DARK, color: '#fff' } : { borderColor: '#d1d5db', color: '#4b5563' }}
+                      >
+                        {ROTULO_TIPO[t as keyof typeof ROTULO_TIPO]}
+                      </button>
+                    )
+                  })}
+                  {tiposFiltro.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => { setTiposFiltro([]); setExtratoVisivel(EXTRATO_PAGINA) }}
+                      className="text-gray-500 underline ml-1"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+              )}
               {extrato.length === 0 ? (
                 <p className="px-4 py-6 text-sm text-center text-gray-500">Nenhuma movimentação no período.</p>
               ) : (
