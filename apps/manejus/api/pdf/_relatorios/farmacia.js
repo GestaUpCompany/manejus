@@ -126,9 +126,11 @@ function avisosHtml(resumo) {
   return avisos.map((a) => `<p class="fm-aviso">${escapeHtml(a)}</p>`).join('')
 }
 
-const LINHAS_PAGINA_RESUMO = 22
-const LINHAS_PAGINA_DETALHE = 14
-const LINHAS_PAGINA_CONTINUACAO = 24
+// Cada .page tem altura fixa de 210mm com overflow hidden (_shared/template.js): o que passa disso é cortado.
+// Valores medidos com Chromium (scratchpad, 60 itens e cenário com validade/consumo): com 22/14/24 a página cortava.
+const LINHAS_PAGINA_RESUMO = 18
+const LINHAS_PAGINA_DETALHE = 10
+const LINHAS_PAGINA_CONTINUACAO = 19
 
 export async function renderFarmaciaHtml(input) {
   const { fazendaNome, logoGestao, logoFazenda } = input
