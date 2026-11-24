@@ -1,5 +1,13 @@
 # Histórico de alterações (RESOLVIDO/IMPLEMENTADO)
 
+## Exclusão de produção de fábrica lançada por engano na Chibata (23/11/2026)
+- **Registro**: `registros_saida_insumos` id `da45aea5-10ee-4d16-a728-434c1f05ed3c`, fazenda Chibata `d3965505-74d5-4af7-9858-f773d2e8aab3`, data 23/11/2026, usuário Jefferson, dieta "Ração 0,5% Seca REP.", destino Cria, total informado 2520 kg (itens somam 2545 kg).
+- **Ação (autorizada pelo usuário com escopo fechado)**: soft-delete do registro (`deleted_at`) e dos 12 movimentos ativos ligados aos 6 itens (6 baixas de insumo e 6 produções da formulação). Itens mantidos.
+- **Resultado**: saldos estornados (Sorgo +625, Uréia +71, Milho +810, Farelo de algodão +638, Sal mineral Matsuda +140, Sal branco +261; formulação 2956,10 → 411,10). Custo médio da formulação 0,9766 → 0,9747 pelo recálculo do trigger.
+- **Backup**: `backup.saida_insumos_chibata_20261123`, `backup.saida_insumos_itens_chibata_20261123`, `backup.movimentacoes_chibata_20261123` (12 linhas) e `backup.estoque_chibata_20261123` (saldos e custos antes).
+- **Reverter**: `UPDATE registros_saida_insumos SET deleted_at = NULL WHERE id = 'da45aea5-…'` e o mesmo nos 12 movimentos (`registro_origem_id` nos itens do registro). Os saldos voltam pelo recálculo do trigger.
+- **Por que soft-delete**: o hard delete do pai cascateia para `saida_insumos_itens` e o trigger `trg_saida_insumos_itens_mov` lê o pai, o que pode deixar os estornos de fora.
+
 ## Consumo não calculado na troca de dieta (16/11/2026)
 - **Sintoma**: no gráfico de consumo em pasto, o último trato antes de uma troca de dieta ficava sem consumo, e o ponto seguinte aparecia como 0%. Caso: Lote 4 (Thiago Maior), Doce Ilusão, 19/10 sem valor.
 - **Causa**: `recalc_consumo_series` separava a série por formulação. Na última linha de cada dieta, zerava o consumo, mesmo com registro seguinte de outra dieta. Além disso, `get_dados_relatorio_consumo` usava `COALESCE(..., 0)`, que transformava ausência em 0%. Afetava 89 trocas em 67 lotes de 14 fazendas.
@@ -14,6 +22,14 @@
 - Problema: o Infográfico Mensal e o relatório individual de Consumo listavam lotes sem nenhum registro de consumo no período, com a mensagem "Sem dados no período".
 - Correção: lotes com `dados` vazio saem do payload em `apps/manejus/src/features/relatorioGeral/loaders.ts` (`carregarConsumo`) e do PDF em `apps/manejus/src/pages/public/RelatorioConsumoPublico.tsx` (`exportarPDF`). A RPC não muda.
 - Ficou de fora: a tela pública do relatório de consumo ainda mostra esses lotes na lista. Os agregados do Infográfico Anual não foram alterados.
+
+## Abastecimentos "Diesel Comum" convertidos para Diesel S10, Fazenda Marcon (23/11/2026)
+
+- **Sintoma**: relatório de combustível mostrava "Diesel Comum" (281 L) com 3 tipos de combustível, mas a fazenda só tem tanques de Diesel S10 e Gasolina.
+- **Correção de dado pontual** (autorizada com escopo fechado pelo usuário, via MCP): `registros_abastecimento.combustivel` de `Diesel Comum` para `Diesel S10` em 4 registros da Fazenda Marcon. IDs: `1ae0b190-c7bc-41da-ad31-506afeee18ac`, `ab62bf3e-5a8f-4234-b3a0-9279d7cb82d3`, `d83534da-8f90-4224-9c5f-3b0f1e82d130`, `20cd9a71-d9f9-4084-8317-ec48f9d2cc5a`. Sem tanque nem movimentação vinculada; o trigger `sync_baixa_abastecimento` não reage a mudança só de `combustivel`, então saldo dos tanques não muda.
+- **Backup**: `backup.registros_abastecimento_marcon_diesel_comum_20261123` (4 linhas).
+- **Verificado depois**: Marcon agora tem só Diesel S10 (301 registros, 25.105,8 L) e Gasolina (96, 438,4 L).
+- **Reverter**: `UPDATE public.registros_abastecimento r SET combustivel = b.combustivel FROM backup.registros_abastecimento_marcon_diesel_comum_20261123 b WHERE r.id = b.id;`
 
 ## Entrada de combustível contada em dobro no saldo do tanque (16/11/2026)
 
@@ -3540,3 +3556,46 @@ Dado operacional (UPDATE pontual, autorizado escopado pelo usuário). Fazenda `2
 - Update com guarda (aborta se diferente de 3): executado. IDs: 625e19f2-a088-4982-9ae7-6c890e2d960b (13/11 16:31, 120 kg), 8f26676f-6eb8-4797-9d4e-59dc1d372f9a (14/11 07:28, 300 kg), 443a8505-ca8a-409c-b69b-9ca41caf5e70 (16/11 08:51, 350 kg).
 - Para reverter: UPDATE a partir de backup.suplementacao_pasto_correcao_20261117 (pasto e pasto_id).
 - Trigger que fixa o pasto pela ocupação: migration 20261117100000, aplicada via db push em 17/11/2026 (com a 20261116150000, relatório de consumo sem zero no ponto sem dado). Não testado com INSERT real para não mutar outra fazenda.
+
+## Exclusão de apartações duplicadas (Fazenda Chibata), 19/11/2026
+- Autorização escopada do usuário: soft-delete, na Chibata (d3965505-74d5-4af7-9858-f773d2e8aab3), das 6 movimentações "Saída (Apartação)" do LOTE 6 (8b3894a7-1d7d-4b2f-b501-25d298b91a25) para "Lote paridas mês 10" (858e16ef-38ec-4349-8fba-852923e4678c), de 16/11 e 17/11. Esperado: 6 linhas, 45 cabeças. As 2 linhas de 18/11 (09d7943f-… e 272235b9-…) ficaram fora.
+- Prévia: 6 linhas ativas, soma 45, nenhum os_id/individuo_id/tipo_saida.
+- Backup: backup.registros_movimentacao_chibata_20261119 (6 linhas).
+- Update com guarda (aborta se diferente de 6): executado. deleted_at = 2026-11-19 07:24:19 (-04). IDs: e5eda65b-f659-469b-a92b-783046cd52bf (9), 29775ce5-973c-4111-a8db-6090b6ffc203 (8), 002c27a2-7009-4e66-8f8a-b177b0f664c4 (1), f271c5da-fa2e-4cf4-897a-3397f80813e0 (17), 0985d923-0c7f-4f90-bd19-6019d850500d (6), b526c9ee-1dbf-4edf-8209-99be6bfae4c3 (4).
+- Para reverter: deleted_at = NULL nesses 6 ids (ou a partir do backup).
+
+## Exclusão de morte com estorno (Fazenda Brilhante), 23/11/2026
+- Autorização escopada do usuário: soft-delete, na Fazenda Brilhante (f5d64d63-838e-42cc-9fe3-60f3ea7bb692), do registro de morte 415646d7-1eab-476a-b05e-44ec426db6e9 (bezerro ao pé, Carimbo 3, P11, Lote 1 (Matriz)). Esperado: 1 linha. Recalcular quant_atual do lote bedbd29e-e810-447a-a2f9-5615760112e8 / categoria bezerro ao pé. Apagar notificação: não havia nenhuma ligada à morte (o trigger só notifica com coordenadas, e o registro não tinha).
+- Backup: backup.registros_morte_20261123 (1 linha).
+- Update com guarda (aborta se diferente de 1): executado. deleted_at = 2026-11-23 10:37:37 (-04).
+- Animal individuo 787895b5-34fb-4aef-8db0-bfd4ef7587fe voltou a Vivo pelo trigger de estorno (data_saida e motivo_saida limpos).
+- quant_atual de bezerro ao pé: 20 → 21 (recálculo; a morte estava sendo descontada).
+- Para reverter: deleted_at = NULL no id 415646d7-…; recalcular quant_atual, e o animal volta a Morto com a mesma data e motivo pelo trigger de baixa (ou restaurar a partir do backup).
+
+## Exclusão de 3 produções de fábrica (Fazenda Santa Cecília), 23/11/2026
+- Autorização escopada do usuário: soft-delete, na Santa Cecília (a53d7375-15c8-44fe-98d8-90e9f8423c65), de 3 registros de `registros_saida_insumos` (Fernando, Ração Capulho Sequestro 2,0%) e das 36 movimentações ligadas a eles em `movimentacoes_estoque_suplementos` (baixas de insumos e produções da formulação), sem contramovimentos. Esperado: 3 registros e 36 movimentações.
+- Registros: cd3f07cb-f5bb-4ce0-845f-6748d5dca509 (18/11, 2.572 kg), 11ddcca4-d280-49b6-a7b7-102f4f576144 (18/11, 3.719 kg), 00341449-70ce-4b58-a0e5-fb3dd4049f56 (23/11, 3.861 kg).
+- Backup: backup.saida_insumos_20261123 (3), backup.saida_itens_20261123 (18), backup.mov_saida_20261123 (36).
+- Update com guarda (aborta se diferente de 3 e 36): executado. Verificado depois: 3 registros com deleted_at, 36 movimentações excluídas, 0 ativas restantes.
+- Motivo: DELETE físico não estornaria as movimentações, porque o trigger de itens não encontra mais a saída no cascade.
+- Para reverter: deleted_at = NULL nos 3 ids de registros e nas 36 movimentações (ou restaurar a partir do backup).
+
+## Ajuste de saldo do CONTÂINER DIESEL S10 (Fazenda Santa Cecília), 23/11/2026
+- Pedido do usuário: ajustar o saldo do tanque 34f0b6ee-68ee-4613-a0a9-6d44e65fc475 para 1.150 L, observação "Ajuste de saldo".
+- Lançada movimentação `ajuste` (origem `painel_ajuste`, padrão dos ajustes existentes) com quantidade 1.150 L. Saldo: -109 → 1.150 L (delta +1.259 L). Verificado depois: saldo_atual_l = 1150.
+- Custo médio continua zerado (0,0000): o ajuste não tem preço.
+- Para reverter: lançar novo ajuste com o saldo anterior (-109), ou apagar a movimentação de ajuste criada hoje.
+
+## Exclusão do ajuste de saldo do CONTÂINER DIESEL S10 (Fazenda Santa Cecília), 23/11/2026
+- Autorização escopada do usuário: excluir a movimentação de ajuste 50c8256c-dbde-4b10-b770-d6b047f61647 (1.150 L, "Ajuste de saldo", criada hoje) do tanque 34f0b6ee-68ee-4613-a0a9-6d44e65fc475.
+- Backup: backup.mov_combustivel_ajuste_20261123 (1 linha). A tabela não tem `deleted_at`, por isso a exclusão foi física, de uma linha, com guarda (aborta se diferente de 1).
+- Verificado depois: saldo voltou para -109 L, custo médio 0,0000, restam só a baixa de 109 L do abastecimento.
+- Para reverter: reinserir a linha a partir do backup (o trigger recalcula o saldo).
+
+## Venda / baixa manual de insumo na Suplementação (painel), 24/11/2026
+- Nova ação "Venda / Baixa" em `apps/manejus/src/pages/controller/EstoqueSuplementacao.tsx`: grava `movimentacoes_estoque_suplementos` com `tipo_movimentacao = 'baixa'`, origem `painel_baixa`, data escolhida, observação "Venda para <cliente>; <obs>". Bloqueia quantidade acima do saldo e quantidade zero.
+- Sem migration: não há check em `origem`, e o trigger `update_estoque_suplemento` já desconta `baixa` manual do saldo.
+- Validado na fazenda de testes (d649c65e…): baixa de 100 kg em "Milho Grão Moído", saldo 18.334,4 → 18.234,4, `saldo_posterior` correto.
+- Lançamento de teste mantido na fazenda de testes: movimentação dd5cf796-9985-43b7-90d0-0166e3b07763 (100 kg, "Venda para Teste venda"). Para reverter: soft-delete (`deleted_at`) dessa linha; o trigger recalcula.
+- Pendente: a mesma ação no Almoxarifado/Cantina/Farmácia, se a venda de grão também ocorrer ali; e checar se os insumos reais (milho triturado, milho grão) existem na fazenda de vocês.
+- Atualização 24/11/2026: o modal ganhou seletor de tipo (Insumo / Produto Final). Validado também em formulação: baixa de 10 kg em "Recria Garrote" (formulacoes d1000000-…, saldo 98,8 → 88,8), movimentação com `item_tipo = 'formulacao'`, `saldo_posterior` correto. Lançamento de teste mantido: `item_tipo = 'formulacao'`, origem `painel_baixa`, observação "Venda para Teste formulacao" (soft-delete do registro para reverter).
