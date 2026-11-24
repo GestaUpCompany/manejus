@@ -53,6 +53,7 @@ const ORIGEM_LABEL: Record<string, string> = {
   estoque_inicial: 'Estoque Inicial',
   painel_entrada: 'Entrada Manual',
   painel_ajuste: 'Ajuste Manual',
+  painel_baixa: 'Venda / Baixa Manual',
   entrada_insumos: 'Recebimento (App)',
   saida_insumos: 'Produção (App)',
   fabrica_confinamento: 'Fábrica (App)',
@@ -90,6 +91,7 @@ export function EstoqueSuplementacao() {
   // Modais
   const [modalEntrada, setModalEntrada] = useState(false)
   const [modalAjuste, setModalAjuste] = useState(false)
+  const [modalBaixa, setModalBaixa] = useState(false)
   const [modalHistorico, setModalHistorico] = useState<{ tipo: ItemTipo; id: string; nome: string } | null>(null)
   const [historicoMovs, setHistoricoMovs] = useState<Movimentacao[]>([])
   const [historicoLoading, setHistoricoLoading] = useState(false)
@@ -102,6 +104,16 @@ export function EstoqueSuplementacao() {
     item_id: '',
     quantidade: '',
     custo_unitario: '',
+    observacao: '',
+  })
+
+  // Form venda / baixa manual
+  const [baixaForm, setBaixaForm] = useState({
+    item_tipo: 'insumo' as ItemTipo,
+    item_id: '',
+    quantidade: '',
+    data: new Date().toISOString().split('T')[0],
+    destino: '',
     observacao: '',
   })
 
@@ -284,6 +296,51 @@ export function EstoqueSuplementacao() {
       loadAll()
     } catch (err: any) {
       setError(err.message || 'Erro ao registrar entrada')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const abrirModalBaixa = () => {
+    setBaixaForm({ item_tipo: 'insumo', item_id: '', quantidade: '', data: new Date().toISOString().split('T')[0], destino: '', observacao: '' })
+    setModalBaixa(true)
+  }
+
+  const salvarBaixa = async () => {
+    if (!fazendaId || !baixaForm.item_id || !baixaForm.quantidade || !baixaForm.data) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      const qtd = parseValorBR(baixaForm.quantidade)
+      if (!qtd || qtd <= 0) throw new Error('Informe uma quantidade maior que zero')
+      const item = (baixaForm.item_tipo === 'insumo' ? insumos : formulacoes)
+        .find((i) => i.id === baixaForm.item_id)
+      const saldoAtual = item ? Number(item.estoque_atual) : 0
+      if (qtd > saldoAtual) {
+        throw new Error(`Quantidade maior que o saldo disponível (${saldoAtual.toLocaleString('pt-BR')} kg)`)
+      }
+      const partes = [
+        baixaForm.destino ? `Venda para ${baixaForm.destino}` : 'Venda / baixa manual',
+        baixaForm.observacao || null,
+      ].filter(Boolean)
+
+      const { error: movError } = await supabase.from('movimentacoes_estoque_suplementos').insert({
+        fazenda_id: fazendaId,
+        item_tipo: baixaForm.item_tipo,
+        item_id: baixaForm.item_id,
+        tipo_movimentacao: 'baixa',
+        quantidade: qtd,
+        origem: 'painel_baixa',
+        data: baixaForm.data,
+        observacao: partes.join('; '),
+        usuario_id: user?.id ?? null,
+      })
+      if (movError) throw movError
+
+      setModalBaixa(false)
+      loadAll()
+    } catch (err: any) {
+      setError(err.message || 'Erro ao registrar venda / baixa')
     } finally {
       setSubmitting(false)
     }
@@ -580,6 +637,7 @@ export function EstoqueSuplementacao() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="secondary" onClick={() => abrirModalAjuste()}>Ajuste</Button>
+          <Button variant="secondary" onClick={abrirModalBaixa}>Venda / Baixa</Button>
           <Button onClick={abrirModalEntrada}>Registrar Entrada</Button>
         </div>
       </div>
@@ -779,6 +837,72 @@ export function EstoqueSuplementacao() {
             <Button variant="secondary" onClick={() => setModalEntrada(false)}>Cancelar</Button>
             <Button onClick={salvarEntrada} disabled={submitting || !entradaForm.item_id || !entradaForm.quantidade || !entradaForm.custo_unitario}>
               {submitting ? 'Salvando...' : 'Registrar Entrada'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: Venda / Baixa manual (saída do estoque, desconta do saldo) */}
+      <Modal isOpen={modalBaixa} onClose={() => setModalBaixa(false)} title="Venda / Baixa de Estoque" size="md">
+        <div className="space-y-4">
+          <Select
+            label="Tipo de item"
+            options={[
+              { value: 'insumo', label: 'Insumo' },
+              { value: 'formulacao', label: 'Produto Final (Formulação)' },
+            ]}
+            value={baixaForm.item_tipo}
+            onChange={(val) => setBaixaForm({ ...baixaForm, item_tipo: val as ItemTipo, item_id: '' })}
+            placeholder="Selecione..."
+            required
+          />
+          <Select
+            label={baixaForm.item_tipo === 'insumo' ? 'Insumo' : 'Produto Final'}
+            options={baixaForm.item_tipo === 'insumo' ? insumosOptions : formulacoesOptions}
+            value={baixaForm.item_id}
+            onChange={(val) => setBaixaForm({ ...baixaForm, item_id: val })}
+            placeholder="Selecione o item..."
+            required
+          />
+          {baixaForm.item_id && (() => {
+            const item = (baixaForm.item_tipo === 'insumo' ? insumos : formulacoes).find((i) => i.id === baixaForm.item_id)
+            return item ? (
+              <p className="text-sm text-content-muted">
+                Saldo atual: <span className="font-semibold">{Number(item.estoque_atual).toLocaleString('pt-BR')} kg</span>
+              </p>
+            ) : null
+          })()}
+          <NumericInput
+            label="Quantidade (kg)"
+            placeholder="Ex: 4080"
+            value={baixaForm.quantidade}
+            onChange={(v) => setBaixaForm({ ...baixaForm, quantidade: v })}
+            decimalPlaces={3}
+            required
+          />
+          <Input
+            label="Data da saída"
+            type="date"
+            value={baixaForm.data}
+            onChange={(e) => setBaixaForm({ ...baixaForm, data: e.target.value })}
+            required
+          />
+          <Input
+            label="Cliente / destino"
+            placeholder="Ex: Marcos (Assentamento Birro)"
+            value={baixaForm.destino}
+            onChange={(e) => setBaixaForm({ ...baixaForm, destino: e.target.value })}
+          />
+          <Input
+            label="Observação"
+            placeholder="Detalhes adicionais (opcional)"
+            value={baixaForm.observacao}
+            onChange={(e) => setBaixaForm({ ...baixaForm, observacao: e.target.value })}
+          />
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="secondary" onClick={() => setModalBaixa(false)}>Cancelar</Button>
+            <Button onClick={salvarBaixa} disabled={submitting || !baixaForm.item_id || !baixaForm.quantidade || !baixaForm.data}>
+              {submitting ? 'Salvando...' : 'Registrar Venda'}
             </Button>
           </div>
         </div>
