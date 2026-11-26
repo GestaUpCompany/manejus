@@ -18,6 +18,14 @@ export function toDate(v) {
     return new Date(Date.UTC(1899, 11, 30) + Math.floor(v) * 86400000);
   }
   if (typeof v === 'string') {
+    // Data em texto no formato brasileiro (dd/mm/aaaa, opcionalmente com hora).
+    // new Date() não entende esse formato e devolvia Invalid Date: a linha sumia.
+    const br = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s|$)/);
+    if (br) {
+      const d = new Date(Date.UTC(Number(br[3]), Number(br[2]) - 1, Number(br[1])));
+      // rejeita 31/02 (senão o Date rola para março)
+      return isNaN(d) || d.getUTCDate() !== Number(br[1]) ? null : d;
+    }
     const d = new Date(v);
     return isNaN(d) ? null : d;
   }

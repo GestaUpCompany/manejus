@@ -161,7 +161,12 @@ function createSheetParser(sst, onRow) {
         const empty = row.every((v) => v == null);
         emptyRun = empty ? emptyRun + 1 : 0;
         onRow(row);
-        if (emptyRun >= EMPTY_STOP) {
+        // Só para cedo se já chegou ao fim da faixa declarada na <dimension>.
+        // Planilhas com blocos vazios de 200+ linhas (ex.: Marcon SF GERAL, aba
+        // Desembolsos Realizados: vazio entre as linhas 231 e 717) tinham os
+        // lançamentos de baixo silenciosamente descartados.
+        const chegouNoFim = !dimLastRow || lastRowNum >= dimLastRow;
+        if (emptyRun >= EMPTY_STOP && chegouNoFim) {
           aborted = true;
           earlyStop = !final;
           return;
