@@ -446,10 +446,6 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
     const atP = sum(prec, x => x.atAbatidas), kgP = sum(prec, x => x.kgFinal), cabP = sum(prec, x => x.cab);
     return { cab, at, kg, valor: val, rsAt: atP ? val / atP : 0, rsKg: kgP ? val / kgP : 0, rsCab: cabP ? val / cabP : 0 };
   };
-  // campo "Frigorífico/Comprador" mistura pessoa jurídica e física; o gráfico de
-  // preço × RC% usa só frigoríficos (sufixo societário ou marca conhecida;
-  // "frig" cobre abreviações como "Frig.")
-  const isFrigorifico = (n) => /ltda|s\.?\s?a\.?\b|eireli|epp|\bme\b|frig|foods|carnes|abatedouro|marfrig|minerva|jbs/i.test(n);
   const aggVendasAbate = (rows) => {
     const porEmpresa = [...groupBy(rows, x => x.comprador || 'Não informado')].map(([k, g]) => ({
       empresa: k, lotes: g.length, cab: sum(g, x => x.cab),
@@ -465,16 +461,20 @@ export function buildModelFromReads(reads, { ini, fim, saldoCaixaInicial = 0, an
         return { mes: k, cab: sum(g, x => x.cab), rsAt: g.length ? avgPos(g, x => x.rsAt) : null };
       }).filter(m => m.cab > 0),
       porEmpresa,
-      porEmpresaFrigo: porEmpresa.filter(e => isFrigorifico(e.empresa)),
     };
   };
-  const vendasAbateMPage = aggVendasAbate(vendasAbate.filter(x => /^m/i.test(x.sexo)));
-  const vendasAbateFPage = aggVendasAbate(vendasAbate.filter(x => /^f/i.test(x.sexo)));
+  // Página do abate é definida pelo tipo da venda ("Abate Machos"/"Abate Fêmeas"); a coluna
+  // sexo só entra quando o tipo não diz. Lançamento com tipo Fêmeas e sexo M (Marcon: 1 cab)
+  // antes caía na página de machos e somava 501 em vez de 500.
+  const isMachoVenda = (x) => /macho/i.test(x.tipo) || (!/f[eê]mea/i.test(x.tipo) && /^m/i.test(x.sexo));
+  const isFemeaVenda = (x) => /f[eê]mea/i.test(x.tipo) || (!/macho/i.test(x.tipo) && /^f/i.test(x.sexo));
+  const vendasAbateMPage = aggVendasAbate(vendasAbate.filter(isMachoVenda));
+  const vendasAbateFPage = aggVendasAbate(vendasAbate.filter(isFemeaVenda));
   // Cabeças abatidas no período sem filtro de status (card N° de Cabeças); R$ seguem só com Pago
   const cabVendasTodas = (pred) => sum(
     vendasAll.filter(x => inPeriod(x.data, ini, fim) && /^abate/i.test(x.tipo) && pred(x)), x => x.cab);
-  vendasAbateMPage.cabTodas = cabVendasTodas(x => /^m/i.test(x.sexo));
-  vendasAbateFPage.cabTodas = cabVendasTodas(x => /^f/i.test(x.sexo));
+  vendasAbateMPage.cabTodas = cabVendasTodas(isMachoVenda);
+  vendasAbateFPage.cabTodas = cabVendasTodas(isFemeaVenda);
 
   // ---------- p.6/p.7 Transferências entre fazendas ----------
   // Entrada: "Transf/Tranf Entrada" na Compra_Gado; saída: "Transf Saída" na
