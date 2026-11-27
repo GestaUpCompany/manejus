@@ -47,8 +47,8 @@ function renderAbate({ model, ctx, v, sufixo, pageNum }) {
     line: { values: v.mensal.map(m => m.rsAt), color: C.green, labelFmt: (x) => `R$ ${fmtInt(x)}` },
   });
 
-  // escopo do gráfico: somente frigoríficos (a coluna mistura compradores PF)
-  const emps = v.porEmpresaFrigo;
+  // gráfico por comprador: todos os compradores da tabela ao lado
+  const emps = v.porEmpresa;
   const rsVals = emps.map(e => e.rsAt);
   const [mn, mx] = [Math.min(...rsVals, 0), Math.max(...rsVals, 0)];
   const trunc = emps.length > 1 && mn > 0 && (mx - mn) / mx < 0.25;
